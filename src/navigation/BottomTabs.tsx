@@ -2,8 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 
-import { colors, spacing, typography } from '../theme';
-import { AppHeader } from '../components/AppHeader';
+import { colors, typography } from '../theme';
 import { HomeScreen } from '../screens/HomeScreen';
 import { StoryScreen } from '../screens/StoryScreen';
 import { MyPageScreen } from '../screens/MyPageScreen';
@@ -15,42 +14,42 @@ const TAB_ICON_SIZE = 44;
 const iconSources = {
   Home: {
     focused: Image.resolveAssetSource(
-      require('../../assets/navigation/navi-home-focus.svg'),
+      require('../../assets/icons/after_home.svg'),
     ).uri,
     unfocused: Image.resolveAssetSource(
-      require('../../assets/navigation/navi-home-unfocus.svg'),
+      require('../../assets/icons/before_home.svg'),
     ).uri,
   },
   Meeting: {
     focused: Image.resolveAssetSource(
-      require('../../assets/navigation/navi-moim-focus.svg'),
+      require('../../assets/icons/after_group.svg'),
     ).uri,
     unfocused: Image.resolveAssetSource(
-      require('../../assets/navigation/navi-moim-unfocus.svg'),
+      require('../../assets/icons/before_group.svg'),
     ).uri,
   },
   Story: {
     focused: Image.resolveAssetSource(
-      require('../../assets/navigation/navi-bookstory-focus.svg'),
+      require('../../assets/icons/after_story.svg'),
     ).uri,
     unfocused: Image.resolveAssetSource(
-      require('../../assets/navigation/navi-bookstory-unfocus.svg'),
+      require('../../assets/icons/before_story.svg'),
     ).uri,
   },
   News: {
     focused: Image.resolveAssetSource(
-      require('../../assets/navigation/navi-news-focus.svg'),
+      require('../../assets/icons/after_news.svg'),
     ).uri,
     unfocused: Image.resolveAssetSource(
-      require('../../assets/navigation/navi-news-unfocus.svg'),
+      require('../../assets/icons/before_news.svg'),
     ).uri,
   },
   My: {
     focused: Image.resolveAssetSource(
-      require('../../assets/navigation/navi-mypage-focus.svg'),
+      require('../../assets/icons/after_my.svg'),
     ).uri,
     unfocused: Image.resolveAssetSource(
-      require('../../assets/navigation/navi-mypage-unfocus.svg'),
+      require('../../assets/icons/before_my.svg'),
     ).uri,
   },
 };
@@ -87,9 +86,7 @@ export default function BottomTabs() {
         tabBarShowLabel: false,
         tabBarStyle: styles.tabBar,
         tabBarItemStyle: styles.tabItem,
-        header: ({ route }) => (
-          <AppHeader title={labelsMap[route.name] ?? route.name} />
-        ),
+        headerShown: false,
       }}
     >
       <Tab.Screen
@@ -163,13 +160,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopColor: colors.background,
     borderTopWidth: StyleSheet.hairlineWidth,
-    height: 70,
-    paddingTop: 12,
-    paddingBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: 10,
+    height: 84,
+    paddingTop: 8,
+    paddingBottom: 8,
     paddingHorizontal: 10,
-    marginBottom: spacing.xs,
+    marginBottom: 0,
   },
   tabItem: {
-    paddingVertical: 4,
+    paddingVertical: 2,
+    marginTop: -2,
   },
 });

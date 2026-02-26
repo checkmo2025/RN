@@ -1,46 +1,40 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Pressable,
-  ScrollView,
   RefreshControl,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
   Image,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 import { colors, radius, spacing, typography } from '../theme';
-import { BookStoryCard } from '../components/BookStoryCard';
-
-const likeIconUri = Image.resolveAssetSource(
-  require('../../assets/book-story/bookstory-like.svg'),
-).uri;
-const commentIconUri = Image.resolveAssetSource(
-  require('../../assets/book-story/bookstory-comment.svg'),
-).uri;
-
-type Promotion = {
-  id: string;
-  title: string;
-  description: string;
-};
-
-type Group = {
-  id: string;
-  name: string;
-};
-
-type UserRecommendation = {
-  id: string;
-  username: string;
-  subscribed: boolean;
-};
+import { ScreenLayout } from '../components/common/ScreenLayout';
+import HomePromotions, { Promotion } from '../components/feature/home/HomePromotions';
+import HomePostCard from '../components/feature/home/HomePostCard';
+import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
+import { useAuthGate } from '../contexts/AuthGateContext';
+import { logoutSession } from '../services/api/authApi';
+import { resolveHomeAccessPolicy } from '../constants/homeAccessPolicy';
+import {
+  fetchBookStories,
+  toggleBookStoryLike,
+  type RemoteStoryItem,
+} from '../services/api/bookStoryApi';
+import { fetchRecommendedMembers, setFollowingMember } from '../services/api/memberApi';
+import { fetchNewsCarousel } from '../services/api/newsApi';
+import { ApiError } from '../services/api/http';
+import { toKstTimeAgoLabel } from '../utils/date';
+import { showToast } from '../utils/toast';
 
 type Post = {
   id: string;
+  remoteId: number;
   author: string;
   timeAgo: string;
   views: number;
@@ -49,491 +43,526 @@ type Post = {
   likes: number;
   comments: number;
   liked: boolean;
+  subscribed: boolean;
+  image?: string;
 };
 
+type UserRecommendation = {
+  id: string;
+  nickname: string;
+  subscribed: boolean;
+  profileImageUrl?: string;
+  followingCount?: number;
+  followerCount?: number;
+};
+
+const defaultPromotionImages = [
+  Image.resolveAssetSource(require('../../assets/images/background.png')).uri,
+  Image.resolveAssetSource(require('../../assets/images/news_sample2.png')).uri,
+  Image.resolveAssetSource(require('../../assets/images/news_sample3.png')).uri,
+];
+
+const defaultPromotions: Promotion[] = [
+  {
+    id: 'p1',
+    title: '봄메이트',
+    description: '5월 책 추천\n나의 돈키호테\n할인된 가격에\n만나보세요!',
+    imageUri: defaultPromotionImages[0],
+  },
+  {
+    id: 'p2',
+    title: '신간 소식',
+    description: '새로운 이야기와\n서점 큐레이션을\n매주 만나보세요.',
+    imageUri: defaultPromotionImages[1],
+  },
+  {
+    id: 'p3',
+    title: '이벤트',
+    description: '책모 구독자 전용\n굿즈 증정 이벤트',
+    imageUri: defaultPromotionImages[2],
+  },
+].slice(0, 5);
+
 export function HomeScreen() {
+  const navigation = useNavigation<any>();
+  const { requireAuth, isLoggedIn, logout } = useAuthGate();
+  const accessPolicy = resolveHomeAccessPolicy({ isLoggedIn });
   const { width } = useWindowDimensions();
+  const horizontalInset = width >= 768 ? spacing.xl : spacing.md;
+  const promotionWidth = Math.max(260, width - horizontalInset * 2);
+  const promotionStep = promotionWidth + spacing.sm;
   const [activeSlide, setActiveSlide] = useState(0);
   const [userRecommendations, setUserRecommendations] = useState<
     UserRecommendation[]
   >([
-    { id: 'u1', username: 'hy_0716', subscribed: false },
-    { id: 'u2', username: 'hy_0717', subscribed: false },
-    { id: 'u3', username: 'hy_0718', subscribed: false },
+    { id: 'hy_0716', nickname: 'hy_0716', followingCount: 17, followerCount: 32, subscribed: false },
+    { id: 'hy_0717', nickname: 'hy_0717', followingCount: 11, followerCount: 21, subscribed: false },
+    { id: 'hy_0718', nickname: 'hy_0718', followingCount: 9, followerCount: 16, subscribed: false },
   ]);
-  const [posts, setPosts] = useState<Post[]>(() => buildPosts(6));
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(false);
+  const [loadingMorePosts, setLoadingMorePosts] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [promotions, setPromotions] = useState<Promotion[]>(defaultPromotions);
+  const loadingPostsRef = useRef(false);
+  const loadingMorePostsRef = useRef(false);
+  const hasNextPostsRef = useRef(true);
+  const nextPostsCursorRef = useRef<number | null>(null);
 
-  const promotions = useMemo<Promotion[]>(
-    () =>
-      [
-        {
-          id: 'p1',
-          title: '봄메이트',
-          description: '5월 책 추천\n나의 돈키호테\n할인된 가격에\n만나보세요!',
-        },
-        {
-          id: 'p2',
-          title: '신간 소식',
-          description: '새로운 이야기와\n서점 큐레이션을\n매주 만나보세요.',
-        },
-        {
-          id: 'p3',
-          title: '이벤트',
-          description: '책모 구독자 전용\n굿즈 증정 이벤트',
-        },
-      ].slice(0, 5),
-    [],
+  const loadRecommendedUsers = useCallback(async () => {
+    if (!accessPolicy.canUseRecommendedSubscribe) {
+      setUserRecommendations([
+        { id: 'hy_0716', nickname: 'hy_0716', followingCount: 17, followerCount: 32, subscribed: false },
+        { id: 'hy_0717', nickname: 'hy_0717', followingCount: 11, followerCount: 21, subscribed: false },
+        { id: 'hy_0718', nickname: 'hy_0718', followingCount: 9, followerCount: 16, subscribed: false },
+      ]);
+      return;
+    }
+
+    try {
+      const users = await fetchRecommendedMembers();
+      if (users.length === 0) {
+        setUserRecommendations([]);
+        return;
+      }
+      setUserRecommendations(
+        users.slice(0, 3).map((user) => ({
+          id: user.nickname,
+          nickname: user.nickname,
+          profileImageUrl: user.profileImageUrl,
+          followingCount: user.followingCount,
+          followerCount: user.followerCount,
+          subscribed: false,
+        })),
+      );
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        setUserRecommendations([
+          { id: 'hy_0716', nickname: 'hy_0716', followingCount: 17, followerCount: 32, subscribed: false },
+          { id: 'hy_0717', nickname: 'hy_0717', followingCount: 11, followerCount: 21, subscribed: false },
+          { id: 'hy_0718', nickname: 'hy_0718', followingCount: 9, followerCount: 16, subscribed: false },
+        ]);
+        return;
+      }
+      if (!(error instanceof ApiError)) {
+        showToast('추천 사용자를 불러오지 못했습니다.');
+      }
+    }
+  }, [accessPolicy.canUseRecommendedSubscribe]);
+
+  useEffect(() => {
+    void loadRecommendedUsers();
+  }, [loadRecommendedUsers]);
+
+  const loadPromotions = useCallback(async () => {
+    try {
+      const news = await fetchNewsCarousel(5);
+      if (news.length === 0) {
+        setPromotions(defaultPromotions);
+        return;
+      }
+      setPromotions(
+        news.map((item, index) => ({
+          id: `news-promo-${item.id}`,
+          title: item.title,
+          description:
+            item.excerpt.trim() || '새로운 소식을 확인해보세요.',
+          imageUri:
+            item.thumbnailUrl ??
+            defaultPromotionImages[index % defaultPromotionImages.length],
+        })),
+      );
+    } catch (error) {
+      if (error instanceof ApiError) return;
+      showToast('소식을 불러오지 못했습니다.');
+      setPromotions(defaultPromotions);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPromotions();
+  }, [loadPromotions]);
+
+  const loadPosts = useCallback(
+    async ({ reset = false }: { reset?: boolean } = {}) => {
+      if (!accessPolicy.canViewBookStoryFeed) return;
+      if (reset) {
+        if (loadingPostsRef.current) return;
+        loadingPostsRef.current = true;
+        setLoadingPosts(true);
+      } else {
+        if (loadingMorePostsRef.current || !hasNextPostsRef.current) return;
+        loadingMorePostsRef.current = true;
+        setLoadingMorePosts(true);
+      }
+
+      try {
+        const cursorId = reset ? undefined : nextPostsCursorRef.current ?? undefined;
+        const feed = await fetchBookStories('ALL', cursorId);
+        const mapped = feed.items.map(mapRemoteStoryToPost);
+
+        setPosts((prev) => {
+          if (reset) return mapped;
+          if (mapped.length === 0) return prev;
+          const existingIds = new Set(prev.map((item) => item.remoteId));
+          const append = mapped.filter((item) => !existingIds.has(item.remoteId));
+          return append.length > 0 ? [...prev, ...append] : prev;
+        });
+        hasNextPostsRef.current = feed.hasNext;
+        nextPostsCursorRef.current = feed.nextCursor;
+      } catch (error) {
+        if (reset && !(error instanceof ApiError)) {
+          showToast('책이야기 목록을 불러오지 못했습니다.');
+        }
+      } finally {
+        if (reset) {
+          loadingPostsRef.current = false;
+          setLoadingPosts(false);
+        } else {
+          loadingMorePostsRef.current = false;
+          setLoadingMorePosts(false);
+        }
+      }
+    },
+    [accessPolicy.canViewBookStoryFeed],
   );
 
-  const joinedGroups: Group[] = [];
+  useEffect(() => {
+    void loadPosts({ reset: true });
+  }, [loadPosts]);
 
   const handleSubscribeToggle = (id: string) => {
-    setUserRecommendations((prev) =>
-      prev.map((user) =>
-        user.id === id ? { ...user, subscribed: !user.subscribed } : user,
-      ),
-    );
+    if (!accessPolicy.canUseRecommendedSubscribe) {
+      requireAuth();
+      return;
+    }
+
+    requireAuth(() => {
+      const target = userRecommendations.find((user) => user.id === id);
+      if (!target) return;
+      const nextSubscribed = !target.subscribed;
+
+      setUserRecommendations((prev) =>
+        prev.map((user) =>
+          user.id === id ? { ...user, subscribed: nextSubscribed } : user,
+        ),
+      );
+
+      const submit = async () => {
+        try {
+          await setFollowingMember(target.nickname, nextSubscribed);
+          showToast(nextSubscribed ? '구독했습니다.' : '구독을 취소했습니다.');
+        } catch {
+          setUserRecommendations((prev) =>
+            prev.map((user) =>
+              user.id === id ? { ...user, subscribed: !nextSubscribed } : user,
+            ),
+          );
+          showToast('구독 상태를 변경하지 못했습니다.');
+        }
+      };
+      void submit();
+    });
   };
 
   const handleLoadMorePosts = () => {
-    setPosts((prev) => [...prev, ...buildPosts(4, prev.length)]);
+    void loadPosts();
   };
 
   const handleToggleLike = (id: string) => {
-    setPosts((prev) =>
-      prev.map((post) => {
-        if (post.id !== id) return post;
-        const liked = !post.liked;
-        const likes = liked ? post.likes + 1 : Math.max(0, post.likes - 1);
-        return { ...post, liked, likes };
-      }),
-    );
+    if (!accessPolicy.canUseBookStoryLike) {
+      requireAuth();
+      return;
+    }
+
+    requireAuth(() => {
+      const target = posts.find((post) => post.id === id);
+      if (!target) return;
+      const nextLiked = !target.liked;
+
+      setPosts((prev) =>
+        prev.map((post) => {
+          if (post.id !== id) return post;
+          return {
+            ...post,
+            liked: nextLiked,
+            likes: nextLiked ? post.likes + 1 : Math.max(0, post.likes - 1),
+          };
+        }),
+      );
+
+      const submit = async () => {
+        try {
+          await toggleBookStoryLike(target.remoteId);
+        } catch {
+          setPosts((prev) =>
+            prev.map((post) => {
+              if (post.id !== id) return post;
+              return {
+                ...post,
+                liked: !nextLiked,
+                likes: !nextLiked ? post.likes + 1 : Math.max(0, post.likes - 1),
+              };
+            }),
+          );
+          showToast('좋아요 상태를 변경하지 못했습니다.');
+        }
+      };
+      void submit();
+    });
+  };
+
+  const handleTogglePostSubscribe = (id: string) => {
+    if (!accessPolicy.canUseBookStorySubscribe) {
+      requireAuth();
+      return;
+    }
+
+    requireAuth(() => {
+      const target = posts.find((post) => post.id === id);
+      if (!target) return;
+      const nextSubscribed = !target.subscribed;
+
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === id ? { ...post, subscribed: nextSubscribed } : post,
+        ),
+      );
+
+      const submit = async () => {
+        try {
+          await setFollowingMember(target.author, nextSubscribed);
+          showToast(nextSubscribed ? '구독했습니다.' : '구독을 취소했습니다.');
+        } catch {
+          setPosts((prev) =>
+            prev.map((post) =>
+              post.id === id ? { ...post, subscribed: !nextSubscribed } : post,
+            ),
+          );
+          showToast('구독 상태를 변경하지 못했습니다.');
+        }
+      };
+      void submit();
+    });
   };
 
   const handleRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setPosts(buildPosts(6));
-      setUserRecommendations((prev) =>
-        prev.map((user) => ({ ...user, subscribed: false })),
-      );
+    const refresh = async () => {
+      await Promise.all([loadRecommendedUsers(), loadPosts({ reset: true }), loadPromotions()]);
       setRefreshing(false);
-    }, 700);
+    };
+    void refresh();
   };
 
-  const renderPromotion = ({ item }: { item: Promotion }) => (
-    <View
-      style={[styles.promoCard, { width: width - spacing.xl * 2 }]}
-      accessible
-      accessibilityLabel={`${item.title} 프로모션`}
-    >
-      <View style={styles.promoGradient} />
-      <View style={styles.promoContent}>
-        <Text style={styles.promoTitle}>{item.title}</Text>
-        <Text style={styles.promoDesc}>{item.description}</Text>
-      </View>
-    </View>
+  const handlePromotionScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const rawIndex = Math.round(event.nativeEvent.contentOffset.x / promotionStep);
+    const safeIndex = Math.max(0, Math.min(promotions.length - 1, rawIndex));
+    if (safeIndex !== activeSlide) {
+      setActiveSlide(safeIndex);
+    }
+  };
+
+  const handlePressAuthTest = () => {
+    if (isLoggedIn) {
+      void logoutSession().finally(() => logout());
+      return;
+    }
+    requireAuth();
+  };
+
+  const openUserProfile = useCallback(
+    (nickname: string) => {
+      const memberNickname = nickname.trim();
+      if (!memberNickname) return;
+      navigation.navigate('UserProfile', { memberNickname, fromScreen: 'Home' });
+    },
+    [navigation],
   );
 
   const header = (
     <View style={styles.headerContainer}>
-      <Text style={styles.sectionTitle}>소식</Text>
-      <ScrollView
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        snapToAlignment="center"
-        onScroll={(event) => {
-          const index = Math.round(
-            event.nativeEvent.contentOffset.x / (width - spacing.xl * 2),
-          );
-          setActiveSlide(index);
-        }}
-        scrollEventThrottle={16}
-        decelerationRate="fast"
-        contentContainerStyle={styles.carousel}
-      >
-        {promotions.map((promo) => (
-          <View key={promo.id} style={styles.promoWrapper}>
-            {renderPromotion({ item: promo })}
+      <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
+        <Text style={styles.sectionTitle}>소식</Text>
+      </View>
+      <HomePromotions
+        promotions={promotions}
+        horizontalInset={horizontalInset}
+        promotionWidth={promotionWidth}
+        promotionStep={promotionStep}
+        activeSlide={activeSlide}
+        onScroll={handlePromotionScroll}
+      />
+      <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
+        <View style={styles.userRecommendationCard}>
+          <Text style={styles.sectionTitle}>사용자 추천</Text>
+          <View style={styles.userRecommendationList}>
+            {userRecommendations.length > 0 ? (
+              userRecommendations.map((user) => (
+                <SubscribeUserItem
+                  key={user.id}
+                  nickname={user.nickname}
+                  profileImageUrl={user.profileImageUrl}
+                  followingCount={user.followingCount}
+                  followerCount={user.followerCount}
+                  subscribed={user.subscribed}
+                  onPressProfile={() => openUserProfile(user.nickname)}
+                  onPressSubscribe={() => handleSubscribeToggle(user.id)}
+                />
+              ))
+            ) : (
+              <Text style={styles.emptyUserText}>추천 사용자가 없습니다.</Text>
+            )}
           </View>
-        ))}
-      </ScrollView>
-      <View style={styles.dots}>
-        {promotions.map((promo, index) => (
-          <View
-            key={promo.id}
-            style={[
-              styles.dot,
-              index === activeSlide ? styles.dotActive : null,
-            ]}
-          />
-        ))}
-      </View>
-
-      <View style={styles.columns}>
-        <View style={[styles.columnCard, styles.columnLeft]}>
-          <Text style={styles.columnTitle}>독서모임</Text>
-          {joinedGroups.length === 0 ? (
-            <View style={styles.emptyGroups}>
-              <Text style={styles.emptyGroupsTitle}>
-                다른 독서 모임도 둘러볼까요?
-              </Text>
-              <Pressable style={styles.secondaryButton}>
-                <MaterialIcons
-                  name="search"
-                  size={18}
-                  color={colors.gray6}
-                />
-                <Text style={styles.secondaryButtonText}>모임 검색하기</Text>
-              </Pressable>
-              <Pressable style={styles.primaryButton}>
-                <MaterialIcons
-                  name="add"
-                  size={18}
-                  color={colors.white}
-                />
-                <Text style={styles.primaryButtonText}>모임 생성하기</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={styles.groupList}>
-              {joinedGroups.map((group) => (
-                <View key={group.id} style={styles.groupItem}>
-                  <Text style={styles.groupName}>{group.name}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View style={[styles.columnCard, styles.columnRight]}>
-          <Text style={styles.columnTitle}>사용자 추천</Text>
-          {userRecommendations.map((user) => (
-            <View key={user.id} style={styles.userRow}>
-              <View style={styles.userAvatar}>
-                <MaterialIcons
-                  name="person-outline"
-                  size={20}
-                  color={colors.gray5}
-                />
-              </View>
-              <Text style={styles.username}>{user.username}</Text>
-              <Pressable
-                onPress={() => handleSubscribeToggle(user.id)}
-                style={[
-                  styles.chipButton,
-                  user.subscribed ? styles.chipActive : styles.chipInactive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    user.subscribed
-                      ? styles.chipTextActive
-                      : styles.chipTextInactive,
-                  ]}
-                >
-                  {user.subscribed ? '구독중' : '구독'}
-                </Text>
-              </Pressable>
-            </View>
-          ))}
         </View>
       </View>
+
+      <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
+        <Text style={styles.sectionTitle}>책이야기(전체)</Text>
+      </View>
+      <View style={styles.headerToStorySpacer} />
     </View>
   );
 
   return (
-    <FlatList
-      data={posts}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.listContent}
-      ListHeaderComponent={header}
-      renderItem={({ item }) => (
-        <BookStoryCard
-          author={item.author}
-          timeAgo={item.timeAgo}
-          views={item.views}
-          title={item.title}
-          body={item.body}
-          likes={item.likes}
-          comments={item.comments}
-          liked={item.liked}
-          image={Image.resolveAssetSource(require('../../assets/tmp/little-prince.jpg')).uri}
-          onToggleLike={() => handleToggleLike(item.id)}
+    <ScreenLayout title="책모 홈">
+      <View style={styles.screenBody}>
+        <FlatList
+          data={posts}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          ListHeaderComponent={header}
+          ItemSeparatorComponent={() => <View style={styles.postItemSeparator} />}
+          ListEmptyComponent={
+            !loadingPosts ? (
+              <Text style={styles.emptyPostText}>표시할 책이야기가 없습니다.</Text>
+            ) : null
+          }
+          ListFooterComponent={
+            loadingMorePosts ? <Text style={styles.loadingPostText}>불러오는 중...</Text> : null
+          }
+          renderItem={({ item }) => (
+            <HomePostCard
+              post={item}
+              onToggleLike={handleToggleLike}
+              onToggleSubscribe={handleTogglePostSubscribe}
+              onPressAuthor={openUserProfile}
+            />
+          )}
+          onEndReached={handleLoadMorePosts}
+          onEndReachedThreshold={0.3}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary1}
+              colors={[colors.primary1]}
+            />
+          }
         />
-      )}
-      onEndReached={handleLoadMorePosts}
-      onEndReachedThreshold={0.3}
-      showsVerticalScrollIndicator={false}
-      ListFooterComponent={<View style={{ height: spacing.xxl }} />}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor={colors.primary1}
-          colors={[colors.primary1]}
-        />
-      }
-    />
+
+        <Pressable
+          style={({ pressed }) => [styles.authTestButton, pressed && styles.authTestPressed]}
+          onPress={handlePressAuthTest}
+        >
+          <Text style={styles.authTestButtonText}>
+            {isLoggedIn ? '로그아웃(테스트)' : '로그인/회원가입(테스트)'}
+          </Text>
+        </Pressable>
+      </View>
+    </ScreenLayout>
   );
 }
 
-function buildPosts(count: number, offset = 0): Post[] {
-  return Array.from({ length: count }).map((_, index) => {
-    const id = offset + index + 1;
-    return {
-      id: `post-${id}`,
-      author: `hy_071${(id % 10).toString()}`,
-      timeAgo: `${2 + (id % 3)}분전`,
-      views: 300 + id,
-      title: '나는 나이트 왕자다',
-      body:
-        '나는 나이트 왕자다. 그 누가 숫자가 중요하다가 했던가. 세고 또 세는 그런 마법같은 경험을 한 사람은 놀랍도록 이 세상에 얼마 안된다! 나는 숲이 아닌 바다만큼...',
-      likes: 1 + (id % 3),
-      comments: 1 + (id % 2),
-      liked: false,
-    };
-  });
+function mapRemoteStoryToPost(item: RemoteStoryItem): Post {
+  return {
+    id: `post-${item.id}`,
+    remoteId: item.id,
+    author: item.nickname,
+    timeAgo: toKstTimeAgoLabel(item.createdAt),
+    views: item.viewCount,
+    title: item.title,
+    body: item.description,
+    likes: item.likeCount,
+    comments: item.commentCount,
+    liked: item.liked,
+    subscribed: item.following,
+    image: item.bookInfo?.imgUrl,
+  };
 }
 
 const styles = StyleSheet.create({
+  screenBody: {
+    flex: 1,
+  },
   listContent: {
-    paddingBottom: spacing.xl,
     backgroundColor: colors.background,
+    paddingTop: spacing.md,
+  },
+  postItemSeparator: {
+    height: spacing.sm,
   },
   headerContainer: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
     gap: spacing.md,
+  },
+  userRecommendationCard: {
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  userRecommendationList: {
+    gap: spacing.sm,
+  },
+  emptyUserText: {
+    ...typography.body2_2,
+    color: colors.gray4,
+  },
+  emptyPostText: {
+    ...typography.body2_2,
+    color: colors.gray4,
+    textAlign: 'center',
+    paddingVertical: spacing.lg,
+  },
+  loadingPostText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textAlign: 'center',
+    paddingVertical: spacing.md,
+  },
+  headerToStorySpacer: {
+    height: spacing.md,
+  },
+  contentBlock: {
+    width: '100%',
   },
   sectionTitle: {
     ...typography.body1_2,
     color: colors.gray6,
   },
-  carousel: {
-    paddingVertical: spacing.xs,
-  },
-  promoWrapper: {
-    marginRight: spacing.sm,
-  },
-  promoCard: {
-    borderRadius: radius.md,
-    backgroundColor: colors.gray1,
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
-    padding: spacing.lg,
-    aspectRatio: 16 / 10,
-  },
-  promoGradient: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(91, 71, 61, 0.35)',
-  },
-  promoContent: {
-    gap: spacing.xs,
-  },
-  promoTitle: {
-    ...typography.subhead3,
-    color: colors.white,
-  },
-  promoDesc: {
-    ...typography.body1_3,
-    color: colors.white,
-  },
-  dots: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.xs,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.gray2,
-  },
-  dotActive: {
+  authTestButton: {
+    position: 'absolute',
+    right: spacing.md,
+    bottom: 96,
+    height: 40,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
     backgroundColor: colors.primary1,
-  },
-  columns: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  columnCard: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  columnLeft: {},
-  columnRight: {},
-  columnTitle: {
-    ...typography.body1_2,
-    color: colors.gray6,
-  },
-  emptyGroups: {
-    gap: spacing.sm,
-  },
-  emptyGroupsTitle: {
-    ...typography.body1_3,
-    color: colors.gray5,
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.gray2,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.white,
-  },
-  secondaryButtonText: {
-    ...typography.body1_2,
-    color: colors.gray6,
-  },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  primaryButtonText: {
-    ...typography.body1_2,
-    color: colors.white,
-  },
-  groupList: {
-    gap: spacing.xs,
-  },
-  groupItem: {
-    backgroundColor: colors.subbrown4,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  groupName: {
-    ...typography.body1_3,
-    color: colors.gray6,
-  },
-  userRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  userAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.gray1,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 20,
   },
-  username: {
-    ...typography.body1_3,
-    color: colors.gray6,
-    flex: 1,
-  },
-  chipButton: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-  },
-  chipActive: {
-    backgroundColor: colors.primary1,
-    borderColor: colors.primary1,
-  },
-  chipInactive: {
-    backgroundColor: colors.white,
-    borderColor: colors.primary1,
-  },
-  chipText: {
+  authTestButtonText: {
     ...typography.body2_2,
-  },
-  chipTextActive: {
     color: colors.white,
   },
-  chipTextInactive: {
-    color: colors.primary1,
-  },
-  postCard: {
-    backgroundColor: colors.white,
-    marginHorizontal: spacing.md,
-    marginVertical: spacing.xs,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    gap: spacing.sm,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  postHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  postAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.gray1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  postMeta: {
-    flex: 1,
-  },
-  postAuthor: {
-    ...typography.body1_2,
-    color: colors.gray6,
-  },
-  postSubtitle: {
-    ...typography.body2_3,
-    color: colors.gray4,
-  },
-  subscribeInline: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primary1,
-  },
-  postPlaceholder: {
-    aspectRatio: 16 / 9,
-    borderRadius: radius.md,
-    backgroundColor: colors.gray1,
-  },
-  postTitle: {
-    ...typography.subhead4_1,
-    color: colors.gray6,
-  },
-  postBody: {
-    ...typography.body1_3,
-    color: colors.gray6,
-  },
-  postActions: {
-    flexDirection: 'row',
-    gap: spacing.lg,
-  },
-  postAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  postActionText: {
-    ...typography.body2_3,
-    color: colors.gray5,
+  authTestPressed: {
+    opacity: 0.8,
   },
 });

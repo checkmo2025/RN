@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-import { colors, spacing } from '../theme';
+import { colors, spacing } from '../../theme';
 
 export type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 

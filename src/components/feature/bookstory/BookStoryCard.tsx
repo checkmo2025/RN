@@ -11,7 +11,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, spacing, typography } from '../../../theme';
 
 type Props = {
   author: string;
@@ -27,11 +27,12 @@ type Props = {
   onPress?: () => void;
   onToggleLike?: () => void;
   onToggleSubscribe?: () => void;
+  onPressAuthor?: () => void;
   onPressComment?: (e?: GestureResponderEvent) => void;
 };
 
 const commentIconUri = Image.resolveAssetSource(
-  require('../../assets/book-story/bookstory-comment.svg'),
+  require('../../../../assets/book-story/bookstory-comment.svg'),
 ).uri;
 
 export function BookStoryCard({
@@ -48,20 +49,29 @@ export function BookStoryCard({
   onPress,
   onToggleLike,
   onToggleSubscribe,
+  onPressAuthor,
   onPressComment,
 }: Props) {
   return (
     <Pressable style={styles.card} onPress={onPress}>
       <View style={styles.headerRow}>
-        <View style={styles.avatar}>
-          <MaterialIcons name="person-outline" size={24} color={colors.gray5} />
-        </View>
-        <View style={styles.meta}>
-          <Text style={styles.author}>{author}</Text>
-          <Text style={styles.subtitle}>
-            {timeAgo} · 조회수 {views}
-          </Text>
-        </View>
+        <Pressable
+          style={({ pressed }) => [styles.authorPressArea, pressed && styles.pressed]}
+          onPress={(e) => {
+            e.stopPropagation?.();
+            onPressAuthor?.();
+          }}
+        >
+          <View style={styles.avatar}>
+            <MaterialIcons name="person-outline" size={24} color={colors.gray5} />
+          </View>
+          <View style={styles.meta}>
+            <Text style={styles.author}>{author}</Text>
+            <Text style={styles.subtitle}>
+              {timeAgo} · 조회수 {views}
+            </Text>
+          </View>
+        </Pressable>
         {typeof subscribed !== 'undefined' ? (
           <Pressable
             style={[
@@ -89,9 +99,15 @@ export function BookStoryCard({
         source={image ? { uri: image } : undefined}
         style={styles.coverBg}
         imageStyle={styles.coverBgImage}
+        blurRadius={18}
         resizeMode="cover"
       >
-        {image ? <Image source={{ uri: image }} style={styles.cover} resizeMode="contain" /> : null}
+        <View style={styles.coverOverlay} />
+        {image ? (
+          <Image source={{ uri: image }} style={styles.cover} resizeMode="contain" />
+        ) : (
+          <View style={styles.coverPlaceholder} />
+        )}
       </ImageBackground>
 
       <Text style={styles.title}>{title}</Text>
@@ -142,6 +158,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  authorPressArea: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -197,11 +219,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   coverBgImage: {
-    opacity: 0.55,
+    opacity: 0.9,
+    transform: [{ scale: 1.08 }],
+  },
+  coverOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.56)',
   },
   cover: {
-    width: '60%',
-    height: '60%',
+    width: '52%',
+    height: '92%',
+    borderRadius: spacing.xs,
+    shadowColor: '#000',
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  coverPlaceholder: {
+    width: '52%',
+    height: '92%',
+    borderRadius: spacing.xs,
+    backgroundColor: colors.gray1,
   },
   title: {
     ...typography.subhead4_1,
@@ -234,5 +273,8 @@ const styles = StyleSheet.create({
     width: 1,
     height: 20,
     backgroundColor: colors.gray2,
+  },
+  pressed: {
+    opacity: 0.75,
   },
 });
