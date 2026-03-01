@@ -1,10 +1,11 @@
 import React from 'react';
 
-import { BookStoryCard } from '../bookstory/BookStoryCard';
+import BookStoryFeedCard from '../bookstory/BookStoryFeedCard';
 
 export type HomePost = {
   id: string;
   author: string;
+  profileImageUrl?: string;
   timeAgo: string;
   views: number;
   title: string;
@@ -13,37 +14,47 @@ export type HomePost = {
   comments: number;
   liked: boolean;
   subscribed: boolean;
+  mine: boolean;
   image?: string;
 };
 
 type Props = {
   post: HomePost;
+  viewerIsLoggedIn?: boolean;
   onToggleLike: (id: string) => void;
   onToggleSubscribe: (id: string) => void;
+  onPress?: (id: string) => void;
   onPressAuthor?: (nickname: string) => void;
 };
 
 export default function HomePostCard({
   post,
+  viewerIsLoggedIn = false,
   onToggleLike,
   onToggleSubscribe,
+  onPress,
   onPressAuthor,
 }: Props) {
+  const isMineForViewer = viewerIsLoggedIn && post.mine;
+
   return (
-    <BookStoryCard
-      author={post.author}
+    <BookStoryFeedCard
+      authorName={post.author}
+      profileImgSrc={post.profileImageUrl}
       timeAgo={post.timeAgo}
-      views={post.views}
+      viewCount={post.views}
       title={post.title}
-      body={post.body}
-      likes={post.likes}
-      comments={post.comments}
+      content={post.body}
+      likeCount={post.likes}
+      commentCount={post.comments}
       liked={post.liked}
-      subscribed={post.subscribed}
-      image={post.image}
+      isAuthor={isMineForViewer}
+      subscribed={isMineForViewer ? undefined : post.subscribed}
+      coverImgSrc={post.image}
+      onPress={onPress ? () => onPress(post.id) : undefined}
       onToggleLike={() => onToggleLike(post.id)}
-      onToggleSubscribe={() => onToggleSubscribe(post.id)}
-      onPressAuthor={() => onPressAuthor?.(post.author)}
+      onToggleSubscribe={isMineForViewer ? undefined : () => onToggleSubscribe(post.id)}
+      onPressAuthor={onPressAuthor ? () => onPressAuthor(post.author) : undefined}
     />
   );
 }

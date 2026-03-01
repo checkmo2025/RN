@@ -2,14 +2,22 @@ import { useEffect, useRef } from 'react';
 import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 
-import { colors, typography } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
 
 const LOGO_WIDTH = 100;
 const LOGO_HEIGHT = 60;
 
 const logoUri = Image.resolveAssetSource(require('../../../assets/icons/logo_primary.svg')).uri;
 
-export function BookFlipLoadingScreen() {
+type Props = {
+  detailTitle?: string;
+  detailDescription?: string;
+};
+
+export function BookFlipLoadingScreen({
+  detailTitle,
+  detailDescription,
+}: Props) {
   const fillProgress = useRef(new Animated.Value(0)).current;
   const textOpacity = useRef(new Animated.Value(0.35)).current;
 
@@ -92,6 +100,10 @@ export function BookFlipLoadingScreen() {
       <Animated.Text style={[styles.loadingText, { opacity: textOpacity }]}>
         로딩중
       </Animated.Text>
+      {detailTitle ? <Text style={styles.detailTitle}>{detailTitle}</Text> : null}
+      {detailDescription ? (
+        <Text style={styles.detailDescription}>{detailDescription}</Text>
+      ) : null}
     </View>
   );
 }
@@ -138,5 +150,17 @@ const styles = StyleSheet.create({
     marginTop: 14,
     color: '#BDBDBD',
     letterSpacing: 0.2,
+  },
+  detailTitle: {
+    ...typography.body1_2,
+    marginTop: spacing.lg,
+    color: colors.gray6,
+    textAlign: 'center',
+  },
+  detailDescription: {
+    ...typography.body2_3,
+    marginTop: spacing.xs,
+    color: colors.gray4,
+    textAlign: 'center',
   },
 });

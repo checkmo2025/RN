@@ -35,6 +35,13 @@ export type RemoteNewsDetail = RemoteNewsSummary & {
   imageUrls: string[];
 };
 
+export type RemoteNewsSummaryList = {
+  items: RemoteNewsSummary[];
+  hasNext: boolean;
+  nextCursor: number | null;
+  pageSize?: number;
+};
+
 function buildUrl(path: string, query?: Record<string, QueryValue>) {
   const normalizedPath = path
     .replace(/^\/+/, '')
@@ -191,93 +198,61 @@ function normalizeNewsDetail(raw: unknown): RemoteNewsDetail | null {
   };
 }
 
-function normalizeNewsList(payload: unknown): RemoteNewsSummary[] {
+function normalizeNewsListResult(payload: unknown): RemoteNewsSummaryList {
   const result = unwrapResult(payload as NewsListResponse);
+  const resultRecord = asRecord(result);
 
   const list = Array.isArray(result)
     ? result
-    : Array.isArray(asRecord(result)?.basicInfoList)
-      ? (asRecord(result)?.basicInfoList as unknown[])
-      : Array.isArray(asRecord(result)?.newsList)
-        ? (asRecord(result)?.newsList as unknown[])
-        : Array.isArray(asRecord(result)?.content)
-          ? (asRecord(result)?.content as unknown[])
-          : Array.isArray(asRecord(result)?.items)
-            ? (asRecord(result)?.items as unknown[])
+    : Array.isArray(resultRecord?.basicInfoList)
+      ? (resultRecord.basicInfoList as unknown[])
+      : Array.isArray(resultRecord?.newsList)
+        ? (resultRecord.newsList as unknown[])
+        : Array.isArray(resultRecord?.content)
+          ? (resultRecord.content as unknown[])
+          : Array.isArray(resultRecord?.items)
+            ? (resultRecord.items as unknown[])
             : [];
 
-  return list
-    .map(normalizeNewsSummary)
-    .filter((item): item is RemoteNewsSummary => Boolean(item));
+  return {
+    items: list
+      .map(normalizeNewsSummary)
+      .filter((item): item is RemoteNewsSummary => Boolean(item)),
+    hasNext: typeof resultRecord?.hasNext === 'boolean' ? resultRecord.hasNext : false,
+    nextCursor: toNumber(resultRecord?.nextCursor) ?? null,
+    pageSize: toNumber(resultRecord?.pageSize),
+  };
 }
 
-export async function fetchNewsList(page?: number): Promise<RemoteNewsSummary[]> {
-  const candidatePaths = ['/news', '/news/list', '/newses'] as const;
+export async function fetchNewsList(cursorId?: number): Promise<RemoteNewsSummary[]> {
+  const response = await requestJsonSilent<NewsListResponse>('/news', {
+    method: 'GET',
+    query: {
+      cursorId,
+    },
+  });
+  return normalizeNewsListResult(response).items;
+}
 
-  for (const path of candidatePaths) {
-    try {
-      const response = await requestJsonSilent<NewsListResponse>(path, {
-        method: 'GET',
-        query: {
-          page,
-        },
-      });
-      return normalizeNewsList(response);
-    } catch (error) {
-      if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
-        continue;
-      }
-      throw error;
-    }
-  }
-
-  throw new ApiError('소식 목록 조회 경로를 찾지 못했습니다.', 404, 'NEWS_LIST_PATH_NOT_FOUND');
+export async function fetchMyNewsList(cursorId?: number): Promise<RemoteNewsSummaryList> {
+  const response = await requestJsonSilent<NewsListResponse>('/news/me', {
+    method: 'GET',
+    query: {
+      cursorId,
+    },
+  });
+  return normalizeNewsListResult(response);
 }
 
 export async function fetchNewsDetail(newsId: number): Promise<RemoteNewsDetail | null> {
-  const candidatePaths = [`/news/${newsId}`, `/news/detail/${newsId}`, `/newses/${newsId}`] as const;
-
-  for (const path of candidatePaths) {
-    try {
-      const response = await requestJsonSilent<NewsDetailResponse>(path, {
-        method: 'GET',
-      });
-      const result = unwrapResult(response);
-      return normalizeNewsDetail(result);
-    } catch (error) {
-      if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
-        continue;
-      }
-      throw error;
-    }
-  }
-
-  throw new ApiError('소식 상세 조회 경로를 찾지 못했습니다.', 404, 'NEWS_DETAIL_PATH_NOT_FOUND');
+  const response = await requestJsonSilent<NewsDetailResponse>(`/news/${newsId}`, {
+    method: 'GET',
+  });
+  const result = unwrapResult(response);
+  return normalizeNewsDetail(result);
 }
 
 export async function fetchNewsCarousel(limit = 5): Promise<RemoteNewsSummary[]> {
-  try {
-    const carouselPaths = ['/news/carousel', '/news/banner', '/news/banners'] as const;
-    for (const path of carouselPaths) {
-      try {
-        const response = await requestJsonSilent<NewsListResponse>(path, {
-          method: 'GET',
-        });
-        const items = normalizeNewsList(response);
-        if (items.length > 0) return items.slice(0, limit);
-      } catch (error) {
-        if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
-          continue;
-        }
-        throw error;
-      }
-    }
-  } catch (error) {
-    if (!(error instanceof ApiError)) {
-      throw error;
-    }
-  }
-
   const list = await fetchNewsList();
   return list.slice(0, limit);
 }

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import {
   Alert,
   Image,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -16,34 +17,82 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
+import { SvgUri } from 'react-native-svg';
 
 import { colors, radius, spacing, typography } from '../theme';
+import { navigateToHome } from '../navigation/navigateToHome';
+import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
+import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import { ScreenLayout } from '../components/common/ScreenLayout';
+import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import { MeetingListCard } from '../components/feature/groups/MeetingListCard';
 import { MyGroupsDropdownCard } from '../components/feature/groups/MyGroupsDropdownCard';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { ApiError } from '../services/api/http';
+import { issueImageUploadUrl } from '../services/api/authApi';
 import {
   checkClubNameDuplicate,
   createClub,
+  createClubBookshelf,
+  createClubNotice,
+  createClubNoticeComment,
+  deleteClubNotice,
+  fetchClubBookshelfDetail,
+  fetchClubBookshelfReviews,
+  fetchClubBookshelfTopics,
+  fetchClubBookshelves,
+  fetchClubDetail,
   fetchRecommendedClubs,
   fetchClubHome,
+  fetchClubMeeting,
+  fetchClubMeetingTeamTopics,
+  fetchClubMembers,
+  fetchClubNoticeComments,
+  fetchClubNoticeDetail,
+  fetchClubNotices,
   fetchMyClubs,
   joinClub,
   searchClubs,
+  submitClubNoticeVote,
+  updateClub,
+  updateClubMemberStatus,
+  updateClubNotice,
   type ClubDetailResult,
   type ClubCategoryCode,
+  type ClubContact,
+  type ClubManagedMember,
+  type ClubMeetingInfo,
+  type ClubMeetingTeamTopics,
+  type ClubMembershipStatus,
+  type ClubNoticeComment,
+  type ClubNoticeDetail,
+  type ClubNoticePreview,
   type ClubParticipantTypeCode,
   type ClubSearchInputFilter,
   type ClubSearchItem,
   type ClubSearchOutputFilter,
 } from '../services/api/clubApi';
+import { searchBooks, type BookItem } from '../services/api/bookApi';
+import { reportMember, type MemberReportType } from '../services/api/memberApi';
+import {
+  formatKstDateLabel,
+  formatKstDateTimeLabel,
+  getCurrentKstApiDateTime,
+  getCurrentKstDateLabel,
+  getCurrentKstYearMonth,
+  toKstApiDateTime,
+} from '../utils/date';
+import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Group = {
   id: string;
   clubId?: number;
   name: string;
+  profileImageUrl?: string;
+  links?: ClubContact[];
   tags: string[];
   topic: string;
   region: string;
@@ -67,6 +116,8 @@ const outputFilterOptions: Array<{ label: string; value: ClubSearchOutputFilter 
   { label: '모임', value: 'MEETING' },
   { label: '대면', value: 'OFFLINE' },
 ];
+const BOOKSHELF_MEETING_TITLE_MAX_LENGTH = 12;
+const BOOKSHELF_MEETING_LOCATION_MAX_LENGTH = 12;
 
 const categoryLabelByCode: Record<string, string> = {
   FICTION_POETRY_DRAMA: '소설/시/희곡',
@@ -95,70 +146,205 @@ const participantLabelByCode: Record<string, string> = {
   OFFLINE: '오프라인',
 };
 
-const fallbackMyGroups: Group[] = [
-  {
-    id: 'my-1',
-    name: '새벽 독서회',
-    tags: ['에세이', '인문학'],
-    topic: '모임 대상 · 직장인, 대학생',
-    region: '활동 지역 · 서울 영등포구',
-    notice: '이번 주는 7시 온라인 모임으로 진행합니다.',
-    description: '출근 전 40분 독서와 짧은 토론으로 하루를 여는 모임입니다.',
-  },
-  {
-    id: 'my-2',
-    name: '강북 소설 클럽',
-    tags: ['소설/시/희곡', '역사/문화'],
-    topic: '모임 대상 · 대학생, 직장인',
-    region: '활동 지역 · 강북',
-    notice: '2월 마지막 주제는 한국 단편 소설입니다.',
-    description: '한 달에 두 번 오프라인으로 만나 작품을 깊게 읽습니다.',
-  },
-  {
-    id: 'my-3',
-    name: '논픽션 라운지',
-    tags: ['사회과학', '정치/외교/국방', '경제/경영'],
-    topic: '모임 대상 · 직장인',
-    region: '활동 지역 · 서울 마포구',
-    description: '시사/경제 논픽션을 읽고 실무 관점으로 토론합니다.',
-  },
-];
+const MIN_BOOK_FLIP_LOADING_MS = 1000;
+const clubDefaultImageUri = Image.resolveAssetSource(
+  require('../../assets/icons/logo_primary.svg'),
+).uri;
+const clubDefaultProfileLogoUri = Image.resolveAssetSource(
+  require('../../assets/mobile-header-logo.svg'),
+).uri;
+const calendarWeekdayLabels = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
-const fallbackDiscoverGroups: Group[] = [
-  {
-    id: 'g-1',
-    name: '복적복적',
-    tags: ['여행', '외국어', '어린이/청소년', '종교/철학', '과학', '경제/경영'],
-    topic: '모임 대상 · 대학생, 직장인, 동아리, 모임',
-    region: '활동 지역 · 강북',
-    applicationStatus: '신청 완료',
-    notice: '금칙 금칙 머리나 굳지 말고 모임에서 책임지고! 금칙굳적 독서 모임 소개글',
-    description:
-      '책을 좋아하는 사람들이 모여 각자의 속도로 읽고, 각자의 언어로 생각을 나누는 책 모임입니다. 이 모임은 정답을 찾기보다 질문을 남기는 시간을 소중히 여깁니다. 한 권의 책을 통해 서로의 관점과 경험을 자연스럽게 공유하는 것을 목표로 합니다.',
-    nextSession: '이번 모임 바로가기',
-    isPrivate: true,
-  },
-  {
-    id: 'g-2',
-    name: '독서 사색',
-    tags: ['소설/시/희곡', '에세이', '인문학', '사회과학', '정치/외교/국방', '역사/문화'],
-    topic: '작품 토론 · 격주',
-    region: '온라인',
-    notice: '이번 달 주제: 단편 소설로 떠나는 세계 여행',
-    description:
-      '서로의 해석을 존중하며 깊이 있는 토론을 지향합니다. 처음 오시는 분들도 부담 없이 의견을 나누고 배울 수 있는 공간을 목표로 합니다.',
-  },
-  {
-    id: 'g-3',
-    name: '북적북적 IT',
-    tags: ['과학', '컴퓨터/IT', '경제/경영', '자기계발', '사회과학', '예술/대중문화'],
-    topic: '모임 대상 · 직장인, 대학생, 온라인',
-    region: '활동 지역 · 서울 마포구',
-    notice: '이번 주는 생성형 AI 책으로 토론합니다.',
-    description:
-      '기술과 인문학의 접점을 함께 읽고 토론하는 모임입니다. 매주 1권을 읽고 핵심 인사이트를 공유합니다.',
-  },
-];
+function ClubDefaultProfileArtwork({
+  variant = 'detail',
+}: {
+  variant?: 'detail' | 'preview';
+}) {
+  const preview = variant === 'preview';
+
+  return (
+    <View
+      style={[
+        styles.clubDefaultProfileArtwork,
+        preview ? styles.clubDefaultProfileArtworkPreview : styles.clubDefaultProfileArtworkDetail,
+      ]}
+    >
+      <SvgUri
+        uri={clubDefaultProfileLogoUri}
+        width={preview ? 72 : 96}
+        height={preview ? 44 : 58}
+      />
+    </View>
+  );
+}
+
+async function waitForMinimumLoading(startedAt: number, minimumMs = MIN_BOOK_FLIP_LOADING_MS) {
+  const elapsed = Date.now() - startedAt;
+  const remaining = minimumMs - elapsed;
+  if (remaining <= 0) return;
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, remaining);
+  });
+}
+
+function formatDotDateValue(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}.${month}.${day}`;
+}
+
+function formatDotDate(value?: string): string {
+  return formatKstDateLabel(value);
+}
+
+function formatDotDateTime(value?: string): string {
+  return formatKstDateTimeLabel(value);
+}
+
+function toApiDateTime(value: string): string | undefined {
+  return toKstApiDateTime(value);
+}
+
+function toTeamLabel(teamNumber?: number): string {
+  if (!teamNumber || teamNumber < 1) return '미배정';
+  const alphabetIndex = teamNumber - 1;
+  if (alphabetIndex >= 0 && alphabetIndex < 26) {
+    return `${String.fromCharCode(65 + alphabetIndex)}조`;
+  }
+  return `${teamNumber}조`;
+}
+
+function parseGenerationNumber(value?: string): number | null {
+  if (!value) return null;
+  const digits = value.replace(/[^0-9]/g, '');
+  if (!digits) return null;
+  const parsed = Number(digits);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function formatGenerationLabel(value?: string | number | null): string {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return `${value}기`;
+  }
+  if (typeof value === 'string') {
+    const parsed = parseGenerationNumber(value);
+    return parsed ? `${parsed}기` : value;
+  }
+  return '';
+}
+
+function sanitizeGenerationInput(value: string): string {
+  return value.replace(/[^0-9]/g, '').slice(0, 2);
+}
+
+function inferMimeType(fileName?: string, fallback?: string): string {
+  if (typeof fallback === 'string' && fallback.startsWith('image/')) return fallback;
+  const extension = fileName?.split('.').pop()?.toLowerCase();
+  switch (extension) {
+    case 'png':
+      return 'image/png';
+    case 'webp':
+      return 'image/webp';
+    case 'heic':
+    case 'heif':
+      return 'image/heic';
+    case 'gif':
+      return 'image/gif';
+    default:
+      return 'image/jpeg';
+  }
+}
+
+async function pickAndUploadImage(type: 'CLUB' | 'NOTICE'): Promise<string | null> {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) {
+    showToast('사진 접근 권한이 필요합니다.');
+    return null;
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    quality: 0.9,
+  });
+
+  if (result.canceled || !result.assets?.length) return null;
+  const asset = result.assets[0];
+  const fileName = asset.fileName ?? `${type.toLowerCase()}_${Date.now()}.jpg`;
+  const contentType = inferMimeType(fileName, asset.mimeType);
+  const uploadMeta = await issueImageUploadUrl(type, fileName, contentType);
+  if (!uploadMeta?.presignedUrl || !uploadMeta.imageUrl) {
+    showToast('이미지 업로드 URL 발급에 실패했습니다.');
+    return null;
+  }
+
+  const fileResponse = await fetch(asset.uri);
+  const blob = await fileResponse.blob();
+  const uploadResponse = await fetch(uploadMeta.presignedUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': contentType,
+    },
+    body: blob,
+  });
+
+  if (!uploadResponse.ok) {
+    showToast('이미지 업로드에 실패했습니다.');
+    return null;
+  }
+
+  return uploadMeta.imageUrl;
+}
+
+function parseDotDate(value?: string): Date | null {
+  if (!value) return null;
+  const match = value.trim().match(/^(\d{4})\.(\d{2})\.(\d{2})$/);
+  if (!match) return null;
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const parsed = new Date(year, month - 1, day);
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+  return parsed;
+}
+
+function formatCalendarMonthLabel(date: Date): string {
+  return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
+}
+
+function buildCalendarDays(monthDate: Date): Array<{
+  key: string;
+  label: string;
+  value: string;
+  inCurrentMonth: boolean;
+  isToday: boolean;
+}> {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const monthStart = new Date(year, month, 1);
+  const calendarStart = new Date(year, month, 1 - monthStart.getDay());
+  const todayValue = getCurrentKstDateLabel();
+
+  return Array.from({ length: 42 }).map((_, index) => {
+    const current = new Date(calendarStart.getFullYear(), calendarStart.getMonth(), calendarStart.getDate() + index);
+    const value = formatDotDateValue(current);
+    return {
+      key: `${value}-${index}`,
+      label: String(current.getDate()),
+      value,
+      inCurrentMonth: current.getMonth() === month,
+      isToday: value === todayValue,
+    };
+  });
+}
 
 function toLabelList(
   values: unknown,
@@ -185,6 +371,56 @@ function toLabelList(
       return null;
     })
     .filter((value): value is string => typeof value === 'string' && value.length > 0);
+}
+
+function normalizeClubContacts(value: unknown): ClubContact[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (typeof item === 'string') {
+        const link = item.trim();
+        if (!link) return null;
+        return { link };
+      }
+
+      if (typeof item !== 'object' || item === null) return null;
+      const record = item as Record<string, unknown>;
+      const linkCandidate = [record.link, record.url, record.href, record.originalLink].find(
+        (candidate) => candidate !== null && typeof candidate !== 'undefined',
+      );
+      const labelCandidate = [record.label, record.text, record.name, record.title].find(
+        (candidate) => candidate !== null && typeof candidate !== 'undefined',
+      );
+      const link = typeof linkCandidate === 'string' ? linkCandidate.trim() : '';
+      if (!link) return null;
+
+      return {
+        label: typeof labelCandidate === 'string' ? labelCandidate.trim() || undefined : undefined,
+        link,
+      };
+    })
+    .filter((item): item is ClubContact => Boolean(item));
+}
+
+function formatContactLabel(contact: ClubContact): string {
+  const label = contact.label?.trim();
+  if (label) return label;
+
+  return (
+    contact.link
+      .trim()
+      .replace(/^[a-z][a-z0-9+.-]*:\/\//i, '')
+      .replace(/^www\./i, '')
+      .replace(/\/$/, '') || '문의 링크'
+  );
+}
+
+function toOpenableContactLink(link: string): string {
+  const trimmed = link.trim();
+  if (!trimmed) return trimmed;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
 }
 
 function mapMyClubToGroup(club: { clubId: number; clubName: string }): Group {
@@ -228,6 +464,8 @@ function mapSearchClubToGroup(item: ClubSearchItem): Group {
     id: clubId ? `club-${clubId}` : `club-${club.name ?? Math.random().toString()}`,
     clubId,
     name: typeof club.name === 'string' && club.name.length > 0 ? club.name : '이름 없는 모임',
+    profileImageUrl: normalizeRemoteImageUrl(club.profileImageUrl ?? undefined),
+    links: normalizeClubContacts(club.links),
     tags,
     topic: participants.length > 0 ? `모임 대상 · ${participants.join(', ')}` : '모임 대상 · 정보 없음',
     region: `활동 지역 · ${regionText}`,
@@ -240,6 +478,7 @@ function mapSearchClubToGroup(item: ClubSearchItem): Group {
 function mapClubHomeDetailToGroup(detail: ClubDetailResult, prev: Group): Group {
   const tags = toLabelList(detail.category, categoryLabelByCode).slice(0, 6);
   const participants = toLabelList(detail.participantTypes, participantLabelByCode);
+  const links = normalizeClubContacts(detail.links);
   const region = typeof detail.region === 'string' && detail.region.trim().length > 0
     ? detail.region.trim()
     : '정보 없음';
@@ -248,36 +487,15 @@ function mapClubHomeDetailToGroup(detail: ClubDetailResult, prev: Group): Group 
     ...prev,
     clubId: typeof detail.clubId === 'number' ? detail.clubId : prev.clubId,
     name: typeof detail.name === 'string' && detail.name.length > 0 ? detail.name : prev.name,
+    profileImageUrl:
+      normalizeRemoteImageUrl(detail.profileImageUrl ?? undefined) ?? prev.profileImageUrl,
+    links: Array.isArray(detail.links) ? links : prev.links,
     tags: tags.length > 0 ? tags : prev.tags,
     topic: participants.length > 0 ? `모임 대상 · ${participants.join(', ')}` : prev.topic,
     region: `활동 지역 · ${region}`,
     description: typeof detail.description === 'string' ? detail.description : prev.description,
     isPrivate: typeof detail.open === 'boolean' ? !detail.open : prev.isPrivate,
   };
-}
-
-function filterFallbackDiscoverGroups(keyword: string, filter: MeetingInputFilter | null): Group[] {
-  const normalizedKeyword = keyword.trim().toLowerCase();
-  const normalizedFilter = filter;
-
-  return fallbackDiscoverGroups.filter((group) => {
-    if (!normalizedKeyword) return true;
-
-    if (normalizedFilter === '모임별') {
-      return group.name.toLowerCase().includes(normalizedKeyword);
-    }
-
-    if (normalizedFilter === '지역별') {
-      return group.region.toLowerCase().includes(normalizedKeyword);
-    }
-
-    const tagText = group.tags.join(' ').toLowerCase();
-    return (
-      group.name.toLowerCase().includes(normalizedKeyword) ||
-      group.region.toLowerCase().includes(normalizedKeyword) ||
-      tagText.includes(normalizedKeyword)
-    );
-  });
 }
 
 export function MeetingScreen() {
@@ -290,11 +508,12 @@ export function MeetingScreen() {
   const [applyOpenId, setApplyOpenId] = useState<string | null>(null);
   const [applyReasonById, setApplyReasonById] = useState<Record<string, string>>({});
   const [appliedById, setAppliedById] = useState<Record<string, string>>({});
-  const [myGroups, setMyGroups] = useState<Group[]>(fallbackMyGroups);
-  const [discoverGroups, setDiscoverGroups] = useState<Group[]>(fallbackDiscoverGroups);
+  const [myGroups, setMyGroups] = useState<Group[]>([]);
+  const [discoverGroups, setDiscoverGroups] = useState<Group[]>([]);
   const [myGroupsLoading, setMyGroupsLoading] = useState(false);
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [pendingOpenClubId, setPendingOpenClubId] = useState<number | null>(null);
+  const [openingClubLoading, setOpeningClubLoading] = useState(false);
 
   const [search, setSearch] = useState('');
   const [activeInputFilter, setActiveInputFilter] = useState<MeetingInputFilter | null>(null);
@@ -320,36 +539,60 @@ export function MeetingScreen() {
     setCreateDraftDirty(false);
   }, []);
 
+  const closeActiveGroupWithLoading = useCallback(async () => {
+    if (!activeGroup) {
+      setOpeningClubLoading(false);
+      return;
+    }
+
+    const loadingStartedAt = Date.now();
+    setOpeningClubLoading(true);
+    await waitForMinimumLoading(loadingStartedAt);
+    setActiveGroup(null);
+    setOpeningClubLoading(false);
+  }, [activeGroup]);
+
   const handlePressHeaderLogo = useCallback(() => {
     showLeaveDraftAlert(() => {
       closeCreateFlow();
-      setActiveGroup(null);
-      navigation.navigate('Home');
+
+      if (activeGroup) {
+        const closeAndMoveHome = async () => {
+          await closeActiveGroupWithLoading();
+          navigateToHome(navigation);
+        };
+        void closeAndMoveHome();
+        return;
+      }
+
+      setOpeningClubLoading(false);
+      navigateToHome(navigation);
     });
-  }, [closeCreateFlow, navigation, showLeaveDraftAlert]);
+  }, [activeGroup, closeActiveGroupWithLoading, closeCreateFlow, navigation, showLeaveDraftAlert]);
 
   const selectedOutputFilterLabel =
     outputFilterOptions.find((option) => option.value === selectedOutputFilter)?.label ?? '전체';
 
   const loadMyGroups = useCallback(async () => {
     if (!isLoggedIn) {
-      setMyGroups(fallbackMyGroups);
+      setMyGroups([]);
       return;
     }
 
     setMyGroupsLoading(true);
     try {
-      const result = await fetchMyClubs();
+      const result = await fetchMyClubs(undefined, { suppressErrorToast: true });
       const mapped = result.items.map(mapMyClubToGroup);
       setMyGroups(mapped);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
-        setMyGroups(fallbackMyGroups);
+        setMyGroups([]);
         return;
       }
       if (!(error instanceof ApiError)) {
         showToast('내 모임 목록을 불러오지 못했습니다.');
       }
+      setMyGroups([]);
     } finally {
       setMyGroupsLoading(false);
     }
@@ -362,11 +605,6 @@ export function MeetingScreen() {
       activeInputFilter === null &&
       selectedOutputFilter === 'ALL';
 
-    if (!isLoggedIn && !shouldLoadRecommendations) {
-      setDiscoverGroups(filterFallbackDiscoverGroups(search, activeInputFilter));
-      return;
-    }
-
     const inputFilter: ClubSearchInputFilter | undefined =
       activeInputFilter === '모임별'
         ? 'NAME'
@@ -377,7 +615,7 @@ export function MeetingScreen() {
     setDiscoverLoading(true);
     try {
       const result = shouldLoadRecommendations
-        ? await fetchRecommendedClubs()
+        ? await fetchRecommendedClubs({ suppressErrorToast: true })
         : await searchClubs({
             keyword: keyword.length > 0 ? keyword : undefined,
             inputFilter,
@@ -385,12 +623,8 @@ export function MeetingScreen() {
           });
       setDiscoverGroups(result.items.map(mapSearchClubToGroup));
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        if (shouldLoadRecommendations) {
-          setDiscoverGroups(fallbackDiscoverGroups);
-        } else {
-          setDiscoverGroups(filterFallbackDiscoverGroups(search, activeInputFilter));
-        }
+      setDiscoverGroups([]);
+      if (error instanceof ApiError) {
         return;
       }
       if (!(error instanceof ApiError)) {
@@ -403,7 +637,7 @@ export function MeetingScreen() {
     } finally {
       setDiscoverLoading(false);
     }
-  }, [activeInputFilter, isLoggedIn, search, selectedOutputFilter]);
+  }, [activeInputFilter, search, selectedOutputFilter]);
 
   useEffect(() => {
     void loadMyGroups();
@@ -495,6 +729,8 @@ export function MeetingScreen() {
     setActiveGroup(group);
     if (typeof group.clubId !== 'number') return;
     const clubId = group.clubId;
+    const loadingStartedAt = Date.now();
+    setOpeningClubLoading(true);
 
     const loadHome = async () => {
       try {
@@ -508,6 +744,9 @@ export function MeetingScreen() {
         if (!(error instanceof ApiError)) {
           showToast('모임 상세를 불러오지 못했습니다.');
         }
+      } finally {
+        await waitForMinimumLoading(loadingStartedAt);
+        setOpeningClubLoading(false);
       }
     };
 
@@ -521,9 +760,9 @@ export function MeetingScreen() {
       discoverGroups.find((group) => group.clubId === pendingOpenClubId);
     if (!targetGroup) return;
 
-    requireAuth(() => openGroupHome(targetGroup));
+    openGroupHome(targetGroup);
     setPendingOpenClubId(null);
-  }, [discoverGroups, myGroups, openGroupHome, pendingOpenClubId, requireAuth]);
+  }, [discoverGroups, myGroups, openGroupHome, pendingOpenClubId]);
 
   const handleOpenApply = (groupId: string) => {
     requireAuth(() => {
@@ -595,7 +834,19 @@ export function MeetingScreen() {
   if (activeGroup) {
     return (
       <ScreenLayout title="모임" onPressLogo={handlePressHeaderLogo}>
-        <GroupHomeView group={activeGroup} onBack={() => setActiveGroup(null)} />
+        <View style={styles.screenWrap}>
+          <GroupHomeView
+            group={activeGroup}
+            onBack={() => {
+              void closeActiveGroupWithLoading();
+            }}
+          />
+          {openingClubLoading ? (
+            <View style={styles.loadingOverlay}>
+              <BookFlipLoadingScreen />
+            </View>
+          ) : null}
+        </View>
       </ScreenLayout>
     );
   }
@@ -628,11 +879,19 @@ export function MeetingScreen() {
         <Text style={styles.createButtonText}>+ 모임 생성하기</Text>
       </Pressable>
 
-      <MyGroupsDropdownCard
-        groups={myGroups}
-        onPressGroup={(group) => requireAuth(() => openGroupHome(group))}
-      />
+      {isLoggedIn && myGroups.length > 0 ? (
+        <MyGroupsDropdownCard
+          groups={myGroups}
+          onPressGroup={openGroupHome}
+        />
+      ) : null}
       {myGroupsLoading ? <Text style={styles.helperText}>내 모임 목록을 불러오는 중...</Text> : null}
+      {!myGroupsLoading && isLoggedIn && myGroups.length === 0 ? (
+        <Text style={styles.helperText}>가입한 모임이 없습니다.</Text>
+      ) : null}
+      {!isLoggedIn ? (
+        <Text style={styles.helperText}>로그인 후 내 모임을 확인할 수 있습니다.</Text>
+      ) : null}
 
       <Text style={styles.sectionTitle}>모임 검색하기</Text>
       <View style={styles.searchRow}>
@@ -760,6 +1019,14 @@ export function MeetingScreen() {
 }
 
 const styles = StyleSheet.create({
+  screenWrap: {
+    flex: 1,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
+    elevation: 20,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1023,13 +1290,139 @@ const styles = StyleSheet.create({
   logoRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   logoPlaceholder: {
     width: 120,
     height: 120,
     borderRadius: radius.md,
     backgroundColor: colors.gray1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.subbrown4,
+  },
+  createProfileCard: {
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.subbrown4,
+    borderWidth: 1,
+    borderColor: colors.subbrown3,
+  },
+  createProfilePreview: {
+    width: 132,
+    minHeight: 132,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.subbrown3,
+  },
+  createProfilePreviewEmpty: {
+    borderStyle: 'dashed',
+    backgroundColor: '#FCF9F7',
+  },
+  createProfileEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+    gap: spacing.xs,
+  },
+  createProfileCameraBadge: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.subbrown4,
+    borderWidth: 1,
+    borderColor: colors.subbrown3,
+  },
+  createProfileEmptyTitle: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
+  createProfileEmptyDescription: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  createProfileActionColumn: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  createProfileActionButton: {
+    flex: 1,
+    minHeight: 62,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.subbrown3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  createProfileActionButtonSelected: {
+    backgroundColor: colors.primary1,
+    borderColor: colors.primary1,
+  },
+  createProfileActionButtonPrimary: {
+    backgroundColor: colors.white,
+    borderColor: colors.primary1,
+  },
+  createProfileActionButtonDisabled: {
+    opacity: 0.6,
+  },
+  createProfileActionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.subbrown4,
+  },
+  createProfileActionIconSelected: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  createProfileActionIconPrimary: {
+    backgroundColor: colors.primary1,
+  },
+  createProfileActionTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  createProfileActionTitle: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
+  createProfileActionTitleSelected: {
+    color: colors.white,
+  },
+  createProfileActionTitlePrimary: {
+    color: colors.primary1,
+  },
+  createProfileActionDescription: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    lineHeight: 18,
+  },
+  createProfileActionDescriptionSelected: {
+    color: 'rgba(255,255,255,0.86)',
+  },
+  createProfileActionDescriptionPrimary: {
+    color: colors.gray5,
+  },
+  createProfileHint: {
+    ...typography.body2_3,
+    color: colors.gray5,
+    lineHeight: 18,
   },
   checkboxRow: {
     flexDirection: 'row',
@@ -1055,6 +1448,54 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     ...typography.body1_3,
     color: colors.gray6,
+  },
+  createVisibilityRow: {
+    gap: spacing.sm,
+  },
+  createVisibilityCard: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.subbrown3,
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  createVisibilityCardActive: {
+    backgroundColor: colors.subbrown4,
+    borderColor: colors.primary1,
+  },
+  createVisibilityIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3EAE4',
+  },
+  createVisibilityIconWrapActive: {
+    backgroundColor: colors.primary1,
+  },
+  createVisibilityTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  createVisibilityTitle: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
+  createVisibilityTitleActive: {
+    color: colors.primary1,
+  },
+  createVisibilityDescription: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    lineHeight: 18,
+  },
+  createVisibilityDescriptionActive: {
+    color: colors.gray5,
   },
   addLinkButton: {
     borderWidth: 1,
@@ -1242,6 +1683,20 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.md,
   },
+  detailTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  detailTitleManageLink: {
+    paddingVertical: spacing.xs / 2,
+  },
+  detailTitleManageLinkText: {
+    ...typography.body1_2,
+    color: colors.primary1,
+    textDecorationLine: 'underline',
+  },
   noticeBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1262,6 +1717,45 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: radius.md,
     backgroundColor: colors.gray1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  detailImagePreview: {
+    width: '100%',
+    height: '100%',
+    borderRadius: radius.md,
+  },
+  detailImageUploaded: {
+    backgroundColor: colors.subbrown4,
+    borderWidth: 1,
+    borderColor: colors.subbrown3,
+  },
+  detailImageLabel: {
+    ...typography.body1_3,
+    color: colors.gray5,
+  },
+  clubDefaultProfileArtwork: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary1,
+    borderWidth: 1,
+    borderColor: colors.subbrown2,
+    shadowColor: colors.primary1,
+    shadowOpacity: 0.14,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  clubDefaultProfileArtworkPreview: {
+    width: '100%',
+    height: '100%',
+    borderRadius: radius.lg,
+  },
+  clubDefaultProfileArtworkDetail: {
+    width: 148,
+    height: 148,
+    borderRadius: radius.lg,
   },
   detailInfo: {
     gap: spacing.xs,
@@ -1293,6 +1787,456 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
   },
+  managementOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay30,
+    justifyContent: 'flex-end',
+    padding: spacing.md,
+  },
+  managementOverlayBottom: {
+    flex: 1,
+    backgroundColor: colors.overlay30,
+    justifyContent: 'flex-end',
+    padding: spacing.md,
+  },
+  managementCenteredOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  managementInlineOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.overlay30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  managementMenuSheet: {
+    borderRadius: radius.lg,
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  managementHandle: {
+    width: 44,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: colors.gray2,
+    alignSelf: 'center',
+    marginBottom: spacing.xs,
+  },
+  managementMenuTitle: {
+    ...typography.subhead3,
+    color: colors.gray6,
+  },
+  managementMenuCaption: {
+    ...typography.body2_3,
+    color: colors.gray4,
+  },
+  managementMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.gray1,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.white,
+  },
+  managementMenuIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.subbrown4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  managementMenuTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  managementMenuItemTitle: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
+  managementMenuItemDescription: {
+    ...typography.body2_3,
+    color: colors.gray4,
+  },
+  managementScreen: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  managementScreenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray1,
+    backgroundColor: colors.white,
+  },
+  managementScreenTitle: {
+    ...typography.subhead3,
+    color: colors.gray6,
+  },
+  managementScreenScroll: {
+    flex: 1,
+  },
+  managementScreenContent: {
+    padding: spacing.md,
+    gap: spacing.md,
+    paddingBottom: spacing.xl * 2,
+  },
+  managementSummaryCard: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.subbrown4,
+    backgroundColor: colors.white,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  managementSummaryTitle: {
+    ...typography.subhead3,
+    color: colors.gray6,
+  },
+  managementSummaryDescription: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    lineHeight: 20,
+  },
+  managementCountBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.lg,
+    backgroundColor: colors.subbrown4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+  },
+  managementCountBadgeText: {
+    ...typography.body2_2,
+    color: colors.primary1,
+  },
+  managementCardList: {
+    gap: spacing.sm,
+  },
+  managementListCard: {
+    borderWidth: 1,
+    borderColor: colors.gray1,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  managementListCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  managementIdentityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  managementAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.gray1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  managementAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 16,
+  },
+  managementIdentityText: {
+    gap: 2,
+    flex: 1,
+  },
+  managementPrimaryText: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
+  managementSecondaryText: {
+    ...typography.body2_3,
+    color: colors.gray5,
+  },
+  managementMetaText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+  },
+  managementActionRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  managementGhostButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.white,
+  },
+  managementGhostButtonText: {
+    ...typography.body2_2,
+    color: colors.gray6,
+  },
+  managementPrimarySmallButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary1,
+  },
+  managementPrimarySmallButtonText: {
+    ...typography.body2_2,
+    color: colors.white,
+  },
+  managementEmptyCard: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.gray1,
+    paddingVertical: spacing.xl,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  managementEmptyText: {
+    ...typography.body1_3,
+    color: colors.gray4,
+  },
+  managementRoleBadge: {
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+  },
+  managementRoleBadgeOwner: {
+    backgroundColor: '#FFF1D8',
+  },
+  managementRoleBadgeStaff: {
+    backgroundColor: '#E2F0FF',
+  },
+  managementRoleBadgeMember: {
+    backgroundColor: colors.subbrown4,
+  },
+  managementRoleBadgeText: {
+    ...typography.body2_3,
+    color: colors.gray6,
+  },
+  managementWideButton: {
+    marginTop: spacing.xs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.subbrown4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+  },
+  managementWideButtonText: {
+    ...typography.body2_2,
+    color: colors.primary1,
+  },
+  managementEditSection: {
+    gap: spacing.md,
+  },
+  managementEditImageUploaded: {
+    backgroundColor: colors.subbrown4,
+    borderWidth: 1,
+    borderColor: colors.subbrown3,
+  },
+  managementEditImageLabel: {
+    ...typography.body2_3,
+    color: colors.gray5,
+    textAlign: 'center',
+  },
+  managementEditImagePreview: {
+    width: '100%',
+    height: '100%',
+    borderRadius: radius.md,
+  },
+  managementToggleRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  managementToggleChip: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    paddingVertical: spacing.sm,
+  },
+  managementToggleChipActive: {
+    borderColor: colors.primary1,
+    backgroundColor: colors.subbrown4,
+  },
+  managementToggleChipText: {
+    ...typography.body1_3,
+    color: colors.gray5,
+  },
+  managementToggleChipTextActive: {
+    color: colors.primary1,
+  },
+  managementFooter: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray1,
+    backgroundColor: colors.white,
+  },
+  managementFooterButton: {
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  managementMessageCard: {
+    width: '100%',
+    maxWidth: 528,
+    borderRadius: radius.lg,
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+    gap: spacing.md,
+  },
+  managementMessageTitle: {
+    ...typography.subhead2,
+    color: colors.primary2,
+  },
+  managementMessageBody: {
+    ...typography.body1_2,
+    color: colors.gray5,
+    lineHeight: 30,
+  },
+  managementMessageScroll: {
+    maxHeight: 360,
+  },
+  managementModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  managementModalTitle: {
+    ...typography.subhead3,
+    color: colors.gray6,
+  },
+  managementBottomSheet: {
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+    gap: spacing.xs,
+  },
+  managementBottomSheetTitle: {
+    ...typography.subhead3,
+    color: colors.gray6,
+    marginBottom: spacing.xs,
+  },
+  managementBottomSheetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray1,
+  },
+  managementBottomSheetItemText: {
+    ...typography.body1_3,
+    color: colors.gray6,
+  },
+  managementJoinActionCard: {
+    width: '100%',
+    maxWidth: 260,
+    borderRadius: radius.lg,
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+    gap: spacing.xs,
+  },
+  managementJoinActionTitle: {
+    ...typography.subhead2,
+    color: colors.primary2,
+  },
+  managementJoinActionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray1,
+  },
+  managementJoinActionItemDisabled: {
+    opacity: 0.45,
+  },
+  managementJoinActionItemLast: {
+    borderBottomWidth: 0,
+  },
+  managementJoinActionItemText: {
+    ...typography.body1_2,
+    color: colors.gray5,
+  },
+  managementJoinActionItemTextDisabled: {
+    color: colors.gray3,
+  },
+  managementRoleMenuOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  managementRoleMenuCard: {
+    width: '100%',
+    maxWidth: 292,
+    borderRadius: radius.lg,
+    backgroundColor: colors.white,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    gap: spacing.xs,
+  },
+  managementRoleMenuTitle: {
+    ...typography.subhead2,
+    color: colors.primary2,
+  },
+  managementRoleMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray1,
+  },
+  managementRoleMenuItemDisabled: {
+    opacity: 0.45,
+  },
+  managementRoleMenuItemLast: {
+    borderBottomWidth: 0,
+  },
+  managementRoleMenuItemText: {
+    ...typography.body1_2,
+    color: colors.gray5,
+  },
+  managementRoleMenuItemTextDisabled: {
+    color: colors.gray3,
+  },
   noticeBoardCard: {
     backgroundColor: colors.white,
     borderRadius: radius.md,
@@ -1300,6 +2244,20 @@ const styles = StyleSheet.create({
     borderColor: colors.subbrown4,
     padding: spacing.md,
     gap: spacing.md,
+  },
+  noticeBoardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  noticeBoardTitle: {
+    ...typography.subhead3,
+    color: colors.gray6,
+  },
+  noticeBoardDescription: {
+    ...typography.body2_3,
+    color: colors.gray4,
   },
   noticeList: {
     gap: spacing.sm,
@@ -1309,11 +2267,16 @@ const styles = StyleSheet.create({
     borderColor: colors.subbrown4,
     borderRadius: radius.sm,
     backgroundColor: colors.white,
-    minHeight: 46,
-    paddingHorizontal: spacing.xs,
+    minHeight: 58,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.xs,
+  },
+  noticeItemContent: {
+    flex: 1,
+    gap: spacing.xs / 2,
   },
   noticeTagRow: {
     flexDirection: 'row',
@@ -1348,6 +2311,24 @@ const styles = StyleSheet.create({
     ...typography.body2_2,
     color: colors.gray6,
     flex: 1,
+  },
+  noticeItemMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  noticeItemMetaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gray1,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+  },
+  noticeItemMetaText: {
+    ...typography.body2_3,
+    color: colors.gray4,
   },
   noticePagination: {
     flexDirection: 'row',
@@ -1399,6 +2380,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
+  noticeDetailCategoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  noticeDetailMenuButton: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   noticeDetailDate: {
     ...typography.body2_3,
     color: colors.gray4,
@@ -1414,12 +2406,55 @@ const styles = StyleSheet.create({
   },
   noticePollSection: {
     gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    padding: spacing.md,
+  },
+  noticeAttachmentCard: {
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  noticeAttachmentTitle: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
+  noticeBookshelfCard: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  noticeBookshelfCover: {
+    width: 72,
+    height: 104,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gray1,
+  },
+  noticeBookshelfInfo: {
+    flex: 1,
+    gap: spacing.xs / 2,
+  },
+  noticeBookshelfTitle: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
+  noticeBookshelfAuthor: {
+    ...typography.body2_3,
+    color: colors.gray5,
   },
   noticePollMetaRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacing.sm,
+  },
+  noticePollSchedule: {
+    flex: 1,
+    gap: 2,
   },
   noticePollEndText: {
     ...typography.body2_3,
@@ -1438,6 +2473,32 @@ const styles = StyleSheet.create({
   noticePollMetaText: {
     ...typography.body2_3,
     color: colors.gray4,
+  },
+  noticePhotoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  noticePhotoItem: {
+    width: '30%',
+    minWidth: 88,
+    aspectRatio: 1,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    backgroundColor: colors.gray1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs / 2,
+  },
+  noticePhotoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: radius.md,
+  },
+  noticePhotoLabel: {
+    ...typography.body2_3,
+    color: colors.gray5,
   },
   noticePollOptionList: {
     gap: spacing.xs,
@@ -1560,6 +2621,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  noticeCommentAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 14,
+  },
   noticeCommentBody: {
     flex: 1,
     gap: spacing.xs / 2,
@@ -1604,6 +2670,448 @@ const styles = StyleSheet.create({
   noticeCommentText: {
     ...typography.body1_3,
     color: colors.gray6,
+  },
+  noticeComposerCard: {
+    borderWidth: 1,
+    borderColor: colors.subbrown4,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  noticeComposerLabel: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
+  noticeComposerTextArea: {
+    minHeight: 180,
+    textAlignVertical: 'top',
+  },
+  noticeComposerActionRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  noticeComposerPinRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  noticeComposerToggle: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs / 2,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    paddingVertical: spacing.sm,
+  },
+  noticeComposerToggleActive: {
+    borderColor: colors.primary1,
+    backgroundColor: colors.subbrown4,
+  },
+  noticeComposerToggleText: {
+    ...typography.body2_2,
+    color: colors.gray5,
+  },
+  noticeComposerToggleTextActive: {
+    color: colors.primary1,
+  },
+  noticeComposerPinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs / 2,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  noticeComposerPinButtonActive: {
+    borderColor: colors.primary1,
+    backgroundColor: colors.subbrown4,
+  },
+  noticeComposerPinButtonText: {
+    ...typography.body2_2,
+    color: colors.gray5,
+  },
+  noticeComposerPinButtonTextActive: {
+    color: colors.primary1,
+  },
+  noticeComposerSection: {
+    gap: spacing.sm,
+  },
+  noticeComposerSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  noticeComposerLinkButton: {
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.white,
+  },
+  noticeComposerLinkButtonText: {
+    ...typography.body2_2,
+    color: colors.gray6,
+  },
+  noticeComposerPollOptionList: {
+    gap: spacing.xs,
+  },
+  noticeComposerAddOptionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs / 2,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.white,
+  },
+  noticeComposerAddOptionText: {
+    ...typography.body2_2,
+    color: colors.gray5,
+  },
+  noticeComposerChoiceRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  noticeComposerChoiceChip: {
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.white,
+  },
+  noticeComposerChoiceChipActive: {
+    borderColor: colors.primary1,
+    backgroundColor: colors.subbrown4,
+  },
+  noticeComposerChoiceChipText: {
+    ...typography.body2_2,
+    color: colors.gray5,
+  },
+  noticeComposerChoiceChipTextActive: {
+    color: colors.primary1,
+  },
+  noticeComposerDateRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  noticeComposerDateInput: {
+    flex: 1,
+  },
+  noticeComposerPhotoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  noticeComposerPhotoItem: {
+    width: '30%',
+    minWidth: 88,
+    aspectRatio: 1,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.gray1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs / 2,
+    position: 'relative',
+  },
+  noticeComposerPhotoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: radius.md,
+  },
+  noticeComposerPhotoRemove: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noticeComposerCounter: {
+    ...typography.body2_3,
+    color: colors.gray4,
+  },
+  noticeComposerFooter: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray1,
+    backgroundColor: colors.white,
+  },
+  noticeComposerFooterButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+  },
+  noticeBookSelectorCard: {
+    borderRadius: radius.lg,
+    backgroundColor: colors.white,
+    padding: spacing.md,
+    gap: spacing.md,
+    maxHeight: '70%',
+  },
+  noticeBookSelectorList: {
+    gap: spacing.sm,
+  },
+  noticeBookSelectorItem: {
+    width: 112,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    padding: spacing.sm,
+    gap: spacing.xs,
+  },
+  noticeBookSelectorItemActive: {
+    borderColor: colors.primary1,
+    backgroundColor: colors.subbrown4,
+  },
+  noticeBookSelectorCover: {
+    width: '100%',
+    aspectRatio: 0.72,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gray1,
+  },
+  noticeBookSelectorTitle: {
+    ...typography.body2_2,
+    color: colors.gray6,
+  },
+  noticeBookSelectorMeta: {
+    ...typography.body2_3,
+    color: colors.gray4,
+  },
+  bookshelfBookSearchInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  bookshelfBookSearchInput: {
+    flex: 1,
+    ...typography.body1_3,
+    color: colors.gray6,
+    paddingVertical: 0,
+  },
+  bookshelfBookSearchGuide: {
+    ...typography.body2_3,
+    color: colors.gray4,
+  },
+  bookshelfBookSearchScreen: {
+    flex: 1,
+  },
+  bookshelfBookSearchScroll: {
+    flex: 1,
+  },
+  bookshelfBookSearchList: {
+    gap: spacing.sm,
+    paddingBottom: spacing.xl,
+  },
+  bookshelfBookSearchItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    padding: spacing.sm,
+  },
+  bookshelfBookSearchItemActive: {
+    borderColor: colors.primary1,
+    backgroundColor: colors.subbrown4,
+  },
+  bookshelfBookSearchCover: {
+    width: 56,
+    height: 80,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gray1,
+  },
+  bookshelfBookSearchInfo: {
+    flex: 1,
+    gap: spacing.xs / 2,
+  },
+  bookshelfBookSearchTitle: {
+    ...typography.body2_2,
+    color: colors.gray6,
+  },
+  bookshelfBookSearchMeta: {
+    ...typography.body2_3,
+    color: colors.gray4,
+  },
+  bookshelfBookSearchEmpty: {
+    ...typography.body1_3,
+    color: colors.gray4,
+    textAlign: 'center',
+    paddingVertical: spacing.xl,
+  },
+  bookshelfCreateSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookshelfCreateSelectorText: {
+    ...typography.body1_3,
+    color: colors.gray6,
+  },
+  bookshelfCreateSelectorPlaceholder: {
+    color: colors.gray4,
+  },
+  bookshelfDatePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bookshelfDatePickerValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  bookshelfDatePickerIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.subbrown4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookshelfDatePickerText: {
+    ...typography.body1_3,
+    color: colors.gray6,
+  },
+  bookshelfDatePickerPlaceholder: {
+    color: colors.gray4,
+  },
+  bookshelfCalendarCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: radius.lg,
+    backgroundColor: colors.white,
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  bookshelfCalendarMonthRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  bookshelfCalendarMonthButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.subbrown4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookshelfCalendarMonthText: {
+    ...typography.subhead3,
+    color: colors.gray6,
+  },
+  bookshelfCalendarWeekRow: {
+    flexDirection: 'row',
+  },
+  bookshelfCalendarWeekLabel: {
+    flex: 1,
+    textAlign: 'center',
+    ...typography.body2_3,
+    color: colors.gray4,
+  },
+  bookshelfCalendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: spacing.xs,
+  },
+  bookshelfCalendarDay: {
+    width: '14.2857%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookshelfCalendarDayInner: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookshelfCalendarDayCurrentMonth: {
+    backgroundColor: colors.white,
+  },
+  bookshelfCalendarDayOutside: {
+    opacity: 0.35,
+  },
+  bookshelfCalendarDayToday: {
+    borderWidth: 1,
+    borderColor: colors.primary1,
+    backgroundColor: colors.subbrown4,
+  },
+  bookshelfCalendarDaySelected: {
+    backgroundColor: colors.primary1,
+  },
+  bookshelfCalendarDayLabel: {
+    ...typography.body2_2,
+    color: colors.gray6,
+  },
+  bookshelfCalendarDayLabelOutside: {
+    color: colors.gray3,
+  },
+  bookshelfCalendarDayLabelSelected: {
+    color: colors.white,
+  },
+  bookshelfCalendarFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingTop: spacing.xs,
+  },
+  bookshelfCalendarFooterHint: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    flex: 1,
+  },
+  bookshelfCalendarTodayButton: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.primary1,
+    backgroundColor: colors.subbrown4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  bookshelfCalendarTodayButtonText: {
+    ...typography.body2_2,
+    color: colors.primary1,
   },
   voteVotersModalOverlay: {
     flex: 1,
@@ -1654,6 +3162,66 @@ const styles = StyleSheet.create({
     color: colors.gray4,
     textAlign: 'center',
     paddingVertical: spacing.sm,
+  },
+  contactModalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  contactModalCard: {
+    width: '100%',
+    maxWidth: 420,
+    minHeight: 220,
+    borderRadius: radius.lg,
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    gap: spacing.lg,
+  },
+  contactModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  contactModalTitle: {
+    ...typography.subhead1,
+    color: colors.gray6,
+    flex: 1,
+  },
+  contactModalLinkList: {
+    gap: spacing.md,
+  },
+  contactModalLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  contactModalLinkTextWrap: {
+    flex: 1,
+    gap: spacing.xs / 2,
+  },
+  contactModalLinkLabel: {
+    ...typography.subhead4_1,
+    color: colors.gray6,
+  },
+  contactModalLinkUrl: {
+    ...typography.body2_3,
+    color: colors.gray4,
+  },
+  contactModalEmptyWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 96,
+  },
+  contactModalEmptyText: {
+    ...typography.body1_3,
+    color: colors.gray5,
+    textAlign: 'center',
   },
   bookshelfSection: {
     gap: spacing.md,
@@ -1762,6 +3330,424 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingTop: spacing.xs / 2,
   },
+  bookshelfDetailSection: {
+    gap: spacing.md,
+  },
+  bookshelfDetailBookCard: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  bookshelfDetailBookCover: {
+    width: 128,
+    height: 192,
+    borderRadius: radius.md,
+    backgroundColor: colors.gray1,
+  },
+  bookshelfDetailBookInfo: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  bookshelfDetailBookTitle: {
+    ...typography.subhead2,
+    color: colors.gray6,
+  },
+  bookshelfDetailBookAuthor: {
+    ...typography.body1_3,
+    color: colors.gray5,
+  },
+  bookshelfDetailBookDescription: {
+    ...typography.body2_3,
+    color: colors.gray5,
+    lineHeight: 21,
+  },
+  bookshelfDetailTabRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray2,
+  },
+  bookshelfDetailTabButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  bookshelfDetailTabButtonActive: {
+    borderBottomColor: colors.primary1,
+  },
+  bookshelfDetailTabLabel: {
+    ...typography.body1_3,
+    color: colors.gray4,
+  },
+  bookshelfDetailTabLabelActive: {
+    color: colors.primary1,
+  },
+  bookshelfPanel: {
+    gap: spacing.sm,
+  },
+  bookshelfPanelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bookshelfPanelTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  bookshelfPanelTitle: {
+    ...typography.subhead3,
+    color: colors.gray6,
+  },
+  bookshelfPanelAddButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookshelfPostList: {
+    gap: spacing.sm,
+  },
+  bookshelfPostCard: {
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    padding: spacing.sm,
+    gap: spacing.xs,
+  },
+  bookshelfPostTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bookshelfPostAuthorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  bookshelfPostAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.gray1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookshelfPostAuthor: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
+  bookshelfPostRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  bookshelfPostContent: {
+    ...typography.body1_3,
+    color: colors.gray5,
+    lineHeight: 22,
+  },
+  bookshelfRegularSummaryCard: {
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.subbrown4,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  bookshelfRegularSummaryTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  bookshelfRegularSummaryTitle: {
+    ...typography.subhead3,
+    color: colors.gray6,
+  },
+  bookshelfRegularSummaryMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  bookshelfRegularSummaryMetaText: {
+    ...typography.body1_3,
+    color: colors.gray5,
+  },
+  bookshelfGroupChipRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs / 2,
+  },
+  bookshelfGroupChip: {
+    minWidth: 68,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    alignItems: 'center',
+    backgroundColor: colors.white,
+  },
+  bookshelfGroupChipActive: {
+    borderColor: colors.primary1,
+    backgroundColor: colors.subbrown4,
+  },
+  bookshelfGroupChipText: {
+    ...typography.body2_2,
+    color: colors.gray6,
+  },
+  bookshelfGroupChipTextActive: {
+    color: colors.primary1,
+  },
+  bookshelfGroupSection: {
+    gap: spacing.sm,
+  },
+  bookshelfRegularGroupPreviewCard: {
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  bookshelfRegularGroupPreviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bookshelfRegularGroupPreviewLabel: {
+    ...typography.body2_2,
+    color: colors.gray4,
+  },
+  bookshelfRegularGroupMemberList: {
+    gap: spacing.xs,
+  },
+  bookshelfRegularGroupMemberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  bookshelfRegularGroupMemberName: {
+    ...typography.body1_3,
+    color: colors.gray6,
+  },
+  bookshelfRegularGroupHint: {
+    ...typography.body2_3,
+    color: colors.gray4,
+  },
+  bookshelfGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bookshelfGroupHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  bookshelfGroupTitle: {
+    ...typography.subhead3,
+    color: colors.gray6,
+  },
+  bookshelfGroupMemberWrap: {
+    position: 'relative',
+    zIndex: 2,
+  },
+  bookshelfGroupMemberButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs / 2,
+    paddingVertical: spacing.xs / 2,
+  },
+  bookshelfGroupMemberCount: {
+    ...typography.body1_3,
+    color: colors.gray4,
+  },
+  bookshelfGroupMemberDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    minWidth: 164,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    padding: spacing.sm,
+    gap: spacing.xs,
+    shadowColor: '#000000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  bookshelfGroupMemberDropdownTitle: {
+    ...typography.body2_2,
+    color: colors.gray5,
+  },
+  bookshelfGroupActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  bookshelfGroupActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs / 2,
+    paddingVertical: spacing.xs / 2,
+    paddingHorizontal: spacing.xs,
+  },
+  bookshelfGroupSortText: {
+    ...typography.body1_3,
+    color: colors.gray4,
+  },
+  bookshelfGroupPostList: {
+    gap: spacing.sm,
+  },
+  bookshelfGroupPostCard: {
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  bookshelfGroupPostCardCompleted: {
+    backgroundColor: '#E7F2E6',
+    borderColor: '#D2E7CF',
+  },
+  regularChatModalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  regularChatPickerCard: {
+    width: '100%',
+    maxWidth: 360,
+    minHeight: 360,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  regularChatRoomCard: {
+    width: '100%',
+    maxWidth: 360,
+    height: '78%',
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  regularChatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray2,
+  },
+  regularChatHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  regularChatTitle: {
+    ...typography.subhead3,
+    color: colors.gray6,
+  },
+  regularChatGroupList: {
+    gap: spacing.sm,
+  },
+  regularChatGroupItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: radius.sm,
+    backgroundColor: colors.subbrown4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  regularChatGroupItemText: {
+    ...typography.body1_3,
+    color: colors.gray6,
+  },
+  regularChatMessages: {
+    flex: 1,
+  },
+  regularChatMessagesContent: {
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  regularChatMessageRow: {
+    alignSelf: 'flex-start',
+    gap: spacing.xs / 2,
+    maxWidth: '88%',
+  },
+  regularChatMessageRowMine: {
+    alignSelf: 'flex-end',
+    alignItems: 'flex-end',
+  },
+  regularChatMessageMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  regularChatAuthor: {
+    ...typography.body2_3,
+    color: colors.gray5,
+  },
+  regularChatBubble: {
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  regularChatBubbleOther: {
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    backgroundColor: colors.white,
+  },
+  regularChatBubbleMine: {
+    backgroundColor: colors.subbrown4,
+  },
+  regularChatBubbleText: {
+    ...typography.body2_3,
+    color: colors.gray6,
+    lineHeight: 20,
+  },
+  regularChatTime: {
+    ...typography.body2_3,
+    color: colors.gray4,
+  },
+  regularChatInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray2,
+  },
+  regularChatInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    ...typography.body2_3,
+    color: colors.gray6,
+    backgroundColor: colors.white,
+  },
+  regularChatSendButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.subbrown4,
+  },
 });
 
 type CreateStep = 1 | 2 | 3 | 4;
@@ -1795,27 +3781,9 @@ const participantCodeByLabel: Record<string, ClubParticipantTypeCode> = {
 
 type NoticeTag = 'PIN' | 'VOTE' | 'MEETING';
 
-type NoticeItem = {
+type NoticeBookshelfAttachment = {
   id: string;
-  title: string;
-  date: string;
-  tags: NoticeTag[];
-  category: '일반' | '모임' | '투표';
-  content: string;
-  poll?: NoticePoll;
-};
-
-type NoticeComment = {
-  id: string;
-  author: string;
-  date: string;
-  content: string;
-  mine?: boolean;
-  isAuthor?: boolean;
-};
-
-type BookshelfItem = {
-  id: string;
+  remoteMeetingId?: number;
   session: string;
   title: string;
   author: string;
@@ -1824,6 +3792,147 @@ type BookshelfItem = {
   rating: number;
 };
 
+type NoticeItem = {
+  id: string;
+  remoteId?: number;
+  title: string;
+  date: string;
+  tags: NoticeTag[];
+  category: '일반' | '모임' | '투표';
+  content: string;
+  bookshelf?: NoticeBookshelfAttachment;
+  poll?: NoticePoll;
+  photos?: string[];
+  isPinned?: boolean;
+};
+
+type NoticeComment = {
+  id: string;
+  remoteId?: number;
+  author: string;
+  authorProfileImageUrl?: string;
+  date: string;
+  content: string;
+  mine?: boolean;
+  isAuthor?: boolean;
+};
+
+type BookshelfItem = {
+  id: string;
+  remoteMeetingId?: number;
+  bookId?: string;
+  generation?: number;
+  session: string;
+  title: string;
+  author: string;
+  category: string;
+  coverImage: string;
+  rating: number;
+  regularMeetingName?: string;
+  meetingLocation?: string;
+  meetingDate?: string;
+};
+
+type BookshelfDetailTab = 'TOPIC' | 'REVIEW' | 'REGULAR';
+type BookshelfViewMode = 'GRID' | 'DETAIL' | 'REGULAR_GROUP';
+
+type BookshelfPostItem = {
+  id: string;
+  author: string;
+  content: string;
+  rating?: number;
+};
+
+type RegularGroupPostItem = {
+  id: string;
+  remoteTopicId?: number;
+  author: string;
+  content: string;
+  completed: boolean;
+};
+
+type RegularGroupChatMessage = {
+  id: string;
+  author: string;
+  content: string;
+  time: string;
+  mine?: boolean;
+};
+
+type RegularMeetingGroupItem = {
+  id: string;
+  teamId?: number;
+  label: string;
+  memberCount: number;
+  members: string[];
+  posts: RegularGroupPostItem[];
+  chatMessages: RegularGroupChatMessage[];
+};
+
+type RegularMeetingInfo = {
+  id: string;
+  name: string;
+  date: string;
+  location: string;
+  groups: RegularMeetingGroupItem[];
+};
+
+type GroupManagementScreen = 'JOIN_REQUESTS' | 'MEMBERS' | 'EDIT' | 'BOOKSHELF_CREATE';
+
+type GroupJoinRequestItem = {
+  id: string;
+  clubMemberId?: number;
+  nickname: string;
+  profileImageUrl?: string;
+  name: string;
+  email: string;
+  appliedAt: string;
+  message: string;
+};
+
+type GroupMemberRole = '개설자' | '운영진' | '회원';
+
+type GroupMemberItem = {
+  id: string;
+  clubMemberId?: number;
+  nickname: string;
+  profileImageUrl?: string;
+  name: string;
+  email: string;
+  joinedAt: string;
+  role: GroupMemberRole;
+};
+
+type BookshelfCreateDraft = {
+  sourceBook: {
+    isbn: string;
+    title: string;
+    author: string;
+    coverImage?: string;
+    publisher?: string;
+    description?: string;
+  } | null;
+  session: string;
+  categories: string[];
+  regularMeetingName: string;
+  meetingLocation: string;
+  meetingDate: string;
+};
+
+type ClubProfileMode = 'empty' | 'default' | 'uploaded';
+
+function buildBookshelfCreateDraft(defaultSession = '7'): BookshelfCreateDraft {
+  return {
+    sourceBook: null,
+    session: defaultSession,
+    categories: [],
+    regularMeetingName: '',
+    meetingLocation: '',
+    meetingDate: '',
+  };
+}
+
+
 type NoticePollOption = {
   id: string;
   label: string;
@@ -1831,6 +3940,7 @@ type NoticePollOption = {
 };
 
 type NoticePoll = {
+  startsAt: string;
   endsAt: string;
   allowDuplicate: boolean;
   anonymous: boolean;
@@ -1838,12 +3948,329 @@ type NoticePoll = {
   options: NoticePollOption[];
 };
 
+type NoticeDraft = {
+  title: string;
+  content: string;
+  isPinned: boolean;
+  bookshelfEnabled: boolean;
+  bookshelfId: string | null;
+  pollEnabled: boolean;
+  pollAnonymous: boolean;
+  pollAllowDuplicate: boolean;
+  pollStartsAt: string;
+  pollEndsAt: string;
+  pollOptions: string[];
+  photos: string[];
+};
+
+function toNoticeBookshelfAttachment(book: BookshelfItem): NoticeBookshelfAttachment {
+  return {
+    id: book.id,
+    remoteMeetingId: book.remoteMeetingId,
+    session: book.session,
+    title: book.title,
+    author: book.author,
+    category: book.category,
+    coverImage: book.coverImage,
+    rating: book.rating,
+  };
+}
+
+function buildNoticeDraft(): NoticeDraft {
+  return {
+    title: '',
+    content: '',
+    isPinned: false,
+    bookshelfEnabled: false,
+    bookshelfId: null,
+    pollEnabled: false,
+    pollAnonymous: true,
+    pollAllowDuplicate: false,
+    pollStartsAt: '2026.03.01 10:00',
+    pollEndsAt: '2026.03.08 22:00',
+    pollOptions: ['', '', ''],
+    photos: [],
+  };
+}
+
+
+function sortNoticeItems(items: NoticeItem[]): NoticeItem[] {
+  return [...items].sort((left, right) => Number(Boolean(right.isPinned)) - Number(Boolean(left.isPinned)));
+}
+
+function mapClubStatusToRole(status?: ClubMembershipStatus): GroupMemberRole {
+  if (status === 'OWNER') return '개설자';
+  if (status === 'STAFF') return '운영진';
+  return '회원';
+}
+
+function mapManagedClubDetailToGroup(detail: ClubDetailResult, prev: Group): Group {
+  const tags = toLabelList(detail.category, categoryLabelByCode).slice(0, 6);
+  const participants = toLabelList(detail.participantTypes, participantLabelByCode);
+  const links = normalizeClubContacts(detail.links);
+  const region = typeof detail.region === 'string' && detail.region.trim().length > 0
+    ? detail.region.trim()
+    : prev.region.replace(/^활동 지역 · /, '');
+
+  return {
+    ...prev,
+    name: typeof detail.name === 'string' && detail.name.length > 0 ? detail.name : prev.name,
+    profileImageUrl:
+      normalizeRemoteImageUrl(detail.profileImageUrl ?? undefined) ?? prev.profileImageUrl,
+    links: Array.isArray(detail.links) ? links : prev.links,
+    description: typeof detail.description === 'string' ? detail.description : prev.description,
+    tags: tags.length > 0 ? tags : prev.tags,
+    topic: participants.length > 0 ? `모임 대상 · ${participants.join(', ')}` : prev.topic,
+    region: `활동 지역 · ${region}`,
+    isPrivate: typeof detail.open === 'boolean' ? !detail.open : prev.isPrivate,
+  };
+}
+
+function mapClubManagedMemberToJoinRequest(item: ClubManagedMember): GroupJoinRequestItem {
+  return {
+    id: `club-member-pending-${item.clubMemberId}`,
+    clubMemberId: item.clubMemberId,
+    nickname: item.nickname,
+    profileImageUrl: item.profileImageUrl,
+    name: item.name ?? item.nickname,
+    email: item.email ?? '',
+    appliedAt: formatDotDate(item.appliedAt),
+    message: item.joinMessage?.trim() || '가입 메시지가 없습니다.',
+  };
+}
+
+function mapClubManagedMemberToGroupMember(item: ClubManagedMember): GroupMemberItem {
+  return {
+    id: `club-member-${item.clubMemberId}`,
+    clubMemberId: item.clubMemberId,
+    nickname: item.nickname,
+    profileImageUrl: item.profileImageUrl,
+    name: item.name ?? item.nickname,
+    email: item.email ?? '',
+    joinedAt: formatDotDate(item.joinedAt),
+    role: mapClubStatusToRole(item.clubMemberStatus),
+  };
+}
+
+function mapApiBookshelfToItem(book: {
+  meetingId: number;
+  generation?: number;
+  tag?: string;
+  averageRate?: number;
+  bookId?: string;
+  title?: string;
+  author?: string;
+  imgUrl?: string;
+}): BookshelfItem {
+  return {
+    id: `bookshelf-${book.meetingId}`,
+    remoteMeetingId: book.meetingId,
+    bookId: book.bookId,
+    generation: book.generation,
+    session: formatGenerationLabel(book.generation),
+    title: book.title ?? '책 제목',
+    author: book.author ?? '작가 미상',
+    category: book.tag?.trim() || '기본 태그',
+    coverImage: book.imgUrl ?? clubDefaultImageUri,
+    rating: Math.max(0, Math.min(5, Math.round(book.averageRate ?? 0))),
+  };
+}
+
+function toNoticeTags(tagCode?: string, isPinned?: boolean): NoticeTag[] {
+  const tags: NoticeTag[] = [];
+  if (isPinned) tags.push('PIN');
+  if (tagCode === 'VOTE') tags.push('VOTE');
+  if (tagCode === 'MEETING') tags.push('MEETING');
+  return tags;
+}
+
+function mapNoticePreviewToNoticeItem(item: ClubNoticePreview): NoticeItem {
+  const tags = toNoticeTags(item.tagCode, item.isPinned);
+  return {
+    id: `notice-${item.id}`,
+    remoteId: item.id,
+    title: item.title,
+    date: formatDotDate(item.createdAt),
+    tags,
+    category: item.tagCode === 'VOTE' ? '투표' : item.tagCode === 'MEETING' ? '모임' : '일반',
+    content: '',
+    isPinned: item.isPinned,
+  };
+}
+
+function mergeNoticeDetail(
+  baseNotice: NoticeItem | null,
+  detail: ClubNoticeDetail,
+): NoticeItem {
+  const bookshelfAttachment =
+    detail.meetingDetail?.meetingId && detail.meetingDetail.bookInfo
+      ? {
+          id: `bookshelf-${detail.meetingDetail.meetingId}`,
+          remoteMeetingId: detail.meetingDetail.meetingId,
+          session: formatGenerationLabel(detail.meetingDetail.generation),
+          title: detail.meetingDetail.bookInfo.title ?? detail.meetingDetail.title ?? '책 제목',
+          author: detail.meetingDetail.bookInfo.author ?? '작가 미상',
+          category: detail.meetingDetail.tag?.trim() || '기본 태그',
+          coverImage: detail.meetingDetail.bookInfo.imgUrl ?? clubDefaultImageUri,
+          rating: 0,
+        }
+      : undefined;
+
+  return {
+    id: `notice-${detail.id}`,
+    remoteId: detail.id,
+    title: detail.title,
+    date: formatDotDate(detail.createdAt),
+    tags: toNoticeTags(detail.tagCode, detail.isPinned),
+    category: detail.voteDetail ? '투표' : detail.meetingDetail ? '모임' : '일반',
+    content: detail.content,
+    bookshelf: bookshelfAttachment,
+    poll: detail.voteDetail
+      ? {
+          startsAt: formatDotDateTime(detail.voteDetail.startTime),
+          endsAt: formatDotDateTime(detail.voteDetail.deadline),
+          allowDuplicate: detail.voteDetail.duplication,
+          anonymous: detail.voteDetail.anonymity,
+          options: detail.voteDetail.items.map((option) => ({
+            id: `notice-${detail.id}-vote-${option.itemNumber}`,
+            label: option.item,
+            voters: option.votedMembers.map((member) => member.nickname),
+          })),
+        }
+      : undefined,
+    photos: detail.imageUrls,
+    isPinned: detail.isPinned,
+  };
+}
+
+function mapNoticeCommentToUi(item: ClubNoticeComment): NoticeComment {
+  return {
+    id: `notice-comment-${item.commentId}`,
+    remoteId: item.commentId,
+    author: item.nickname,
+    authorProfileImageUrl: item.profileImageUrl,
+    date: formatDotDate(item.updatedAt ?? item.createdAt),
+    content: item.content,
+  };
+}
+
+function mapMeetingToRegularMeetingInfo(
+  book: BookshelfItem | null,
+  meeting: ClubMeetingInfo,
+  topicsByTeamId: Record<number, ClubMeetingTeamTopics>,
+): RegularMeetingInfo | null {
+  if (!book) return null;
+
+  const groups: RegularMeetingGroupItem[] = meeting.teams.map((team) => {
+    const teamMembers = meeting.members.filter((member) => member.teamId === team.teamId);
+    const teamTopics = topicsByTeamId[team.teamId]?.topics ?? [];
+    const label = toTeamLabel(team.teamNumber);
+    const groupId = `${book.id}-regular-group-${team.teamId}`;
+    const members = teamMembers.map((member) => member.nickname);
+
+    return {
+      id: groupId,
+      teamId: team.teamId,
+      label,
+      memberCount: members.length,
+      members,
+      posts: teamTopics.map((topic) => ({
+        id: `${groupId}-topic-${topic.topicId}`,
+        remoteTopicId: topic.topicId,
+        author: topic.authorNickname,
+        content: topic.content,
+        completed: topic.isSelected,
+      })),
+      chatMessages: [],
+    };
+  });
+
+  return {
+    id: `${book.id}-regular`,
+    name: meeting.title?.trim() || `${book.title} 정기모임`,
+    date: formatDotDate(meeting.meetingTime),
+    location: meeting.location?.trim() || '장소 미정',
+    groups,
+  };
+}
+
 function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) {
+  const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
+  const { requireAuth } = useAuthGate();
+  const isManagedClub = typeof group.clubId === 'number';
+  const [managedGroup, setManagedGroup] = useState<Group>(group);
   const [activeTab, setActiveTab] = useState<'home' | 'notice' | 'bookshelf'>('home');
   const [noticePage, setNoticePage] = useState(1);
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
   const [noticeCommentInput, setNoticeCommentInput] = useState('');
-  const [selectedBookshelfSession, setSelectedBookshelfSession] = useState('7기');
+  const [selectedBookshelfSession, setSelectedBookshelfSession] = useState('');
+  const [bookshelfViewMode, setBookshelfViewMode] = useState<BookshelfViewMode>('GRID');
+  const [bookshelfDetailTab, setBookshelfDetailTab] = useState<BookshelfDetailTab>('TOPIC');
+  const [selectedBookshelfBookId, setSelectedBookshelfBookId] = useState<string | null>(null);
+  const [bookshelfItems, setBookshelfItems] = useState<BookshelfItem[]>([]);
+  const [selectedRegularGroupId, setSelectedRegularGroupId] = useState<string | null>(null);
+  const [regularGroupPostsById, setRegularGroupPostsById] = useState<
+    Record<string, RegularGroupPostItem[]>
+  >({});
+  const [regularGroupChatMessagesById, setRegularGroupChatMessagesById] = useState<
+    Record<string, RegularGroupChatMessage[]>
+  >({});
+  const [regularGroupMembersVisible, setRegularGroupMembersVisible] = useState(false);
+  const [regularChatPickerVisible, setRegularChatPickerVisible] = useState(false);
+  const [activeRegularChatGroupId, setActiveRegularChatGroupId] = useState<string | null>(null);
+  const [regularChatInput, setRegularChatInput] = useState('');
+  const [managementMenuVisible, setManagementMenuVisible] = useState(false);
+  const [activeManagementScreen, setActiveManagementScreen] = useState<GroupManagementScreen | null>(null);
+  const [joinRequests, setJoinRequests] = useState<GroupJoinRequestItem[]>([]);
+  const [members, setMembers] = useState<GroupMemberItem[]>([]);
+  const [selectedJoinRequestActionId, setSelectedJoinRequestActionId] = useState<string | null>(null);
+  const [selectedJoinRequestMessage, setSelectedJoinRequestMessage] = useState<GroupJoinRequestItem | null>(null);
+  const [submittingJoinRequestAction, setSubmittingJoinRequestAction] = useState(false);
+  const [selectedMemberActionId, setSelectedMemberActionId] = useState<string | null>(null);
+  const [submittingMemberAction, setSubmittingMemberAction] = useState(false);
+  const [reportModal, setReportModal] = useState<ReportMemberModalState | null>(null);
+  const [contactModalVisible, setContactModalVisible] = useState(false);
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [uploadingClubImage, setUploadingClubImage] = useState(false);
+  const [uploadingNoticePhoto, setUploadingNoticePhoto] = useState(false);
+  const [creatingBookshelf, setCreatingBookshelf] = useState(false);
+  const [editDraft, setEditDraft] = useState(() => ({
+    name: group.name,
+    description: group.description ?? '',
+    region: group.region.replace(/^활동 지역 · /, ''),
+    categories: group.tags,
+    targets:
+      group.topic.replace(/^모임 대상 · /, '') === '정보 없음'
+        ? []
+        : group.topic
+            .replace(/^모임 대상 · /, '')
+            .split(',')
+            .map((item) => item.trim())
+            .filter((item) => item.length > 0),
+    isPrivate: group.isPrivate ?? false,
+    imageUrl: group.profileImageUrl ?? '',
+  }));
+  const [noticeItems, setNoticeItems] = useState<NoticeItem[]>([]);
+  const [noticeComposerVisible, setNoticeComposerVisible] = useState(false);
+  const [noticeBookSelectorVisible, setNoticeBookSelectorVisible] = useState(false);
+  const [bookshelfBookSelectorVisible, setBookshelfBookSelectorVisible] = useState(false);
+  const [bookshelfBookSearchQuery, setBookshelfBookSearchQuery] = useState('');
+  const [bookshelfBookSearchKeyword, setBookshelfBookSearchKeyword] = useState('');
+  const [bookshelfBookSearchResults, setBookshelfBookSearchResults] = useState<BookItem[]>([]);
+  const [bookshelfBookSearchLoading, setBookshelfBookSearchLoading] = useState(false);
+  const [bookshelfBookSearchSearched, setBookshelfBookSearchSearched] = useState(false);
+  const [bookshelfCalendarVisible, setBookshelfCalendarVisible] = useState(false);
+  const [bookshelfCalendarMonth, setBookshelfCalendarMonth] = useState(() => {
+    const { year, month } = getCurrentKstYearMonth();
+    return new Date(year, month - 1, 1);
+  });
+  const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
+  const [noticeMenuVisible, setNoticeMenuVisible] = useState(false);
+  const [noticeDraft, setNoticeDraft] = useState<NoticeDraft>(() => buildNoticeDraft());
+  const [bookshelfCreateDraft, setBookshelfCreateDraft] = useState<BookshelfCreateDraft>(() =>
+    buildBookshelfCreateDraft(),
+  );
   const [noticeCommentsById, setNoticeCommentsById] = useState<Record<string, NoticeComment[]>>({});
   const [selectedVoteOptionIdsByNotice, setSelectedVoteOptionIdsByNotice] = useState<Record<string, string[]>>({});
   const [submittedVoteOptionIdsByNotice, setSubmittedVoteOptionIdsByNotice] = useState<Record<string, string[]>>({});
@@ -1852,155 +4279,454 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     optionLabel: string;
     voters: string[];
   } | null>(null);
+  const contactLinks = useMemo(
+    () => normalizeClubContacts(managedGroup.links),
+    [managedGroup.links],
+  );
+  const closeBookshelfBookSelector = useCallback(() => {
+    setBookshelfBookSelectorVisible(false);
+    setBookshelfBookSearchQuery('');
+    setBookshelfBookSearchKeyword('');
+    setBookshelfBookSearchResults([]);
+    setBookshelfBookSearchLoading(false);
+    setBookshelfBookSearchSearched(false);
+  }, []);
+  const closeManagementMenu = useCallback(() => {
+    setManagementMenuVisible(false);
+  }, []);
+  const closeContactModal = useCallback(() => {
+    setContactModalVisible(false);
+  }, []);
+  const closeBookshelfCalendar = useCallback(() => {
+    setBookshelfCalendarVisible(false);
+  }, []);
+  const openBookshelfCalendar = useCallback(() => {
+    const { year, month } = getCurrentKstYearMonth();
+    const selectedDate = parseDotDate(bookshelfCreateDraft.meetingDate) ?? new Date(year, month - 1, 1);
+    setBookshelfCalendarMonth(
+      new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1),
+    );
+    setBookshelfCalendarVisible(true);
+  }, [bookshelfCreateDraft.meetingDate]);
+  const handleSelectBookshelfMeetingDate = useCallback(
+    (value: string) => {
+      setBookshelfCreateDraft((prev) => ({ ...prev, meetingDate: value }));
+      closeBookshelfCalendar();
+    },
+    [closeBookshelfCalendar],
+  );
+  const handlePickTodayBookshelfMeetingDate = useCallback(() => {
+    const { year, month } = getCurrentKstYearMonth();
+    setBookshelfCalendarMonth(new Date(year, month - 1, 1));
+    handleSelectBookshelfMeetingDate(getCurrentKstDateLabel());
+  }, [handleSelectBookshelfMeetingDate]);
+  const [bookshelfTopicsByMeetingId, setBookshelfTopicsByMeetingId] = useState<
+    Record<number, BookshelfPostItem[]>
+  >({});
+  const [bookshelfReviewsByMeetingId, setBookshelfReviewsByMeetingId] = useState<
+    Record<number, BookshelfPostItem[]>
+  >({});
+  const [regularMeetingInfoByMeetingId, setRegularMeetingInfoByMeetingId] = useState<
+    Record<number, RegularMeetingInfo>
+  >({});
   const noticePageSize = 8;
-  const bookCoverUri = useMemo(
-    () => Image.resolveAssetSource(require('../../assets/tmp/little-prince.jpg')).uri,
-    [],
+  const bookshelfSessions = useMemo(() => {
+    const sessions = Array.from(
+      new Set(bookshelfItems.map((item) => item.session).filter((item) => item.length > 0)),
+    );
+    return sessions.sort((left, right) => {
+      const leftNumber = parseGenerationNumber(left) ?? 0;
+      const rightNumber = parseGenerationNumber(right) ?? 0;
+      return rightNumber - leftNumber;
+    });
+  }, [bookshelfItems]);
+  const bookshelfCalendarDays = useMemo(
+    () => buildCalendarDays(bookshelfCalendarMonth),
+    [bookshelfCalendarMonth],
   );
-  const bookshelfSessions = useMemo(() => ['7기', '8기', '9기'], []);
 
-  const bookshelfItems = useMemo<BookshelfItem[]>(
-    () =>
-      Array.from({ length: 14 }).map((_, index) => {
-        const session = bookshelfSessions[index % bookshelfSessions.length];
-        const categoryPool = ['소설/시/희곡', '자기계발', '정치/외교/국방', '어린이/청소년', '사회과학'];
-        const category = categoryPool[index % categoryPool.length];
+  useEffect(() => {
+    setManagedGroup(group);
+    setJoinRequests([]);
+    setMembers([]);
+    setContactModalVisible(false);
+    setBookshelfItems([]);
+    setBookshelfTopicsByMeetingId({});
+    setBookshelfReviewsByMeetingId({});
+    setRegularMeetingInfoByMeetingId({});
+    setManagementMenuVisible(false);
+    setActiveManagementScreen(null);
+    setSelectedJoinRequestActionId(null);
+    setSelectedJoinRequestMessage(null);
+    setSelectedMemberActionId(null);
+    setEditDraft({
+      name: group.name,
+      description: group.description ?? '',
+      region: group.region.replace(/^활동 지역 · /, ''),
+      categories: group.tags,
+      targets:
+        group.topic.replace(/^모임 대상 · /, '') === '정보 없음'
+          ? []
+          : group.topic
+              .replace(/^모임 대상 · /, '')
+              .split(',')
+              .map((item) => item.trim())
+              .filter((item) => item.length > 0),
+      isPrivate: group.isPrivate ?? false,
+      imageUrl: group.profileImageUrl ?? '',
+    });
+    setNoticeItems([]);
+    setNoticeComposerVisible(false);
+    setNoticeBookSelectorVisible(false);
+    closeBookshelfBookSelector();
+    closeBookshelfCalendar();
+    setEditingNoticeId(null);
+    setNoticeMenuVisible(false);
+    setNoticeDraft(buildNoticeDraft());
+    setBookshelfCreateDraft(
+      buildBookshelfCreateDraft(),
+    );
+  }, [closeBookshelfBookSelector, closeBookshelfCalendar, group]);
 
-        return {
-          id: `${group.id}-bookshelf-${index + 1}`,
-          session,
-          title: `책제목${index + 1}`,
-          author: `작가 ${index + 1}`,
-          category,
-          coverImage: bookCoverUri,
-          rating: 3 + (index % 3),
-        };
-      }),
-    [bookCoverUri, bookshelfSessions, group.id],
-  );
+  useEffect(() => {
+    if (!isManagedClub) return;
+    let cancelled = false;
+
+    const loadClubWorkspace = async () => {
+      try {
+        const [detail, pendingMembers, activeMembers, bookshelfList, noticeList] = await Promise.all([
+          fetchClubDetail(group.clubId as number),
+          fetchClubMembers(group.clubId as number, 'PENDING'),
+          fetchClubMembers(group.clubId as number, 'ACTIVE'),
+          fetchClubBookshelves(group.clubId as number),
+          fetchClubNotices(group.clubId as number, 1),
+        ]);
+
+        if (cancelled) return;
+
+        if (detail) {
+          const nextGroup = mapManagedClubDetailToGroup(detail, group);
+          setManagedGroup(nextGroup);
+          setEditDraft((prev) => {
+            return {
+              ...prev,
+              name: nextGroup.name,
+              description: nextGroup.description ?? '',
+              region: nextGroup.region.replace(/^활동 지역 · /, ''),
+              categories: nextGroup.tags,
+              targets:
+                nextGroup.topic.replace(/^모임 대상 · /, '') === '정보 없음'
+                  ? []
+                  : nextGroup.topic
+                      .replace(/^모임 대상 · /, '')
+                      .split(',')
+                      .map((item) => item.trim())
+                      .filter((item) => item.length > 0),
+              isPrivate: nextGroup.isPrivate ?? false,
+              imageUrl: nextGroup.profileImageUrl ?? '',
+            };
+          });
+        }
+
+        setJoinRequests(pendingMembers.items.map(mapClubManagedMemberToJoinRequest));
+        setMembers(activeMembers.items.map(mapClubManagedMemberToGroupMember));
+
+        const nextBookshelves = bookshelfList.items.map(mapApiBookshelfToItem);
+        if (nextBookshelves.length > 0) {
+          setBookshelfItems(nextBookshelves);
+        } else {
+          setBookshelfItems([]);
+        }
+
+        const nextNotices = [
+          ...noticeList.pinnedNotices.map(mapNoticePreviewToNoticeItem),
+          ...noticeList.normalNotices.map(mapNoticePreviewToNoticeItem),
+        ];
+        setNoticeItems(sortNoticeItems(nextNotices));
+        setSelectedNoticeId(null);
+        setNoticeCommentsById({});
+        setNoticePollOptionsById({});
+        setSelectedVoteOptionIdsByNotice({});
+        setSubmittedVoteOptionIdsByNotice({});
+      } catch (error) {
+        if (error instanceof ApiError) return;
+        showToast('모임 데이터를 불러오지 못했습니다.');
+      }
+    };
+
+    void loadClubWorkspace();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [group, group.clubId, group.id, isManagedClub]);
+
+  useEffect(() => {
+    if (bookshelfSessions.length === 0) return;
+    if (bookshelfSessions.includes(selectedBookshelfSession)) return;
+    setSelectedBookshelfSession(bookshelfSessions[0]);
+  }, [bookshelfSessions, selectedBookshelfSession]);
+
+  useEffect(() => {
+    if (typeof group.clubId !== 'number' || !selectedNoticeId) return;
+    const notice = noticeItems.find((item) => item.id === selectedNoticeId);
+    if (!notice?.remoteId) return;
+    if (notice.content.trim().length > 0 && noticeCommentsById[notice.id]) return;
+    let cancelled = false;
+
+    const loadNoticeDetail = async () => {
+      try {
+        const [detail, comments] = await Promise.all([
+          fetchClubNoticeDetail(group.clubId as number, notice.remoteId as number),
+          fetchClubNoticeComments(group.clubId as number, notice.remoteId as number),
+        ]);
+        if (cancelled || !detail) return;
+
+        const merged = mergeNoticeDetail(notice, detail);
+        setNoticeItems((prev) =>
+          sortNoticeItems(prev.map((item) => (item.id === notice.id ? merged : item))),
+        );
+        setNoticeCommentsById((prev) => ({
+          ...prev,
+          [merged.id]: comments.items.map(mapNoticeCommentToUi),
+        }));
+        if (merged.poll) {
+          setNoticePollOptionsById((prev) => ({
+            ...prev,
+            [merged.id]: merged.poll?.options ?? [],
+          }));
+          const selectedOptionIds = detail.voteDetail
+            ? detail.voteDetail.items
+                .filter((item) => item.isSelected)
+                .map((item) => `notice-${detail.id}-vote-${item.itemNumber}`)
+            : [];
+          setSelectedVoteOptionIdsByNotice((prev) => ({
+            ...prev,
+            [merged.id]: selectedOptionIds,
+          }));
+          setSubmittedVoteOptionIdsByNotice((prev) => ({
+            ...prev,
+            [merged.id]: selectedOptionIds,
+          }));
+        }
+      } catch (error) {
+        if (error instanceof ApiError) return;
+        showToast('공지 상세를 불러오지 못했습니다.');
+      }
+    };
+
+    void loadNoticeDetail();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [group.clubId, noticeCommentsById, noticeItems, selectedNoticeId]);
 
   const visibleBookshelfItems = useMemo(
     () => bookshelfItems.filter((item) => item.session === selectedBookshelfSession),
     [bookshelfItems, selectedBookshelfSession],
   );
 
-  const noticeItems = useMemo<NoticeItem[]>(
-    () =>
-      Array.from({ length: 26 }).map((_, index) => {
-        const tags: NoticeTag[] = [];
-        if (index <= 3) {
-          tags.push('PIN');
-        } else if (index <= 5) {
-          tags.push('VOTE');
-        } else if (index === 6) {
-          tags.push('VOTE', 'MEETING');
-        } else if (index <= 10) {
-          tags.push('MEETING');
+  const selectedBookshelfBook = useMemo(() => {
+    const fallbackBook = visibleBookshelfItems[0] ?? bookshelfItems[0] ?? null;
+    if (!fallbackBook) return null;
+    if (!selectedBookshelfBookId) return fallbackBook;
+    return (
+      bookshelfItems.find((item) => item.id === selectedBookshelfBookId) ??
+      fallbackBook
+    );
+  }, [bookshelfItems, selectedBookshelfBookId, visibleBookshelfItems]);
+
+  useEffect(() => {
+    const clubId = group.clubId;
+    const meetingId = selectedBookshelfBook?.remoteMeetingId;
+    if (typeof clubId !== 'number' || typeof meetingId !== 'number') return;
+    const selectedBook = selectedBookshelfBook;
+    let cancelled = false;
+
+    const loadBookshelfDetailData = async () => {
+      try {
+        const [topics, reviews, meeting, detail] = await Promise.all([
+          fetchClubBookshelfTopics(clubId, meetingId),
+          fetchClubBookshelfReviews(clubId, meetingId),
+          fetchClubMeeting(clubId, meetingId),
+          fetchClubBookshelfDetail(clubId, meetingId),
+        ]);
+
+        if (cancelled) return;
+
+        setBookshelfTopicsByMeetingId((prev) => ({
+          ...prev,
+          [meetingId]: topics.items.map((item) => ({
+            id: `bookshelf-topic-${item.topicId}`,
+            author: item.authorNickname,
+            content: item.content,
+          })),
+        }));
+        setBookshelfReviewsByMeetingId((prev) => ({
+          ...prev,
+          [meetingId]: reviews.items.map((item) => ({
+            id: `bookshelf-review-${item.bookReviewId}`,
+            author: item.authorNickname,
+            content: item.description,
+            rating: Math.round(item.rate),
+          })),
+        }));
+
+        if (detail) {
+          setBookshelfItems((prev) =>
+            prev.map((item) =>
+              item.remoteMeetingId === meetingId
+                ? {
+                    ...item,
+                    generation: detail.generation ?? item.generation,
+                    session: formatGenerationLabel(detail.generation ?? item.generation),
+                    category: detail.tag?.trim() || item.category,
+                    regularMeetingName: detail.title ?? item.regularMeetingName,
+                    meetingLocation: detail.location ?? item.meetingLocation,
+                    meetingDate: formatDotDate(detail.meetingTime) || item.meetingDate,
+                  }
+                : item,
+            ),
+          );
+        }
+
+        if (meeting) {
+          const topicResponses = await Promise.all(
+            meeting.teams.map(async (team) => [
+              team.teamId,
+              await fetchClubMeetingTeamTopics(clubId, meetingId, team.teamId),
+            ] as const),
+          );
+          if (cancelled) return;
+
+          const topicsByTeamId = Object.fromEntries(topicResponses);
+          const regularInfo = mapMeetingToRegularMeetingInfo(selectedBook, meeting, topicsByTeamId);
+          if (regularInfo) {
+            setRegularMeetingInfoByMeetingId((prev) => ({
+              ...prev,
+              [meetingId]: regularInfo,
+            }));
+          }
         } else {
-          if (index % 3 === 0) tags.push('VOTE');
-          if (index % 2 === 0) tags.push('MEETING');
-          if (tags.length === 0) tags.push('MEETING');
-        }
-
-        const date = `2025-11-${String((index % 28) + 1).padStart(2, '0')}`;
-        const category: NoticeItem['category'] =
-          tags.includes('PIN') ? '일반' : tags.includes('VOTE') ? '투표' : '모임';
-        const needsPoll = tags.includes('VOTE');
-
-        let poll: NoticePoll | undefined;
-        if (needsPoll) {
-          const voterPool = [
-            'hy_0716',
-            'hy_0717',
-            'hy_0718',
-            'hy_0720',
-            'hy_0721',
-            'hy_0723',
-            'reader_1',
-            'reader_2',
-            'reader_3',
-            'reader_4',
-            'reader_5',
-            'reader_6',
-          ];
-
-          const optionCount = 5;
-          const options = Array.from({ length: optionCount }).map((__, optionIndex) => {
-            const voteCount = 3 + ((index + optionIndex * 2) % 6);
-            const voters = Array.from({ length: voteCount }).map(
-              (_, voterIndex) => voterPool[(index + optionIndex + voterIndex) % voterPool.length],
-            );
-
-            return {
-              id: `${group.id}-poll-${index + 1}-${optionIndex + 1}`,
-              label: `${optionIndex + 1}번 · 설문 항목 ${optionIndex + 1}`,
-              voters,
-            };
+          setRegularMeetingInfoByMeetingId((prev) => {
+            const next = { ...prev };
+            delete next[meetingId];
+            return next;
           });
-
-          poll = {
-            endsAt: `${date} 17:05`,
-            allowDuplicate: true,
-            anonymous: index % 2 === 0,
-            closed: false,
-            options,
-          };
         }
+      } catch (error) {
+        if (error instanceof ApiError) return;
+        showToast('책장 상세를 불러오지 못했습니다.');
+      }
+    };
 
-        return {
-          id: `${group.id}-notice-${index + 1}`,
-          title: `${group.name} 공지 ${index + 1} · 이번 주 모임 운영 및 안내 사항`,
-          date,
-          tags,
-          category,
-          content:
-            `모임 공지 ${index + 1} 안내드립니다.\n` +
-            `이번 주 진행 내용과 운영 관련 변경 사항을 공유합니다.\n\n` +
-            `1. 모임 일정 및 진행 방식\n` +
-            `2. 준비물 및 참여 방식\n` +
-            `3. 기타 문의는 댓글로 남겨주세요.\n\n` +
-            `감사합니다.`,
-          poll,
-        };
-      }),
-    [group.id, group.name],
+    void loadBookshelfDetailData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [group.clubId, selectedBookshelfBook?.id, selectedBookshelfBook?.remoteMeetingId]);
+
+  const bookshelfTopicItems = useMemo<BookshelfPostItem[]>(
+    () => {
+      const remoteMeetingId = selectedBookshelfBook?.remoteMeetingId;
+      if (remoteMeetingId && bookshelfTopicsByMeetingId[remoteMeetingId]) {
+        return bookshelfTopicsByMeetingId[remoteMeetingId];
+      }
+      return [];
+    },
+    [bookshelfTopicsByMeetingId, selectedBookshelfBook?.remoteMeetingId],
   );
+
+  const bookshelfReviewItems = useMemo<BookshelfPostItem[]>(
+    () => {
+      const remoteMeetingId = selectedBookshelfBook?.remoteMeetingId;
+      if (remoteMeetingId && bookshelfReviewsByMeetingId[remoteMeetingId]) {
+        return bookshelfReviewsByMeetingId[remoteMeetingId];
+      }
+      return [];
+    },
+    [bookshelfReviewsByMeetingId, selectedBookshelfBook?.remoteMeetingId],
+  );
+
+  const baseRegularMeetingInfo = useMemo<RegularMeetingInfo | null>(
+    () => {
+      const remoteMeetingId = selectedBookshelfBook?.remoteMeetingId;
+      if (remoteMeetingId && regularMeetingInfoByMeetingId[remoteMeetingId]) {
+        return regularMeetingInfoByMeetingId[remoteMeetingId];
+      }
+      return null;
+    },
+    [regularMeetingInfoByMeetingId, selectedBookshelfBook?.remoteMeetingId],
+  );
+
+  useEffect(() => {
+    if (!baseRegularMeetingInfo) return;
+
+    setRegularGroupPostsById((prev) => {
+      const next = { ...prev };
+      let changed = false;
+
+      baseRegularMeetingInfo.groups.forEach((groupItem) => {
+        if (next[groupItem.id]) return;
+        next[groupItem.id] = groupItem.posts;
+        changed = true;
+      });
+
+      return changed ? next : prev;
+    });
+
+    setRegularGroupChatMessagesById((prev) => {
+      const next = { ...prev };
+      let changed = false;
+
+      baseRegularMeetingInfo.groups.forEach((groupItem) => {
+        if (next[groupItem.id]) return;
+        next[groupItem.id] = groupItem.chatMessages;
+        changed = true;
+      });
+
+      return changed ? next : prev;
+    });
+  }, [baseRegularMeetingInfo]);
+
+  const regularMeetingInfo = useMemo<RegularMeetingInfo | null>(() => {
+    if (!baseRegularMeetingInfo) return null;
+
+    return {
+      ...baseRegularMeetingInfo,
+      groups: baseRegularMeetingInfo.groups.map((groupItem) => ({
+        ...groupItem,
+        posts: regularGroupPostsById[groupItem.id] ?? groupItem.posts,
+        chatMessages: regularGroupChatMessagesById[groupItem.id] ?? groupItem.chatMessages,
+      })),
+    };
+  }, [baseRegularMeetingInfo, regularGroupChatMessagesById, regularGroupPostsById]);
+
+  const selectedRegularGroup = useMemo(() => {
+    if (!regularMeetingInfo || !selectedRegularGroupId) return null;
+    return (
+      regularMeetingInfo.groups.find((groupItem) => groupItem.id === selectedRegularGroupId) ?? null
+    );
+  }, [regularMeetingInfo, selectedRegularGroupId]);
+
+  const activeRegularChatGroup = useMemo(() => {
+    if (!regularMeetingInfo || !activeRegularChatGroupId) return null;
+    return (
+      regularMeetingInfo.groups.find((groupItem) => groupItem.id === activeRegularChatGroupId) ?? null
+    );
+  }, [activeRegularChatGroupId, regularMeetingInfo]);
 
   const selectedNotice = useMemo(
     () => noticeItems.find((item) => item.id === selectedNoticeId) ?? null,
     [noticeItems, selectedNoticeId],
   );
 
-  const buildDefaultNoticeComments = useCallback((noticeId: string): NoticeComment[] => {
-    const seed = noticeId.length;
-    return [
-      {
-        id: `${noticeId}-c1`,
-        author: 'hy_1234',
-        date: '2025.09.22',
-        content: '인정합니다.',
-        isAuthor: true,
-      },
-      {
-        id: `${noticeId}-c2`,
-        author: 'hy_me',
-        date: '2025.09.22',
-        content: '좋은 공지 감사합니다.',
-        mine: true,
-      },
-      {
-        id: `${noticeId}-c3`,
-        author: `member_${(seed % 9) + 1}`,
-        date: '2025.09.22',
-        content: '참여 일정 확인했습니다.',
-      },
-    ];
-  }, []);
-
   const currentNoticeComments = useMemo(() => {
     if (!selectedNotice) return [];
-    return noticeCommentsById[selectedNotice.id] ?? buildDefaultNoticeComments(selectedNotice.id);
-  }, [buildDefaultNoticeComments, noticeCommentsById, selectedNotice]);
+    return noticeCommentsById[selectedNotice.id] ?? [];
+  }, [noticeCommentsById, selectedNotice]);
 
   const currentNoticePollOptions = useMemo(() => {
     if (!selectedNotice?.poll) return [];
@@ -2040,8 +4766,47 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     setSelectedNoticeId(null);
     setNoticeCommentInput('');
     setVoteVotersModal(null);
-    setSelectedBookshelfSession('7기');
-  }, [activeTab, group.id]);
+    setSelectedBookshelfSession(bookshelfSessions[0] ?? '');
+    setBookshelfViewMode('GRID');
+    setBookshelfDetailTab('TOPIC');
+    setSelectedBookshelfBookId(null);
+    setSelectedRegularGroupId(null);
+    setRegularChatPickerVisible(false);
+    setActiveRegularChatGroupId(null);
+    setRegularChatInput('');
+  }, [activeTab, bookshelfSessions, group.id]);
+
+  useEffect(() => {
+    if (bookshelfViewMode === 'GRID') return;
+    if (!selectedBookshelfBook) {
+      setBookshelfViewMode('GRID');
+      setSelectedRegularGroupId(null);
+      return;
+    }
+    if (!selectedBookshelfBookId) {
+      setSelectedBookshelfBookId(selectedBookshelfBook.id);
+    }
+  }, [bookshelfViewMode, selectedBookshelfBook, selectedBookshelfBookId]);
+
+  useEffect(() => {
+    if (!regularMeetingInfo) {
+      setSelectedRegularGroupId(null);
+      return;
+    }
+
+    if (
+      selectedRegularGroupId &&
+      regularMeetingInfo.groups.some((groupItem) => groupItem.id === selectedRegularGroupId)
+    ) {
+      return;
+    }
+
+    setSelectedRegularGroupId(regularMeetingInfo.groups[0]?.id ?? null);
+  }, [regularMeetingInfo, selectedRegularGroupId]);
+
+  useEffect(() => {
+    setRegularGroupMembersVisible(false);
+  }, [bookshelfViewMode, selectedRegularGroupId]);
 
   const tabItems: Array<{
     key: 'home' | 'notice' | 'bookshelf';
@@ -2084,57 +4849,88 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       showToast('댓글 내용을 입력해주세요.');
       return;
     }
+    const clubId = group.clubId;
+    const noticeId = selectedNotice.remoteId;
+    if (!isManagedClub || typeof clubId !== 'number' || typeof noticeId !== 'number') {
+      showToast('공지 댓글 API를 사용할 수 없습니다.');
+      return;
+    }
 
-    setNoticeCommentsById((prev) => {
-      const prevComments = prev[selectedNotice.id] ?? buildDefaultNoticeComments(selectedNotice.id);
-      return {
-        ...prev,
-        [selectedNotice.id]: [
-          {
-            id: `${selectedNotice.id}-c-${Date.now()}`,
-            author: 'hy_me',
-            date: '방금 전',
-            content,
-            mine: true,
-          },
-          ...prevComments,
-        ],
-      };
-    });
-    setNoticeCommentInput('');
-  }, [buildDefaultNoticeComments, noticeCommentInput, selectedNotice]);
+    const submit = async () => {
+      try {
+        await createClubNoticeComment(clubId, noticeId, { content });
+        const comments = await fetchClubNoticeComments(clubId, noticeId);
+        setNoticeCommentsById((prev) => ({
+          ...prev,
+          [selectedNotice.id]: comments.items.map(mapNoticeCommentToUi),
+        }));
+        setNoticeCommentInput('');
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('댓글 등록에 실패했습니다.');
+        }
+      }
+    };
+
+    void submit();
+  }, [group.clubId, isManagedClub, noticeCommentInput, selectedNotice]);
 
   const handlePressCommentMenu = useCallback(
     (comment: NoticeComment) => {
       if (!selectedNotice) return;
 
       if (comment.mine) {
-        Alert.alert('댓글 메뉴', '원하는 작업을 선택해주세요.', [
-          { text: '취소', style: 'cancel' },
-          { text: '수정하기', onPress: () => showToast('수정 기능은 준비 중입니다.') },
-          {
-            text: '삭제하기',
-            style: 'destructive',
-            onPress: () => {
-              setNoticeCommentsById((prev) => {
-                const prevComments = prev[selectedNotice.id] ?? buildDefaultNoticeComments(selectedNotice.id);
-                return {
-                  ...prev,
-                  [selectedNotice.id]: prevComments.filter((item) => item.id !== comment.id),
-                };
-              });
-            },
-          },
-        ]);
+        showToast('댓글 수정/삭제 API는 아직 제공되지 않습니다.');
         return;
       }
 
       Alert.alert('댓글 메뉴', '원하는 작업을 선택해주세요.', [
         { text: '취소', style: 'cancel' },
-        { text: '신고하기', onPress: () => showToast('신고가 접수되었습니다.') },
+        {
+          text: '신고하기',
+          onPress: () =>
+            setReportModal({
+              nickname: comment.author,
+              profileImageUrl: comment.authorProfileImageUrl,
+              initialType: 'CLUB_MEETING',
+            }),
+        },
       ]);
     },
-    [buildDefaultNoticeComments, selectedNotice],
+    [selectedNotice],
+  );
+
+  const handleCloseReportModal = useCallback(() => {
+    if (submittingReport) return;
+    setReportModal(null);
+  }, [submittingReport]);
+
+  const handleSubmitReport = useCallback(
+    (payload: { reportType: MemberReportType; content?: string }) => {
+      if (!reportModal?.nickname) return;
+      requireAuth(() => {
+        const submit = async () => {
+          setSubmittingReport(true);
+          try {
+            await reportMember({
+              reportedMemberNickname: reportModal.nickname,
+              reportType: payload.reportType,
+              content: payload.content,
+            });
+            setReportModal(null);
+            showToast('신고가 접수되었습니다.');
+          } catch (error) {
+            if (!(error instanceof ApiError)) {
+              showToast('신고 접수에 실패했습니다.');
+            }
+          } finally {
+            setSubmittingReport(false);
+          }
+        };
+        void submit();
+      });
+    },
+    [reportModal, requireAuth],
   );
 
   const handleToggleVoteOption = useCallback(
@@ -2182,32 +4978,63 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       return;
     }
 
-    const noticeId = selectedNotice.id;
-    const selectedIds = selectedVoteOptionIdsByNotice[noticeId] ?? [];
+    const noticeKey = selectedNotice.id;
+    const selectedIds = selectedVoteOptionIdsByNotice[noticeKey] ?? [];
     if (selectedIds.length === 0) {
       showToast('투표 항목을 선택해주세요.');
       return;
     }
+    const clubId = group.clubId;
+    const noticeId = selectedNotice.remoteId;
+    if (!isManagedClub || typeof clubId !== 'number' || typeof noticeId !== 'number') {
+      showToast('공지 투표 API를 사용할 수 없습니다.');
+      return;
+    }
 
-    setNoticePollOptionsById((prev) => {
-      const current = prev[noticeId] ?? selectedNotice.poll?.options ?? [];
-      const next = current.map((option) => {
-        const withoutMine = option.voters.filter((voter) => voter !== 'hy_me');
-        if (selectedIds.includes(option.id)) {
-          return { ...option, voters: [...withoutMine, 'hy_me'] };
+    const submit = async () => {
+      const detail = await fetchClubNoticeDetail(clubId, noticeId);
+      if (!detail?.voteDetail) {
+        showToast('투표 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      const selectedItemNumbers = selectedIds
+        .map((id) => {
+          const match = id.match(/vote-(\d+)$/);
+          return match ? Number(match[1]) : null;
+        })
+        .filter((value): value is number => Boolean(value));
+
+      try {
+        await submitClubNoticeVote(clubId, noticeId, detail.voteDetail.id, {
+          selectedItemNumbers,
+        });
+        const refreshedDetail = await fetchClubNoticeDetail(clubId, noticeId);
+        if (!refreshedDetail) return;
+        const merged = mergeNoticeDetail(selectedNotice, refreshedDetail);
+        setNoticeItems((prev) =>
+          sortNoticeItems(
+            prev.map((item) => (item.id === selectedNotice.id ? merged : item)),
+          ),
+        );
+        setNoticePollOptionsById((prev) => ({
+          ...prev,
+          [selectedNotice.id]: merged.poll?.options ?? [],
+        }));
+        setSubmittedVoteOptionIdsByNotice((prev) => ({
+          ...prev,
+          [noticeId]: selectedIds,
+        }));
+        showToast('투표가 완료되었습니다.');
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('투표에 실패했습니다.');
         }
-        return { ...option, voters: withoutMine };
-      });
+      }
+    };
 
-      return { ...prev, [noticeId]: next };
-    });
-
-    setSubmittedVoteOptionIdsByNotice((prev) => ({
-      ...prev,
-      [noticeId]: selectedIds,
-    }));
-    showToast('투표가 완료되었습니다.');
-  }, [selectedNotice, selectedVoteOptionIdsByNotice]);
+    void submit();
+  }, [group.clubId, isManagedClub, selectedNotice, selectedVoteOptionIdsByNotice]);
 
   const getBookshelfCategoryBadgeStyle = useCallback((category: string) => {
     switch (category) {
@@ -2224,29 +5051,902 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     }
   }, []);
 
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.content, { paddingBottom: spacing.xl * 2 }]}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={false}
-          onRefresh={() => {}}
-          tintColor={colors.primary1}
-          colors={[colors.primary1]}
-        />
+  const openBookshelfDetail = useCallback((book: BookshelfItem, tab: BookshelfDetailTab) => {
+    setSelectedBookshelfBookId(book.id);
+    setBookshelfDetailTab(tab);
+    setSelectedRegularGroupId(null);
+    setBookshelfViewMode('DETAIL');
+  }, []);
+
+  const handleBackToBookshelfGrid = useCallback(() => {
+    setBookshelfViewMode('GRID');
+    setSelectedRegularGroupId(null);
+  }, []);
+
+  const handleChangeBookshelfTab = useCallback((tab: BookshelfDetailTab) => {
+    setBookshelfDetailTab(tab);
+    if (tab !== 'REGULAR') {
+      setSelectedRegularGroupId(null);
+      setBookshelfViewMode('DETAIL');
+      return;
+    }
+    setBookshelfViewMode('DETAIL');
+  }, []);
+
+  const handleSelectRegularGroup = useCallback((groupId: string) => {
+    setSelectedRegularGroupId(groupId);
+  }, []);
+
+  const handleEnterRegularGroup = useCallback((groupId: string) => {
+    setSelectedRegularGroupId(groupId);
+    setBookshelfDetailTab('REGULAR');
+    setBookshelfViewMode('REGULAR_GROUP');
+  }, []);
+
+  const handleToggleRegularGroupMembers = useCallback(() => {
+    setRegularGroupMembersVisible((prev) => !prev);
+  }, []);
+
+  const handleToggleRegularGroupPost = useCallback((groupId: string, postId: string) => {
+    setRegularGroupPostsById((prev) => {
+      const current = prev[groupId];
+      if (!current) return prev;
+
+      return {
+        ...prev,
+        [groupId]: current.map((post) =>
+          post.id === postId ? { ...post, completed: !post.completed } : post,
+        ),
+      };
+    });
+  }, []);
+
+  const handleSortRegularGroupPosts = useCallback((groupId: string) => {
+    setRegularGroupPostsById((prev) => {
+      const current = prev[groupId];
+      if (!current) return prev;
+
+      return {
+        ...prev,
+        [groupId]: [
+          ...current.filter((post) => post.completed),
+          ...current.filter((post) => !post.completed),
+        ],
+      };
+    });
+  }, []);
+
+  const handleOpenRegularChatPicker = useCallback(() => {
+    setRegularChatPickerVisible(true);
+    setActiveRegularChatGroupId(null);
+    setRegularChatInput('');
+  }, []);
+
+  const handleSelectRegularChatGroup = useCallback((groupId: string) => {
+    setActiveRegularChatGroupId(groupId);
+    setRegularChatPickerVisible(false);
+    setRegularChatInput('');
+  }, []);
+
+  const handleBackToRegularChatPicker = useCallback(() => {
+    setActiveRegularChatGroupId(null);
+    setRegularChatPickerVisible(true);
+    setRegularChatInput('');
+  }, []);
+
+  const handleCloseRegularChat = useCallback(() => {
+    setRegularChatPickerVisible(false);
+    setActiveRegularChatGroupId(null);
+    setRegularChatInput('');
+  }, []);
+
+  const handleSubmitRegularChat = useCallback(() => {
+    const content = regularChatInput.trim();
+    if (!activeRegularChatGroup || !content) return;
+    showToast('조 채팅 API 연동 전입니다.');
+  }, [activeRegularChatGroup, regularChatInput]);
+
+  const runAfterClosingManagementMenu = useCallback(
+    (callback: () => void) => {
+      closeManagementMenu();
+      callback();
+    },
+    [closeManagementMenu],
+  );
+
+  const handleOpenManagementScreen = useCallback((screen: GroupManagementScreen) => {
+    runAfterClosingManagementMenu(() => {
+      setActiveManagementScreen(screen);
+      setSelectedJoinRequestActionId(null);
+      setSelectedJoinRequestMessage(null);
+      setSelectedMemberActionId(null);
+      if (screen === 'BOOKSHELF_CREATE') {
+        setBookshelfCreateDraft(
+          buildBookshelfCreateDraft(String(parseGenerationNumber(bookshelfSessions[0]) ?? 1)),
+        );
+        closeBookshelfBookSelector();
+        closeBookshelfCalendar();
       }
-    >
+    });
+  }, [bookshelfSessions, closeBookshelfBookSelector, closeBookshelfCalendar, runAfterClosingManagementMenu]);
+
+  const handleCloseManagementScreen = useCallback(() => {
+    setActiveManagementScreen(null);
+    setSelectedJoinRequestActionId(null);
+    setSelectedJoinRequestMessage(null);
+    setSelectedMemberActionId(null);
+    closeBookshelfBookSelector();
+    closeBookshelfCalendar();
+  }, [closeBookshelfBookSelector, closeBookshelfCalendar]);
+  const handleCloseManagementLayer = useCallback(() => {
+    if (bookshelfBookSelectorVisible) {
+      closeBookshelfBookSelector();
+      return;
+    }
+    if (activeManagementScreen) {
+      handleCloseManagementScreen();
+      return;
+    }
+    closeManagementMenu();
+  }, [
+    activeManagementScreen,
+    bookshelfBookSelectorVisible,
+    closeBookshelfBookSelector,
+    closeManagementMenu,
+    handleCloseManagementScreen,
+  ]);
+
+  const handleProcessJoinRequest = useCallback((request: GroupJoinRequestItem, action: 'APPROVE' | 'REJECT') => {
+    const clubId = group.clubId;
+    const clubMemberId = request.clubMemberId;
+    if (submittingJoinRequestAction) return;
+    if (!isManagedClub || typeof clubId !== 'number' || typeof clubMemberId !== 'number') {
+      showToast('가입 신청 처리 API를 사용할 수 없습니다.');
+      return;
+    }
+
+    const process = async () => {
+      setSubmittingJoinRequestAction(true);
+      try {
+        await updateClubMemberStatus(clubId, clubMemberId, {
+          command: action === 'APPROVE' ? 'APPROVE' : 'REJECT',
+        });
+        const [pendingMembers, activeMembers] = await Promise.all([
+          fetchClubMembers(clubId, 'PENDING'),
+          fetchClubMembers(clubId, 'ACTIVE'),
+        ]);
+        setJoinRequests(pendingMembers.items.map(mapClubManagedMemberToJoinRequest));
+        setMembers(activeMembers.items.map(mapClubManagedMemberToGroupMember));
+        setSelectedJoinRequestActionId(null);
+        showToast(action === 'APPROVE' ? '가입 신청을 승인했습니다.' : '가입 신청을 삭제했습니다.');
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('가입 신청 처리에 실패했습니다.');
+        }
+      } finally {
+        setSubmittingJoinRequestAction(false);
+      }
+    };
+
+    void process();
+  }, [group.clubId, isManagedClub, submittingJoinRequestAction]);
+
+  const handleChangeMemberRole = useCallback((memberId: string, role: GroupMemberRole) => {
+    const targetMember = members.find((member) => member.id === memberId);
+    const clubId = group.clubId;
+    const clubMemberId = targetMember?.clubMemberId;
+    if (submittingMemberAction) return;
+    if (!isManagedClub || typeof clubId !== 'number' || typeof clubMemberId !== 'number') {
+      showToast('회원 역할 수정 API를 사용할 수 없습니다.');
+      return;
+    }
+    if (!targetMember || targetMember.role === role) {
+      setSelectedMemberActionId(null);
+      return;
+    }
+
+    const submit = async () => {
+      setSubmittingMemberAction(true);
+      try {
+        if (role === '개설자') {
+          await updateClubMemberStatus(clubId, clubMemberId, {
+            command: 'TRANSFER_OWNER',
+          });
+        } else {
+          await updateClubMemberStatus(clubId, clubMemberId, {
+            command: 'CHANGE_ROLE',
+            status: role === '운영진' ? 'STAFF' : 'MEMBER',
+          });
+        }
+
+        const activeMembers = await fetchClubMembers(clubId, 'ACTIVE');
+        setMembers(activeMembers.items.map(mapClubManagedMemberToGroupMember));
+        setSelectedMemberActionId(null);
+        showToast(`${role} 역할로 변경했습니다.`);
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('회원 역할 수정에 실패했습니다.');
+        }
+      } finally {
+        setSubmittingMemberAction(false);
+      }
+    };
+
+    if (role === '개설자') {
+      Alert.alert(
+        '개설자 역할 위임',
+        `'${targetMember.nickname}'님에게 개설자 역할을 위임하시겠습니까?`,
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '위임하기',
+            onPress: () => {
+              void submit();
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    void submit();
+  }, [group.clubId, isManagedClub, members, submittingMemberAction]);
+
+  const handleRemoveMember = useCallback((memberId: string) => {
+    const targetMember = members.find((member) => member.id === memberId);
+    const clubId = group.clubId;
+    const clubMemberId = targetMember?.clubMemberId;
+    if (submittingMemberAction) return;
+    if (!isManagedClub || typeof clubId !== 'number' || typeof clubMemberId !== 'number') {
+      showToast('회원 제외 API를 사용할 수 없습니다.');
+      return;
+    }
+    if (!targetMember || targetMember.role === '개설자') {
+      setSelectedMemberActionId(null);
+      return;
+    }
+
+    Alert.alert('회원 탈퇴', `'${targetMember.nickname}'님을 모임에서 제외하시겠습니까?`, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '탈퇴 처리',
+        style: 'destructive',
+        onPress: () => {
+          const removeMember = async () => {
+            setSubmittingMemberAction(true);
+            try {
+              await updateClubMemberStatus(clubId, clubMemberId, {
+                command: 'KICK',
+              });
+              const activeMembers = await fetchClubMembers(clubId, 'ACTIVE');
+              setMembers(activeMembers.items.map(mapClubManagedMemberToGroupMember));
+              setSelectedMemberActionId(null);
+              showToast('회원이 모임에서 제외되었습니다.');
+            } catch (error) {
+              if (!(error instanceof ApiError)) {
+                showToast('회원 제외에 실패했습니다.');
+              }
+            } finally {
+              setSubmittingMemberAction(false);
+            }
+          };
+
+          void removeMember();
+        },
+      },
+    ]);
+  }, [group.clubId, isManagedClub, members, submittingMemberAction]);
+
+  const handleSaveGroupEdit = useCallback(() => {
+    const name = editDraft.name.trim();
+    const region = editDraft.region.trim();
+    const description = editDraft.description.trim();
+    const tags = editDraft.categories;
+    const targets = editDraft.targets;
+
+    if (!name || !region || !description || tags.length === 0 || targets.length === 0) {
+      showToast('모임 이름, 소개글, 지역, 카테고리, 대상을 입력해주세요.');
+      return;
+    }
+    if (!isManagedClub) {
+      showToast('모임 수정 API를 사용할 수 없습니다.');
+      return;
+    }
+
+    const save = async () => {
+      try {
+        await updateClub(group.clubId as number, {
+          name,
+          description,
+          region,
+          category: tags
+            .map((tag) => categoryCodeByLabel[tag])
+            .filter((tag): tag is ClubCategoryCode => Boolean(tag)),
+          participantTypes: targets
+            .map((target) => participantCodeByLabel[target])
+            .filter((target): target is ClubParticipantTypeCode => Boolean(target)),
+          open: !editDraft.isPrivate,
+          profileImageUrl: editDraft.imageUrl || undefined,
+        });
+        const detail = await fetchClubDetail(group.clubId as number);
+        if (detail) {
+          const nextGroup = mapManagedClubDetailToGroup(detail, managedGroup);
+          setManagedGroup(nextGroup);
+        } else {
+          setManagedGroup((prev) => ({
+            ...prev,
+            name,
+            topic: `모임 대상 · ${targets.join(', ')}`,
+            region: `활동 지역 · ${region}`,
+            description,
+            tags,
+            isPrivate: editDraft.isPrivate,
+            profileImageUrl: editDraft.imageUrl || undefined,
+          }));
+        }
+        setActiveManagementScreen(null);
+        showToast('모임 정보가 수정되었습니다.');
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('모임 정보 수정에 실패했습니다.');
+        }
+      }
+    };
+
+    void save();
+  }, [editDraft, group.clubId, isManagedClub, managedGroup]);
+
+  const handleOpenJoinRequestProfile = useCallback(
+    (nickname: string) => {
+      const memberNickname = nickname.trim();
+      if (!memberNickname) return;
+
+      setSelectedJoinRequestActionId(null);
+      setSelectedJoinRequestMessage(null);
+      setActiveManagementScreen(null);
+      navigation.navigate('UserProfile', { memberNickname, fromScreen: 'Meeting' });
+    },
+    [navigation],
+  );
+
+  const handlePickClubImage = useCallback(() => {
+    if (uploadingClubImage) return;
+
+    const pick = async () => {
+      setUploadingClubImage(true);
+      try {
+        const imageUrl = await pickAndUploadImage('CLUB');
+        if (!imageUrl) return;
+        setEditDraft((prev) => ({ ...prev, imageUrl }));
+        showToast('모임 이미지를 적용했습니다.');
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('이미지 업로드에 실패했습니다.');
+        }
+      } finally {
+        setUploadingClubImage(false);
+      }
+    };
+
+    void pick();
+  }, [uploadingClubImage]);
+
+  const runBookshelfBookSearch = useCallback(async (keyword: string) => {
+    const trimmed = keyword.trim();
+    if (!trimmed) {
+      setBookshelfBookSearchSearched(false);
+      setBookshelfBookSearchKeyword('');
+      setBookshelfBookSearchResults([]);
+      return;
+    }
+
+    setBookshelfBookSearchLoading(true);
+    setBookshelfBookSearchSearched(true);
+    setBookshelfBookSearchKeyword(trimmed);
+    setBookshelfBookSearchResults([]);
+    try {
+      const response = await searchBooks(trimmed, 1);
+      setBookshelfBookSearchResults(response.items);
+    } catch (error) {
+      if (!(error instanceof ApiError)) {
+        showToast('책 검색에 실패했습니다.');
+      }
+      setBookshelfBookSearchResults([]);
+    } finally {
+      setBookshelfBookSearchLoading(false);
+    }
+  }, []);
+
+  const handleSubmitBookshelfBookSearch = useCallback(() => {
+    void runBookshelfBookSearch(bookshelfBookSearchQuery);
+  }, [bookshelfBookSearchQuery, runBookshelfBookSearch]);
+
+  const handleSelectBookshelfSourceBook = useCallback((book: BookItem) => {
+    setBookshelfCreateDraft((prev) => ({
+      ...prev,
+      sourceBook: {
+        isbn: book.isbn,
+        title: book.title,
+        author: book.author,
+        coverImage: book.imgUrl,
+        publisher: book.publisher,
+        description: book.description,
+      },
+    }));
+    closeBookshelfBookSelector();
+  }, [closeBookshelfBookSelector]);
+
+  const handleSubmitBookshelfCreate = useCallback(() => {
+    if (creatingBookshelf) {
+      return;
+    }
+    if (!bookshelfCreateDraft.sourceBook) {
+      showToast('책을 선택해주세요.');
+      return;
+    }
+    const clubId = group.clubId;
+    if (!isManagedClub || typeof clubId !== 'number') {
+      showToast('책장 생성 API를 사용할 수 없습니다.');
+      return;
+    }
+
+    const generation = parseGenerationNumber(bookshelfCreateDraft.session);
+    if (!generation) {
+      showToast('기수를 숫자로 입력해주세요.');
+      return;
+    }
+
+    const regularMeetingName = bookshelfCreateDraft.regularMeetingName.trim();
+    const meetingLocation = bookshelfCreateDraft.meetingLocation.trim();
+    const meetingDate = bookshelfCreateDraft.meetingDate.trim();
+    if (!regularMeetingName || !meetingLocation || !meetingDate) {
+      showToast('정기모임 이름, 장소, 날짜를 입력해주세요.');
+      return;
+    }
+    if (regularMeetingName.length > BOOKSHELF_MEETING_TITLE_MAX_LENGTH) {
+      showToast(`정기모임 이름은 ${BOOKSHELF_MEETING_TITLE_MAX_LENGTH}자 이하로 입력해주세요.`);
+      return;
+    }
+    if (meetingLocation.length > BOOKSHELF_MEETING_LOCATION_MAX_LENGTH) {
+      showToast(`모임 장소는 ${BOOKSHELF_MEETING_LOCATION_MAX_LENGTH}자 이하로 입력해주세요.`);
+      return;
+    }
+
+    const sourceBook = bookshelfCreateDraft.sourceBook;
+    const primaryCategory = bookshelfCreateDraft.categories[0];
+    const submit = async () => {
+      setCreatingBookshelf(true);
+      try {
+        const meetingTime = toApiDateTime(meetingDate);
+        if (!meetingTime) {
+          showToast('올바른 모임 날짜를 선택해주세요.');
+          return;
+        }
+        await createClubBookshelf(clubId, {
+          title: regularMeetingName,
+          location: meetingLocation,
+          meetingTime,
+          generation,
+          tag: primaryCategory,
+          bookInfo: {
+            isbn: sourceBook.isbn,
+            title: sourceBook.title,
+            author: sourceBook.author,
+            imgUrl: sourceBook.coverImage,
+            publisher: sourceBook.publisher,
+            description: sourceBook.description,
+          },
+        });
+        const bookshelfList = await fetchClubBookshelves(clubId);
+        const nextItems = bookshelfList.items.map(mapApiBookshelfToItem);
+        setBookshelfItems(nextItems);
+        const createdSession = formatGenerationLabel(generation);
+        setSelectedBookshelfSession(createdSession);
+        setActiveTab('bookshelf');
+        setBookshelfViewMode('GRID');
+        setActiveManagementScreen(null);
+        setBookshelfCreateDraft(buildBookshelfCreateDraft(String(generation)));
+        showToast('책장이 생성되었습니다.');
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('책장 생성에 실패했습니다.');
+        }
+      } finally {
+        setCreatingBookshelf(false);
+      }
+    };
+
+    void submit();
+  }, [bookshelfCreateDraft, creatingBookshelf, group.clubId, isManagedClub]);
+
+  const handleOpenNoticeComposer = useCallback((notice?: NoticeItem) => {
+    if (notice) {
+      setEditingNoticeId(notice.id);
+      setNoticeDraft({
+        title: notice.title,
+        content: notice.content,
+        isPinned: Boolean(notice.isPinned),
+        bookshelfEnabled: Boolean(notice.bookshelf),
+        bookshelfId: notice.bookshelf?.id ?? null,
+        pollEnabled: Boolean(notice.poll),
+        pollAnonymous: notice.poll?.anonymous ?? true,
+        pollAllowDuplicate: notice.poll?.allowDuplicate ?? false,
+        pollStartsAt: notice.poll?.startsAt ?? '2026.03.01 10:00',
+        pollEndsAt: notice.poll?.endsAt ?? '2026.03.08 22:00',
+        pollOptions:
+          notice.poll?.options.map((option) => option.label) ?? ['', '', ''],
+        photos: notice.photos ?? [],
+      });
+    } else {
+      setEditingNoticeId(null);
+      setNoticeDraft(buildNoticeDraft());
+    }
+
+    setNoticeMenuVisible(false);
+    setNoticeBookSelectorVisible(false);
+    setNoticeComposerVisible(true);
+  }, []);
+
+  const handleOpenNoticeComposerFromManagement = useCallback(() => {
+    runAfterClosingManagementMenu(() => {
+      handleOpenNoticeComposer();
+    });
+  }, [handleOpenNoticeComposer, runAfterClosingManagementMenu]);
+
+  const handleCloseNoticeComposer = useCallback(() => {
+    setNoticeComposerVisible(false);
+    setNoticeBookSelectorVisible(false);
+    setEditingNoticeId(null);
+    setNoticeDraft(buildNoticeDraft());
+  }, []);
+
+  const handleAddNoticePhoto = useCallback(() => {
+    if (uploadingNoticePhoto) return;
+
+    const pick = async () => {
+      if (noticeDraft.photos.length >= 10) {
+        showToast('사진은 최대 10개까지 추가할 수 있습니다.');
+        return;
+      }
+
+      setUploadingNoticePhoto(true);
+      try {
+        const imageUrl = await pickAndUploadImage('NOTICE');
+        if (!imageUrl) return;
+        setNoticeDraft((prev) => ({
+          ...prev,
+          photos: [...prev.photos, imageUrl].slice(0, 10),
+        }));
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('이미지 업로드에 실패했습니다.');
+        }
+      } finally {
+        setUploadingNoticePhoto(false);
+      }
+    };
+
+    void pick();
+  }, [noticeDraft.photos.length, uploadingNoticePhoto]);
+
+  const handleRemoveNoticePhoto = useCallback((index: number) => {
+    setNoticeDraft((prev) => ({
+      ...prev,
+      photos: prev.photos.filter((_, currentIndex) => currentIndex !== index),
+    }));
+  }, []);
+
+  const handleUpdateNoticePollOption = useCallback((index: number, value: string) => {
+    setNoticeDraft((prev) => ({
+      ...prev,
+      pollOptions: prev.pollOptions.map((item, currentIndex) =>
+        currentIndex === index ? value : item,
+      ),
+    }));
+  }, []);
+
+  const handleAddNoticePollOption = useCallback(() => {
+    setNoticeDraft((prev) => ({
+      ...prev,
+      pollOptions: [...prev.pollOptions, ''],
+    }));
+  }, []);
+
+  const handleSelectNoticeBookshelf = useCallback((bookId: string) => {
+    setNoticeDraft((prev) => ({
+      ...prev,
+      bookshelfEnabled: true,
+      bookshelfId: bookId,
+    }));
+    setNoticeBookSelectorVisible(false);
+  }, []);
+
+  const handleSubmitNotice = useCallback(() => {
+    const title = noticeDraft.title.trim();
+    const content = noticeDraft.content.trim();
+    if (!title || !content) {
+      showToast('제목과 내용을 입력해주세요.');
+      return;
+    }
+    if (!isManagedClub) {
+      showToast('공지 API를 사용할 수 없습니다.');
+      return;
+    }
+
+    const bookshelfAttachment =
+      noticeDraft.bookshelfEnabled && noticeDraft.bookshelfId
+        ? bookshelfItems.find((book) => book.id === noticeDraft.bookshelfId)
+        : null;
+    const pollOptions = noticeDraft.pollOptions
+      .map((option) => option.trim())
+      .filter((option) => option.length > 0);
+
+    if (noticeDraft.pollEnabled && pollOptions.length < 2) {
+      showToast('투표 항목은 2개 이상 필요합니다.');
+      return;
+    }
+
+    const submit = async () => {
+      try {
+        if (editingNoticeId) {
+          const editingNotice = noticeItems.find((item) => item.id === editingNoticeId);
+          if (!editingNotice?.remoteId) {
+            showToast('수정할 공지 정보를 찾을 수 없습니다.');
+            return;
+          }
+
+          await updateClubNotice(group.clubId as number, editingNotice.remoteId, {
+            title,
+            content,
+            meetingId: bookshelfAttachment?.remoteMeetingId,
+            imageUrls: noticeDraft.photos.length > 0 ? noticeDraft.photos : undefined,
+            vote: noticeDraft.pollEnabled
+              ? {
+                  deadline:
+                    toApiDateTime(noticeDraft.pollEndsAt.trim()) ?? getCurrentKstApiDateTime(),
+                }
+              : undefined,
+            isPinned: noticeDraft.isPinned,
+          });
+        } else {
+          await createClubNotice(group.clubId as number, {
+            title,
+            content,
+            meetingId: bookshelfAttachment?.remoteMeetingId,
+            imageUrls: noticeDraft.photos.length > 0 ? noticeDraft.photos : undefined,
+            vote: noticeDraft.pollEnabled
+              ? {
+                  title,
+                  content,
+                  item1: pollOptions[0] ?? '',
+                  item2: pollOptions[1] ?? '',
+                  item3: pollOptions[2],
+                  item4: pollOptions[3],
+                  item5: pollOptions[4],
+                  item6: pollOptions[5],
+                  anonymity: noticeDraft.pollAnonymous,
+                  duplication: noticeDraft.pollAllowDuplicate,
+                  startTime:
+                    toApiDateTime(noticeDraft.pollStartsAt.trim()) ?? getCurrentKstApiDateTime(),
+                  deadline:
+                    toApiDateTime(noticeDraft.pollEndsAt.trim()) ?? getCurrentKstApiDateTime(),
+                }
+              : undefined,
+            isPinned: noticeDraft.isPinned,
+          });
+        }
+
+        const refreshed = await fetchClubNotices(group.clubId as number, 1);
+        const mapped = sortNoticeItems([
+          ...refreshed.pinnedNotices.map(mapNoticePreviewToNoticeItem),
+          ...refreshed.normalNotices.map(mapNoticePreviewToNoticeItem),
+        ]);
+        setNoticeItems(mapped);
+        setSelectedNoticeId(mapped[0]?.id ?? null);
+        setNoticeComposerVisible(false);
+        setEditingNoticeId(null);
+        setNoticeDraft(buildNoticeDraft());
+        showToast(editingNoticeId ? '공지가 수정되었습니다.' : '공지가 등록되었습니다.');
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast(editingNoticeId ? '공지 수정에 실패했습니다.' : '공지 등록에 실패했습니다.');
+        }
+      }
+    };
+
+    void submit();
+  }, [bookshelfItems, editingNoticeId, group.clubId, isManagedClub, noticeDraft, noticeItems]);
+
+  const handleDeleteNotice = useCallback(() => {
+    if (!selectedNotice) return;
+    const clubId = group.clubId;
+    const noticeId = selectedNotice.remoteId;
+    if (!isManagedClub || typeof clubId !== 'number' || typeof noticeId !== 'number') {
+      showToast('공지 삭제 API를 사용할 수 없습니다.');
+      return;
+    }
+
+    const remove = async () => {
+      try {
+        await deleteClubNotice(clubId, noticeId);
+        const refreshed = await fetchClubNotices(clubId, 1);
+        setNoticeItems(sortNoticeItems([
+          ...refreshed.pinnedNotices.map(mapNoticePreviewToNoticeItem),
+          ...refreshed.normalNotices.map(mapNoticePreviewToNoticeItem),
+        ]));
+        setNoticeCommentsById((prev) => {
+          const next = { ...prev };
+          delete next[selectedNotice.id];
+          return next;
+        });
+        setNoticePollOptionsById((prev) => {
+          const next = { ...prev };
+          delete next[selectedNotice.id];
+          return next;
+        });
+        setSelectedVoteOptionIdsByNotice((prev) => {
+          const next = { ...prev };
+          delete next[selectedNotice.id];
+          return next;
+        });
+        setSubmittedVoteOptionIdsByNotice((prev) => {
+          const next = { ...prev };
+          delete next[selectedNotice.id];
+          return next;
+        });
+        setNoticeMenuVisible(false);
+        setSelectedNoticeId(null);
+        setNoticeCommentInput('');
+        showToast('공지를 삭제했습니다.');
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('공지 삭제에 실패했습니다.');
+        }
+      }
+    };
+
+    void remove();
+  }, [group.clubId, isManagedClub, selectedNotice]);
+
+  const selectedJoinRequestAction = useMemo(
+    () => joinRequests.find((item) => item.id === selectedJoinRequestActionId) ?? null,
+    [joinRequests, selectedJoinRequestActionId],
+  );
+
+  const selectedMemberAction = useMemo(
+    () => members.find((item) => item.id === selectedMemberActionId) ?? null,
+    [members, selectedMemberActionId],
+  );
+
+  const handleBackFromGroupHome = useCallback(() => {
+    if (contactModalVisible) {
+      closeContactModal();
+      return;
+    }
+
+    if (selectedMemberActionId) {
+      setSelectedMemberActionId(null);
+      return;
+    }
+
+    if (selectedJoinRequestActionId) {
+      setSelectedJoinRequestActionId(null);
+      return;
+    }
+
+    if (selectedJoinRequestMessage) {
+      setSelectedJoinRequestMessage(null);
+      return;
+    }
+
+    if (bookshelfBookSelectorVisible) {
+      closeBookshelfBookSelector();
+      return;
+    }
+
+    if (bookshelfCalendarVisible) {
+      closeBookshelfCalendar();
+      return;
+    }
+
+    if (noticeBookSelectorVisible) {
+      setNoticeBookSelectorVisible(false);
+      return;
+    }
+
+    if (noticeMenuVisible) {
+      setNoticeMenuVisible(false);
+      return;
+    }
+
+    if (noticeComposerVisible) {
+      handleCloseNoticeComposer();
+      return;
+    }
+
+    if (activeManagementScreen) {
+      handleCloseManagementScreen();
+      return;
+    }
+
+    if (managementMenuVisible) {
+      closeManagementMenu();
+      return;
+    }
+
+    onBack();
+  }, [
+    activeManagementScreen,
+    bookshelfBookSelectorVisible,
+    bookshelfCalendarVisible,
+    closeContactModal,
+    closeBookshelfBookSelector,
+    closeBookshelfCalendar,
+    contactModalVisible,
+    handleCloseManagementScreen,
+    handleCloseNoticeComposer,
+    managementMenuVisible,
+    closeManagementMenu,
+    noticeBookSelectorVisible,
+    noticeComposerVisible,
+    noticeMenuVisible,
+    onBack,
+    selectedJoinRequestActionId,
+    selectedJoinRequestMessage,
+    selectedMemberActionId,
+  ]);
+
+  const handlePressContactButton = useCallback(() => {
+    setContactModalVisible(true);
+  }, []);
+
+  const handleOpenContactLink = useCallback(async (link: string) => {
+    const target = toOpenableContactLink(link);
+    if (!target) {
+      showToast('문의하기 링크를 열 수 없습니다.');
+      return;
+    }
+
+    try {
+      await Linking.openURL(target);
+      closeContactModal();
+    } catch {
+      showToast('문의하기 링크를 열 수 없습니다.');
+    }
+  }, [closeContactModal]);
+
+  return (
+    <View style={styles.screenWrap}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingBottom: spacing.xl * 2 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => {}}
+            tintColor={colors.primary1}
+            colors={[colors.primary1]}
+          />
+        }
+      >
       <Pressable
         style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
-        onPress={onBack}
+        onPress={handleBackFromGroupHome}
       >
         <MaterialIcons name="chevron-left" size={18} color={colors.gray5} />
         <Text style={styles.breadcrumbText}>모임 목록</Text>
       </Pressable>
 
-      <Text style={[styles.sectionTitle, styles.detailTitle]}>{group.name}</Text>
+      <View style={styles.detailTitleRow}>
+        <Text style={[styles.sectionTitle, styles.detailTitle]}>{managedGroup.name}</Text>
+        <Pressable
+          style={({ pressed }) => [styles.detailTitleManageLink, pressed && styles.pressed]}
+          onPress={() => setManagementMenuVisible(true)}
+        >
+          <Text style={styles.detailTitleManageLinkText}>모임 관리하기</Text>
+        </Pressable>
+      </View>
 
       <View style={styles.pillNav}>
         {tabItems.map((tab) => {
@@ -2274,18 +5974,28 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
       {activeTab === 'home' ? (
         <View style={styles.detailCard}>
-          {group.notice ? (
+          {managedGroup.notice ? (
             <View style={styles.noticeBox}>
               <MaterialIcons name="campaign" size={18} color={colors.primary1} />
-              <Text style={styles.noticeText}>{group.notice}</Text>
+              <Text style={styles.noticeText}>{managedGroup.notice}</Text>
             </View>
           ) : null}
 
-          <View style={styles.detailMain}>
-            <View style={styles.detailImage} />
+	          <View style={styles.detailMain}>
+	            <View style={styles.detailImage}>
+	              {managedGroup.profileImageUrl ? (
+	                <Image
+	                  source={{ uri: managedGroup.profileImageUrl }}
+	                  style={styles.detailImagePreview}
+	                  resizeMode="cover"
+	                />
+	              ) : (
+	                <ClubDefaultProfileArtwork />
+	              )}
+	            </View>
             <View style={styles.detailInfo}>
               <View style={styles.tagRow}>
-                {group.tags.map((tag) => (
+                {managedGroup.tags.map((tag) => (
                   <View key={tag} style={styles.tag}>
                     <Text style={styles.tagText}>{tag}</Text>
                   </View>
@@ -2293,18 +6003,18 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               </View>
               <View style={styles.metaBlock}>
                 <Text style={styles.metaLabel}>모임 대상</Text>
-                <Text style={styles.metaValue}>{group.topic}</Text>
+                <Text style={styles.metaValue}>{managedGroup.topic}</Text>
               </View>
               <View style={styles.metaBlock}>
                 <Text style={styles.metaLabel}>활동 지역</Text>
-                <Text style={styles.metaValue}>{group.region}</Text>
+                <Text style={styles.metaValue}>{managedGroup.region}</Text>
               </View>
               <View style={styles.metaBlock}>
                 <Text style={styles.metaLabel}>모임 취지</Text>
-                <Text style={styles.metaValue}>토론, 친목</Text>
+                <Text style={styles.metaValue}>{managedGroup.isPrivate ? '비공개, 토론' : '공개, 토론'}</Text>
               </View>
-              {group.description ? (
-                <Text style={styles.detailBody}>{group.description}</Text>
+              {managedGroup.description ? (
+                <Text style={styles.detailBody}>{managedGroup.description}</Text>
               ) : null}
             </View>
           </View>
@@ -2313,10 +6023,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
             <Pressable
               style={({ pressed }) => [styles.primaryButton, styles.detailButton, pressed && styles.pressed]}
             >
-              <Text style={styles.primaryButtonText}>{group.nextSession ?? '이번 모임 바로가기'}</Text>
+              <Text style={styles.primaryButtonText}>{managedGroup.nextSession ?? '이번 모임 바로가기'}</Text>
             </Pressable>
             <Pressable
               style={({ pressed }) => [styles.outlineButton, styles.detailButton, pressed && styles.pressed]}
+              onPress={handlePressContactButton}
             >
               <Text style={styles.outlineButtonText}>문의하기</Text>
             </Pressable>
@@ -2339,29 +6050,87 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
             </Pressable>
 
             <View style={styles.noticeDetailTopRow}>
-              <View style={[styles.noticeTag, styles.noticeTagPin]}>
-                <Text style={styles.noticeTagText}>{selectedNotice.category}</Text>
+              <View style={styles.noticeDetailCategoryRow}>
+                <View style={[styles.noticeTag, styles.noticeTagPin]}>
+                  <Text style={styles.noticeTagText}>{selectedNotice.category}</Text>
+                </View>
+                <Text style={styles.noticeDetailDate}>{selectedNotice.date}</Text>
               </View>
-              <Text style={styles.noticeDetailDate}>{selectedNotice.date}</Text>
+              <Pressable
+                style={({ pressed }) => [styles.noticeDetailMenuButton, pressed && styles.pressed]}
+                onPress={() => setNoticeMenuVisible(true)}
+              >
+                <MaterialIcons name="more-vert" size={18} color={colors.gray5} />
+              </Pressable>
             </View>
             <Text style={styles.noticeDetailTitle}>{selectedNotice.title}</Text>
             <Text style={styles.noticeDetailBody}>{selectedNotice.content}</Text>
+            {selectedNotice.bookshelf ? (
+              <View style={styles.noticeAttachmentCard}>
+                <Text style={styles.noticeAttachmentTitle}>책장</Text>
+                <View style={styles.noticeBookshelfCard}>
+                  <Image
+                    source={{ uri: selectedNotice.bookshelf.coverImage }}
+                    style={styles.noticeBookshelfCover}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.noticeBookshelfInfo}>
+                    <Text style={styles.noticeBookshelfTitle}>{selectedNotice.bookshelf.title}</Text>
+                    <Text style={styles.noticeBookshelfAuthor}>{selectedNotice.bookshelf.author}</Text>
+                    <View style={styles.bookshelfBadgeRow}>
+                      <View style={styles.bookshelfSessionBadge}>
+                        <Text style={styles.bookshelfBadgeText}>{selectedNotice.bookshelf.session}</Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.bookshelfCategoryBadge,
+                          getBookshelfCategoryBadgeStyle(selectedNotice.bookshelf.category),
+                        ]}
+                      >
+                        <Text style={styles.bookshelfBadgeText}>
+                          {selectedNotice.bookshelf.category}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.bookshelfRatingRow}>
+                      {Array.from({ length: 5 }).map((_, idx) => (
+                          <MaterialIcons
+                            key={`${selectedNotice.id}-bookshelf-star-${idx}`}
+                            name="star"
+                            size={14}
+                            color={
+                              idx < (selectedNotice.bookshelf?.rating ?? 0)
+                                ? colors.secondary2
+                                : colors.gray2
+                            }
+                          />
+                      ))}
+                    </View>
+                  </View>
+                </View>
+              </View>
+            ) : null}
             {selectedNotice.poll ? (
               <View style={styles.noticePollSection}>
                 <View style={styles.noticePollMetaRow}>
-                  <Text style={styles.noticePollEndText}>투표 종료 {selectedNotice.poll.endsAt}</Text>
+                  <View style={styles.noticePollSchedule}>
+                    <Text style={styles.noticeAttachmentTitle}>투표</Text>
+                    <Text style={styles.noticePollEndText}>
+                      {selectedNotice.poll.startsAt} - {selectedNotice.poll.endsAt}
+                    </Text>
+                  </View>
                   <View style={styles.noticePollMetaRight}>
                     <Text style={styles.noticePollMetaText}>
                       {selectedNotice.poll.allowDuplicate ? '중복 가능' : '중복 불가'}
                     </Text>
                     <View style={styles.noticePollMetaPrivacy}>
                       <MaterialIcons
-                        name={selectedNotice.poll.anonymous ? 'lock-outline' : 'public'}
+                        name={selectedNotice.poll.anonymous ? 'lock-outline' : 'person-outline'}
                         size={14}
                         color={colors.gray4}
                       />
                       <Text style={styles.noticePollMetaText}>
-                        {selectedNotice.poll.anonymous ? '익명' : '공개'}
+                        {selectedNotice.poll.anonymous ? '익명' : '실명'}
                       </Text>
                     </View>
                   </View>
@@ -2430,9 +6199,23 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   </Text>
                 </Pressable>
               </View>
-            ) : (
-              <View style={styles.noticeDetailImageStrip} />
-            )}
+            ) : null}
+            {selectedNotice.photos && selectedNotice.photos.length > 0 ? (
+              <View style={styles.noticeAttachmentCard}>
+                <Text style={styles.noticeAttachmentTitle}>사진</Text>
+                <View style={styles.noticePhotoGrid}>
+                  {selectedNotice.photos.map((photo, index) => (
+                    <View key={`${selectedNotice.id}-photo-${photo}-${index}`} style={styles.noticePhotoItem}>
+                      <Image
+                        source={{ uri: photo }}
+                        style={styles.noticePhotoImage}
+                        resizeMode="cover"
+                      />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
             <View style={styles.noticeDetailDivider} />
 
             <View style={styles.noticeCommentSection}>
@@ -2461,7 +6244,15 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 {currentNoticeComments.map((comment) => (
                   <View key={comment.id} style={styles.noticeCommentItem}>
                     <View style={styles.noticeCommentAvatar}>
-                      <MaterialIcons name="person-outline" size={20} color={colors.gray4} />
+                      {comment.authorProfileImageUrl ? (
+                        <Image
+                          source={{ uri: comment.authorProfileImageUrl }}
+                          style={styles.noticeCommentAvatarImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <MaterialIcons name="person-outline" size={20} color={colors.gray4} />
+                      )}
                     </View>
                     <View style={styles.noticeCommentBody}>
                       <View style={styles.noticeCommentMetaRow}>
@@ -2485,11 +6276,24 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     </View>
                   </View>
                 ))}
+                {currentNoticeComments.length === 0 ? (
+                  <View style={styles.managementEmptyCard}>
+                    <Text style={styles.managementEmptyText}>등록된 댓글이 없습니다.</Text>
+                  </View>
+                ) : null}
               </View>
             </View>
           </View>
         ) : (
           <View style={styles.noticeBoardCard}>
+              <View style={styles.noticeBoardHeader}>
+                <View>
+                  <Text style={styles.noticeBoardTitle}>공지사항</Text>
+                  <Text style={styles.noticeBoardDescription}>
+                    운영진은 모임 관리하기에서 공지 작성과 수정을 한 번에 관리할 수 있습니다.
+                  </Text>
+                </View>
+              </View>
             <View style={styles.noticeList}>
               {visibleNotices.map((notice) => (
                 <Pressable
@@ -2502,143 +6306,2190 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                       renderNoticeTag(tag, `${notice.id}-${tag}-${index}`),
                     )}
                   </View>
-                  <Text style={styles.noticeItemTitle} numberOfLines={1}>
-                    {notice.title}
-                  </Text>
+                  <View style={styles.noticeItemContent}>
+                    <Text style={styles.noticeItemTitle} numberOfLines={1}>
+                      {notice.title}
+                    </Text>
+                    <View style={styles.noticeItemMetaRow}>
+                      {notice.bookshelf ? (
+                        <View style={styles.noticeItemMetaBadge}>
+                          <MaterialIcons name="collections-bookmark" size={14} color={colors.gray4} />
+                          <Text style={styles.noticeItemMetaText}>책장</Text>
+                        </View>
+                      ) : null}
+                      {notice.poll ? (
+                        <View style={styles.noticeItemMetaBadge}>
+                          <MaterialIcons name="poll" size={14} color={colors.gray4} />
+                          <Text style={styles.noticeItemMetaText}>투표</Text>
+                        </View>
+                      ) : null}
+                      {notice.photos && notice.photos.length > 0 ? (
+                        <View style={styles.noticeItemMetaBadge}>
+                          <MaterialIcons name="image" size={14} color={colors.gray4} />
+                          <Text style={styles.noticeItemMetaText}>사진 {notice.photos.length}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
                 </Pressable>
               ))}
+              {visibleNotices.length === 0 ? (
+                <View style={styles.managementEmptyCard}>
+                  <Text style={styles.managementEmptyText}>등록된 공지가 없습니다.</Text>
+                </View>
+              ) : null}
             </View>
-            <View style={styles.noticePagination}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.noticePageArrow,
-                  currentNoticePage === 1 && styles.noticePageArrowDisabled,
-                  pressed && styles.pressed,
-                ]}
-                disabled={currentNoticePage === 1}
-                onPress={() => setNoticePage((prev) => Math.max(1, prev - 1))}
-              >
-                <MaterialIcons name="chevron-left" size={18} color={colors.gray5} />
-              </Pressable>
+            {visibleNotices.length > 0 ? (
+              <View style={styles.noticePagination}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.noticePageArrow,
+                    currentNoticePage === 1 && styles.noticePageArrowDisabled,
+                    pressed && styles.pressed,
+                  ]}
+                  disabled={currentNoticePage === 1}
+                  onPress={() => setNoticePage((prev) => Math.max(1, prev - 1))}
+                >
+                  <MaterialIcons name="chevron-left" size={18} color={colors.gray5} />
+                </Pressable>
 
-              {visiblePageNumbers.map((page) => {
-                const active = page === currentNoticePage;
-                return (
-                  <Pressable
-                    key={`notice-page-${page}`}
-                    style={({ pressed }) => [
-                      styles.noticePageButton,
-                      active && styles.noticePageButtonActive,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => setNoticePage(page)}
-                  >
-                    <Text style={[styles.noticePageText, active && styles.noticePageTextActive]}>
-                      {page}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+                {visiblePageNumbers.map((page) => {
+                  const active = page === currentNoticePage;
+                  return (
+                    <Pressable
+                      key={`notice-page-${page}`}
+                      style={({ pressed }) => [
+                        styles.noticePageButton,
+                        active && styles.noticePageButtonActive,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => setNoticePage(page)}
+                    >
+                      <Text style={[styles.noticePageText, active && styles.noticePageTextActive]}>
+                        {page}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
 
-              <Pressable
-                style={({ pressed }) => [
-                  styles.noticePageArrow,
-                  currentNoticePage >= totalNoticePages && styles.noticePageArrowDisabled,
-                  pressed && styles.pressed,
-                ]}
-                disabled={currentNoticePage >= totalNoticePages}
-                onPress={() => setNoticePage((prev) => Math.min(totalNoticePages, prev + 1))}
-              >
-                <MaterialIcons name="chevron-right" size={18} color={colors.gray5} />
-              </Pressable>
-            </View>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.noticePageArrow,
+                    currentNoticePage >= totalNoticePages && styles.noticePageArrowDisabled,
+                    pressed && styles.pressed,
+                  ]}
+                  disabled={currentNoticePage >= totalNoticePages}
+                  onPress={() => setNoticePage((prev) => Math.min(totalNoticePages, prev + 1))}
+                >
+                  <MaterialIcons name="chevron-right" size={18} color={colors.gray5} />
+                </Pressable>
+              </View>
+            ) : null}
           </View>
         )
       ) : null}
 
       {activeTab === 'bookshelf' ? (
         <View style={styles.bookshelfSection}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.bookshelfSessionRow}
-          >
-            {bookshelfSessions.map((session) => {
-              const active = selectedBookshelfSession === session;
-              return (
-                <Pressable
-                  key={`${group.id}-session-${session}`}
-                  style={({ pressed }) => [
-                    styles.bookshelfSessionChip,
-                    active && styles.bookshelfSessionChipActive,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() => setSelectedBookshelfSession(session)}
-                >
-                  <Text
-                    style={[
-                      styles.bookshelfSessionText,
-                      active && styles.bookshelfSessionTextActive,
-                    ]}
-                  >
-                    {session}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          <View style={styles.bookshelfGrid}>
-            {visibleBookshelfItems.map((book) => (
-              <View key={book.id} style={styles.bookshelfCard}>
-                <Image
-                  source={{ uri: book.coverImage }}
-                  style={styles.bookshelfCover}
-                  resizeMode="cover"
-                />
-                <Text style={styles.bookshelfTitle} numberOfLines={1}>
-                  {book.title}
-                </Text>
-                <Text style={styles.bookshelfAuthor} numberOfLines={1}>
-                  {book.author}
-                </Text>
-                <View style={styles.bookshelfBadgeRow}>
-                  <View style={styles.bookshelfSessionBadge}>
-                    <Text style={styles.bookshelfBadgeText}>{book.session}</Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.bookshelfCategoryBadge,
-                      getBookshelfCategoryBadgeStyle(book.category),
-                    ]}
-                  >
-                    <Text style={styles.bookshelfBadgeText}>{book.category}</Text>
-                  </View>
+          {bookshelfViewMode === 'GRID' ? (
+            <>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.bookshelfSessionRow}
+              >
+                {bookshelfSessions.map((session) => {
+                  const active = selectedBookshelfSession === session;
+                  return (
+                    <Pressable
+                      key={`${group.id}-session-${session}`}
+                      style={({ pressed }) => [
+                        styles.bookshelfSessionChip,
+                        active && styles.bookshelfSessionChipActive,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => setSelectedBookshelfSession(session)}
+                    >
+                      <Text
+                        style={[
+                          styles.bookshelfSessionText,
+                          active && styles.bookshelfSessionTextActive,
+                        ]}
+                      >
+                        {session}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+              {visibleBookshelfItems.length === 0 ? (
+                <View style={styles.managementEmptyCard}>
+                  <Text style={styles.managementEmptyText}>등록된 책장이 없습니다.</Text>
                 </View>
-                {['발제', '한줄평', '정기모임'].map((label) => (
-                  <Pressable
-                    key={`${book.id}-${label}`}
-                    style={({ pressed }) => [styles.bookshelfLinkRow, pressed && styles.pressed]}
-                  >
-                    <Text style={styles.bookshelfLinkLabel}>{label}</Text>
-                    <MaterialIcons name="north-east" size={14} color={colors.gray3} />
-                  </Pressable>
-                ))}
-                <View style={styles.bookshelfRatingRow}>
-                  {Array.from({ length: 5 }).map((_, idx) => (
-                    <MaterialIcons
-                      key={`${book.id}-star-${idx}`}
-                      name="star"
-                      size={16}
-                      color={idx < book.rating ? colors.secondary2 : colors.gray2}
-                    />
+              ) : (
+                <View style={styles.bookshelfGrid}>
+                  {visibleBookshelfItems.map((book) => (
+                    <View key={book.id} style={styles.bookshelfCard}>
+                      <Image
+                        source={{ uri: book.coverImage }}
+                        style={styles.bookshelfCover}
+                        resizeMode="cover"
+                      />
+                      <Text style={styles.bookshelfTitle} numberOfLines={1}>
+                        {book.title}
+                      </Text>
+                      <Text style={styles.bookshelfAuthor} numberOfLines={1}>
+                        {book.author}
+                      </Text>
+                      <View style={styles.bookshelfBadgeRow}>
+                        <View style={styles.bookshelfSessionBadge}>
+                          <Text style={styles.bookshelfBadgeText}>{book.session}</Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.bookshelfCategoryBadge,
+                            getBookshelfCategoryBadgeStyle(book.category),
+                          ]}
+                        >
+                          <Text style={styles.bookshelfBadgeText}>{book.category}</Text>
+                        </View>
+                      </View>
+                      {[
+                        { label: '발제', tab: 'TOPIC' as const },
+                        { label: '한줄평', tab: 'REVIEW' as const },
+                        { label: '정기모임', tab: 'REGULAR' as const },
+                      ].map((item) => (
+                        <Pressable
+                          key={`${book.id}-${item.label}`}
+                          style={({ pressed }) => [styles.bookshelfLinkRow, pressed && styles.pressed]}
+                          onPress={() => openBookshelfDetail(book, item.tab)}
+                        >
+                          <Text style={styles.bookshelfLinkLabel}>{item.label}</Text>
+                          <MaterialIcons name="north-east" size={14} color={colors.gray3} />
+                        </Pressable>
+                      ))}
+                      <View style={styles.bookshelfRatingRow}>
+                        {Array.from({ length: 5 }).map((_, idx) => (
+                          <MaterialIcons
+                            key={`${book.id}-star-${idx}`}
+                            name="star"
+                            size={16}
+                            color={idx < book.rating ? colors.secondary2 : colors.gray2}
+                          />
+                        ))}
+                      </View>
+                    </View>
                   ))}
                 </View>
+              )}
+            </>
+          ) : selectedBookshelfBook ? (
+            <View style={styles.bookshelfDetailSection}>
+              <Pressable
+                style={({ pressed }) => [styles.breadcrumbPress, pressed && styles.pressed]}
+                onPress={handleBackToBookshelfGrid}
+              >
+                <MaterialIcons name="chevron-left" size={18} color={colors.gray5} />
+                <Text style={styles.breadcrumbText}>책장</Text>
+              </Pressable>
+
+              <View style={styles.bookshelfDetailBookCard}>
+                <Image
+                  source={{ uri: selectedBookshelfBook.coverImage }}
+                  style={styles.bookshelfDetailBookCover}
+                />
+                <View style={styles.bookshelfDetailBookInfo}>
+                  <Text style={styles.bookshelfDetailBookTitle}>{selectedBookshelfBook.title}</Text>
+                  <Text style={styles.bookshelfDetailBookAuthor}>{selectedBookshelfBook.author}</Text>
+                  <View style={styles.bookshelfBadgeRow}>
+                    <View style={styles.bookshelfSessionBadge}>
+                      <Text style={styles.bookshelfBadgeText}>{selectedBookshelfBook.session}</Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.bookshelfCategoryBadge,
+                        getBookshelfCategoryBadgeStyle(selectedBookshelfBook.category),
+                      ]}
+                    >
+                      <Text style={styles.bookshelfBadgeText}>{selectedBookshelfBook.category}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.bookshelfRatingRow}>
+                    {Array.from({ length: 5 }).map((_, idx) => (
+                      <MaterialIcons
+                        key={`${selectedBookshelfBook.id}-detail-star-${idx}`}
+                        name="star"
+                        size={16}
+                        color={idx < selectedBookshelfBook.rating ? colors.secondary2 : colors.gray2}
+                      />
+                    ))}
+                  </View>
+                  <Text style={styles.bookshelfDetailBookDescription} numberOfLines={4}>
+                    책을 좋아하는 사람들이 모여 각자의 속도로 읽고, 각자의 언어로 생각을 나누는 모임입니다.
+                  </Text>
+                </View>
               </View>
-            ))}
-          </View>
+
+              <View style={styles.bookshelfDetailTabRow}>
+                {[
+                  { label: '발제', tab: 'TOPIC' as const },
+                  { label: '한줄평', tab: 'REVIEW' as const },
+                  { label: '정기모임', tab: 'REGULAR' as const },
+                ].map((item) => {
+                  const active = bookshelfDetailTab === item.tab;
+                  return (
+                    <Pressable
+                      key={`${selectedBookshelfBook.id}-${item.tab}`}
+                      style={({ pressed }) => [
+                        styles.bookshelfDetailTabButton,
+                        active && styles.bookshelfDetailTabButtonActive,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => handleChangeBookshelfTab(item.tab)}
+                    >
+                      <Text
+                        style={[
+                          styles.bookshelfDetailTabLabel,
+                          active && styles.bookshelfDetailTabLabelActive,
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {bookshelfDetailTab === 'TOPIC' ? (
+                <View style={styles.bookshelfPanel}>
+                  <View style={styles.bookshelfPanelHeader}>
+                    <View style={styles.bookshelfPanelTitleRow}>
+                      <MaterialIcons name="description" size={22} color={colors.gray6} />
+                      <Text style={styles.bookshelfPanelTitle}>전체 발제</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.bookshelfPostList}>
+                    {bookshelfTopicItems.map((item) => (
+                      <View key={item.id} style={styles.bookshelfPostCard}>
+                        <View style={styles.bookshelfPostTop}>
+                          <View style={styles.bookshelfPostAuthorRow}>
+                            <View style={styles.bookshelfPostAvatar}>
+                              <MaterialIcons name="person" size={16} color={colors.gray3} />
+                            </View>
+                            <Text style={styles.bookshelfPostAuthor}>{item.author}</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.bookshelfPostContent}>{item.content}</Text>
+                      </View>
+                    ))}
+                    {bookshelfTopicItems.length === 0 ? (
+                      <View style={styles.managementEmptyCard}>
+                        <Text style={styles.managementEmptyText}>등록된 발제가 없습니다.</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              ) : null}
+
+              {bookshelfDetailTab === 'REVIEW' ? (
+                <View style={styles.bookshelfPanel}>
+                  <View style={styles.bookshelfPanelHeader}>
+                    <View style={styles.bookshelfPanelTitleRow}>
+                      <MaterialIcons name="star-border" size={22} color={colors.gray6} />
+                      <Text style={styles.bookshelfPanelTitle}>한줄평</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.bookshelfPostList}>
+                    {bookshelfReviewItems.map((item) => (
+                      <View key={item.id} style={styles.bookshelfPostCard}>
+                        <View style={styles.bookshelfPostTop}>
+                          <View style={styles.bookshelfPostAuthorRow}>
+                            <View style={styles.bookshelfPostAvatar}>
+                              <MaterialIcons name="person" size={16} color={colors.gray3} />
+                            </View>
+                            <Text style={styles.bookshelfPostAuthor}>{item.author}</Text>
+                          </View>
+                        </View>
+                        <View style={styles.bookshelfPostRatingRow}>
+                          {Array.from({ length: 5 }).map((_, idx) => (
+                            <MaterialIcons
+                              key={`${item.id}-review-star-${idx}`}
+                              name="star"
+                              size={16}
+                              color={idx < (item.rating ?? 0) ? colors.secondary2 : colors.gray2}
+                            />
+                          ))}
+                        </View>
+                        <Text style={styles.bookshelfPostContent}>{item.content}</Text>
+                      </View>
+                    ))}
+                    {bookshelfReviewItems.length === 0 ? (
+                      <View style={styles.managementEmptyCard}>
+                        <Text style={styles.managementEmptyText}>등록된 한줄평이 없습니다.</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              ) : null}
+
+              {bookshelfDetailTab === 'REGULAR' ? (
+                <View style={styles.bookshelfPanel}>
+                  {regularMeetingInfo ? (
+                    <>
+                      <View style={styles.bookshelfRegularSummaryCard}>
+                        <View style={styles.bookshelfRegularSummaryTitleRow}>
+                          <MaterialIcons name="groups" size={24} color={colors.gray6} />
+                          <Text style={styles.bookshelfRegularSummaryTitle}>{regularMeetingInfo.name}</Text>
+                        </View>
+                        <View style={styles.bookshelfRegularSummaryMetaRow}>
+                          <MaterialIcons name="event" size={18} color={colors.gray4} />
+                          <Text style={styles.bookshelfRegularSummaryMetaText}>
+                            {regularMeetingInfo.date}
+                          </Text>
+                        </View>
+                        <View style={styles.bookshelfRegularSummaryMetaRow}>
+                          <MaterialIcons name="place" size={18} color={colors.gray4} />
+                          <Text style={styles.bookshelfRegularSummaryMetaText}>
+                            {regularMeetingInfo.location}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.bookshelfGroupChipRow}
+                      >
+                        {regularMeetingInfo.groups.map((groupItem) => {
+                          const active = selectedRegularGroupId === groupItem.id;
+                          return (
+                            <Pressable
+                              key={groupItem.id}
+                              style={({ pressed }) => [
+                                styles.bookshelfGroupChip,
+                                active && styles.bookshelfGroupChipActive,
+                                pressed && styles.pressed,
+                              ]}
+                              onPress={() => handleSelectRegularGroup(groupItem.id)}
+                            >
+                              <Text
+                                style={[
+                                  styles.bookshelfGroupChipText,
+                                  active && styles.bookshelfGroupChipTextActive,
+                                ]}
+                              >
+                                {groupItem.label}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </ScrollView>
+
+                      {bookshelfViewMode !== 'REGULAR_GROUP' && selectedRegularGroup ? (
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.bookshelfRegularGroupPreviewCard,
+                            pressed && styles.pressed,
+                          ]}
+                          onPress={() => handleEnterRegularGroup(selectedRegularGroup.id)}
+                        >
+                          <View style={styles.bookshelfRegularGroupPreviewHeader}>
+                            <View style={styles.bookshelfGroupHeaderLeft}>
+                              <Text style={styles.bookshelfGroupTitle}>{selectedRegularGroup.label}</Text>
+                              <MaterialIcons name="person" size={20} color={colors.gray4} />
+                              <Text style={styles.bookshelfGroupMemberCount}>
+                                {selectedRegularGroup.memberCount}
+                              </Text>
+                            </View>
+                            <MaterialIcons name="chevron-right" size={20} color={colors.gray4} />
+                          </View>
+                          <Text style={styles.bookshelfRegularGroupPreviewLabel}>참여자</Text>
+                          <View style={styles.bookshelfRegularGroupMemberList}>
+                            {selectedRegularGroup.members.map((member) => (
+                              <View key={`${selectedRegularGroup.id}-${member}`} style={styles.bookshelfRegularGroupMemberRow}>
+                                <View style={styles.bookshelfPostAvatar}>
+                                  <MaterialIcons name="person" size={16} color={colors.gray3} />
+                                </View>
+                                <Text style={styles.bookshelfRegularGroupMemberName}>{member}</Text>
+                              </View>
+                            ))}
+                          </View>
+                          <Text style={styles.bookshelfRegularGroupHint}>
+                            조 페이지로 이동해 발제와 정렬 현황을 확인하세요.
+                          </Text>
+                        </Pressable>
+                      ) : null}
+
+                      {bookshelfViewMode === 'REGULAR_GROUP' && selectedRegularGroup ? (
+                        <View style={styles.bookshelfGroupSection}>
+                          <View style={styles.bookshelfGroupHeader}>
+                            <View style={styles.bookshelfGroupHeaderLeft}>
+                              <Text style={styles.bookshelfGroupTitle}>{selectedRegularGroup.label}</Text>
+                              <View style={styles.bookshelfGroupMemberWrap}>
+                                <Pressable
+                                  style={({ pressed }) => [
+                                    styles.bookshelfGroupMemberButton,
+                                    pressed && styles.pressed,
+                                  ]}
+                                  onPress={handleToggleRegularGroupMembers}
+                                >
+                                  <MaterialIcons name="person" size={20} color={colors.gray4} />
+                                  <Text style={styles.bookshelfGroupMemberCount}>
+                                    {selectedRegularGroup.memberCount}
+                                  </Text>
+                                  <MaterialIcons
+                                    name={
+                                      regularGroupMembersVisible
+                                        ? 'keyboard-arrow-up'
+                                        : 'keyboard-arrow-down'
+                                    }
+                                    size={18}
+                                    color={colors.gray4}
+                                  />
+                                </Pressable>
+                                {regularGroupMembersVisible ? (
+                                  <View style={styles.bookshelfGroupMemberDropdown}>
+                                    <Text style={styles.bookshelfGroupMemberDropdownTitle}>
+                                      {selectedRegularGroup.label} 참여자
+                                    </Text>
+                                    <View style={styles.bookshelfRegularGroupMemberList}>
+                                      {selectedRegularGroup.members.map((member) => (
+                                        <View
+                                          key={`${selectedRegularGroup.id}-member-dropdown-${member}`}
+                                          style={styles.bookshelfRegularGroupMemberRow}
+                                        >
+                                          <View style={styles.bookshelfPostAvatar}>
+                                            <MaterialIcons
+                                              name="person"
+                                              size={16}
+                                              color={colors.gray3}
+                                            />
+                                          </View>
+                                          <Text style={styles.bookshelfRegularGroupMemberName}>
+                                            {member}
+                                          </Text>
+                                        </View>
+                                      ))}
+                                    </View>
+                                  </View>
+                                ) : null}
+                              </View>
+                            </View>
+                            <View style={styles.bookshelfGroupActionRow}>
+                              <Pressable
+                                style={({ pressed }) => [
+                                  styles.bookshelfGroupActionButton,
+                                  pressed && styles.pressed,
+                                ]}
+                                onPress={() => showToast('발제 작성 기능은 준비 중입니다.')}
+                              >
+                                <MaterialIcons name="edit" size={18} color={colors.gray4} />
+                                <Text style={styles.bookshelfGroupSortText}>발제</Text>
+                              </Pressable>
+                              <Pressable
+                                style={({ pressed }) => [
+                                  styles.bookshelfGroupActionButton,
+                                  pressed && styles.pressed,
+                                ]}
+                                onPress={() => handleSortRegularGroupPosts(selectedRegularGroup.id)}
+                              >
+                                <MaterialIcons name="sort" size={18} color={colors.gray4} />
+                                <Text style={styles.bookshelfGroupSortText}>정렬하기</Text>
+                              </Pressable>
+                            </View>
+                          </View>
+
+                          <View style={styles.bookshelfGroupPostList}>
+                            {selectedRegularGroup.posts.map((post) => (
+                              <Pressable
+                                key={post.id}
+                                style={({ pressed }) => [
+                                  styles.bookshelfGroupPostCard,
+                                  post.completed && styles.bookshelfGroupPostCardCompleted,
+                                  pressed && styles.pressed,
+                                ]}
+                                onPress={() => handleToggleRegularGroupPost(selectedRegularGroup.id, post.id)}
+                              >
+                                <View style={styles.bookshelfPostTop}>
+                                  <View style={styles.bookshelfPostAuthorRow}>
+                                    <View style={styles.bookshelfPostAvatar}>
+                                      <MaterialIcons name="person" size={16} color={colors.gray3} />
+                                    </View>
+                                    <Text style={styles.bookshelfPostAuthor}>{post.author}</Text>
+                                  </View>
+                                  <MaterialIcons
+                                    name="check"
+                                    size={28}
+                                    color={post.completed ? '#3FBE78' : colors.gray2}
+                                  />
+                                </View>
+                                <Text style={styles.bookshelfPostContent}>{post.content}</Text>
+                              </Pressable>
+                            ))}
+                            {selectedRegularGroup.posts.length === 0 ? (
+                              <View style={styles.managementEmptyCard}>
+                                <Text style={styles.managementEmptyText}>등록된 조 발제가 없습니다.</Text>
+                              </View>
+                            ) : null}
+                          </View>
+                        </View>
+                      ) : null}
+                    </>
+                  ) : (
+                    <View style={styles.managementEmptyCard}>
+                      <Text style={styles.managementEmptyText}>정기모임 정보가 없습니다.</Text>
+                    </View>
+                  )}
+                </View>
+              ) : null}
+            </View>
+          ) : null}
         </View>
       ) : null}
+      </ScrollView>
+      <Modal
+        visible={managementMenuVisible || Boolean(activeManagementScreen) || bookshelfBookSelectorVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseManagementLayer}
+      >
+        {bookshelfBookSelectorVisible ? (
+          <KeyboardAvoidingView
+            style={styles.managementScreen}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <View style={[styles.managementScreenHeader, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
+              <Pressable onPress={closeBookshelfBookSelector} hitSlop={8}>
+                <MaterialIcons name="chevron-left" size={24} color={colors.gray6} />
+              </Pressable>
+              <Text style={styles.managementScreenTitle}>책 검색</Text>
+              <Pressable onPress={closeBookshelfBookSelector} hitSlop={8}>
+                <MaterialIcons name="close" size={22} color={colors.gray6} />
+              </Pressable>
+            </View>
+
+            <View style={[styles.managementScreenContent, styles.bookshelfBookSearchScreen]}>
+              <View style={styles.bookshelfBookSearchInputRow}>
+                <Pressable onPress={handleSubmitBookshelfBookSearch}>
+                  <MaterialIcons name="search" size={22} color={colors.gray4} />
+                </Pressable>
+                <TextInput
+                  value={bookshelfBookSearchQuery}
+                  onChangeText={setBookshelfBookSearchQuery}
+                  placeholder="책 제목, 작가 이름을 검색해보세요"
+                  placeholderTextColor={colors.gray3}
+                  style={styles.bookshelfBookSearchInput}
+                  onSubmitEditing={handleSubmitBookshelfBookSearch}
+                  returnKeyType="search"
+                  autoFocus
+                />
+                {bookshelfBookSearchQuery.length > 0 ? (
+                  <Pressable
+                    onPress={() => {
+                      setBookshelfBookSearchQuery('');
+                      setBookshelfBookSearchKeyword('');
+                      setBookshelfBookSearchResults([]);
+                      setBookshelfBookSearchSearched(false);
+                    }}
+                    hitSlop={8}
+                  >
+                    <MaterialIcons name="close" size={18} color={colors.gray4} />
+                  </Pressable>
+                ) : null}
+              </View>
+              {bookshelfBookSearchSearched ? (
+                <Text style={styles.bookshelfBookSearchGuide}>
+                  {bookshelfBookSearchLoading
+                    ? '검색 중...'
+                    : `"${bookshelfBookSearchKeyword}" 총 ${bookshelfBookSearchResults.length}개의 검색결과가 있습니다.`}
+                </Text>
+              ) : (
+                <Text style={styles.bookshelfBookSearchGuide}>
+                  검색어를 입력하고 책을 선택해주세요.
+                </Text>
+              )}
+              <ScrollView
+                style={styles.bookshelfBookSearchScroll}
+                contentContainerStyle={styles.bookshelfBookSearchList}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                {bookshelfBookSearchSearched &&
+                !bookshelfBookSearchLoading &&
+                bookshelfBookSearchResults.length === 0 ? (
+                  <Text style={styles.bookshelfBookSearchEmpty}>검색 결과가 없습니다.</Text>
+                ) : null}
+
+                {bookshelfBookSearchResults.map((book, index) => (
+                  <Pressable
+                    key={`bookshelf-create-book-${book.isbn}-${index}`}
+                    style={({ pressed }) => [
+                      styles.bookshelfBookSearchItem,
+                      bookshelfCreateDraft.sourceBook?.isbn === book.isbn &&
+                        styles.bookshelfBookSearchItemActive,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => handleSelectBookshelfSourceBook(book)}
+                  >
+                    {book.imgUrl ? (
+                      <Image
+                        source={{ uri: book.imgUrl }}
+                        style={styles.bookshelfBookSearchCover}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={styles.bookshelfBookSearchCover} />
+                    )}
+                    <View style={styles.bookshelfBookSearchInfo}>
+                      <Text style={styles.bookshelfBookSearchTitle} numberOfLines={2}>
+                        {book.title}
+                      </Text>
+                      <Text style={styles.bookshelfBookSearchMeta} numberOfLines={1}>
+                        {book.author}
+                      </Text>
+                      {book.publisher ? (
+                        <Text style={styles.bookshelfBookSearchMeta} numberOfLines={1}>
+                          {book.publisher}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        ) : activeManagementScreen ? (
+          <KeyboardAvoidingView
+            style={styles.managementScreen}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <View style={[styles.managementScreenHeader, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
+              <Pressable onPress={handleCloseManagementScreen} hitSlop={8}>
+                <MaterialIcons name="chevron-left" size={24} color={colors.gray6} />
+              </Pressable>
+              <Text style={styles.managementScreenTitle}>
+                {activeManagementScreen === 'JOIN_REQUESTS'
+                  ? '모임 가입 신청 관리'
+                  : activeManagementScreen === 'MEMBERS'
+                    ? '모임 회원 관리'
+                    : activeManagementScreen === 'BOOKSHELF_CREATE'
+                      ? '책장 생성하기'
+                      : '모임 정보 수정하기'}
+              </Text>
+              <Pressable onPress={handleCloseManagementScreen} hitSlop={8}>
+                <MaterialIcons name="close" size={22} color={colors.gray6} />
+              </Pressable>
+            </View>
+
+            <ScrollView
+              style={styles.managementScreenScroll}
+              contentContainerStyle={styles.managementScreenContent}
+              showsVerticalScrollIndicator={false}
+            >
+            {activeManagementScreen === 'JOIN_REQUESTS' ? (
+              <>
+                <View style={styles.managementSummaryCard}>
+                  <Text style={styles.managementSummaryTitle}>가입 신청 현황</Text>
+                  <Text style={styles.managementSummaryDescription}>
+                    가입 메시지를 확인한 뒤 승인하거나 삭제할 수 있습니다.
+                  </Text>
+                  <View style={styles.managementCountBadge}>
+                    <Text style={styles.managementCountBadgeText}>
+                      대기 {joinRequests.length}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.managementCardList}>
+                  {joinRequests.map((request) => (
+                    <View key={request.id} style={styles.managementListCard}>
+                      <View style={styles.managementListCardTop}>
+                        <View style={styles.managementIdentityRow}>
+                          <View style={styles.managementAvatar}>
+                            {request.profileImageUrl ? (
+                              <Image
+                                source={{ uri: request.profileImageUrl }}
+                                style={styles.managementAvatarImage}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <MaterialIcons name="person" size={18} color={colors.gray3} />
+                            )}
+                          </View>
+                          <View style={styles.managementIdentityText}>
+                            <Text style={styles.managementPrimaryText}>{request.nickname}</Text>
+                            <Text style={styles.managementSecondaryText}>{request.name}</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.managementMetaText}>{request.appliedAt}</Text>
+                      </View>
+                      <Text style={styles.managementMetaText}>{request.email}</Text>
+                      <View style={styles.managementActionRow}>
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.managementGhostButton,
+                            pressed && styles.pressed,
+                          ]}
+                          onPress={() => handleOpenJoinRequestProfile(request.nickname)}
+                        >
+                          <Text style={styles.managementGhostButtonText}>프로필 보기</Text>
+                        </Pressable>
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.managementGhostButton,
+                            pressed && styles.pressed,
+                          ]}
+                          onPress={() => setSelectedJoinRequestMessage(request)}
+                        >
+                          <Text style={styles.managementGhostButtonText}>가입 메시지</Text>
+                        </Pressable>
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.managementPrimarySmallButton,
+                            pressed && styles.pressed,
+                          ]}
+                          onPress={() => setSelectedJoinRequestActionId(request.id)}
+                        >
+                          <Text style={styles.managementPrimarySmallButtonText}>가입 처리</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ))}
+                  {joinRequests.length === 0 ? (
+                    <View style={styles.managementEmptyCard}>
+                      <Text style={styles.managementEmptyText}>대기 중인 가입 신청이 없습니다.</Text>
+                    </View>
+                  ) : null}
+                </View>
+              </>
+            ) : null}
+
+            {activeManagementScreen === 'MEMBERS' ? (
+              <>
+                <View style={styles.managementSummaryCard}>
+                  <Text style={styles.managementSummaryTitle}>회원 역할 관리</Text>
+                  <Text style={styles.managementSummaryDescription}>
+                    회원 역할을 수정하거나 운영진 권한을 조정할 수 있습니다.
+                  </Text>
+                  <View style={styles.managementCountBadge}>
+                    <Text style={styles.managementCountBadgeText}>회원 {members.length}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.managementCardList}>
+                  {members.map((member) => (
+                    <View key={member.id} style={styles.managementListCard}>
+                      <View style={styles.managementListCardTop}>
+                        <View style={styles.managementIdentityRow}>
+                          <View style={styles.managementAvatar}>
+                            {member.profileImageUrl ? (
+                              <Image
+                                source={{ uri: member.profileImageUrl }}
+                                style={styles.managementAvatarImage}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <MaterialIcons name="person" size={18} color={colors.gray3} />
+                            )}
+                          </View>
+                          <View style={styles.managementIdentityText}>
+                            <Text style={styles.managementPrimaryText}>{member.nickname}</Text>
+                            <Text style={styles.managementSecondaryText}>{member.name}</Text>
+                          </View>
+                        </View>
+                        <View
+                          style={[
+                            styles.managementRoleBadge,
+                            member.role === '개설자'
+                              ? styles.managementRoleBadgeOwner
+                              : member.role === '운영진'
+                                ? styles.managementRoleBadgeStaff
+                                : styles.managementRoleBadgeMember,
+                          ]}
+                        >
+                          <Text style={styles.managementRoleBadgeText}>{member.role}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.managementMetaText}>{member.email}</Text>
+                      <Text style={styles.managementMetaText}>가입일 {member.joinedAt}</Text>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.managementWideButton,
+                          pressed && styles.pressed,
+                        ]}
+                        onPress={() => setSelectedMemberActionId(member.id)}
+                      >
+                        <Text style={styles.managementWideButtonText}>역할 수정</Text>
+                      </Pressable>
+                    </View>
+                  ))}
+                  {members.length === 0 ? (
+                    <View style={styles.managementEmptyCard}>
+                      <Text style={styles.managementEmptyText}>조회된 회원이 없습니다.</Text>
+                    </View>
+                  ) : null}
+                </View>
+              </>
+            ) : null}
+
+            {activeManagementScreen === 'EDIT' ? (
+              <View style={styles.managementEditSection}>
+                <View style={styles.sectionBox}>
+                  <Text style={styles.sectionTitle}>모임 정보 수정하기</Text>
+                  <Text style={styles.helperText}>
+                    모임 생성하기처럼 한 화면에서 수정하고 저장할 수 있습니다.
+                  </Text>
+
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
+                    독서 모임 이름을 입력해주세요!
+                  </Text>
+                  <TextInput
+                    value={editDraft.name}
+                    onChangeText={(text) => setEditDraft((prev) => ({ ...prev, name: text }))}
+                    placeholder="독서 모임 이름을 입력해주세요"
+                    placeholderTextColor={colors.gray3}
+                    style={styles.input}
+                  />
+
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
+                    모임의 소개글을 입력해주세요!
+                  </Text>
+                  <TextInput
+                    value={editDraft.description}
+                    onChangeText={(text) => setEditDraft((prev) => ({ ...prev, description: text }))}
+                    placeholder="자유롭게 입력해주세요! (500자 제한)"
+                    placeholderTextColor={colors.gray3}
+                    style={[styles.input, styles.textArea]}
+                    multiline
+                  />
+
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
+                    모임의 프로필 사진을 변경할 수 있어요!
+                  </Text>
+	                  <View style={styles.logoRow}>
+	                    <View style={styles.logoPlaceholder}>
+	                      {editDraft.imageUrl ? (
+	                        <Image
+	                          source={{ uri: editDraft.imageUrl }}
+	                          style={styles.managementEditImagePreview}
+	                          resizeMode="cover"
+	                        />
+	                      ) : (
+	                        <ClubDefaultProfileArtwork variant="preview" />
+	                      )}
+	                    </View>
+                    <View style={{ gap: spacing.xs }}>
+                      <Pressable
+                        style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
+                        onPress={() =>
+                          setEditDraft((prev) => ({ ...prev, imageUrl: '' }))
+                        }
+                      >
+                        <Text style={styles.outlineButtonText}>기본 프로필 사용하기</Text>
+                      </Pressable>
+                      <Pressable
+                        style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
+                        onPress={handlePickClubImage}
+                      >
+                        <Text style={styles.outlineButtonText}>
+                          {uploadingClubImage ? '업로드중...' : '사진 변경하기'}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
+                    모임의 공개여부를 알려주세요!
+                  </Text>
+                  <View style={styles.managementToggleRow}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.managementToggleChip,
+                        !editDraft.isPrivate && styles.managementToggleChipActive,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => setEditDraft((prev) => ({ ...prev, isPrivate: false }))}
+                    >
+                      <Text
+                        style={[
+                          styles.managementToggleChipText,
+                          !editDraft.isPrivate && styles.managementToggleChipTextActive,
+                        ]}
+                      >
+                        공개
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.managementToggleChip,
+                        editDraft.isPrivate && styles.managementToggleChipActive,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => setEditDraft((prev) => ({ ...prev, isPrivate: true }))}
+                    >
+                      <Text
+                        style={[
+                          styles.managementToggleChipText,
+                          editDraft.isPrivate && styles.managementToggleChipTextActive,
+                        ]}
+                      >
+                        비공개
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
+                    선호하는 독서 카테고리를 선택해주세요!
+                  </Text>
+                  <View style={styles.chipGrid}>
+                    {Object.keys(categoryCodeByLabel).map((category) => {
+                      const active = editDraft.categories.includes(category);
+                      return (
+                        <Pressable
+                          key={`edit-category-${category}`}
+                          onPress={() =>
+                            setEditDraft((prev) => ({
+                              ...prev,
+                              categories: prev.categories.includes(category)
+                                ? prev.categories.filter((item) => item !== category)
+                                : [...prev.categories, category],
+                            }))
+                          }
+                          style={({ pressed }) => [
+                            styles.chip,
+                            active ? styles.chipActive : null,
+                            pressed && styles.pressed,
+                          ]}
+                        >
+                          <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>
+                            {category}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
+                    활동 지역을 입력해주세요!
+                  </Text>
+                  <TextInput
+                    value={editDraft.region}
+                    onChangeText={(text) => setEditDraft((prev) => ({ ...prev, region: text }))}
+                    placeholder="활동 지역을 입력해주세요 (40자 제한)"
+                    placeholderTextColor={colors.gray3}
+                    style={styles.input}
+                  />
+
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
+                    모임의 대상을 선택해주세요!
+                  </Text>
+                  <View style={styles.chipGrid}>
+                    {Object.keys(participantCodeByLabel).map((target) => {
+                      const active = editDraft.targets.includes(target);
+                      return (
+                        <Pressable
+                          key={`edit-target-${target}`}
+                          onPress={() =>
+                            setEditDraft((prev) => ({
+                              ...prev,
+                              targets: prev.targets.includes(target)
+                                ? prev.targets.filter((item) => item !== target)
+                                : [...prev.targets, target],
+                            }))
+                          }
+                          style={({ pressed }) => [
+                            styles.chip,
+                            active ? styles.chipActive : null,
+                            pressed && styles.pressed,
+                          ]}
+                        >
+                          <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>
+                            {target}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              </View>
+            ) : null}
+
+            {activeManagementScreen === 'BOOKSHELF_CREATE' ? (
+              <View style={styles.managementEditSection}>
+                <View style={styles.sectionBox}>
+                  <Text style={styles.sectionTitle}>책장 생성하기</Text>
+                  <Text style={styles.helperText}>
+                    책을 선택하고 정기모임 정보까지 한 화면에서 등록할 수 있습니다.
+                  </Text>
+
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
+                    책 선택
+                  </Text>
+                  <Pressable
+                      style={({ pressed }) => [styles.input, styles.bookshelfCreateSelector, pressed && styles.pressed]}
+                    onPress={() => setBookshelfBookSelectorVisible(true)}
+                  >
+                    <Text
+                      style={[
+                        styles.bookshelfCreateSelectorText,
+                        !bookshelfCreateDraft.sourceBook && styles.bookshelfCreateSelectorPlaceholder,
+                      ]}
+                    >
+                      {bookshelfCreateDraft.sourceBook
+                        ? bookshelfCreateDraft.sourceBook.title
+                        : '선택하기'}
+                    </Text>
+                  </Pressable>
+
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
+                    기수
+                  </Text>
+                  <TextInput
+                    value={bookshelfCreateDraft.session}
+                    onChangeText={(text) =>
+                      setBookshelfCreateDraft((prev) => ({
+                        ...prev,
+                        session: sanitizeGenerationInput(text),
+                      }))
+                    }
+                    placeholder="예: 7"
+                    placeholderTextColor={colors.gray3}
+                    keyboardType="number-pad"
+                    style={styles.input}
+                  />
+                  <Text style={styles.helperText}>
+                    입력한 숫자는 책장에서 {formatGenerationLabel(bookshelfCreateDraft.session || '1')} 형태로 표시됩니다.
+                  </Text>
+
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
+                    태그
+                  </Text>
+                  <View style={styles.chipGrid}>
+                    {Object.keys(categoryCodeByLabel).map((category) => {
+                      const active = bookshelfCreateDraft.categories.includes(category);
+                      return (
+                        <Pressable
+                          key={`bookshelf-create-category-${category}`}
+                          onPress={() =>
+                            setBookshelfCreateDraft((prev) => ({
+                              ...prev,
+                              categories: prev.categories.includes(category)
+                                ? []
+                                : [category],
+                            }))
+                          }
+                          style={({ pressed }) => [
+                            styles.chip,
+                            active ? styles.chipActive : null,
+                            pressed && styles.pressed,
+                          ]}
+                        >
+                          <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>
+                            {category}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <Text style={styles.helperText}>태그는 1개만 선택해 등록할 수 있습니다.</Text>
+
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
+                    정기모임 이름
+                  </Text>
+                  <TextInput
+                    value={bookshelfCreateDraft.regularMeetingName}
+                    onChangeText={(text) =>
+                      setBookshelfCreateDraft((prev) => ({ ...prev, regularMeetingName: text }))
+                    }
+                    placeholder="정기모임 이름을 입력해주세요"
+                    placeholderTextColor={colors.gray3}
+                    maxLength={BOOKSHELF_MEETING_TITLE_MAX_LENGTH}
+                    style={styles.input}
+                  />
+
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
+                    모임 장소
+                  </Text>
+                  <TextInput
+                    value={bookshelfCreateDraft.meetingLocation}
+                    onChangeText={(text) =>
+                      setBookshelfCreateDraft((prev) => ({ ...prev, meetingLocation: text }))
+                    }
+                    placeholder="모임 장소를 입력해주세요"
+                    placeholderTextColor={colors.gray3}
+                    maxLength={BOOKSHELF_MEETING_LOCATION_MAX_LENGTH}
+                    style={styles.input}
+                  />
+
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
+                    모임 날짜
+                  </Text>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.input,
+                      styles.bookshelfDatePickerButton,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={openBookshelfCalendar}
+                  >
+                    <View style={styles.bookshelfDatePickerValueRow}>
+                      <View style={styles.bookshelfDatePickerIconWrap}>
+                        <MaterialIcons
+                          name="calendar-month"
+                          size={18}
+                          color={
+                            bookshelfCreateDraft.meetingDate ? colors.primary1 : colors.gray4
+                          }
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.bookshelfDatePickerText,
+                          !bookshelfCreateDraft.meetingDate &&
+                            styles.bookshelfDatePickerPlaceholder,
+                        ]}
+                      >
+                        {bookshelfCreateDraft.meetingDate || '날짜를 선택해주세요'}
+                      </Text>
+                    </View>
+                    <MaterialIcons name="chevron-right" size={20} color={colors.gray4} />
+                  </Pressable>
+                  <Text style={styles.helperText}>달력에서 날짜를 선택해주세요.</Text>
+                </View>
+              </View>
+            ) : null}
+            </ScrollView>
+
+            {activeManagementScreen === 'EDIT' || activeManagementScreen === 'BOOKSHELF_CREATE' ? (
+              <View style={styles.managementFooter}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    styles.managementFooterButton,
+                    activeManagementScreen === 'BOOKSHELF_CREATE' &&
+                    creatingBookshelf &&
+                    styles.primaryButtonDisabled,
+                    pressed &&
+                    !(activeManagementScreen === 'BOOKSHELF_CREATE' && creatingBookshelf) &&
+                    styles.pressed,
+                  ]}
+                  onPress={
+                    activeManagementScreen === 'EDIT'
+                      ? handleSaveGroupEdit
+                      : handleSubmitBookshelfCreate
+                  }
+                  disabled={activeManagementScreen === 'BOOKSHELF_CREATE' && creatingBookshelf}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {activeManagementScreen === 'EDIT'
+                      ? '저장하기'
+                      : creatingBookshelf
+                        ? '등록중...'
+                        : '등록하기'}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+            {selectedJoinRequestMessage ? (
+              <Pressable
+                style={styles.managementInlineOverlay}
+                onPress={() => setSelectedJoinRequestMessage(null)}
+              >
+                <Pressable
+                  style={styles.managementMessageCard}
+                  onPress={(event) => event.stopPropagation()}
+                >
+                  <Text style={styles.managementMessageTitle}>가입 메시지</Text>
+                  <ScrollView
+                    style={styles.managementMessageScroll}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    <Text style={styles.managementMessageBody}>
+                      {selectedJoinRequestMessage.message}
+                    </Text>
+                  </ScrollView>
+                </Pressable>
+              </Pressable>
+            ) : null}
+            {selectedJoinRequestAction ? (
+              <Pressable
+                style={styles.managementInlineOverlay}
+                onPress={() => {
+                  if (submittingJoinRequestAction) return;
+                  setSelectedJoinRequestActionId(null);
+                }}
+              >
+                <Pressable
+                  style={styles.managementJoinActionCard}
+                  onPress={(event) => event.stopPropagation()}
+                >
+                  <Text style={styles.managementJoinActionTitle}>가입 처리</Text>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.managementJoinActionItem,
+                      submittingJoinRequestAction && styles.managementJoinActionItemDisabled,
+                      pressed && !submittingJoinRequestAction && styles.pressed,
+                    ]}
+                    disabled={submittingJoinRequestAction}
+                    onPress={() => handleProcessJoinRequest(selectedJoinRequestAction, 'REJECT')}
+                  >
+                    <MaterialIcons
+                      name="delete-outline"
+                      size={34}
+                      color={submittingJoinRequestAction ? colors.gray3 : colors.gray5}
+                    />
+                    <Text
+                      style={[
+                        styles.managementJoinActionItemText,
+                        submittingJoinRequestAction && styles.managementJoinActionItemTextDisabled,
+                      ]}
+                    >
+                      삭제하기
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.managementJoinActionItem,
+                      styles.managementJoinActionItemLast,
+                      submittingJoinRequestAction && styles.managementJoinActionItemDisabled,
+                      pressed && !submittingJoinRequestAction && styles.pressed,
+                    ]}
+                    disabled={submittingJoinRequestAction}
+                    onPress={() => handleProcessJoinRequest(selectedJoinRequestAction, 'APPROVE')}
+                  >
+                    <MaterialIcons
+                      name="check-circle-outline"
+                      size={34}
+                      color={submittingJoinRequestAction ? colors.gray3 : colors.gray5}
+                    />
+                    <Text
+                      style={[
+                        styles.managementJoinActionItemText,
+                        submittingJoinRequestAction && styles.managementJoinActionItemTextDisabled,
+                      ]}
+                    >
+                      {submittingJoinRequestAction ? '처리중...' : '가입처리'}
+                    </Text>
+                  </Pressable>
+                </Pressable>
+              </Pressable>
+            ) : null}
+            {selectedMemberAction ? (
+              <Pressable
+                style={styles.managementInlineOverlay}
+                onPress={() => {
+                  if (submittingMemberAction) return;
+                  setSelectedMemberActionId(null);
+                }}
+              >
+                <Pressable
+                  style={styles.managementRoleMenuCard}
+                  onPress={(event) => event.stopPropagation()}
+                >
+                  <Text style={styles.managementRoleMenuTitle}>역할 수정</Text>
+                  {[
+                    {
+                      key: '운영진' as const,
+                      label: '운영진 역할',
+                      icon: 'workspace-premium' as const,
+                      disabled:
+                        submittingMemberAction ||
+                        selectedMemberAction.role === '운영진' ||
+                        selectedMemberAction.role === '개설자',
+                      onPress: () => handleChangeMemberRole(selectedMemberAction.id, '운영진'),
+                    },
+                    {
+                      key: '회원' as const,
+                      label: '회원 역할',
+                      icon: 'person-outline' as const,
+                      disabled:
+                        submittingMemberAction ||
+                        selectedMemberAction.role === '회원' ||
+                        selectedMemberAction.role === '개설자',
+                      onPress: () => handleChangeMemberRole(selectedMemberAction.id, '회원'),
+                    },
+                    {
+                      key: '개설자' as const,
+                      label: '개설자 역할',
+                      icon: 'schedule' as const,
+                      disabled:
+                        submittingMemberAction || selectedMemberAction.role === '개설자',
+                      onPress: () => handleChangeMemberRole(selectedMemberAction.id, '개설자'),
+                    },
+                  ].map((item) => (
+                    <Pressable
+                      key={`${selectedMemberAction.id}-${item.key}`}
+                      style={({ pressed }) => [
+                        styles.managementRoleMenuItem,
+                        item.disabled && styles.managementRoleMenuItemDisabled,
+                        pressed && !item.disabled && styles.pressed,
+                      ]}
+                      disabled={item.disabled}
+                      onPress={item.onPress}
+                    >
+                      <MaterialIcons
+                        name={item.icon}
+                        size={34}
+                        color={item.disabled ? colors.gray3 : colors.gray5}
+                      />
+                      <Text
+                        style={[
+                          styles.managementRoleMenuItemText,
+                          item.disabled && styles.managementRoleMenuItemTextDisabled,
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.managementRoleMenuItem,
+                      styles.managementRoleMenuItemLast,
+                      (selectedMemberAction.role === '개설자' || submittingMemberAction) &&
+                        styles.managementRoleMenuItemDisabled,
+                      pressed &&
+                        selectedMemberAction.role !== '개설자' &&
+                        !submittingMemberAction &&
+                        styles.pressed,
+                    ]}
+                    disabled={selectedMemberAction.role === '개설자' || submittingMemberAction}
+                    onPress={() => handleRemoveMember(selectedMemberAction.id)}
+                  >
+                    <MaterialIcons
+                      name="logout"
+                      size={34}
+                      color={
+                        selectedMemberAction.role === '개설자' || submittingMemberAction
+                          ? colors.gray3
+                          : colors.gray5
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.managementRoleMenuItemText,
+                        (selectedMemberAction.role === '개설자' || submittingMemberAction) &&
+                          styles.managementRoleMenuItemTextDisabled,
+                      ]}
+                    >
+                      회원 탈퇴
+                    </Text>
+                  </Pressable>
+                </Pressable>
+              </Pressable>
+            ) : null}
+          </KeyboardAvoidingView>
+        ) : (
+          <Pressable
+            style={styles.managementOverlay}
+            onPress={closeManagementMenu}
+          >
+            <Pressable
+              style={styles.managementMenuSheet}
+              onPress={(event) => event.stopPropagation()}
+            >
+              <View style={styles.managementHandle} />
+              <Text style={styles.managementMenuTitle}>모임 관리하기</Text>
+              <Text style={styles.managementMenuCaption}>
+                운영진용 관리 기능을 선택해주세요.
+              </Text>
+              {[
+                {
+                  key: 'JOIN_REQUESTS' as const,
+                  title: '모임 가입 신청 관리',
+                  description: `${joinRequests.length}개의 대기 신청`,
+                  icon: 'person-add-alt-1' as const,
+                  onPress: () => handleOpenManagementScreen('JOIN_REQUESTS'),
+                },
+                {
+                  key: 'MEMBERS' as const,
+                  title: '모임 회원 관리',
+                  description: `${members.length}명의 모임 회원`,
+                  icon: 'groups' as const,
+                  onPress: () => handleOpenManagementScreen('MEMBERS'),
+                },
+                {
+                  key: 'EDIT' as const,
+                  title: '모임 수정하기',
+                  description: '소개, 태그, 공개 여부 수정',
+                  icon: 'edit' as const,
+                  onPress: () => handleOpenManagementScreen('EDIT'),
+                },
+                {
+                  key: 'NOTICE_CREATE' as const,
+                  title: '공지 작성하기',
+                  description: '책장, 투표, 사진 첨부 가능',
+                  icon: 'edit-note' as const,
+                  onPress: handleOpenNoticeComposerFromManagement,
+                },
+                {
+                  key: 'BOOKSHELF_CREATE' as const,
+                  title: '책장 생성하기',
+                  description: '정기모임용 책장 추가',
+                  icon: 'library-add' as const,
+                  onPress: () => handleOpenManagementScreen('BOOKSHELF_CREATE'),
+                },
+              ].map((item) => (
+                <Pressable
+                  key={item.key}
+                  style={({ pressed }) => [
+                    styles.managementMenuItem,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={item.onPress}
+                >
+                  <View style={styles.managementMenuIcon}>
+                    <MaterialIcons name={item.icon} size={20} color={colors.primary1} />
+                  </View>
+                  <View style={styles.managementMenuTextWrap}>
+                    <Text style={styles.managementMenuItemTitle}>{item.title}</Text>
+                    <Text style={styles.managementMenuItemDescription}>{item.description}</Text>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={20} color={colors.gray4} />
+                </Pressable>
+              ))}
+            </Pressable>
+          </Pressable>
+        )}
+      </Modal>
+      <ReportMemberModal
+        visible={Boolean(reportModal)}
+        target={reportModal}
+        submitting={submittingReport}
+        onClose={handleCloseReportModal}
+        onSubmit={handleSubmitReport}
+      />
+      <Modal
+        visible={noticeComposerVisible}
+        animationType="slide"
+        onRequestClose={handleCloseNoticeComposer}
+      >
+        <KeyboardAvoidingView
+          style={styles.managementScreen}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={[styles.managementScreenHeader, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
+            <Pressable onPress={handleCloseNoticeComposer} hitSlop={8}>
+              <MaterialIcons name="chevron-left" size={24} color={colors.gray6} />
+            </Pressable>
+            <Text style={styles.managementScreenTitle}>
+              {editingNoticeId ? '공지 수정하기' : '공지 작성하기'}
+            </Text>
+            <Pressable onPress={handleCloseNoticeComposer} hitSlop={8}>
+              <MaterialIcons name="close" size={22} color={colors.gray6} />
+            </Pressable>
+          </View>
+
+          <ScrollView
+            style={styles.managementScreenScroll}
+            contentContainerStyle={styles.managementScreenContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.noticeComposerCard}>
+              <Text style={styles.noticeComposerLabel}>제목</Text>
+              <TextInput
+                value={noticeDraft.title}
+                onChangeText={(text) => setNoticeDraft((prev) => ({ ...prev, title: text }))}
+                placeholder="제목을 입력해주세요."
+                placeholderTextColor={colors.gray3}
+                style={styles.input}
+              />
+
+              <Text style={styles.noticeComposerLabel}>내용</Text>
+              <TextInput
+                value={noticeDraft.content}
+                onChangeText={(text) => setNoticeDraft((prev) => ({ ...prev, content: text }))}
+                placeholder="내용을 입력해주세요."
+                placeholderTextColor={colors.gray3}
+                style={[styles.input, styles.noticeComposerTextArea]}
+                multiline
+              />
+
+              <View style={styles.noticeComposerPinRow}>
+                <Text style={styles.noticeAttachmentTitle}>상단 고정</Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.noticeComposerPinButton,
+                    noticeDraft.isPinned && styles.noticeComposerPinButtonActive,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() =>
+                    setNoticeDraft((prev) => ({
+                      ...prev,
+                      isPinned: !prev.isPinned,
+                    }))
+                  }
+                >
+                  <MaterialIcons
+                    name="push-pin"
+                    size={16}
+                    color={noticeDraft.isPinned ? colors.primary1 : colors.gray4}
+                  />
+                  <Text
+                    style={[
+                      styles.noticeComposerPinButtonText,
+                      noticeDraft.isPinned && styles.noticeComposerPinButtonTextActive,
+                    ]}
+                  >
+                    {noticeDraft.isPinned ? '고정 해제하기' : '고정하기'}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.noticeComposerActionRow}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.noticeComposerToggle,
+                    noticeDraft.bookshelfEnabled && styles.noticeComposerToggleActive,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() =>
+                    setNoticeDraft((prev) => ({
+                      ...prev,
+                      bookshelfEnabled: !prev.bookshelfEnabled,
+                      bookshelfId: !prev.bookshelfEnabled ? prev.bookshelfId : null,
+                    }))
+                  }
+                >
+                  <MaterialIcons
+                    name="collections-bookmark"
+                    size={18}
+                    color={noticeDraft.bookshelfEnabled ? colors.primary1 : colors.gray4}
+                  />
+                  <Text
+                    style={[
+                      styles.noticeComposerToggleText,
+                      noticeDraft.bookshelfEnabled && styles.noticeComposerToggleTextActive,
+                    ]}
+                  >
+                    책장
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.noticeComposerToggle,
+                    noticeDraft.pollEnabled && styles.noticeComposerToggleActive,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() =>
+                    setNoticeDraft((prev) => ({
+                      ...prev,
+                      pollEnabled: !prev.pollEnabled,
+                    }))
+                  }
+                >
+                  <MaterialIcons
+                    name="poll"
+                    size={18}
+                    color={noticeDraft.pollEnabled ? colors.primary1 : colors.gray4}
+                  />
+                  <Text
+                    style={[
+                      styles.noticeComposerToggleText,
+                      noticeDraft.pollEnabled && styles.noticeComposerToggleTextActive,
+                    ]}
+                  >
+                    투표
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.noticeComposerToggle,
+                    noticeDraft.photos.length > 0 && styles.noticeComposerToggleActive,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={handleAddNoticePhoto}
+                >
+                  <MaterialIcons
+                    name="image"
+                    size={18}
+                    color={noticeDraft.photos.length > 0 ? colors.primary1 : colors.gray4}
+                  />
+                  <Text
+                    style={[
+                      styles.noticeComposerToggleText,
+                      noticeDraft.photos.length > 0 && styles.noticeComposerToggleTextActive,
+                    ]}
+                  >
+                    {uploadingNoticePhoto ? '업로드중' : '사진'}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {noticeDraft.bookshelfEnabled ? (
+                <View style={styles.noticeComposerSection}>
+                  <View style={styles.noticeComposerSectionHeader}>
+                    <Text style={styles.noticeAttachmentTitle}>책장</Text>
+                    <Pressable
+                      style={({ pressed }) => [styles.noticeComposerLinkButton, pressed && styles.pressed]}
+                      onPress={() => setNoticeBookSelectorVisible(true)}
+                    >
+                      <Text style={styles.noticeComposerLinkButtonText}>
+                        {noticeDraft.bookshelfId ? '책장 변경' : '책장 연결'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                  {noticeDraft.bookshelfId ? (
+                    (() => {
+                      const attachedBook = bookshelfItems.find(
+                        (book) => book.id === noticeDraft.bookshelfId,
+                      );
+                      return attachedBook ? (
+                        <View style={styles.noticeBookshelfCard}>
+                          <Image
+                            source={{ uri: attachedBook.coverImage }}
+                            style={styles.noticeBookshelfCover}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.noticeBookshelfInfo}>
+                            <Text style={styles.noticeBookshelfTitle}>{attachedBook.title}</Text>
+                            <Text style={styles.noticeBookshelfAuthor}>{attachedBook.author}</Text>
+                            <View style={styles.bookshelfBadgeRow}>
+                              <View style={styles.bookshelfSessionBadge}>
+                                <Text style={styles.bookshelfBadgeText}>{attachedBook.session}</Text>
+                              </View>
+                              <View
+                                style={[
+                                  styles.bookshelfCategoryBadge,
+                                  getBookshelfCategoryBadgeStyle(attachedBook.category),
+                                ]}
+                              >
+                                <Text style={styles.bookshelfBadgeText}>{attachedBook.category}</Text>
+                              </View>
+                            </View>
+                          </View>
+                        </View>
+                      ) : null;
+                    })()
+                  ) : (
+                    <Text style={styles.helperText}>연결할 책장을 선택해주세요.</Text>
+                  )}
+                </View>
+              ) : null}
+
+              {noticeDraft.pollEnabled ? (
+                <View style={styles.noticeComposerSection}>
+                  <Text style={styles.noticeAttachmentTitle}>투표</Text>
+                  <View style={styles.noticeComposerPollOptionList}>
+                    {noticeDraft.pollOptions.map((option, index) => (
+                      <TextInput
+                        key={`notice-poll-option-${index}`}
+                        value={option}
+                        onChangeText={(text) => handleUpdateNoticePollOption(index, text)}
+                        placeholder={`투표 항목 ${index + 1}`}
+                        placeholderTextColor={colors.gray3}
+                        style={styles.input}
+                      />
+                    ))}
+                    <Pressable
+                      style={({ pressed }) => [styles.noticeComposerAddOptionButton, pressed && styles.pressed]}
+                      onPress={handleAddNoticePollOption}
+                    >
+                      <MaterialIcons name="add" size={18} color={colors.gray5} />
+                      <Text style={styles.noticeComposerAddOptionText}>항목 추가</Text>
+                    </Pressable>
+                  </View>
+                  <View style={styles.noticeComposerChoiceRow}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.noticeComposerChoiceChip,
+                        noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipActive,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => setNoticeDraft((prev) => ({ ...prev, pollAnonymous: true }))}
+                    >
+                      <Text
+                        style={[
+                          styles.noticeComposerChoiceChipText,
+                          noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipTextActive,
+                        ]}
+                      >
+                        익명
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.noticeComposerChoiceChip,
+                        !noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipActive,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => setNoticeDraft((prev) => ({ ...prev, pollAnonymous: false }))}
+                    >
+                      <Text
+                        style={[
+                          styles.noticeComposerChoiceChipText,
+                          !noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipTextActive,
+                        ]}
+                      >
+                        실명
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.noticeComposerChoiceChip,
+                        noticeDraft.pollAllowDuplicate && styles.noticeComposerChoiceChipActive,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() =>
+                        setNoticeDraft((prev) => ({
+                          ...prev,
+                          pollAllowDuplicate: !prev.pollAllowDuplicate,
+                        }))
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.noticeComposerChoiceChipText,
+                          noticeDraft.pollAllowDuplicate &&
+                            styles.noticeComposerChoiceChipTextActive,
+                        ]}
+                      >
+                        중복 가능
+                      </Text>
+                    </Pressable>
+                  </View>
+                  <View style={styles.noticeComposerDateRow}>
+                    <TextInput
+                      value={noticeDraft.pollStartsAt}
+                      onChangeText={(text) =>
+                        setNoticeDraft((prev) => ({ ...prev, pollStartsAt: text }))
+                      }
+                      placeholder="시작 시간"
+                      placeholderTextColor={colors.gray3}
+                      style={[styles.input, styles.noticeComposerDateInput]}
+                    />
+                    <TextInput
+                      value={noticeDraft.pollEndsAt}
+                      onChangeText={(text) =>
+                        setNoticeDraft((prev) => ({ ...prev, pollEndsAt: text }))
+                      }
+                      placeholder="종료 시간"
+                      placeholderTextColor={colors.gray3}
+                      style={[styles.input, styles.noticeComposerDateInput]}
+                    />
+                  </View>
+                </View>
+              ) : null}
+
+              {noticeDraft.photos.length > 0 ? (
+                <View style={styles.noticeComposerSection}>
+                  <View style={styles.noticeComposerSectionHeader}>
+                    <Text style={styles.noticeAttachmentTitle}>사진</Text>
+                    <Text style={styles.noticeComposerCounter}>{noticeDraft.photos.length}/10</Text>
+                  </View>
+                  <View style={styles.noticeComposerPhotoGrid}>
+                    {noticeDraft.photos.map((photo, index) => (
+                      <View key={`composer-photo-${photo}-${index}`} style={styles.noticeComposerPhotoItem}>
+                        <Image
+                          source={{ uri: photo }}
+                          style={styles.noticeComposerPhotoImage}
+                          resizeMode="cover"
+                        />
+                        <Pressable
+                          style={styles.noticeComposerPhotoRemove}
+                          onPress={() => handleRemoveNoticePhoto(index)}
+                        >
+                          <MaterialIcons name="close" size={14} color={colors.gray4} />
+                        </Pressable>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          </ScrollView>
+
+          <View style={styles.noticeComposerFooter}>
+            <Pressable
+              style={({ pressed }) => [styles.outlineButton, styles.noticeComposerFooterButton, pressed && styles.pressed]}
+              onPress={handleCloseNoticeComposer}
+            >
+              <Text style={styles.outlineButtonText}>취소</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.primaryButton, styles.noticeComposerFooterButton, pressed && styles.pressed]}
+              onPress={handleSubmitNotice}
+            >
+              <Text style={styles.primaryButtonText}>{editingNoticeId ? '수정하기' : '등록하기'}</Text>
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+      <Modal
+        visible={noticeBookSelectorVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setNoticeBookSelectorVisible(false)}
+      >
+        <Pressable
+          style={styles.managementOverlay}
+          onPress={() => setNoticeBookSelectorVisible(false)}
+        >
+          <Pressable
+            style={styles.noticeBookSelectorCard}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <View style={styles.managementModalHeader}>
+              <Text style={styles.managementModalTitle}>책장 선택</Text>
+              <Pressable onPress={() => setNoticeBookSelectorVisible(false)} hitSlop={8}>
+                <MaterialIcons name="close" size={20} color={colors.gray6} />
+              </Pressable>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.noticeBookSelectorList}
+            >
+              {bookshelfItems.map((book) => (
+                <Pressable
+                  key={`notice-book-${book.id}`}
+                  style={({ pressed }) => [
+                    styles.noticeBookSelectorItem,
+                    noticeDraft.bookshelfId === book.id && styles.noticeBookSelectorItemActive,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() => handleSelectNoticeBookshelf(book.id)}
+                >
+                  <Image source={{ uri: book.coverImage }} style={styles.noticeBookSelectorCover} />
+                  <Text style={styles.noticeBookSelectorTitle} numberOfLines={1}>
+                    {book.title}
+                  </Text>
+                  <Text style={styles.noticeBookSelectorMeta} numberOfLines={1}>
+                    {book.author}
+                  </Text>
+                </Pressable>
+              ))}
+              {bookshelfItems.length === 0 ? (
+                <View style={styles.managementEmptyCard}>
+                  <Text style={styles.managementEmptyText}>연결할 책장이 없습니다.</Text>
+                </View>
+              ) : null}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <Modal
+        visible={noticeMenuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setNoticeMenuVisible(false)}
+      >
+        <Pressable
+          style={styles.managementOverlayBottom}
+          onPress={() => setNoticeMenuVisible(false)}
+        >
+          {selectedNotice ? (
+            <Pressable
+              style={styles.managementBottomSheet}
+              onPress={(event) => event.stopPropagation()}
+            >
+              <Text style={styles.managementBottomSheetTitle}>공지 메뉴</Text>
+              <Pressable
+                style={({ pressed }) => [styles.managementBottomSheetItem, pressed && styles.pressed]}
+                onPress={() => handleOpenNoticeComposer(selectedNotice)}
+              >
+                <MaterialIcons name="edit" size={20} color={colors.gray5} />
+                <Text style={styles.managementBottomSheetItemText}>수정하기</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.managementBottomSheetItem, pressed && styles.pressed]}
+                onPress={handleDeleteNotice}
+              >
+                <MaterialIcons name="delete-outline" size={20} color={colors.likeRed} />
+                <Text style={styles.managementBottomSheetItemText}>삭제하기</Text>
+              </Pressable>
+            </Pressable>
+          ) : null}
+        </Pressable>
+      </Modal>
+      <Modal
+        visible={bookshelfCalendarVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeBookshelfCalendar}
+      >
+        <Pressable
+          style={styles.managementCenteredOverlay}
+          onPress={closeBookshelfCalendar}
+        >
+          <Pressable
+            style={styles.bookshelfCalendarCard}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <View style={styles.managementModalHeader}>
+              <Text style={styles.managementModalTitle}>모임 날짜 선택</Text>
+              <Pressable onPress={closeBookshelfCalendar} hitSlop={8}>
+                <MaterialIcons name="close" size={20} color={colors.gray6} />
+              </Pressable>
+            </View>
+            <View style={styles.bookshelfCalendarMonthRow}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.bookshelfCalendarMonthButton,
+                  pressed && styles.pressed,
+                ]}
+                onPress={() =>
+                  setBookshelfCalendarMonth(
+                    (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
+                  )
+                }
+              >
+                <MaterialIcons name="chevron-left" size={20} color={colors.gray6} />
+              </Pressable>
+              <Text style={styles.bookshelfCalendarMonthText}>
+                {formatCalendarMonthLabel(bookshelfCalendarMonth)}
+              </Text>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.bookshelfCalendarMonthButton,
+                  pressed && styles.pressed,
+                ]}
+                onPress={() =>
+                  setBookshelfCalendarMonth(
+                    (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
+                  )
+                }
+              >
+                <MaterialIcons name="chevron-right" size={20} color={colors.gray6} />
+              </Pressable>
+            </View>
+            <View style={styles.bookshelfCalendarWeekRow}>
+              {calendarWeekdayLabels.map((label) => (
+                <Text key={`bookshelf-calendar-weekday-${label}`} style={styles.bookshelfCalendarWeekLabel}>
+                  {label}
+                </Text>
+              ))}
+            </View>
+            <View style={styles.bookshelfCalendarGrid}>
+              {bookshelfCalendarDays.map((day) => {
+                const selected = bookshelfCreateDraft.meetingDate === day.value;
+                return (
+                  <Pressable
+                    key={day.key}
+                    style={({ pressed }) => [
+                      styles.bookshelfCalendarDay,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => handleSelectBookshelfMeetingDate(day.value)}
+                  >
+                    <View
+                      style={[
+                        styles.bookshelfCalendarDayInner,
+                        day.inCurrentMonth
+                          ? styles.bookshelfCalendarDayCurrentMonth
+                          : styles.bookshelfCalendarDayOutside,
+                        day.isToday && styles.bookshelfCalendarDayToday,
+                        selected && styles.bookshelfCalendarDaySelected,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.bookshelfCalendarDayLabel,
+                          !day.inCurrentMonth && styles.bookshelfCalendarDayLabelOutside,
+                          selected && styles.bookshelfCalendarDayLabelSelected,
+                        ]}
+                      >
+                        {day.label}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <View style={styles.bookshelfCalendarFooter}>
+              <Text style={styles.bookshelfCalendarFooterHint}>
+                선택한 날짜가 바로 적용됩니다.
+              </Text>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.bookshelfCalendarTodayButton,
+                  pressed && styles.pressed,
+                ]}
+                onPress={handlePickTodayBookshelfMeetingDate}
+              >
+                <Text style={styles.bookshelfCalendarTodayButtonText}>오늘</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+      {activeTab === 'bookshelf' &&
+      bookshelfViewMode === 'REGULAR_GROUP' &&
+      selectedRegularGroup ? (
+        <FloatingActionButton onPress={handleOpenRegularChatPicker}>
+          <MaterialIcons name="chat-bubble-outline" size={20} color={colors.white} />
+        </FloatingActionButton>
+      ) : null}
+      <Modal
+        visible={contactModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeContactModal}
+      >
+        <Pressable style={styles.contactModalOverlay} onPress={closeContactModal}>
+          <Pressable
+            style={styles.contactModalCard}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <View style={styles.contactModalHeader}>
+              <Text style={styles.contactModalTitle}>Contact Us</Text>
+              <Pressable onPress={closeContactModal} hitSlop={8}>
+                <MaterialIcons name="close" size={30} color={colors.gray6} />
+              </Pressable>
+            </View>
+            {contactLinks.length > 0 ? (
+              <View style={styles.contactModalLinkList}>
+                {contactLinks.map((contact, index) => (
+                  <Pressable
+                    key={`contact-link-${contact.link}-${index}`}
+                    style={({ pressed }) => [
+                      styles.contactModalLinkRow,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => {
+                      void handleOpenContactLink(contact.link);
+                    }}
+                  >
+                    <MaterialIcons name="link" size={30} color={colors.gray5} />
+                    <View style={styles.contactModalLinkTextWrap}>
+                      <Text style={styles.contactModalLinkLabel}>
+                        {formatContactLabel(contact)}
+                      </Text>
+                      <Text style={styles.contactModalLinkUrl} numberOfLines={1}>
+                        {contact.link}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.contactModalEmptyWrap}>
+                <Text style={styles.contactModalEmptyText}>문의하기 링크가 없습니다.</Text>
+              </View>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <Modal
+        visible={regularChatPickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseRegularChat}
+      >
+        <Pressable style={styles.regularChatModalOverlay} onPress={handleCloseRegularChat}>
+          <Pressable
+            style={styles.regularChatPickerCard}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <View style={styles.regularChatHeader}>
+              <Text style={styles.regularChatTitle}>채팅 조 선택</Text>
+              <Pressable onPress={handleCloseRegularChat} hitSlop={8}>
+                <MaterialIcons name="close" size={20} color={colors.gray6} />
+              </Pressable>
+            </View>
+            <View style={styles.regularChatGroupList}>
+              {(regularMeetingInfo?.groups ?? []).map((groupItem) => (
+                <Pressable
+                  key={`chat-picker-${groupItem.id}`}
+                  style={({ pressed }) => [
+                    styles.regularChatGroupItem,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() => handleSelectRegularChatGroup(groupItem.id)}
+                >
+                  <Text style={styles.regularChatGroupItemText}>{groupItem.label}</Text>
+                  <MaterialIcons name="chevron-right" size={20} color={colors.gray5} />
+                </Pressable>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <Modal
+        visible={Boolean(activeRegularChatGroup)}
+        transparent
+        animationType="slide"
+        onRequestClose={handleCloseRegularChat}
+      >
+        <Pressable style={styles.regularChatModalOverlay} onPress={handleCloseRegularChat}>
+          {activeRegularChatGroup ? (
+            <Pressable
+              style={styles.regularChatRoomCard}
+              onPress={(event) => event.stopPropagation()}
+            >
+              <View style={styles.regularChatHeader}>
+                <View style={styles.regularChatHeaderLeft}>
+                  <Pressable onPress={handleBackToRegularChatPicker} hitSlop={8}>
+                    <MaterialIcons name="chevron-left" size={20} color={colors.gray6} />
+                  </Pressable>
+                  <Text style={styles.regularChatTitle}>{activeRegularChatGroup.label}</Text>
+                </View>
+                <Pressable onPress={handleCloseRegularChat} hitSlop={8}>
+                  <MaterialIcons name="close" size={20} color={colors.gray6} />
+                </Pressable>
+              </View>
+              <ScrollView
+                style={styles.regularChatMessages}
+                contentContainerStyle={styles.regularChatMessagesContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {activeRegularChatGroup.chatMessages.map((message) => (
+                  <View
+                    key={message.id}
+                    style={[
+                      styles.regularChatMessageRow,
+                      message.mine && styles.regularChatMessageRowMine,
+                    ]}
+                  >
+                    {!message.mine ? (
+                      <View style={styles.regularChatMessageMeta}>
+                        <View style={styles.bookshelfPostAvatar}>
+                          <MaterialIcons name="person" size={16} color={colors.gray3} />
+                        </View>
+                        <Text style={styles.regularChatAuthor}>{message.author}</Text>
+                      </View>
+                    ) : null}
+                    <View
+                      style={[
+                        styles.regularChatBubble,
+                        message.mine ? styles.regularChatBubbleMine : styles.regularChatBubbleOther,
+                      ]}
+                    >
+                      <Text style={styles.regularChatBubbleText}>{message.content}</Text>
+                    </View>
+                    <Text style={styles.regularChatTime}>{message.time}</Text>
+                  </View>
+                ))}
+                {activeRegularChatGroup.chatMessages.length === 0 ? (
+                  <View style={styles.managementEmptyCard}>
+                    <Text style={styles.managementEmptyText}>표시할 채팅 내역이 없습니다.</Text>
+                  </View>
+                ) : null}
+              </ScrollView>
+              <View style={styles.regularChatInputRow}>
+                <TextInput
+                  style={styles.regularChatInput}
+                  placeholder="채팅 입력"
+                  placeholderTextColor={colors.gray3}
+                  value={regularChatInput}
+                  onChangeText={setRegularChatInput}
+                />
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.regularChatSendButton,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={handleSubmitRegularChat}
+                >
+                  <MaterialIcons name="send" size={18} color={colors.gray4} />
+                </Pressable>
+              </View>
+            </Pressable>
+          ) : null}
+        </Pressable>
+      </Modal>
       <Modal
         visible={Boolean(voteVotersModal)}
         transparent
@@ -2672,7 +8523,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           ) : null}
         </Pressable>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -2696,6 +8547,9 @@ function MeetingCreateFlow({
     value: string;
     duplicate: boolean;
   } | null>(null);
+  const [clubImageMode, setClubImageMode] = useState<ClubProfileMode>('empty');
+  const [clubImageUrl, setClubImageUrl] = useState('');
+  const [uploadingClubImage, setUploadingClubImage] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const categoryOptions = useMemo(
@@ -2768,6 +8622,34 @@ function MeetingCreateFlow({
     }
   };
 
+  const handlePickClubImage = useCallback(() => {
+    if (uploadingClubImage) return;
+
+    const pick = async () => {
+      setUploadingClubImage(true);
+      try {
+        const imageUrl = await pickAndUploadImage('CLUB');
+        if (!imageUrl) return;
+        setClubImageMode('uploaded');
+        setClubImageUrl(imageUrl);
+        showToast('모임 이미지를 적용했습니다.');
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('이미지 업로드에 실패했습니다.');
+        }
+      } finally {
+        setUploadingClubImage(false);
+      }
+    };
+
+    void pick();
+  }, [uploadingClubImage]);
+
+  const handleUseDefaultClubImage = useCallback(() => {
+    setClubImageMode('default');
+    setClubImageUrl('');
+  }, []);
+
   const handleCreateClub = async () => {
     if (creating) return;
 
@@ -2802,6 +8684,7 @@ function MeetingCreateFlow({
         participantTypes: participantCodes,
         links: normalizedLinks,
         open: isPublic ?? true,
+        profileImageUrl: clubImageMode === 'uploaded' ? clubImageUrl || undefined : undefined,
       });
       showToast('모임이 생성되었습니다.');
       onClose();
@@ -2936,37 +8819,173 @@ function MeetingCreateFlow({
           {step === 2 && (
             <View style={styles.sectionBox}>
               <Text style={styles.sectionTitle}>모임의 프로필 사진을 업로드 해주세요!</Text>
-              <View style={styles.logoRow}>
-                <View style={styles.logoPlaceholder} />
-                <View style={{ gap: spacing.xs }}>
+              <View style={styles.createProfileCard}>
+                <View style={styles.logoRow}>
                   <Pressable
-                    style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
+                    style={({ pressed }) => [
+                      styles.createProfilePreview,
+                      clubImageMode === 'empty' && styles.createProfilePreviewEmpty,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={handlePickClubImage}
                   >
-                    <Text style={styles.outlineButtonText}>기본 프로필 사용하기</Text>
+                    {clubImageMode === 'uploaded' && clubImageUrl ? (
+                      <Image
+                        source={{ uri: clubImageUrl }}
+                        style={styles.managementEditImagePreview}
+                        resizeMode="cover"
+                      />
+                    ) : clubImageMode === 'default' ? (
+                      <ClubDefaultProfileArtwork variant="preview" />
+                    ) : (
+                      <View style={styles.createProfileEmptyState}>
+                        <View style={styles.createProfileCameraBadge}>
+                          <MaterialIcons name="photo-camera" size={26} color={colors.primary1} />
+                        </View>
+                        <Text style={styles.createProfileEmptyTitle}>사진 업로드</Text>
+                        <Text style={styles.createProfileEmptyDescription}>
+                          비어 있는 박스를 눌러 사진을 선택하세요
+                        </Text>
+                      </View>
+                    )}
                   </Pressable>
-                  <Pressable
-                    style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
-                  >
-                    <Text style={styles.outlineButtonText}>사진 업로드하기</Text>
-                  </Pressable>
+
+                  <View style={styles.createProfileActionColumn}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.createProfileActionButton,
+                        clubImageMode === 'default' && styles.createProfileActionButtonSelected,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={handleUseDefaultClubImage}
+                    >
+                      <View
+                        style={[
+                          styles.createProfileActionIcon,
+                          clubImageMode === 'default' && styles.createProfileActionIconSelected,
+                        ]}
+                      >
+                        <MaterialIcons
+                          name="auto-awesome"
+                          size={16}
+                          color={clubImageMode === 'default' ? colors.white : colors.primary1}
+                        />
+                      </View>
+                      <View style={styles.createProfileActionTextWrap}>
+                        <Text
+                          style={[
+                            styles.createProfileActionTitle,
+                            clubImageMode === 'default' && styles.createProfileActionTitleSelected,
+                          ]}
+                        >
+                          기본 프로필 사용하기
+                        </Text>
+                        <Text
+                          style={[
+                            styles.createProfileActionDescription,
+                            clubImageMode === 'default' &&
+                              styles.createProfileActionDescriptionSelected,
+                          ]}
+                        >
+                          책모 로고가 모임 대표 이미지로 표시됩니다.
+                        </Text>
+                      </View>
+                    </Pressable>
+
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.createProfileActionButton,
+                        styles.createProfileActionButtonPrimary,
+                        uploadingClubImage && styles.createProfileActionButtonDisabled,
+                        pressed && !uploadingClubImage && styles.pressed,
+                      ]}
+                      onPress={handlePickClubImage}
+                      disabled={uploadingClubImage}
+                    >
+                      <View style={[styles.createProfileActionIcon, styles.createProfileActionIconPrimary]}>
+                        <MaterialIcons name="photo-camera" size={16} color={colors.white} />
+                      </View>
+                      <View style={styles.createProfileActionTextWrap}>
+                        <Text style={[styles.createProfileActionTitle, styles.createProfileActionTitlePrimary]}>
+                          {uploadingClubImage ? '업로드중...' : '사진 업로드하기'}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.createProfileActionDescription,
+                            styles.createProfileActionDescriptionPrimary,
+                          ]}
+                        >
+                          앨범에서 모임 이미지를 선택할 수 있어요.
+                        </Text>
+                      </View>
+                    </Pressable>
+                  </View>
                 </View>
+                <Text style={styles.createProfileHint}>
+                  프로필 이미지는 나중에 모임 관리 화면에서 다시 변경할 수 있습니다.
+                </Text>
               </View>
 
               <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
                 모임의 공개여부를 알려주세요!
               </Text>
-              <View style={styles.checkboxRow}>
-                {['공개', '비공개'].map((label) => {
-                  const value = label === '공개';
+              <View style={styles.createVisibilityRow}>
+                {[
+                  {
+                    label: '공개',
+                    description: '검색과 탐색에서 모임을 찾을 수 있어요.',
+                    value: true,
+                    icon: 'public' as const,
+                  },
+                  {
+                    label: '비공개',
+                    description: '승인된 사람 중심으로 조용히 운영할 수 있어요.',
+                    value: false,
+                    icon: 'lock-outline' as const,
+                  },
+                ].map((option) => {
+                  const value = option.value;
                   const active = isPublic === value;
                   return (
                     <Pressable
-                      key={label}
-                      style={({ pressed }) => [styles.checkbox, pressed && styles.pressed]}
+                      key={option.label}
+                      style={({ pressed }) => [
+                        styles.createVisibilityCard,
+                        active && styles.createVisibilityCardActive,
+                        pressed && styles.pressed,
+                      ]}
                       onPress={() => setIsPublic(value)}
                     >
-                      <View style={[styles.checkBoxSquare, active && styles.checkBoxSquareActive]} />
-                      <Text style={styles.checkboxLabel}>{label}</Text>
+                      <View
+                        style={[
+                          styles.createVisibilityIconWrap,
+                          active && styles.createVisibilityIconWrapActive,
+                        ]}
+                      >
+                        <MaterialIcons
+                          name={option.icon}
+                          size={18}
+                          color={active ? colors.white : colors.primary1}
+                        />
+                      </View>
+                      <View style={styles.createVisibilityTextWrap}>
+                        <Text
+                          style={[
+                            styles.createVisibilityTitle,
+                            active && styles.createVisibilityTitleActive,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.createVisibilityDescription,
+                            active && styles.createVisibilityDescriptionActive,
+                          ]}
+                        >
+                          {option.description}
+                        </Text>
+                      </View>
                     </Pressable>
                   );
                 })}

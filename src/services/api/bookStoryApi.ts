@@ -1,6 +1,10 @@
 import { ApiEnvelope, requestJson, unwrapResult } from './http';
+import { normalizeRemoteImageUrl } from '../../utils/image';
 
 type UnknownRecord = Record<string, unknown>;
+type ViewerContextOptions = {
+  viewerAuthenticated?: boolean;
+};
 
 type BookStoryListResult = {
   basicInfoList?: unknown[];
@@ -29,6 +33,7 @@ export type StoryBookInfo = {
 export type RemoteStoryComment = {
   id: number;
   nickname: string;
+  profileImageUrl?: string;
   content: string;
   createdAt?: string;
   parentCommentId?: number;
@@ -69,6 +74,17 @@ const fallbackStoryList: StoryFeed = {
   nextCursor: null,
 };
 
+let guestAllFirstPageCache: StoryFeed | null = null;
+let guestAllFirstPagePending: Promise<StoryFeed> | null = null;
+
+function cloneStoryFeed(feed: StoryFeed): StoryFeed {
+  return {
+    items: [...feed.items],
+    hasNext: feed.hasNext,
+    nextCursor: feed.nextCursor,
+  };
+}
+
 function asRecord(value: unknown): UnknownRecord | null {
   return typeof value === 'object' && value !== null ? (value as UnknownRecord) : null;
 }
@@ -100,12 +116,30 @@ function normalizeBookInfo(raw: unknown): StoryBookInfo | undefined {
   if (!record) return undefined;
 
   const mapped: StoryBookInfo = {
-    isbn: toStringValue(firstDefined(record.isbn, record.bookId)),
-    title: toStringValue(record.title),
-    author: toStringValue(record.author),
-    imgUrl: toStringValue(firstDefined(record.imgUrl, record.imageUrl)),
-    publisher: toStringValue(record.publisher),
-    description: toStringValue(firstDefined(record.description, record.content)),
+    isbn: toStringValue(firstDefined(record.isbn, record.bookId, record.isbn13, record.bookIsbn)),
+    title: toStringValue(firstDefined(record.title, record.bookTitle)),
+    author: toStringValue(firstDefined(record.author, record.bookAuthor)),
+    imgUrl: normalizeRemoteImageUrl(
+      toStringValue(
+        firstDefined(
+          record.imgUrl,
+          record.imageUrl,
+          record.image,
+          record.cover,
+          record.coverImage,
+          record.coverImgSrc,
+          record.thumbnailUrl,
+          record.thumbnail,
+          record.thumbUrl,
+          record.bookImageUrl,
+          record.bookImgUrl,
+        ),
+      ),
+    ),
+    publisher: toStringValue(firstDefined(record.publisher, record.bookPublisher)),
+    description: toStringValue(
+      firstDefined(record.description, record.content, record.bookDetail, record.bookDescription),
+    ),
   };
 
   if (
@@ -120,6 +154,29 @@ function normalizeBookInfo(raw: unknown): StoryBookInfo | undefined {
   }
 
   return mapped;
+}
+
+function extractStoryBookInfo(record: UnknownRecord): StoryBookInfo | undefined {
+  const nestedBookInfo = normalizeBookInfo(
+    firstDefined(record.bookInfo, record.book, record.bookDetailInfo, record.bookData, record.bookResponse),
+  );
+  if (nestedBookInfo) return nestedBookInfo;
+
+  return normalizeBookInfo({
+    bookId: firstDefined(record.bookId, record.isbn, record.isbn13, record.bookIsbn),
+    title: record.bookTitle,
+    author: record.bookAuthor,
+    description: firstDefined(record.bookDetail, record.bookDescription),
+    publisher: record.bookPublisher,
+    bookImageUrl: firstDefined(
+      record.bookImageUrl,
+      record.bookImgUrl,
+      record.bookThumbnailUrl,
+      record.bookThumbUrl,
+      record.coverImgSrc,
+      record.coverImage,
+    ),
+  });
 }
 
 function normalizeStoryItem(raw: unknown): RemoteStoryItem | null {
@@ -151,8 +208,21 @@ function normalizeStoryItem(raw: unknown): RemoteStoryItem | null {
       '제목 없음',
     description: toStringValue(firstDefined(record.description, record.content, record.body)) ?? '',
     nickname,
-    profileImageUrl: toStringValue(
-      firstDefined(authorInfo?.profileImageUrl, record.profileImageUrl, record.authorProfileImageUrl),
+    profileImageUrl: normalizeRemoteImageUrl(
+      toStringValue(
+        firstDefined(
+          authorInfo?.profileImageUrl,
+          authorInfo?.profileImgUrl,
+          authorInfo?.imgUrl,
+          authorInfo?.imageUrl,
+          record.profileImageUrl,
+          record.profileImgUrl,
+          record.memberProfileImageUrl,
+          record.authorProfileImageUrl,
+          record.imageUrl,
+          record.imgUrl,
+        ),
+      ),
     ),
     createdAt: toStringValue(firstDefined(record.createdAt, record.updatedAt)),
     viewCount: toNumber(firstDefined(record.viewCount, record.views, record.readCount)) ?? 0,
@@ -162,9 +232,24 @@ function normalizeStoryItem(raw: unknown): RemoteStoryItem | null {
     following:
       toBoolean(firstDefined(authorInfo?.following, record.following, record.subscribed)) ?? false,
     mine:
-      toBoolean(firstDefined(record.mine, record.isMine, record.myStory, record.ownedByMe)) ??
+      toBoolean(
+        firstDefined(record.mine, record.isMine, record.myStory, record.ownedByMe, record.writtenByMe),
+      ) ??
       undefined,
-    bookInfo: normalizeBookInfo(firstDefined(record.bookInfo, record.book)),
+    bookInfo: extractStoryBookInfo(record),
+  };
+}
+
+function applyViewerContextToStoryItem(
+  item: RemoteStoryItem,
+  viewerAuthenticated: boolean,
+): RemoteStoryItem {
+  if (viewerAuthenticated) return item;
+  return {
+    ...item,
+    liked: false,
+    following: false,
+    mine: false,
   };
 }
 
@@ -188,22 +273,54 @@ function normalizeStoryComment(raw: unknown): RemoteStoryComment | null {
           record.authorName,
         ),
       ) ?? '알 수 없음',
+    profileImageUrl: normalizeRemoteImageUrl(
+      toStringValue(
+        firstDefined(
+          authorInfo?.profileImageUrl,
+          authorInfo?.profileImgUrl,
+          authorInfo?.imgUrl,
+          authorInfo?.imageUrl,
+          record.profileImageUrl,
+          record.profileImgUrl,
+          record.memberProfileImageUrl,
+          record.authorProfileImageUrl,
+          record.imageUrl,
+          record.imgUrl,
+        ),
+      ),
+    ),
     content: toStringValue(firstDefined(record.content, record.comment, record.description)) ?? '',
     createdAt: toStringValue(firstDefined(record.createdAt, record.updatedAt)),
     parentCommentId: toNumber(firstDefined(record.parentCommentId, record.parentId)),
     deleted: toBoolean(firstDefined(record.deleted, record.isDeleted)) ?? false,
     mine:
-      toBoolean(firstDefined(record.mine, record.isMine, record.myComment, record.ownedByMe)) ??
+      toBoolean(
+        firstDefined(record.mine, record.isMine, record.myComment, record.ownedByMe, record.writtenByMe),
+      ) ??
       false,
   };
 }
 
-function normalizeStoryFeed(payload: unknown): StoryFeed {
+function applyViewerContextToStoryComment(
+  comment: RemoteStoryComment,
+  viewerAuthenticated: boolean,
+): RemoteStoryComment {
+  if (viewerAuthenticated) return comment;
+  return {
+    ...comment,
+    mine: false,
+  };
+}
+
+function normalizeStoryFeed(payload: unknown, viewerAuthenticated = true): StoryFeed {
   const result = unwrapResult(payload as BookStoryListResponse);
 
   if (Array.isArray(result)) {
     return {
-      items: result.map(normalizeStoryItem).filter((item): item is RemoteStoryItem => Boolean(item)),
+      items: result
+        .map(normalizeStoryItem)
+        .filter((item): item is RemoteStoryItem => Boolean(item))
+        .map((item) => applyViewerContextToStoryItem(item, viewerAuthenticated)),
       hasNext: false,
       nextCursor: null,
     };
@@ -223,13 +340,16 @@ function normalizeStoryFeed(payload: unknown): StoryFeed {
   const list = Array.isArray(rawItems) ? rawItems : [];
 
   return {
-    items: list.map(normalizeStoryItem).filter((item): item is RemoteStoryItem => Boolean(item)),
+    items: list
+      .map(normalizeStoryItem)
+      .filter((item): item is RemoteStoryItem => Boolean(item))
+      .map((item) => applyViewerContextToStoryItem(item, viewerAuthenticated)),
     hasNext: toBoolean(record.hasNext) ?? false,
     nextCursor: toNumber(record.nextCursor) ?? null,
   };
 }
 
-function normalizeStoryDetail(payload: unknown): RemoteStoryDetail | null {
+function normalizeStoryDetail(payload: unknown, viewerAuthenticated = true): RemoteStoryDetail | null {
   const result = unwrapResult(payload as BookStoryDetailResponse);
   const record = asRecord(result);
   if (!record) return null;
@@ -254,20 +374,52 @@ function normalizeStoryDetail(payload: unknown): RemoteStoryDetail | null {
     ? rawComments
         .map(normalizeStoryComment)
         .filter((comment): comment is RemoteStoryComment => Boolean(comment))
+        .map((comment) => applyViewerContextToStoryComment(comment, viewerAuthenticated))
     : [];
 
+  return applyViewerContextToStoryDetail(
+    {
+      ...item,
+      mine:
+        item.mine ??
+        toBoolean(
+          firstDefined(
+            source.mine,
+            source.isMine,
+            source.myStory,
+            source.ownedByMe,
+            source.writtenByMe,
+          ),
+        ) ??
+        false,
+      commentList,
+      commentCount: item.commentCount || commentList.length,
+    },
+    viewerAuthenticated,
+  );
+}
+
+function applyViewerContextToStoryDetail(
+  detail: RemoteStoryDetail,
+  viewerAuthenticated: boolean,
+): RemoteStoryDetail {
+  if (viewerAuthenticated) return detail;
   return {
-    ...item,
-    mine:
-      item.mine ??
-      toBoolean(firstDefined(source.mine, source.isMine, source.myStory, source.ownedByMe)) ??
-      false,
-    commentList,
-    commentCount: item.commentCount || commentList.length,
+    ...detail,
+    liked: false,
+    following: false,
+    mine: false,
+    commentList: detail.commentList.map((comment) =>
+      applyViewerContextToStoryComment(comment, viewerAuthenticated),
+    ),
   };
 }
 
-async function fetchStoryFeedByPath(path: string, cursorId?: number): Promise<StoryFeed> {
+async function fetchStoryFeedByPath(
+  path: string,
+  cursorId?: number,
+  options: ViewerContextOptions = {},
+): Promise<StoryFeed> {
   const response = await requestJson<BookStoryListResponse>(path, {
     method: 'GET',
     suppressErrorToast: true,
@@ -276,12 +428,64 @@ async function fetchStoryFeedByPath(path: string, cursorId?: number): Promise<St
     },
   });
 
-  return normalizeStoryFeed(response);
+  return normalizeStoryFeed(response, options.viewerAuthenticated ?? true);
 }
 
-export async function fetchBookStories(scope: StoryScope, cursorId?: number): Promise<StoryFeed> {
+export async function fetchBookStories(
+  scope: StoryScope,
+  cursorId?: number,
+  options?: ViewerContextOptions,
+): Promise<StoryFeed> {
   const path = scope === 'FOLLOWING' ? '/book-stories/following' : '/book-stories';
-  return fetchStoryFeedByPath(path, cursorId);
+  return fetchStoryFeedByPath(path, cursorId, options);
+}
+
+export async function fetchGuestAllBookStories(options?: {
+  forceRefresh?: boolean;
+}): Promise<StoryFeed> {
+  const forceRefresh = options?.forceRefresh ?? false;
+
+  if (!forceRefresh && guestAllFirstPageCache) {
+    return cloneStoryFeed(guestAllFirstPageCache);
+  }
+
+  if (!forceRefresh && guestAllFirstPagePending) {
+    const pending = await guestAllFirstPagePending;
+    return cloneStoryFeed(pending);
+  }
+
+  const requestPromise = fetchStoryFeedByPath('/book-stories', undefined, {
+    viewerAuthenticated: false,
+  })
+    .then((feed) => {
+      guestAllFirstPageCache = cloneStoryFeed(feed);
+      return cloneStoryFeed(feed);
+    })
+    .finally(() => {
+      guestAllFirstPagePending = null;
+    });
+
+  guestAllFirstPagePending = requestPromise;
+
+  return requestPromise;
+}
+
+export function mergeGuestAllBookStoriesCache(feed: StoryFeed): StoryFeed {
+  const previousItems = guestAllFirstPageCache?.items ?? [];
+  const existingIds = new Set(previousItems.map((item) => item.id));
+  const sanitizedItems = feed.items.map((item) => applyViewerContextToStoryItem(item, false));
+  const nextItems = [
+    ...previousItems,
+    ...sanitizedItems.filter((item) => !existingIds.has(item.id)),
+  ];
+
+  guestAllFirstPageCache = {
+    items: nextItems,
+    hasNext: feed.hasNext,
+    nextCursor: feed.nextCursor,
+  };
+
+  return cloneStoryFeed(guestAllFirstPageCache);
 }
 
 export async function fetchMyBookStories(cursorId?: number): Promise<StoryFeed> {
@@ -296,20 +500,27 @@ export async function fetchMemberBookStories(
   return fetchStoryFeedByPath(`/book-stories/members/${encodedNickname}`, cursorId);
 }
 
-export async function fetchBookStoriesByBook(bookId: number, cursorId?: number): Promise<StoryFeed> {
-  return fetchStoryFeedByPath(`/book-stories/search/${bookId}`, cursorId);
+export async function fetchBookStoriesByBook(
+  bookId: number,
+  cursorId?: number,
+  options?: ViewerContextOptions,
+): Promise<StoryFeed> {
+  return fetchStoryFeedByPath(`/book-stories/search/${bookId}`, cursorId, options);
 }
 
 export async function fetchClubBookStories(clubId: number, cursorId?: number): Promise<StoryFeed> {
   return fetchStoryFeedByPath(`/book-stories/clubs/${clubId}`, cursorId);
 }
 
-export async function fetchBookStoryDetail(bookStoryId: number): Promise<RemoteStoryDetail | null> {
+export async function fetchBookStoryDetail(
+  bookStoryId: number,
+  options?: ViewerContextOptions,
+): Promise<RemoteStoryDetail | null> {
   const response = await requestJson<BookStoryDetailResponse>(`/book-stories/${bookStoryId}`, {
     method: 'GET',
   });
 
-  return normalizeStoryDetail(response);
+  return normalizeStoryDetail(response, options?.viewerAuthenticated ?? true);
 }
 
 export async function createBookStory(payload: {
@@ -338,9 +549,7 @@ export async function updateBookStory(
   await requestJson<unknown>(`/book-stories/${bookStoryId}`, {
     method: 'PATCH',
     body: {
-      title: payload.title,
       description: payload.description,
-      ...(payload.bookInfo ? { bookInfo: payload.bookInfo } : {}),
     },
   });
 }

@@ -43,6 +43,7 @@ import {
   updateMyEmail,
   updateMyPassword,
   updateMyProfile,
+  withdrawMember,
   type MemberLoginStatus,
   type ReportItem,
 } from '../services/api/memberApi';
@@ -55,7 +56,9 @@ import {
   type NotificationSettingInfo,
   type NotificationSettingType,
 } from '../services/api/notificationApi';
-import { toKstTimeAgoLabel } from '../utils/date';
+import { fetchMyNewsList, type RemoteNewsSummary } from '../services/api/newsApi';
+import { formatKstDateLabel, toKstTimeAgoLabel } from '../utils/date';
+import { normalizeRemoteImageUrl } from '../utils/image';
 import { formatNotificationText, resolveNotificationTarget } from '../utils/notification';
 import { showToast } from '../utils/toast';
 
@@ -64,8 +67,10 @@ type TabKey = (typeof tabs)[number];
 
 type StoryCard = {
   id: string;
+  remoteId?: number;
   title: string;
   excerpt: string;
+  imageUrl?: string;
   likes: number;
   comments: number;
 };
@@ -83,6 +88,15 @@ type GroupItem = {
   id: string;
   clubId?: number;
   name: string;
+};
+
+type MyNewsItem = {
+  id: string;
+  newsId: number;
+  title: string;
+  excerpt: string;
+  date: string;
+  thumbnailUrl?: string;
 };
 
 type AlarmItem = {
@@ -228,15 +242,8 @@ type GroupMenuState = {
   pageY: number;
 };
 
-const SUPPORTED_IMAGE_URL_PATTERN =
-  /^(https?:\/\/|file:\/\/|content:\/\/|asset:\/\/|ph:\/\/|data:image\/)/i;
-
 function normalizeImageUrl(url?: string): string | undefined {
-  if (typeof url !== 'string') return undefined;
-  const trimmed = url.trim();
-  if (!trimmed) return undefined;
-  if (/^blob:/i.test(trimmed)) return undefined;
-  return SUPPORTED_IMAGE_URL_PATTERN.test(trimmed) ? trimmed : undefined;
+  return normalizeRemoteImageUrl(url);
 }
 
 function inferMimeType(fileName?: string, fallback?: string): string {
@@ -250,13 +257,7 @@ function inferMimeType(fileName?: string, fallback?: string): string {
 }
 
 function toDateLabel(value?: string): string {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}.${month}.${day}`;
+  return formatKstDateLabel(value);
 }
 
 function getMenuPosition(pageX: number, pageY: number, screenWidth: number, screenHeight: number) {
@@ -371,6 +372,7 @@ export function MyPageScreen() {
   const [stories, setStories] = useState<StoryCard[]>([]);
   const [books, setBooks] = useState<BookCard[]>([]);
   const [alarms, setAlarms] = useState<AlarmItem[]>([]);
+  const [myNews, setMyNews] = useState<MyNewsItem[]>([]);
   const [groups, setGroups] = useState<GroupItem[]>([]);
   const [profileName, setProfileName] = useState('_hy_0716');
   const [profileDesc, setProfileDesc] = useState(
@@ -389,6 +391,7 @@ export function MyPageScreen() {
   const [loadingStories, setLoadingStories] = useState(false);
   const [loadingBooks, setLoadingBooks] = useState(false);
   const [loadingAlarms, setLoadingAlarms] = useState(false);
+  const [loadingMyNews, setLoadingMyNews] = useState(false);
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [loadingFollowUsers, setLoadingFollowUsers] = useState(false);
@@ -419,11 +422,9 @@ export function MyPageScreen() {
   const [loadingLoginStatus, setLoadingLoginStatus] = useState(false);
   const [reportHistory, setReportHistory] = useState<ReportHistoryItem[]>([]);
   const [loadingReportHistory, setLoadingReportHistory] = useState(false);
+  const [submittingWithdrawal, setSubmittingWithdrawal] = useState(false);
+  const [submittingLogout, setSubmittingLogout] = useState(false);
 
-  const writeIconUri = useMemo(
-    () => Image.resolveAssetSource(require('../../assets/write-floating.svg')).uri,
-    [],
-  );
   const settingIconUri = useMemo(
     () => Image.resolveAssetSource(require('../../assets/mypage/mypage-setting.svg')).uri,
     [],
@@ -457,6 +458,17 @@ export function MyPageScreen() {
       title: book.title || '책 제목',
       author: book.author || '작가 미상',
       imageUrl: normalizeImageUrl(book.imgUrl),
+    }));
+  }, []);
+
+  const mapMyNewsItems = useCallback((items: RemoteNewsSummary[]): MyNewsItem[] => {
+    return items.map((item) => ({
+      id: `my-news-${item.id}`,
+      newsId: item.id,
+      title: item.title || '제목 없음',
+      excerpt: item.excerpt?.trim() || '소식 내용을 확인해보세요.',
+      date: toDateLabel(item.date),
+      thumbnailUrl: normalizeImageUrl(item.thumbnailUrl),
     }));
   }, []);
 
@@ -497,6 +509,7 @@ export function MyPageScreen() {
       setStories(fallbackStories);
       setBooks(fallbackBooks);
       setAlarms([]);
+      setMyNews([]);
       setGroups(fallbackGroups);
       setProfileName('_hy_0716');
       setProfileDesc(
@@ -556,8 +569,10 @@ export function MyPageScreen() {
       const result = await fetchMyBookStories();
       const mapped: StoryCard[] = result.items.map((item) => ({
         id: `s-${item.id}`,
+        remoteId: item.id,
         title: item.title || '제목 없음',
         excerpt: item.description || '내용이 없습니다.',
+        imageUrl: normalizeImageUrl(item.bookInfo?.imgUrl),
         likes: item.likeCount ?? 0,
         comments: item.commentCount ?? 0,
       }));
@@ -678,6 +693,40 @@ export function MyPageScreen() {
       setLoadingAlarms(false);
     }
   }, [isLoggedIn, mapNotificationToAlarm]);
+
+  const loadMyNews = useCallback(async () => {
+    if (!isLoggedIn) {
+      setMyNews([]);
+      return;
+    }
+
+    setLoadingMyNews(true);
+    try {
+      const allItems: RemoteNewsSummary[] = [];
+      let cursorId: number | undefined;
+
+      for (let i = 0; i < 20; i += 1) {
+        const response = await fetchMyNewsList(cursorId);
+        allItems.push(...response.items);
+        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+        cursorId = response.nextCursor;
+      }
+
+      setMyNews(mapMyNewsItems(allItems));
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        setMyNews([]);
+        return;
+      }
+      if (error instanceof ApiError) {
+        setMyNews([]);
+        return;
+      }
+      showToast('내 소식을 불러오지 못했습니다.');
+    } finally {
+      setLoadingMyNews(false);
+    }
+  }, [isLoggedIn, mapMyNewsItems]);
 
   const loadNotificationSettingInfo = useCallback(async () => {
     if (!isLoggedIn) {
@@ -1028,18 +1077,68 @@ export function MyPageScreen() {
     void submit();
   }, [passwordConfirm, passwordCurrent, passwordNext]);
 
-  const handleLogout = useCallback(() => {
-    const submit = async () => {
-      try {
-        await logoutSession();
-      } finally {
-        logout();
-        setShowSettings(false);
-        setSelectedSetting(null);
-      }
-    };
-    void submit();
-  }, [logout]);
+  const handleWithdrawMember = useCallback(() => {
+    if (submittingWithdrawal) return;
+
+    Alert.alert('회원 탈퇴', '정말 탈퇴하시겠습니까? 탈퇴 후에는 되돌릴 수 없습니다.', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '탈퇴하기',
+        style: 'destructive',
+        onPress: () => {
+          setSubmittingWithdrawal(true);
+          const submit = async () => {
+            try {
+              await withdrawMember();
+              showToast('탈퇴가 신청되었습니다.');
+              logout();
+              setShowSettings(false);
+              setSelectedSetting(null);
+            } catch (error) {
+              if (!(error instanceof ApiError)) {
+                showToast('회원 탈퇴에 실패했습니다.');
+              }
+            } finally {
+              setSubmittingWithdrawal(false);
+            }
+          };
+          void submit();
+        },
+      },
+    ]);
+  }, [logout, submittingWithdrawal]);
+
+  const handleLogoutPress = useCallback(() => {
+    if (submittingLogout) return;
+
+    Alert.alert('로그아웃', '로그아웃하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '로그아웃',
+        style: 'destructive',
+        onPress: () => {
+          setSubmittingLogout(true);
+          const submit = async () => {
+            try {
+              await logoutSession();
+              logout();
+              setShowSettings(false);
+              setSelectedSetting(null);
+              navigation.navigate('Home');
+              showToast('로그아웃되었습니다.');
+            } catch (error) {
+              if (!(error instanceof ApiError)) {
+                showToast('로그아웃에 실패했습니다.');
+              }
+            } finally {
+              setSubmittingLogout(false);
+            }
+          };
+          void submit();
+        },
+      },
+    ]);
+  }, [logout, navigation, submittingLogout]);
 
   const openFollowerList = useCallback(() => {
     setGroupMenu(null);
@@ -1054,6 +1153,22 @@ export function MyPageScreen() {
     setShowFollowPage(true);
     void loadFollowUsers();
   }, [loadFollowUsers]);
+
+  const openMemberProfile = useCallback(
+    (nickname: string) => {
+      const memberNickname = nickname.trim();
+      if (!memberNickname) return;
+
+      if (profileName.trim() && memberNickname === profileName.trim()) {
+        setShowFollowPage(false);
+        navigation.navigate('My');
+        return;
+      }
+
+      navigation.navigate('UserProfile', { memberNickname, fromScreen: 'My' });
+    },
+    [navigation, profileName],
+  );
 
   const handleToggleFollowUser = useCallback(
     (nickname: string, nextFollowing: boolean) => {
@@ -1122,8 +1237,22 @@ export function MyPageScreen() {
         <Text style={styles.emptyText}>작성한 책이야기가 없습니다.</Text>
       ) : null}
       {stories.map((item) => (
-        <View key={item.id} style={styles.storyCard}>
-          <View style={styles.storyThumb} />
+        <Pressable
+          key={item.id}
+          style={({ pressed }) => [styles.storyCard, pressed && styles.pressed]}
+          onPress={() => {
+            if (typeof item.remoteId !== 'number' || item.remoteId <= 0) {
+              showToast('해당 책이야기를 찾을 수 없습니다.');
+              return;
+            }
+            navigation.navigate('Story', { openStoryId: item.remoteId });
+          }}
+        >
+          <View style={styles.storyThumb}>
+            {item.imageUrl ? (
+              <Image source={{ uri: item.imageUrl }} style={styles.storyThumbImage} resizeMode="cover" />
+            ) : null}
+          </View>
           <Text style={styles.storyTitle}>{item.title}</Text>
           <Text style={styles.storyExcerpt} numberOfLines={2}>
             {item.excerpt}
@@ -1139,7 +1268,7 @@ export function MyPageScreen() {
               <Text style={styles.inlineText}>{item.comments}</Text>
             </View>
           </View>
-        </View>
+        </Pressable>
       ))}
     </View>
   );
@@ -1181,12 +1310,17 @@ export function MyPageScreen() {
         <Text style={styles.emptyText}>가입한 모임이 없습니다.</Text>
       ) : null}
       {groups.map((group) => (
-        <View key={group.id} style={styles.groupRow}>
+        <Pressable
+          key={group.id}
+          style={({ pressed }) => [styles.groupRow, pressed && styles.pressed]}
+          onPress={() => handleOpenGroupHome(group)}
+        >
           <Text style={styles.groupName}>{group.name}</Text>
           <Pressable
             style={styles.groupMenuButton}
             hitSlop={8}
             onPress={(event) => {
+              event.stopPropagation();
               setGroupMenu({
                 group,
                 pageX: event.nativeEvent.pageX,
@@ -1196,7 +1330,7 @@ export function MyPageScreen() {
           >
             <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
           </Pressable>
-        </View>
+        </Pressable>
       ))}
     </View>
   );
@@ -1220,6 +1354,39 @@ export function MyPageScreen() {
             </Text>
           </View>
           <Text style={styles.alarmTime}>{alarm.time}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+
+  const renderMyNews = () => (
+    <View style={styles.listContainer}>
+      {loadingMyNews ? <Text style={styles.loadingText}>내 소식을 불러오는 중...</Text> : null}
+      {!loadingMyNews && myNews.length === 0 ? (
+        <Text style={styles.emptyText}>등록한 소식이 없습니다.</Text>
+      ) : null}
+      {myNews.map((item) => (
+        <Pressable
+          key={item.id}
+          style={({ pressed }) => [styles.myNewsRow, pressed && styles.pressed]}
+          onPress={() => handleOpenMyNews(item)}
+        >
+          {item.thumbnailUrl ? (
+            <Image source={{ uri: item.thumbnailUrl }} style={styles.myNewsThumb} />
+          ) : (
+            <View style={styles.myNewsThumbPlaceholder}>
+              <MaterialIcons name="article" size={20} color={colors.gray3} />
+            </View>
+          )}
+          <View style={styles.myNewsBody}>
+            <Text style={styles.myNewsTitle} numberOfLines={1}>
+              {item.title}
+            </Text>
+            <Text style={styles.myNewsExcerpt} numberOfLines={2}>
+              {item.excerpt}
+            </Text>
+          </View>
+          <Text style={styles.myNewsDate}>{item.date}</Text>
         </Pressable>
       ))}
     </View>
@@ -1307,7 +1474,10 @@ export function MyPageScreen() {
 
         {activeFollowUsers.map((user) => (
           <View key={`${activeFollowTab}-${user.nickname}`} style={styles.followUserRow}>
-            <View style={styles.followUserMeta}>
+            <Pressable
+              style={({ pressed }) => [styles.followUserMeta, pressed && styles.pressed]}
+              onPress={() => openMemberProfile(user.nickname)}
+            >
               {user.profileImageUrl ? (
                 <Image source={{ uri: user.profileImageUrl }} style={styles.followUserAvatarImage} />
               ) : (
@@ -1316,7 +1486,7 @@ export function MyPageScreen() {
                 </View>
               )}
               <Text style={styles.followUserName}>{user.nickname}</Text>
-            </View>
+            </Pressable>
 
             <Pressable
               style={[
@@ -1385,6 +1555,11 @@ export function MyPageScreen() {
     if (selectedSetting !== '알림 관리') return;
     void loadNotificationSettingInfo();
   }, [loadNotificationSettingInfo, selectedSetting]);
+
+  useEffect(() => {
+    if (selectedSetting !== '내 소식 관리') return;
+    void loadMyNews();
+  }, [loadMyNews, selectedSetting]);
 
   useEffect(() => {
     if (selectedSetting !== '신고 관리') return;
@@ -1457,6 +1632,24 @@ export function MyPageScreen() {
       },
     ]);
   }, []);
+
+  const handleOpenGroupHome = useCallback((group: GroupItem) => {
+    if (typeof group.clubId !== 'number' || group.clubId <= 0) {
+      showToast('해당 모임 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    navigation.navigate('Meeting', { openClubId: group.clubId });
+  }, [navigation]);
+
+  const handleOpenMyNews = useCallback((item: MyNewsItem) => {
+    if (item.newsId <= 0) {
+      showToast('소식 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    navigation.navigate('News', { openNewsId: item.newsId });
+  }, [navigation]);
 
   const handleWriteStory = useCallback(() => {
     navigation.navigate('Story', { openCompose: true });
@@ -1741,6 +1934,30 @@ export function MyPageScreen() {
               않습니다.
             </Text>
           </View>
+          <Pressable
+            style={[
+              styles.submitButton,
+              styles.submitButtonDanger,
+              submittingWithdrawal ? styles.submitButtonDisabled : null,
+            ]}
+            onPress={handleWithdrawMember}
+            disabled={submittingWithdrawal}
+          >
+            <Text style={styles.submitButtonText}>
+              {submittingWithdrawal ? '처리 중...' : '탈퇴 신청하기'}
+            </Text>
+          </Pressable>
+        </View>
+      );
+    }
+
+    if (selectedSetting === '내 소식 관리') {
+      return (
+        <View style={styles.settingsDetailWrap}>
+          {back}
+          <Text style={styles.detailTitle}>내 소식 관리</Text>
+          <Text style={styles.detailDivider} />
+          {renderMyNews()}
         </View>
       );
     }
@@ -1929,57 +2146,60 @@ export function MyPageScreen() {
           contentContainerStyle={styles.settingsContent}
           showsVerticalScrollIndicator={false}
         >
-        <View style={styles.breadcrumbRow}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.breadcrumbRow,
-              pressed && styles.pressed,
-            ]}
-            onPress={() => {
-              if (selectedSetting) {
-                setSelectedSetting(null);
-              } else {
-                setShowSettings(false);
-              }
-            }}
-          >
-            <Text style={styles.breadcrumbText}>뒤로가기</Text>
-          </Pressable>
-        </View>
-
-        {selectedSetting ? (
-          renderSettingDetail()
-        ) : (
-          settingsSections.map((section) => (
-            <View key={section.title} style={styles.settingsSection}>
-              <View style={styles.settingsHeader}>
-                <SvgUri uri={section.iconUri} width={18} height={18} />
-                <Text style={styles.settingsTitle}>{section.title}</Text>
-              </View>
-              <View style={styles.settingsItems}>
-                {section.items.map((item) => (
-                  <Pressable
-                    key={item}
-                    style={({ pressed }) => [styles.settingsItem, pressed && styles.pressed]}
-                    onPress={() => {
-                      if (item === '로그아웃') {
-                        handleLogout();
-                        return;
-                      }
-                      if (item === '고객센터/문의하기') {
-                        handleContact();
-                        return;
-                      }
-                      setSelectedSetting(item);
-                    }}
-                  >
-                    <Text style={styles.settingsItemText}>{item}</Text>
-                  </Pressable>
-                ))}
-              </View>
+          {selectedSetting ? null : (
+            <View style={styles.breadcrumbRow}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.breadcrumbRow,
+                  pressed && styles.pressed,
+                ]}
+                onPress={() => {
+                  setShowSettings(false);
+                }}
+              >
+                <Text style={styles.breadcrumbText}>뒤로가기</Text>
+              </Pressable>
             </View>
-          ))
-        )}
+          )}
+
+          {selectedSetting ? (
+            renderSettingDetail()
+          ) : (
+            <>
+              {settingsSections.map((section) => (
+                <View key={section.title} style={styles.settingsSection}>
+                  <View style={styles.settingsHeader}>
+                    <SvgUri uri={section.iconUri} width={18} height={18} />
+                    <Text style={styles.settingsTitle}>{section.title}</Text>
+                  </View>
+                  <View style={styles.settingsItems}>
+                    {section.items.map((item) => (
+                      <Pressable
+                        key={item}
+                        style={({ pressed }) => [styles.settingsItem, pressed && styles.pressed]}
+                        disabled={item === '로그아웃' && submittingLogout}
+                        onPress={() => {
+                          if (item === '고객센터/문의하기') {
+                            handleContact();
+                            return;
+                          }
+                          if (item === '로그아웃') {
+                            handleLogoutPress();
+                            return;
+                          }
+                          setSelectedSetting(item);
+                        }}
+                      >
+                        <Text style={styles.settingsItemText}>
+                          {item === '로그아웃' && submittingLogout ? '로그아웃 중...' : item}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </>
+          )}
         </ScrollView>
       </ScreenLayout>
     );
@@ -2093,10 +2313,6 @@ export function MyPageScreen() {
 
         <View style={styles.tabContent}>{renderTabContent()}</View>
         </ScrollView>
-
-        <Pressable style={({ pressed }) => [styles.fab, pressed && styles.pressed]}>
-          <SvgUri uri={writeIconUri} width={48} height={48} />
-        </Pressable>
 
         <Modal
           visible={Boolean(groupMenu)}
@@ -2357,6 +2573,9 @@ const styles = StyleSheet.create({
   submitButtonDisabled: {
     opacity: 0.7,
   },
+  submitButtonDanger: {
+    backgroundColor: colors.gray6,
+  },
   submitButtonText: {
     ...typography.body1_2,
     color: colors.white,
@@ -2470,6 +2689,47 @@ const styles = StyleSheet.create({
   alarmTime: {
     ...typography.body2_3,
     color: colors.gray4,
+  },
+  myNewsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.subbrown4,
+    padding: spacing.sm,
+    gap: spacing.sm,
+  },
+  myNewsThumb: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gray1,
+  },
+  myNewsThumbPlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gray1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  myNewsBody: {
+    flex: 1,
+    gap: spacing.xs / 2,
+  },
+  myNewsTitle: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
+  myNewsExcerpt: {
+    ...typography.body2_3,
+    color: colors.gray5,
+  },
+  myNewsDate: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    alignSelf: 'flex-start',
   },
   toggleButton: {
     width: 44,
@@ -2727,6 +2987,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray1,
     borderRadius: radius.sm,
     aspectRatio: 1,
+    overflow: 'hidden',
+  },
+  storyThumbImage: {
+    width: '100%',
+    height: '100%',
   },
   storyTitle: {
     ...typography.body1_2,
@@ -2849,15 +3114,6 @@ const styles = StyleSheet.create({
   groupMenuText: {
     ...typography.body2_2,
     color: colors.gray6,
-  },
-  fab: {
-    position: 'absolute',
-    right: spacing.xl,
-    bottom: spacing.xl,
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   pressed: {
     opacity: 0.7,

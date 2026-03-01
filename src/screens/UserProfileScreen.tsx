@@ -1,17 +1,36 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import {
+  Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { SvgUri } from 'react-native-svg';
 
 import { colors, radius, spacing, typography } from '../theme';
+import { navigateToHome } from '../navigation/navigateToHome';
 import { ScreenLayout } from '../components/common/ScreenLayout';
+import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
+import { useAuthGate } from '../contexts/AuthGateContext';
 import { showToast } from '../utils/toast';
+import { ApiError } from '../services/api/http';
+import {
+  fetchMemberProfile,
+  reportMember,
+  setFollowingMember,
+  type MemberReportType,
+  type MemberProfile,
+} from '../services/api/memberApi';
+import {
+  fetchMemberBookStories,
+  type RemoteStoryItem,
+} from '../services/api/bookStoryApi';
+import { normalizeRemoteImageUrl } from '../utils/image';
 
 type TabKey = '책 이야기' | '서재' | '모임';
 
@@ -21,112 +40,210 @@ type StoryCard = {
   excerpt: string;
   likes: number;
   comments: number;
+  imageUrl?: string;
 };
 
 type BookCard = {
   id: string;
   title: string;
   author: string;
+  imageUrl?: string;
 };
 
 type GroupItem = {
   id: string;
   name: string;
-  memberCount: number;
-  category: string;
 };
 
 const tabs: TabKey[] = ['책 이야기', '서재', '모임'];
+const likeIconUri = Image.resolveAssetSource(
+  require('../../assets/book-story/bookstory-like.svg'),
+).uri;
+const commentIconUri = Image.resolveAssetSource(
+  require('../../assets/book-story/bookstory-comment.svg'),
+).uri;
+
+function mapRemoteStoryToCard(item: RemoteStoryItem): StoryCard {
+  return {
+    id: `story-${item.id}`,
+    title: item.title,
+    excerpt: item.description,
+    likes: item.likeCount,
+    comments: item.commentCount,
+    imageUrl: normalizeRemoteImageUrl(item.bookInfo?.imgUrl),
+  };
+}
 
 export function UserProfileScreen() {
-  const { width } = useWindowDimensions();
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const { requireAuth } = useAuthGate();
   const [activeTab, setActiveTab] = useState<TabKey>('책 이야기');
-  const [subscribed, setSubscribed] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [submittingFollow, setSubmittingFollow] = useState(false);
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profile, setProfile] = useState<MemberProfile | null>(null);
+  const [stories, setStories] = useState<StoryCard[]>([]);
+  const [reportModal, setReportModal] = useState<ReportMemberModalState | null>(null);
+  const memberNickname =
+    typeof route.params?.memberNickname === 'string' && route.params.memberNickname.trim().length > 0
+      ? route.params.memberNickname.trim()
+      : '_hy_0716';
 
-  const stories: StoryCard[] = useMemo(
-    () =>
-      Array.from({ length: 9 }).map((_, idx) => ({
-        id: `story-${idx + 1}`,
-        title: '나는 나이든 왕자다',
-        excerpt:
-          '나는 나이든 왕자다. 그 누가 숫자가 중요하다고 했던가. 세고 또 세면서 어떤 인연을 떠올려 본다.',
-        likes: (idx % 5) + 1,
-        comments: (idx % 3) + 1,
-      })),
-    [],
-  );
+  const books: BookCard[] = useMemo(() => [], []);
+  const groups: GroupItem[] = useMemo(() => [], []);
 
-  const books: BookCard[] = useMemo(
-    () =>
-      Array.from({ length: 10 }).map((_, idx) => ({
-        id: `book-${idx + 1}`,
-        title: idx % 2 === 0 ? '단테 <신곡> 인문...' : '오래된 세계의 농...',
-        author: idx % 2 === 0 ? '박상진' : '이다혜',
-      })),
-    [],
-  );
+  const loadProfile = useCallback(async () => {
+    const [profileResult, storiesResult] = await Promise.all([
+      fetchMemberProfile(memberNickname),
+      fetchMemberBookStories(memberNickname),
+    ]);
 
-  const groups: GroupItem[] = useMemo(
-    () =>
-      ['새벽 독서회', '강북 소설 클럽', '논픽션 라운지', '퇴근길 북클럽'].map((name, idx) => ({
-        id: `group-${idx + 1}`,
-        name,
-        memberCount: 24 + idx * 7,
-        category: idx % 2 === 0 ? '인문학' : '소설/시/희곡',
-      })),
-    [],
-  );
+    setProfile(profileResult);
+    setStories(storiesResult.items.map(mapRemoteStoryToCard));
+  }, [memberNickname]);
 
-  const storyCardWidth = width >= 1280 ? '32%' : width >= 820 ? '48%' : '100%';
-  const bookCardWidth = width >= 1280 ? '23.8%' : width >= 1000 ? '31.5%' : width >= 720 ? '48%' : '100%';
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setProfileLoading(true);
+      try {
+        await loadProfile();
+      } catch (error) {
+        if (cancelled) return;
+        if (!(error instanceof ApiError)) {
+          showToast('프로필을 불러오지 못했습니다.');
+        }
+      } finally {
+        if (!cancelled) {
+          setProfileLoading(false);
+        }
+      }
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadProfile]);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+
+    const refresh = async () => {
+      try {
+        await loadProfile();
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('프로필을 새로고침하지 못했습니다.');
+        }
+      } finally {
+        setRefreshing(false);
+      }
+    };
+
+    void refresh();
+  }, [loadProfile]);
 
   const handleSubscribe = useCallback(() => {
-    setSubscribed((prev) => {
-      const next = !prev;
-      showToast(next ? '구독했습니다.' : '구독을 취소했습니다.');
-      return next;
+    if (!profile || submittingFollow) return;
+
+    const nextFollowing = !(profile.following ?? false);
+    setSubmittingFollow(true);
+
+    const submit = async () => {
+      try {
+        await setFollowingMember(memberNickname, nextFollowing);
+        showToast(nextFollowing ? '구독했습니다.' : '구독을 취소했습니다.');
+        await loadProfile();
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('구독 상태를 변경하지 못했습니다.');
+        }
+      } finally {
+        setSubmittingFollow(false);
+      }
+    };
+
+    void submit();
+  }, [loadProfile, memberNickname, profile, submittingFollow]);
+
+  const following = profile?.following ?? false;
+  const profileName = profile?.nickname?.trim() || memberNickname;
+  const profileDesc =
+    profile?.description?.trim() ||
+    '소개글이 없습니다.';
+
+  const handleOpenReportModal = useCallback(() => {
+    setReportModal({
+      nickname: profileName,
+      profileImageUrl: profile?.profileImageUrl,
+      initialType: 'GENERAL',
     });
-  }, []);
+  }, [profile?.profileImageUrl, profileName]);
+
+  const handleCloseReportModal = useCallback(() => {
+    if (submittingReport) return;
+    setReportModal(null);
+  }, [submittingReport]);
+
+  const handleSubmitReport = useCallback(
+    (payload: { reportType: MemberReportType; content?: string }) => {
+      requireAuth(() => {
+        const submit = async () => {
+          setSubmittingReport(true);
+          try {
+            await reportMember({
+              reportedMemberNickname: memberNickname,
+              reportType: payload.reportType,
+              content: payload.content,
+            });
+            setReportModal(null);
+            showToast('신고가 접수되었습니다.');
+          } catch (error) {
+            if (!(error instanceof ApiError)) {
+              showToast('신고 접수에 실패했습니다.');
+            }
+          } finally {
+            setSubmittingReport(false);
+          }
+        };
+        void submit();
+      });
+    },
+    [memberNickname, requireAuth],
+  );
 
   const renderStoryCards = () => (
-    <View style={styles.gridWrap}>
+    <View style={[styles.gridContent, styles.cardWrap]}>
+      {stories.length === 0 ? <Text style={styles.emptyText}>작성한 책이야기가 없습니다.</Text> : null}
       {stories.map((story) => (
         <Pressable
           key={story.id}
-          style={({ pressed }) => [
-            styles.storyCard,
-            { width: storyCardWidth },
-            pressed && styles.pressed,
-          ]}
+          style={({ pressed }) => [styles.storyCard, pressed && styles.pressed]}
+          onPress={() => showToast('책이야기 상세는 준비 중입니다.')}
         >
-          <View style={styles.storyCardHeader}>
-            <View style={styles.storyAuthorWrap}>
-              <View style={styles.storyAuthorAvatar}>
-                <MaterialIcons name="person-outline" size={16} color={colors.gray4} />
-              </View>
-              <View>
-                <Text style={styles.storyAuthorName}>hy_0716</Text>
-                <Text style={styles.storyMeta}>2분전 · 조회수 302</Text>
-              </View>
-            </View>
-            <View style={styles.subscribeChip}>
-              <Text style={styles.subscribeChipText}>구독</Text>
-            </View>
+          <View style={styles.storyThumb}>
+            {story.imageUrl ? (
+              <Image source={{ uri: story.imageUrl }} style={styles.storyThumbImage} resizeMode="cover" />
+            ) : null}
           </View>
-          <View style={styles.storyThumb} />
           <Text style={styles.storyTitle}>{story.title}</Text>
           <Text style={styles.storyExcerpt} numberOfLines={2}>
             {story.excerpt}
           </Text>
-          <View style={styles.storyFooter}>
-            <View style={styles.storyFooterItem}>
-              <MaterialIcons name="favorite-border" size={14} color={colors.gray4} />
-              <Text style={styles.storyFooterText}>좋아요 {story.likes}</Text>
+          <View style={styles.storyActions}>
+            <View style={styles.inlineAction}>
+              <SvgUri uri={likeIconUri} width={18} height={18} />
+              <Text style={styles.inlineText}>{story.likes}</Text>
             </View>
-            <View style={styles.storyFooterDivider} />
-            <View style={styles.storyFooterItem}>
-              <MaterialIcons name="chat-bubble-outline" size={14} color={colors.gray4} />
-              <Text style={styles.storyFooterText}>댓글 {story.comments}</Text>
+            <View style={styles.actionDivider} />
+            <View style={styles.inlineAction}>
+              <SvgUri uri={commentIconUri} width={18} height={18} />
+              <Text style={styles.inlineText}>{story.comments}</Text>
             </View>
           </View>
         </Pressable>
@@ -135,11 +252,17 @@ export function UserProfileScreen() {
   );
 
   const renderLibraryCards = () => (
-    <View style={styles.gridWrap}>
+    <View style={[styles.gridContent, styles.bookWrap]}>
+      {books.length === 0 ? <Text style={styles.emptyText}>공개된 서재가 없습니다.</Text> : null}
       {books.map((book) => (
-        <View key={book.id} style={[styles.bookCard, { width: bookCardWidth }]}>
+        <View key={book.id} style={styles.bookCard}>
           <View style={styles.bookThumb}>
-            <MaterialIcons name="favorite" size={20} color={colors.secondary1} />
+            {book.imageUrl ? (
+              <Image source={{ uri: book.imageUrl }} style={styles.bookThumbImage} resizeMode="cover" />
+            ) : null}
+            <View style={styles.bookLikeBadge}>
+              <MaterialIcons name="favorite" size={18} color={colors.secondary1} />
+            </View>
           </View>
           <Text style={styles.bookTitle} numberOfLines={1}>
             {book.title}
@@ -153,17 +276,15 @@ export function UserProfileScreen() {
   );
 
   const renderMeetings = () => (
-    <View style={styles.groupList}>
+    <View style={styles.listContainer}>
+      {groups.length === 0 ? <Text style={styles.emptyText}>공개된 모임이 없습니다.</Text> : null}
       {groups.map((group) => (
-        <Pressable key={group.id} style={({ pressed }) => [styles.groupRow, pressed && styles.pressed]}>
-          <View>
-            <Text style={styles.groupName}>{group.name}</Text>
-            <Text style={styles.groupMeta}>
-              {group.category} · 멤버 {group.memberCount}명
-            </Text>
-          </View>
-          <MaterialIcons name="chevron-right" size={18} color={colors.gray4} />
-        </Pressable>
+        <View key={group.id} style={styles.groupRow}>
+          <Text style={styles.groupName}>{group.name}</Text>
+          <Pressable style={styles.groupMenuButton} hitSlop={8}>
+            <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
+          </Pressable>
+        </View>
       ))}
     </View>
   );
@@ -180,43 +301,66 @@ export function UserProfileScreen() {
         style={styles.container}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary1}
+            colors={[colors.primary1]}
+          />
+        }
       >
-        <View style={styles.breadcrumbRow}>
+        <Pressable
+          style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+              return;
+            }
+            navigateToHome(navigation);
+          }}
+        >
           <Text style={styles.breadcrumbText}>전체</Text>
           <MaterialIcons name="chevron-right" size={16} color={colors.gray4} />
           <Text style={[styles.breadcrumbText, styles.breadcrumbActive]}>다른사람 프로필</Text>
-        </View>
+        </Pressable>
 
         <View style={styles.profileRow}>
           <View style={styles.profileAvatar}>
-            <MaterialIcons name="person" size={48} color={colors.gray3} />
+            {profile?.profileImageUrl ? (
+              <Image source={{ uri: profile.profileImageUrl }} style={styles.profileAvatarImage} />
+            ) : (
+              <MaterialIcons name="person" size={48} color={colors.gray3} />
+            )}
           </View>
           <View style={styles.profileMeta}>
-            <Text style={styles.profileName}>_hy_0716</Text>
-            <Text style={styles.profileSub}>구독중 2 · 구독자 2</Text>
+            <Text style={styles.profileName}>{profileName}</Text>
+            <Text style={styles.profileSub}>
+              구독중 {profile?.followingCount ?? 0} · 구독자 {profile?.followerCount ?? 0}
+            </Text>
             <Text style={styles.profileDesc} numberOfLines={3}>
-              이제 다양한 책을 함께 읽고 서로의 생각을 나누는 특별한 시간을 시작해보세요. 한 권의 책이 주는 작은 울림이 일상에
-              큰 변화를 가져올지도 모릅니다.
+              {profileDesc}
             </Text>
           </View>
         </View>
 
-        <View style={styles.actionRow}>
+        <View style={styles.actionButtons}>
           <Pressable
             style={({ pressed }) => [
               styles.primaryButton,
-              subscribed ? styles.primaryButtonDisabled : null,
+              following ? styles.primaryButtonDisabled : null,
               pressed && styles.pressed,
             ]}
             onPress={handleSubscribe}
+            disabled={submittingFollow || profileLoading}
           >
-            <Text style={[styles.primaryButtonText, subscribed ? styles.disabledText : null]}>
-              {subscribed ? '구독 중' : '구독하기'}
+            <Text style={[styles.primaryButtonText, following ? styles.disabledText : null]}>
+              {submittingFollow ? '처리 중...' : following ? '구독 중' : '구독하기'}
             </Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            onPress={() => showToast('신고 기능은 준비 중입니다.')}
+            onPress={handleOpenReportModal}
           >
             <Text style={styles.secondaryButtonText}>신고하기</Text>
           </Pressable>
@@ -228,10 +372,14 @@ export function UserProfileScreen() {
             return (
               <Pressable
                 key={tab}
-                style={({ pressed }) => [styles.tabButton, active ? styles.tabActive : null, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.tabButton,
+                  active ? styles.tabActive : null,
+                  pressed && styles.pressed,
+                ]}
                 onPress={() => setActiveTab(tab)}
               >
-                <Text style={[styles.tabLabel, active ? styles.tabLabelActive : styles.tabLabelInactive]}>
+                <Text style={[styles.tabLabel, active ? styles.tabLabelActive : null]}>
                   {tab}
                 </Text>
               </Pressable>
@@ -239,8 +387,21 @@ export function UserProfileScreen() {
           })}
         </View>
 
-        <View style={styles.tabContent}>{renderTabContent()}</View>
+        <View style={styles.tabContent}>
+          {profileLoading && !refreshing ? (
+            <Text style={styles.emptyText}>불러오는 중...</Text>
+          ) : (
+            renderTabContent()
+          )}
+        </View>
       </ScrollView>
+      <ReportMemberModal
+        visible={Boolean(reportModal)}
+        target={reportModal}
+        submitting={submittingReport}
+        onClose={handleCloseReportModal}
+        onSubmit={handleSubmitReport}
+      />
     </ScreenLayout>
   );
 }
@@ -274,8 +435,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
     alignItems: 'center',
-    backgroundColor: colors.background,
-    paddingVertical: spacing.sm,
   },
   profileAvatar: {
     width: 96,
@@ -286,6 +445,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  profileAvatarImage: {
+    width: '100%',
+    height: '100%',
   },
   profileMeta: {
     flex: 1,
@@ -301,10 +465,10 @@ const styles = StyleSheet.create({
   },
   profileDesc: {
     ...typography.body1_3,
-    color: colors.gray5,
+    color: colors.gray6,
     lineHeight: 20,
   },
-  actionRow: {
+  actionButtons: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
@@ -327,13 +491,14 @@ const styles = StyleSheet.create({
     color: colors.gray5,
   },
   secondaryButton: {
-    width: 140,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.gray2,
+    flex: 1,
     backgroundColor: colors.white,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.gray2,
   },
   secondaryButtonText: {
     ...typography.body1_2,
@@ -346,165 +511,150 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     flex: 1,
-    paddingVertical: spacing.sm,
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: spacing.sm,
   },
   tabActive: {
     borderBottomWidth: 2,
     borderBottomColor: colors.primary1,
   },
   tabLabel: {
-    ...typography.body1_2,
+    ...typography.body1_3,
+    color: colors.gray4,
   },
   tabLabelActive: {
     color: colors.primary1,
   },
-  tabLabelInactive: {
-    color: colors.gray4,
-  },
   tabContent: {
-    minHeight: 300,
+    minHeight: 200,
   },
-  gridWrap: {
+  gridContent: {
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  cardWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
   storyCard: {
+    width: '48%',
+    backgroundColor: colors.white,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.gray2,
-    backgroundColor: colors.white,
+    borderColor: colors.subbrown4,
     padding: spacing.sm,
-    gap: spacing.sm,
-  },
-  storyCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  storyAuthorWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: spacing.xs,
   },
-  storyAuthorAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.gray2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
-  storyAuthorName: {
-    ...typography.body2_2,
-    color: colors.gray6,
-  },
-  storyMeta: {
-    ...typography.body2_3,
-    color: colors.gray3,
-  },
-  subscribeChip: {
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary1,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 4,
-  },
-  subscribeChipText: {
-    ...typography.body2_3,
-    color: colors.white,
-  },
   storyThumb: {
-    width: '100%',
-    aspectRatio: 16 / 9,
-    borderRadius: radius.sm,
     backgroundColor: colors.gray1,
+    borderRadius: radius.sm,
+    aspectRatio: 1,
+    overflow: 'hidden',
+  },
+  storyThumbImage: {
+    width: '100%',
+    height: '100%',
   },
   storyTitle: {
-    ...typography.subhead4_1,
+    ...typography.body1_2,
     color: colors.gray6,
   },
   storyExcerpt: {
     ...typography.body2_3,
     color: colors.gray5,
-    lineHeight: 18,
   },
-  storyFooter: {
+  storyActions: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: colors.gray2,
-    paddingTop: spacing.xs,
   },
-  storyFooterItem: {
-    flex: 1,
+  inlineAction: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: spacing.xs / 2,
   },
-  storyFooterText: {
+  inlineText: {
     ...typography.body2_3,
-    color: colors.gray4,
+    color: colors.gray5,
   },
-  storyFooterDivider: {
+  actionDivider: {
     width: 1,
-    height: 14,
+    height: 16,
     backgroundColor: colors.gray2,
   },
+  bookWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
   bookCard: {
+    width: '30%',
+    backgroundColor: colors.white,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.gray2,
-    backgroundColor: colors.white,
+    borderColor: colors.subbrown4,
     padding: spacing.xs,
-    gap: spacing.xs,
+    gap: spacing.xs / 2,
+    alignItems: 'center',
   },
   bookThumb: {
     width: '100%',
     aspectRatio: 2 / 3,
     borderRadius: radius.sm,
     backgroundColor: colors.gray1,
-    padding: spacing.xs,
-    alignItems: 'flex-start',
+    overflow: 'hidden',
     justifyContent: 'flex-start',
   },
+  bookThumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  bookLikeBadge: {
+    position: 'absolute',
+    top: spacing.xs,
+    left: spacing.xs,
+  },
   bookTitle: {
-    ...typography.body1_2,
+    ...typography.body2_2,
     color: colors.gray6,
+    alignSelf: 'flex-start',
   },
   bookAuthor: {
     ...typography.body2_3,
-    color: colors.gray4,
+    color: colors.gray5,
+    alignSelf: 'flex-start',
   },
-  groupList: {
+  listContainer: {
     gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  emptyText: {
+    ...typography.body1_3,
+    color: colors.gray5,
   },
   groupRow: {
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.subbrown4,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.gray2,
-    backgroundColor: colors.white,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
   },
   groupName: {
-    ...typography.body1_2,
+    ...typography.body1_3,
     color: colors.gray6,
+    flex: 1,
   },
-  groupMeta: {
-    ...typography.body2_3,
-    color: colors.gray4,
-    marginTop: 2,
+  groupMenuButton: {
+    marginLeft: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    paddingHorizontal: spacing.xs / 2,
   },
   pressed: {
-    opacity: 0.72,
+    opacity: 0.7,
   },
 });

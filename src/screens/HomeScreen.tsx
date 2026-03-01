@@ -19,23 +19,27 @@ import HomePromotions, { Promotion } from '../components/feature/home/HomePromot
 import HomePostCard from '../components/feature/home/HomePostCard';
 import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
 import { useAuthGate } from '../contexts/AuthGateContext';
-import { logoutSession } from '../services/api/authApi';
 import { resolveHomeAccessPolicy } from '../constants/homeAccessPolicy';
 import {
+  fetchGuestAllBookStories,
   fetchBookStories,
+  mergeGuestAllBookStoriesCache,
   toggleBookStoryLike,
   type RemoteStoryItem,
 } from '../services/api/bookStoryApi';
-import { fetchRecommendedMembers, setFollowingMember } from '../services/api/memberApi';
+import { fetchMyProfile, fetchRecommendedMembers, setFollowingMember } from '../services/api/memberApi';
 import { fetchNewsCarousel } from '../services/api/newsApi';
 import { ApiError } from '../services/api/http';
 import { toKstTimeAgoLabel } from '../utils/date';
+import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
 
 type Post = {
   id: string;
   remoteId: number;
   author: string;
+  profileImageUrl?: string;
+  mine: boolean;
   timeAgo: string;
   views: number;
   title: string;
@@ -85,21 +89,16 @@ const defaultPromotions: Promotion[] = [
 
 export function HomeScreen() {
   const navigation = useNavigation<any>();
-  const { requireAuth, isLoggedIn, logout } = useAuthGate();
+  const { requireAuth, isLoggedIn } = useAuthGate();
   const accessPolicy = resolveHomeAccessPolicy({ isLoggedIn });
   const { width } = useWindowDimensions();
   const horizontalInset = width >= 768 ? spacing.xl : spacing.md;
   const promotionWidth = Math.max(260, width - horizontalInset * 2);
   const promotionStep = promotionWidth + spacing.sm;
   const [activeSlide, setActiveSlide] = useState(0);
-  const [userRecommendations, setUserRecommendations] = useState<
-    UserRecommendation[]
-  >([
-    { id: 'hy_0716', nickname: 'hy_0716', followingCount: 17, followerCount: 32, subscribed: false },
-    { id: 'hy_0717', nickname: 'hy_0717', followingCount: 11, followerCount: 21, subscribed: false },
-    { id: 'hy_0718', nickname: 'hy_0718', followingCount: 9, followerCount: 16, subscribed: false },
-  ]);
+  const [userRecommendations, setUserRecommendations] = useState<UserRecommendation[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [myNickname, setMyNickname] = useState('');
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [loadingMorePosts, setLoadingMorePosts] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -110,12 +109,8 @@ export function HomeScreen() {
   const nextPostsCursorRef = useRef<number | null>(null);
 
   const loadRecommendedUsers = useCallback(async () => {
-    if (!accessPolicy.canUseRecommendedSubscribe) {
-      setUserRecommendations([
-        { id: 'hy_0716', nickname: 'hy_0716', followingCount: 17, followerCount: 32, subscribed: false },
-        { id: 'hy_0717', nickname: 'hy_0717', followingCount: 11, followerCount: 21, subscribed: false },
-        { id: 'hy_0718', nickname: 'hy_0718', followingCount: 9, followerCount: 16, subscribed: false },
-      ]);
+    if (!isLoggedIn) {
+      setUserRecommendations([]);
       return;
     }
 
@@ -137,22 +132,49 @@ export function HomeScreen() {
       );
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
-        setUserRecommendations([
-          { id: 'hy_0716', nickname: 'hy_0716', followingCount: 17, followerCount: 32, subscribed: false },
-          { id: 'hy_0717', nickname: 'hy_0717', followingCount: 11, followerCount: 21, subscribed: false },
-          { id: 'hy_0718', nickname: 'hy_0718', followingCount: 9, followerCount: 16, subscribed: false },
-        ]);
+        setUserRecommendations([]);
         return;
       }
       if (!(error instanceof ApiError)) {
         showToast('추천 사용자를 불러오지 못했습니다.');
       }
+      setUserRecommendations([]);
     }
-  }, [accessPolicy.canUseRecommendedSubscribe]);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     void loadRecommendedUsers();
   }, [loadRecommendedUsers]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setMyNickname('');
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadMyNickname = async () => {
+      try {
+        const profile = await fetchMyProfile();
+        if (cancelled) return;
+        setMyNickname(profile?.nickname?.trim() ?? '');
+      } catch (error) {
+        if (cancelled) return;
+        if (error instanceof ApiError && error.status === 401) {
+          setMyNickname('');
+          return;
+        }
+        setMyNickname('');
+      }
+    };
+
+    void loadMyNickname();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn]);
 
   const loadPromotions = useCallback(async () => {
     try {
@@ -184,7 +206,7 @@ export function HomeScreen() {
   }, [loadPromotions]);
 
   const loadPosts = useCallback(
-    async ({ reset = false }: { reset?: boolean } = {}) => {
+    async ({ reset = false, forceRefresh = false }: { reset?: boolean; forceRefresh?: boolean } = {}) => {
       if (!accessPolicy.canViewBookStoryFeed) return;
       if (reset) {
         if (loadingPostsRef.current) return;
@@ -198,7 +220,14 @@ export function HomeScreen() {
 
       try {
         const cursorId = reset ? undefined : nextPostsCursorRef.current ?? undefined;
-        const feed = await fetchBookStories('ALL', cursorId);
+        const isGuestAll = !isLoggedIn;
+        const feed =
+          !isLoggedIn && reset
+            ? await fetchGuestAllBookStories({ forceRefresh })
+            : await fetchBookStories('ALL', cursorId, { viewerAuthenticated: isLoggedIn });
+        if (isGuestAll && !reset) {
+          mergeGuestAllBookStoriesCache(feed);
+        }
         const mapped = feed.items.map(mapRemoteStoryToPost);
 
         setPosts((prev) => {
@@ -224,7 +253,7 @@ export function HomeScreen() {
         }
       }
     },
-    [accessPolicy.canViewBookStoryFeed],
+    [accessPolicy.canViewBookStoryFeed, isLoggedIn],
   );
 
   useEffect(() => {
@@ -349,7 +378,11 @@ export function HomeScreen() {
   const handleRefresh = () => {
     setRefreshing(true);
     const refresh = async () => {
-      await Promise.all([loadRecommendedUsers(), loadPosts({ reset: true }), loadPromotions()]);
+      await Promise.all([
+        loadRecommendedUsers(),
+        loadPosts({ reset: true, forceRefresh: true }),
+        loadPromotions(),
+      ]);
       setRefreshing(false);
     };
     void refresh();
@@ -363,21 +396,26 @@ export function HomeScreen() {
     }
   };
 
-  const handlePressAuthTest = () => {
-    if (isLoggedIn) {
-      void logoutSession().finally(() => logout());
-      return;
-    }
-    requireAuth();
-  };
-
   const openUserProfile = useCallback(
     (nickname: string) => {
       const memberNickname = nickname.trim();
       if (!memberNickname) return;
+      if (isLoggedIn && myNickname && memberNickname === myNickname) {
+        navigation.navigate('My');
+        return;
+      }
       navigation.navigate('UserProfile', { memberNickname, fromScreen: 'Home' });
     },
-    [navigation],
+    [isLoggedIn, myNickname, navigation],
+  );
+
+  const openPostDetail = useCallback(
+    (id: string) => {
+      const target = posts.find((post) => post.id === id);
+      if (!target || typeof target.remoteId !== 'number') return;
+      navigation.navigate('Story', { openStoryId: target.remoteId });
+    },
+    [navigation, posts],
   );
 
   const header = (
@@ -393,29 +431,31 @@ export function HomeScreen() {
         activeSlide={activeSlide}
         onScroll={handlePromotionScroll}
       />
-      <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
-        <View style={styles.userRecommendationCard}>
-          <Text style={styles.sectionTitle}>사용자 추천</Text>
-          <View style={styles.userRecommendationList}>
-            {userRecommendations.length > 0 ? (
-              userRecommendations.map((user) => (
-                <SubscribeUserItem
-                  key={user.id}
-                  nickname={user.nickname}
-                  profileImageUrl={user.profileImageUrl}
-                  followingCount={user.followingCount}
-                  followerCount={user.followerCount}
-                  subscribed={user.subscribed}
-                  onPressProfile={() => openUserProfile(user.nickname)}
-                  onPressSubscribe={() => handleSubscribeToggle(user.id)}
-                />
-              ))
-            ) : (
-              <Text style={styles.emptyUserText}>추천 사용자가 없습니다.</Text>
-            )}
+      {isLoggedIn ? (
+        <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
+          <View style={styles.userRecommendationCard}>
+            <Text style={styles.sectionTitle}>사용자 추천</Text>
+            <View style={styles.userRecommendationList}>
+              {userRecommendations.length > 0 ? (
+                userRecommendations.map((user) => (
+                  <SubscribeUserItem
+                    key={user.id}
+                    nickname={user.nickname}
+                    profileImageUrl={user.profileImageUrl}
+                    followingCount={user.followingCount}
+                    followerCount={user.followerCount}
+                    subscribed={user.subscribed}
+                    onPressProfile={() => openUserProfile(user.nickname)}
+                    onPressSubscribe={() => handleSubscribeToggle(user.id)}
+                  />
+                ))
+              ) : (
+                <Text style={styles.emptyUserText}>추천 사용자가 없습니다.</Text>
+              )}
+            </View>
           </View>
         </View>
-      </View>
+      ) : null}
 
       <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
         <Text style={styles.sectionTitle}>책이야기(전체)</Text>
@@ -444,6 +484,8 @@ export function HomeScreen() {
           renderItem={({ item }) => (
             <HomePostCard
               post={item}
+              viewerIsLoggedIn={isLoggedIn}
+              onPress={openPostDetail}
               onToggleLike={handleToggleLike}
               onToggleSubscribe={handleTogglePostSubscribe}
               onPressAuthor={openUserProfile}
@@ -461,15 +503,6 @@ export function HomeScreen() {
             />
           }
         />
-
-        <Pressable
-          style={({ pressed }) => [styles.authTestButton, pressed && styles.authTestPressed]}
-          onPress={handlePressAuthTest}
-        >
-          <Text style={styles.authTestButtonText}>
-            {isLoggedIn ? '로그아웃(테스트)' : '로그인/회원가입(테스트)'}
-          </Text>
-        </Pressable>
       </View>
     </ScreenLayout>
   );
@@ -480,6 +513,8 @@ function mapRemoteStoryToPost(item: RemoteStoryItem): Post {
     id: `post-${item.id}`,
     remoteId: item.id,
     author: item.nickname,
+    profileImageUrl: normalizeRemoteImageUrl(item.profileImageUrl),
+    mine: item.mine ?? false,
     timeAgo: toKstTimeAgoLabel(item.createdAt),
     views: item.viewCount,
     title: item.title,
@@ -488,7 +523,7 @@ function mapRemoteStoryToPost(item: RemoteStoryItem): Post {
     comments: item.commentCount,
     liked: item.liked,
     subscribed: item.following,
-    image: item.bookInfo?.imgUrl,
+    image: normalizeRemoteImageUrl(item.bookInfo?.imgUrl),
   };
 }
 
@@ -545,24 +580,5 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...typography.body1_2,
     color: colors.gray6,
-  },
-  authTestButton: {
-    position: 'absolute',
-    right: spacing.md,
-    bottom: 96,
-    height: 40,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 20,
-  },
-  authTestButtonText: {
-    ...typography.body2_2,
-    color: colors.white,
-  },
-  authTestPressed: {
-    opacity: 0.8,
   },
 });

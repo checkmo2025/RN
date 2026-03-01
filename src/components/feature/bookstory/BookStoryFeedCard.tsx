@@ -22,10 +22,12 @@ type Props = {
   likeCount?: number;
   commentCount?: number;
   liked?: boolean;
+  isAuthor?: boolean;
   subscribed?: boolean;
   onPress?: () => void;
   onToggleLike?: () => void;
   onToggleSubscribe?: () => void;
+  onPressAuthor?: () => void;
   onPressComment?: () => void;
 };
 
@@ -40,30 +42,62 @@ export default function BookStoryFeedCard({
   likeCount = 0,
   commentCount = 0,
   liked,
+  isAuthor = false,
   subscribed,
   onPress,
   onToggleLike,
   onToggleSubscribe,
+  onPressAuthor,
   onPressComment,
 }: Props) {
   return (
     <Pressable style={styles.card} onPress={onPress}>
       {/* Header */}
       <View style={styles.headerRow}>
-        <View style={styles.avatar}>
-          {profileImgSrc ? (
-            <Image source={{ uri: profileImgSrc }} style={styles.avatarImg} />
-          ) : (
-            <MaterialIcons name="person-outline" size={22} color={colors.gray4} />
-          )}
-        </View>
-        <View style={styles.meta}>
-          <Text style={styles.author}>{authorName}</Text>
-          <Text style={styles.subtitle}>
-            {timeAgo}  조회수 {viewCount}
-          </Text>
-        </View>
-        {typeof subscribed !== 'undefined' && (
+        {onPressAuthor ? (
+          <Pressable
+            style={styles.headerMain}
+            onPress={(e) => {
+              e.stopPropagation?.();
+              onPressAuthor();
+            }}
+          >
+            <View style={styles.avatar}>
+              {profileImgSrc ? (
+                <Image source={{ uri: profileImgSrc }} style={styles.avatarImg} />
+              ) : (
+                <MaterialIcons name="person-outline" size={22} color={colors.gray4} />
+              )}
+            </View>
+            <View style={styles.meta}>
+              <Text style={styles.author}>{authorName}</Text>
+              <Text style={styles.subtitle}>
+                {timeAgo}  조회수 {viewCount}
+              </Text>
+            </View>
+          </Pressable>
+        ) : (
+          <View style={styles.headerMain}>
+            <View style={styles.avatar}>
+              {profileImgSrc ? (
+                <Image source={{ uri: profileImgSrc }} style={styles.avatarImg} />
+              ) : (
+                <MaterialIcons name="person-outline" size={22} color={colors.gray4} />
+              )}
+            </View>
+            <View style={styles.meta}>
+              <Text style={styles.author}>{authorName}</Text>
+              <Text style={styles.subtitle}>
+                {timeAgo}  조회수 {viewCount}
+              </Text>
+            </View>
+          </View>
+        )}
+        {isAuthor ? (
+          <View style={styles.authorTag}>
+            <Text style={styles.authorTagText}>작성자</Text>
+          </View>
+        ) : typeof subscribed !== 'undefined' ? (
           <Pressable
             style={[
               styles.subButton,
@@ -83,7 +117,7 @@ export default function BookStoryFeedCard({
               {subscribed ? '구독중' : '구독'}
             </Text>
           </Pressable>
-        )}
+        ) : null}
       </View>
 
       {/* Cover */}
@@ -159,6 +193,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  headerMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   avatar: {
     width: 32,
     height: 32,
@@ -193,16 +233,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary1,
   },
   subButtonInactive: {
-    backgroundColor: colors.subbrown3,
+    backgroundColor: colors.primary2,
   },
   subButtonText: {
     ...typography.body2_2,
+  },
+  authorTag: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gray1,
+  },
+  authorTagText: {
+    ...typography.body2_2,
+    color: colors.gray5,
   },
   subTextActive: {
     color: colors.white,
   },
   subTextInactive: {
-    color: colors.gray6,
+    color: colors.white,
   },
   cover: {
     width: '100%',

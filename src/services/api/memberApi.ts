@@ -1,8 +1,11 @@
 import { ApiEnvelope, ApiError, requestJson, unwrapResult } from './http';
+import { normalizeRemoteImageUrl } from '../../utils/image';
 
 type FollowInfo = {
   nickname?: string;
   profileImageUrl?: string;
+  imgUrl?: string;
+  imageUrl?: string;
   following?: boolean;
 };
 
@@ -16,6 +19,8 @@ type DetailInfo = {
   nickname?: string;
   description?: string;
   profileImageUrl?: string;
+  imgUrl?: string;
+  imageUrl?: string;
   categories?: string[];
 };
 
@@ -23,6 +28,8 @@ type RecommendedMemberResult = {
   friends?: Array<{
     nickname?: string;
     profileImageUrl?: string;
+    imgUrl?: string;
+    imageUrl?: string;
     followerCount?: number;
     followingCount?: number;
   }>;
@@ -84,6 +91,8 @@ type ReportListResult = {
   reports?: ReportItem[];
 };
 
+type ReportListPayload = ReportListResult | ReportItem[];
+
 export type FollowList = {
   items: FollowInfo[];
   hasNext: boolean;
@@ -97,6 +106,30 @@ export type RecommendedMember = {
   followingCount?: number;
 };
 
+export type MemberProfile = {
+  nickname: string;
+  description: string;
+  profileImageUrl?: string;
+  followerCount?: number;
+  followingCount?: number;
+  following?: boolean;
+};
+
+function normalizeFollowInfo(item: FollowInfo): FollowInfo {
+  return {
+    ...item,
+    profileImageUrl: normalizeRemoteImageUrl(
+      item.profileImageUrl ?? item.imgUrl ?? item.imageUrl,
+    ),
+  };
+}
+
+function extractReportItems(payload: ReportListPayload | null | undefined): ReportItem[] {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.reports)) return payload.reports;
+  return [];
+}
+
 export async function setFollowingMember(
   nickname: string,
   following: boolean,
@@ -108,8 +141,37 @@ export async function setFollowingMember(
   });
 }
 
-export async function fetchMyProfile(): Promise<MyProfile | null> {
+export async function fetchMyProfile(options?: {
+  suppressErrorToast?: boolean;
+}): Promise<MyProfile | null> {
   const response = await requestJson<ApiEnvelope<DetailInfo>>('/members/me', {
+    method: 'GET',
+    suppressErrorToast: options?.suppressErrorToast ?? false,
+  });
+  const result = unwrapResult(response);
+
+  if (!result) return null;
+
+  return {
+    nickname: typeof result.nickname === 'string' ? result.nickname : '',
+    description: typeof result.description === 'string' ? result.description : '',
+    profileImageUrl: normalizeRemoteImageUrl(
+      result.profileImageUrl ?? result.imgUrl ?? result.imageUrl,
+    ),
+    categories: Array.isArray(result.categories)
+      ? result.categories.filter((value): value is string => typeof value === 'string')
+      : [],
+  };
+}
+
+export async function fetchMemberProfile(nickname: string): Promise<MemberProfile | null> {
+  const encodedNickname = encodeURIComponent(nickname);
+  const response = await requestJson<ApiEnvelope<DetailInfo & FollowInfo & {
+    followerCount?: number;
+    followingCount?: number;
+    subscribed?: boolean;
+    isFollowing?: boolean;
+  }>>(`/members/${encodedNickname}`, {
     method: 'GET',
   });
   const result = unwrapResult(response);
@@ -119,11 +181,21 @@ export async function fetchMyProfile(): Promise<MyProfile | null> {
   return {
     nickname: typeof result.nickname === 'string' ? result.nickname : '',
     description: typeof result.description === 'string' ? result.description : '',
-    profileImageUrl:
-      typeof result.profileImageUrl === 'string' ? result.profileImageUrl : undefined,
-    categories: Array.isArray(result.categories)
-      ? result.categories.filter((value): value is string => typeof value === 'string')
-      : [],
+    profileImageUrl: normalizeRemoteImageUrl(
+      result.profileImageUrl ?? result.imgUrl ?? result.imageUrl,
+    ),
+    followerCount:
+      typeof result.followerCount === 'number' ? result.followerCount : undefined,
+    followingCount:
+      typeof result.followingCount === 'number' ? result.followingCount : undefined,
+    following:
+      typeof result.following === 'boolean'
+        ? result.following
+        : typeof result.isFollowing === 'boolean'
+          ? result.isFollowing
+          : typeof result.subscribed === 'boolean'
+            ? result.subscribed
+            : undefined,
   };
 }
 
@@ -137,7 +209,7 @@ export async function fetchMyFollowers(cursorId?: number): Promise<FollowList> {
   const result = unwrapResult(response) ?? {};
 
   return {
-    items: Array.isArray(result.followList) ? result.followList : [],
+    items: Array.isArray(result.followList) ? result.followList.map(normalizeFollowInfo) : [],
     hasNext: Boolean(result.hasNext),
     nextCursor: typeof result.nextCursor === 'number' ? result.nextCursor : null,
   };
@@ -153,15 +225,18 @@ export async function fetchMyFollowing(cursorId?: number): Promise<FollowList> {
   const result = unwrapResult(response) ?? {};
 
   return {
-    items: Array.isArray(result.followList) ? result.followList : [],
+    items: Array.isArray(result.followList) ? result.followList.map(normalizeFollowInfo) : [],
     hasNext: Boolean(result.hasNext),
     nextCursor: typeof result.nextCursor === 'number' ? result.nextCursor : null,
   };
 }
 
-export async function fetchRecommendedMembers(): Promise<RecommendedMember[]> {
+export async function fetchRecommendedMembers(options?: {
+  suppressErrorToast?: boolean;
+}): Promise<RecommendedMember[]> {
   const response = await requestJson<ApiEnvelope<RecommendedMemberResult>>('/members/me/recommend', {
     method: 'GET',
+    suppressErrorToast: options?.suppressErrorToast ?? false,
   });
   const result = unwrapResult(response) ?? {};
   const friends = Array.isArray(result.friends) ? result.friends : [];
@@ -173,10 +248,9 @@ export async function fetchRecommendedMembers(): Promise<RecommendedMember[]> {
 
     acc.push({
       nickname,
-      profileImageUrl:
-        typeof friend.profileImageUrl === 'string'
-          ? friend.profileImageUrl
-          : undefined,
+      profileImageUrl: normalizeRemoteImageUrl(
+        friend.profileImageUrl ?? friend.imgUrl ?? friend.imageUrl,
+      ),
       followerCount:
         typeof friend.followerCount === 'number' ? friend.followerCount : undefined,
       followingCount:
@@ -197,8 +271,9 @@ export async function updateMyProfile(payload: UpdateMyProfilePayload): Promise<
   return {
     nickname: typeof result.nickname === 'string' ? result.nickname : '',
     description: typeof result.description === 'string' ? result.description : '',
-    profileImageUrl:
-      typeof result.profileImageUrl === 'string' ? result.profileImageUrl : undefined,
+    profileImageUrl: normalizeRemoteImageUrl(
+      result.profileImageUrl ?? result.imgUrl ?? result.imageUrl,
+    ),
     categories: Array.isArray(result.categories)
       ? result.categories.filter((value): value is string => typeof value === 'string')
       : [],
@@ -233,21 +308,48 @@ export async function reportMember(payload: ReportMemberPayload): Promise<void> 
   });
 }
 
+export async function withdrawMember(): Promise<void> {
+  await requestJson<ApiEnvelope<void>>('/members/withdrawal', {
+    method: 'POST',
+  });
+}
+
 export async function fetchMyReports(): Promise<ReportItem[]> {
-  const candidatePaths = ['/members/me/reports', '/members/reports'] as const;
+  const candidatePaths = ['/members/me/reports', '/members/reports'];
 
   for (const path of candidatePaths) {
     try {
-      const response = await requestJson<ApiEnvelope<ReportListResult>>(path, {
+      const response = await requestJson<ApiEnvelope<ReportListPayload>>(path, {
         method: 'GET',
       });
-      const result = unwrapResult(response) ?? {};
-      return Array.isArray(result.reports) ? result.reports : [];
+      return extractReportItems(unwrapResult(response));
     } catch (error) {
-      if (error instanceof ApiError && error.status === 404) continue;
+      if (
+        error instanceof ApiError &&
+        (error.status === 403 || error.status === 404 || error.status === 405)
+      ) {
+        continue;
+      }
       throw error;
     }
   }
 
-  return [];
+  const myProfile = await fetchMyProfile();
+  const nickname = myProfile?.nickname?.trim();
+  if (!nickname) return [];
+
+  try {
+    const response = await requestJson<ApiEnvelope<ReportListPayload>>(
+      `/admin/members/${encodeURIComponent(nickname)}/reports`,
+      {
+        method: 'GET',
+      },
+    );
+    return extractReportItems(unwrapResult(response));
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
+      return [];
+    }
+    throw error;
+  }
 }

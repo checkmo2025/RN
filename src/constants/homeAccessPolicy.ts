@@ -15,7 +15,7 @@ const POLICY: Record<HomeAccessor, HomeAccessPolicy> = {
   GUEST: {
     accessor: 'GUEST',
     canViewNewsCarousel: true,
-    canViewRecommendedUsers: true,
+    canViewRecommendedUsers: false,
     canUseRecommendedSubscribe: false,
     canViewBookStoryFeed: true,
     canUseBookStoryLike: false,

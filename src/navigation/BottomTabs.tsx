@@ -8,6 +8,7 @@ import { StoryScreen } from '../screens/StoryScreen';
 import { MyPageScreen } from '../screens/MyPageScreen';
 import { MeetingScreen } from '../screens/MeetingScreen';
 import { NewsScreen } from '../screens/NewsScreen';
+import { useAuthGate } from '../contexts/AuthGateContext';
 
 const TAB_ICON_SIZE = 44;
 
@@ -78,6 +79,8 @@ const Placeholder = ({ label }: { label: string }) => (
 );
 
 export default function BottomTabs() {
+  const { isLoggedIn, requireAuth } = useAuthGate();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -131,6 +134,15 @@ export default function BottomTabs() {
           tabBarLabel: labels.my,
           tabBarIcon: ({ focused }) => <TabIcon routeName="My" focused={focused} />,
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (event) => {
+            if (isLoggedIn) return;
+            event.preventDefault();
+            requireAuth(() => {
+              navigation.navigate('My');
+            });
+          },
+        })}
       >
         {() => <MyPageScreen />}
       </Tab.Screen>

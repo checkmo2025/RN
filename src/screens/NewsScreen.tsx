@@ -18,10 +18,12 @@ import {
   useWindowDimensions,
   Linking,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../theme';
 import { ScreenLayout } from '../components/common/ScreenLayout';
+import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import {
   fetchNewsCarousel,
   fetchNewsDetail,
@@ -29,7 +31,9 @@ import {
   type RemoteNewsDetail,
   type RemoteNewsSummary,
 } from '../services/api/newsApi';
+import { fetchRecommendedBooks } from '../services/api/bookApi';
 import { ApiError } from '../services/api/http';
+import { formatKstDateLabel } from '../utils/date';
 import { showToast } from '../utils/toast';
 
 type NewsItem = {
@@ -89,11 +93,19 @@ const fallbackPromotions: NewsItem[] = [
     body: '',
   },
 ];
+const NEWS_CONTACT_URL = 'https://forms.gle/qNjhNN7RBTiWNuX99';
+
+function shuffleItems<T>(items: T[]): T[] {
+  const copied = [...items];
+  for (let index = copied.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [copied[index], copied[randomIndex]] = [copied[randomIndex], copied[index]];
+  }
+  return copied;
+}
 
 function toDateLabel(value?: string): string {
-  if (!value) return '';
-  if (value.includes('T')) return value.slice(0, 10);
-  return value;
+  return formatKstDateLabel(value, '-');
 }
 
 function toNewsItem(
@@ -125,11 +137,26 @@ function applyDetail(item: NewsItem, detail: RemoteNewsDetail): NewsItem {
   };
 }
 
+function toStandaloneNewsItem(detail: RemoteNewsDetail): NewsItem {
+  return {
+    id: `news-${detail.id}`,
+    newsId: detail.id,
+    title: detail.title,
+    excerpt: detail.excerpt?.trim() || '소식 내용을 확인해보세요.',
+    date: toDateLabel(detail.date),
+    cover: detail.thumbnailUrl ?? fallbackPromotionImages[detail.id % fallbackPromotionImages.length],
+    body: detail.content,
+    originalLink: detail.originalLink,
+  };
+}
+
 export function NewsScreen() {
   if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
   }
 
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { width } = useWindowDimensions();
   const [selected, setSelected] = useState<NewsItem | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -138,10 +165,8 @@ export function NewsScreen() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [promotions, setPromotions] = useState<NewsItem[]>(fallbackPromotions);
   const [items, setItems] = useState<NewsItem[]>([]);
+  const [recommendedBooks, setRecommendedBooks] = useState<RecommendedBook[]>([]);
   const detailTranslateX = useRef(new Animated.Value(0)).current;
-  const littlePrinceUri = Image.resolveAssetSource(
-    require('../../assets/tmp/little-prince.jpg'),
-  ).uri;
 
   const animateTransition = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -154,23 +179,6 @@ export function NewsScreen() {
     });
     setSelected(null);
   }, [animateTransition, detailTranslateX]);
-
-  const recommendedBooks: RecommendedBook[] = useMemo(
-    () => [
-      {
-        id: 'rb-1',
-        title: '어린 왕자',
-        author: '생텍쥐페리',
-        imageUri: littlePrinceUri,
-      },
-      {
-        id: 'rb-2',
-        title: '돈키호테',
-        author: '세르반테스',
-      },
-    ],
-    [littlePrinceUri],
-  );
 
   const loadNews = useCallback(async () => {
     setLoadingNews(true);
@@ -198,9 +206,33 @@ export function NewsScreen() {
     }
   }, []);
 
+  const loadRecommendedBookCards = useCallback(async () => {
+    try {
+      const books = await fetchRecommendedBooks();
+      const cards = shuffleItems(books).slice(0, 4).map((book, index) => ({
+        id: book.isbn || `recommended-${index}`,
+        title: book.title || '책 제목',
+        author: book.author || '작가 미상',
+        imageUri: book.imgUrl,
+      }));
+      setRecommendedBooks(cards);
+    } catch (error) {
+      setRecommendedBooks([]);
+      if (error instanceof ApiError) return;
+      showToast('추천 책을 불러오지 못했습니다.');
+    }
+  }, []);
+
   useEffect(() => {
     void loadNews();
   }, [loadNews]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadRecommendedBookCards();
+      return undefined;
+    }, [loadRecommendedBookCards]),
+  );
 
   const onSelect = useCallback(
     (item: NewsItem) => {
@@ -232,6 +264,62 @@ export function NewsScreen() {
     [animateTransition, detailTranslateX],
   );
 
+  const openNewsDetailById = useCallback(
+    (newsId: number) => {
+      if (!Number.isInteger(newsId) || newsId <= 0) return;
+
+      animateTransition();
+      detailTranslateX.stopAnimation(() => {
+        detailTranslateX.setValue(0);
+      });
+      setSelected({
+        id: `news-route-${newsId}`,
+        newsId,
+        title: '소식',
+        excerpt: '소식 내용을 불러오는 중입니다.',
+        date: '',
+        body: '',
+      });
+
+      const loadDetailById = async () => {
+        setLoadingDetail(true);
+        try {
+          const detail = await fetchNewsDetail(newsId);
+          if (!detail) {
+            setSelected(null);
+            showToast('소식 상세를 불러오지 못했습니다.');
+            return;
+          }
+          setSelected(toStandaloneNewsItem(detail));
+        } catch (error) {
+          setSelected(null);
+          if (!(error instanceof ApiError)) {
+            showToast('소식 상세를 불러오지 못했습니다.');
+          }
+        } finally {
+          setLoadingDetail(false);
+        }
+      };
+
+      void loadDetailById();
+    },
+    [animateTransition, detailTranslateX],
+  );
+
+  useEffect(() => {
+    const value = route.params?.openNewsId;
+    const newsId =
+      typeof value === 'number'
+        ? value
+        : typeof value === 'string'
+          ? Number(value)
+          : NaN;
+    if (!Number.isInteger(newsId) || newsId <= 0) return;
+
+    navigation.setParams({ openNewsId: undefined });
+    openNewsDetailById(newsId);
+  }, [navigation, openNewsDetailById, route.params?.openNewsId]);
+
   const handleRefresh = () => {
     setRefreshing(true);
     const refresh = async () => {
@@ -239,11 +327,15 @@ export function NewsScreen() {
         detailTranslateX.setValue(0);
       });
       setSelected(null);
-      await loadNews();
+      await Promise.all([loadNews(), loadRecommendedBookCards()]);
       setRefreshing(false);
     };
     void refresh();
   };
+
+  const handleContact = useCallback(() => {
+    Linking.openURL(NEWS_CONTACT_URL).catch(() => null);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -423,7 +515,11 @@ export function NewsScreen() {
               </View>
               <View style={styles.recommendedSection}>
                 <Text style={styles.recommendedTitle}>오늘의 추천 책</Text>
-                <View style={styles.recommendedRow}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.recommendedRow}
+                >
                   {recommendedBooks.map((book) => (
                     <Pressable key={book.id} style={styles.recommendedCard}>
                       <ImageBackground
@@ -443,7 +539,7 @@ export function NewsScreen() {
                       </ImageBackground>
                     </Pressable>
                   ))}
-                </View>
+                </ScrollView>
               </View>
               <Text style={styles.newsListTitle}>소식</Text>
             </View>
@@ -478,6 +574,9 @@ export function NewsScreen() {
             />
           }
         />
+        <FloatingActionButton onPress={handleContact}>
+          <MaterialIcons name="phone-in-talk" size={22} color={colors.white} />
+        </FloatingActionButton>
       </View>
     </ScreenLayout>
   );
@@ -541,9 +640,10 @@ const styles = StyleSheet.create({
   recommendedRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+    paddingRight: spacing.xs,
   },
   recommendedCard: {
-    flex: 1,
+    width: 132,
   },
   recommendedThumb: {
     aspectRatio: 3 / 4,

@@ -18,9 +18,10 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
 import { IconButton, IconName } from './IconButton';
 import { useAuthGate } from '../../contexts/AuthGateContext';
+import { navigateToHome } from '../../navigation/navigateToHome';
 import { ApiError } from '../../services/api/http';
 import {
   fetchBookDetail,
@@ -355,7 +356,9 @@ export function AppHeader(props: Props) {
     }
 
     try {
-      const feed = await fetchBookStoriesByBook(bookId);
+      const feed = await fetchBookStoriesByBook(bookId, undefined, {
+        viewerAuthenticated: isLoggedIn,
+      });
       if (activeBookRequestId.current === requestId) {
         setBookStories(feed.items);
       }
@@ -371,7 +374,7 @@ export function AppHeader(props: Props) {
         setBookStoriesLoading(false);
       }
     }
-  }, []);
+  }, [isLoggedIn]);
 
   const handleSearchSubmitFromDropdown = useCallback(() => {
     const keyword = query.trim();
@@ -458,7 +461,7 @@ export function AppHeader(props: Props) {
       return;
     }
 
-    navigation.navigate('Home');
+    navigateToHome(navigation);
   }, [closeSearchPage, hideDropdownImmediately, navigation, onPressLogo]);
 
   useEffect(() => {
@@ -847,7 +850,10 @@ export function AppHeader(props: Props) {
                         </Pressable>
 
                         <Pressable
-                          style={styles.resultWriteButton}
+                          style={({ pressed }) => [
+                            styles.resultWriteButton,
+                            pressed && styles.resultWriteButtonPressed,
+                          ]}
                           onPress={(event) => {
                             event.stopPropagation();
                             openStoryCompose(book);
@@ -915,7 +921,10 @@ export function AppHeader(props: Props) {
                         />
                       </Pressable>
                       <Pressable
-                        style={styles.resultWriteButton}
+                        style={({ pressed }) => [
+                          styles.resultWriteButton,
+                          pressed && styles.resultWriteButtonPressed,
+                        ]}
                         onPress={(event) => {
                           event.stopPropagation();
                           openStoryCompose(selectedBook);
@@ -941,22 +950,26 @@ export function AppHeader(props: Props) {
                   ) : null}
 
                   <View style={styles.detailStoryList}>
-                    {bookStories.map((story) => (
-                      <BookStoryFeedCard
-                        key={`book-story-${story.id}`}
-                        authorName={story.nickname}
-                        profileImgSrc={story.profileImageUrl}
-                        timeAgo={toKstTimeAgoLabel(story.createdAt)}
-                        viewCount={story.viewCount}
-                        title={story.title}
-                        content={story.description}
-                        coverImgSrc={story.bookInfo?.imgUrl ?? selectedBook?.imgUrl}
-                        likeCount={story.likeCount}
-                        commentCount={story.commentCount}
-                        liked={story.liked}
-                        subscribed={story.mine ? undefined : story.following}
-                      />
-                    ))}
+                    {bookStories.map((story) => {
+                      const isMineForViewer = isLoggedIn && (story.mine ?? false);
+                      return (
+                        <BookStoryFeedCard
+                          key={`book-story-${story.id}`}
+                          authorName={story.nickname}
+                          profileImgSrc={story.profileImageUrl}
+                          timeAgo={toKstTimeAgoLabel(story.createdAt)}
+                          viewCount={story.viewCount}
+                          title={story.title}
+                          content={story.description}
+                          coverImgSrc={story.bookInfo?.imgUrl ?? selectedBook?.imgUrl}
+                          likeCount={story.likeCount}
+                          commentCount={story.commentCount}
+                          liked={story.liked}
+                          isAuthor={isMineForViewer}
+                          subscribed={isMineForViewer ? undefined : story.following}
+                        />
+                      );
+                    })}
                   </View>
                 </>
               )}
@@ -1244,14 +1257,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: spacing.md,
     bottom: spacing.md,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary2,
+    width: 48,
+    height: 48,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  detailBackRow: {
+  resultWriteButtonPressed: {
+    opacity: 0.8,
+  },
+	  detailBackRow: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',

@@ -2,7 +2,6 @@ import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
   Alert,
   Animated,
-  Clipboard,
   FlatList,
   GestureResponderEvent,
   KeyboardAvoidingView,
@@ -25,10 +24,15 @@ import {
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
+import * as Clipboard from 'expo-clipboard';
 
 import { colors, radius, spacing, typography } from '../theme';
+import { navigateToHome } from '../navigation/navigateToHome';
+import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
+import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { IconButton } from '../components/common/IconButton';
+import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import BookStoryFeedCard from '../components/feature/bookstory/BookStoryFeedCard';
 import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
 import { useAuthGate } from '../contexts/AuthGateContext';
@@ -37,9 +41,11 @@ import {
   createBookStoryComment,
   deleteBookStory,
   deleteBookStoryComment,
+  fetchGuestAllBookStories,
   fetchBookStories,
   fetchClubBookStories,
   fetchBookStoryDetail,
+  mergeGuestAllBookStoriesCache,
   type RemoteStoryComment,
   type RemoteStoryDetail,
   type RemoteStoryItem,
@@ -49,6 +55,7 @@ import {
 } from '../services/api/bookStoryApi';
 import { fetchMyClubs } from '../services/api/clubApi';
 import {
+  fetchMyProfile,
   fetchRecommendedMembers,
   reportMember,
   setFollowingMember,
@@ -57,6 +64,7 @@ import {
 import { ApiError } from '../services/api/http';
 import { searchBooks, type BookItem } from '../services/api/bookApi';
 import { toKstTimeAgoLabel } from '../utils/date';
+import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
 
 type Book = {
@@ -71,6 +79,7 @@ type Comment = {
   id: string;
   remoteId?: number;
   author: string;
+  profileImageUrl?: string;
   time: string;
   text: string;
   mine?: boolean;
@@ -82,6 +91,7 @@ type Story = {
   id: string;
   remoteId?: number;
   author: string;
+  profileImageUrl?: string;
   mine?: boolean;
   timeAgo: string;
   views: number;
@@ -107,6 +117,9 @@ type StoryFeedItem =
       type: 'recommended';
       key: string;
     };
+
+const COMMENT_INPUT_MIN_HEIGHT = 48;
+const COMMENT_INPUT_MAX_HEIGHT = 160;
 
 type CommentMenuState = {
   comment: Comment;
@@ -135,17 +148,6 @@ type StoryFilterTab = {
   clubId?: number;
 };
 
-type ReportModalState = {
-  nickname: string;
-};
-
-const reportTypeOptions: Array<{ type: MemberReportType; label: string }> = [
-  { type: 'GENERAL', label: '일반' },
-  { type: 'BOOK_STORY', label: '책이야기' },
-  { type: 'COMMENT', label: '책이야기(댓글)' },
-  { type: 'CLUB_MEETING', label: '모임 내부' },
-];
-
 const ALL_STORY_TAB: StoryFilterTab = {
   key: 'ALL',
   label: '전체',
@@ -163,28 +165,16 @@ const DETAIL_BACK_ACTIVATE_DISTANCE = 14;
 const DETAIL_BACK_TRIGGER_DISTANCE = 72;
 const DETAIL_BACK_ACTIVATE_MAX_DY = 16;
 const DETAIL_BACK_TRIGGER_MAX_DY = 60;
+const MIN_BOOK_FLIP_LOADING_MS = 1000;
 
-const bookOptions: Book[] = [
-  {
-    id: 'b1',
-    title: '어린 왕자',
-    author: '생텍쥐페리',
-    description: '작은 왕자가 여행하며 만난 이야기와 어른들을 비추는 동화.',
-    image: Image.resolveAssetSource(require('../../assets/tmp/little-prince.jpg')).uri,
-  },
-  {
-    id: 'b2',
-    title: '돈키호테',
-    author: '세르반테스',
-    description: '풍차와 모험, 기사도에 대한 유쾌한 풍자.',
-  },
-  {
-    id: 'b3',
-    title: '데미안',
-    author: '헤르만 헤세',
-    description: '자아를 찾아가는 싱클레어의 성장과 깨달음.',
-  },
-];
+async function waitForMinimumLoading(startedAt: number, minimumMs = MIN_BOOK_FLIP_LOADING_MS) {
+  const elapsed = Date.now() - startedAt;
+  const remaining = minimumMs - elapsed;
+  if (remaining <= 0) return;
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, remaining);
+  });
+}
 
 function toComposeBook(raw: unknown): Book | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -199,11 +189,13 @@ function toComposeBook(raw: unknown): Book | null {
         ? item.publisher
         : '';
   const image =
-    typeof item.imgUrl === 'string'
-      ? item.imgUrl
-      : typeof item.image === 'string'
-        ? item.image
-        : undefined;
+    normalizeRemoteImageUrl(
+      typeof item.imgUrl === 'string'
+        ? item.imgUrl
+        : typeof item.image === 'string'
+          ? item.image
+          : undefined,
+    );
   const idSource =
     item.isbn ?? item.isbn13 ?? item.bookId ?? item.id ?? `${title}-${author}`;
   const id = String(idSource);
@@ -224,7 +216,7 @@ function mapBookItemToBook(item: BookItem): Book {
     author: item.author || '작가 미상',
     description:
       item.description || item.publisher || '책 설명이 없습니다.',
-    image: item.imgUrl,
+    image: normalizeRemoteImageUrl(item.imgUrl),
   };
 }
 
@@ -240,6 +232,7 @@ export function StoryScreen() {
   const [selectedFilterKey, setSelectedFilterKey] = useState(ALL_STORY_TAB.key);
   const [myClubTabs, setMyClubTabs] = useState<Array<{ clubId: number; clubName: string }>>([]);
   const [recommendedUsers, setRecommendedUsers] = useState<RecommendedUser[]>([]);
+  const [myNickname, setMyNickname] = useState('');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [showBookPicker, setShowBookPicker] = useState(false);
   const [bookSearchQuery, setBookSearchQuery] = useState('');
@@ -256,8 +249,10 @@ export function StoryScreen() {
   const [isComposing, setIsComposing] = useState(false);
   const [editingStoryId, setEditingStoryId] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [detailRefreshing, setDetailRefreshing] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [commentInput, setCommentInput] = useState('');
+  const [commentInputHeight, setCommentInputHeight] = useState(COMMENT_INPUT_MIN_HEIGHT);
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [replyTarget, setReplyTarget] = useState<{
     commentId?: number;
@@ -266,16 +261,13 @@ export function StoryScreen() {
   } | null>(null);
   const [commentMenu, setCommentMenu] = useState<CommentMenuState | null>(null);
   const [storyMenu, setStoryMenu] = useState<StoryMenuState | null>(null);
-  const [reportModal, setReportModal] = useState<ReportModalState | null>(null);
-  const [reportType, setReportType] = useState<MemberReportType>('GENERAL');
-  const [reportContent, setReportContent] = useState('');
+  const [reportModal, setReportModal] = useState<ReportMemberModalState | null>(null);
   const [submittingReport, setSubmittingReport] = useState(false);
+  const [submittingStory, setSubmittingStory] = useState(false);
   const listRef = useRef<FlatList<StoryFeedItem>>(null);
   const commentInputRef = useRef<TextInput>(null);
   const inlineReplyInputRef = useRef<TextInput>(null);
-  const writeIconUri = Image.resolveAssetSource(
-    require('../../assets/write-floating.svg'),
-  ).uri;
+  const writeIconUri = Image.resolveAssetSource(require('../../assets/icons/pencil_icon.svg')).uri;
   const detailTranslateX = useRef(new Animated.Value(0)).current;
 
   const animateTransition = useCallback(() => {
@@ -412,6 +404,21 @@ export function StoryScreen() {
     const commentDraft = Boolean(selectedStory) && commentInput.trim().length > 0;
     return composingDraft || commentDraft;
   }, [body, commentInput, isComposing, selectedBook, selectedStory, title]);
+  const isCommentSubmitDisabled = commentInput.trim().length === 0;
+
+  useEffect(() => {
+    if (commentInput.length === 0) {
+      setCommentInputHeight(COMMENT_INPUT_MIN_HEIGHT);
+    }
+  }, [commentInput]);
+
+  const handleCommentInputSizeChange = useCallback((nextContentHeight: number) => {
+    const nextHeight = Math.max(
+      COMMENT_INPUT_MIN_HEIGHT,
+      Math.min(COMMENT_INPUT_MAX_HEIGHT, Math.ceil(nextContentHeight)),
+    );
+    setCommentInputHeight((prev) => (Math.abs(prev - nextHeight) > 1 ? nextHeight : prev));
+  }, []);
 
   const showDiscardStoryAlert = useCallback(
     (onClose: () => void) => {
@@ -441,7 +448,7 @@ export function StoryScreen() {
       setStoryMenu(null);
       setSelectedStory(null);
       closeCompose();
-      navigation.navigate('Home');
+      navigateToHome(navigation);
     };
 
     if (hasUnsavedStoryChanges) {
@@ -449,7 +456,7 @@ export function StoryScreen() {
       return;
     }
 
-    navigation.navigate('Home');
+    navigateToHome(navigation);
   }, [closeCompose, hasUnsavedStoryChanges, navigation, showDiscardStoryAlert]);
 
   const storyTabs = useMemo<StoryFilterTab[]>(() => {
@@ -520,7 +527,7 @@ export function StoryScreen() {
         let cursorId: number | undefined;
 
         while (hasNext) {
-          const response = await fetchMyClubs(cursorId);
+          const response = await fetchMyClubs(cursorId, { suppressErrorToast: true });
           all.push(...response.items);
           hasNext = response.hasNext && typeof response.nextCursor === 'number';
           cursorId = response.nextCursor ?? undefined;
@@ -543,7 +550,6 @@ export function StoryScreen() {
   }, [isLoggedIn]);
 
   const canLoadApiFeed = selectedTab.type === 'ALL' || isLoggedIn;
-  const canUseProtectedApi = isLoggedIn;
 
   const loadRecommendedUsers = useCallback(async () => {
     if (!isLoggedIn) {
@@ -552,7 +558,7 @@ export function StoryScreen() {
     }
 
     try {
-      const users = await fetchRecommendedMembers();
+      const users = await fetchRecommendedMembers({ suppressErrorToast: true });
       setRecommendedUsers(
         users.slice(0, 4).map((user) => ({
           id: user.nickname,
@@ -578,9 +584,53 @@ export function StoryScreen() {
     void loadRecommendedUsers();
   }, [loadRecommendedUsers]);
 
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setMyNickname('');
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadMyNickname = async () => {
+      try {
+        const profile = await fetchMyProfile({ suppressErrorToast: true });
+        if (cancelled) return;
+        setMyNickname(profile?.nickname?.trim() ?? '');
+      } catch (error) {
+        if (cancelled) return;
+        if (error instanceof ApiError && error.status === 401) {
+          setMyNickname('');
+          return;
+        }
+        setMyNickname('');
+      }
+    };
+
+    void loadMyNickname();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn]);
+
+  const openUserProfile = useCallback(
+    (nickname: string) => {
+      const memberNickname = nickname.trim();
+      if (!memberNickname) return;
+      if (isLoggedIn && myNickname && memberNickname === myNickname) {
+        navigation.navigate('My');
+        return;
+      }
+      navigation.navigate('UserProfile', { memberNickname, fromScreen: 'Story' });
+    },
+    [isLoggedIn, myNickname, navigation],
+  );
+
   const loadStories = useCallback(
-    async (options?: { reset?: boolean }) => {
+    async (options?: { reset?: boolean; forceRefresh?: boolean }) => {
       const reset = options?.reset ?? false;
+      const forceRefresh = options?.forceRefresh ?? false;
 
       if (!canLoadApiFeed) {
         if (reset) {
@@ -599,10 +649,20 @@ export function StoryScreen() {
       }
 
       try {
+        const isGuestAll = !isLoggedIn && selectedTab.type === 'ALL';
         const feed =
-          selectedTab.type === 'CLUB' && typeof selectedTab.clubId === 'number'
+          isGuestAll && reset
+            ? await fetchGuestAllBookStories({ forceRefresh })
+            : selectedTab.type === 'CLUB' && typeof selectedTab.clubId === 'number'
             ? await fetchClubBookStories(selectedTab.clubId, cursorId)
-            : await fetchBookStories(selectedTab.type === 'FOLLOWING' ? 'FOLLOWING' : 'ALL', cursorId);
+            : await fetchBookStories(
+                selectedTab.type === 'FOLLOWING' ? 'FOLLOWING' : 'ALL',
+                cursorId,
+                { viewerAuthenticated: isLoggedIn },
+              );
+        if (isGuestAll && !reset) {
+          mergeGuestAllBookStoriesCache(feed);
+        }
         const mapped = feed.items.map(mapRemoteStoryToStory);
 
         setStories((prev) => {
@@ -625,7 +685,7 @@ export function StoryScreen() {
         }
       }
     },
-    [canLoadApiFeed, hasNext, isLoadingMore, nextCursor, selectedTab],
+    [canLoadApiFeed, hasNext, isLoadingMore, isLoggedIn, nextCursor, selectedTab],
   );
 
   useEffect(() => {
@@ -646,9 +706,11 @@ export function StoryScreen() {
 
   const loadStoryDetail = useCallback(
     async (story: Story) => {
-      if (!canUseProtectedApi || typeof story.remoteId !== 'number') return;
+      if (typeof story.remoteId !== 'number') return;
       try {
-        const detail = await fetchBookStoryDetail(story.remoteId);
+        const detail = await fetchBookStoryDetail(story.remoteId, {
+          viewerAuthenticated: isLoggedIn,
+        });
         if (!detail) return;
         const mapped = mapRemoteDetailToStory(detail, story);
         applyStoryUpdate(mapped);
@@ -658,7 +720,7 @@ export function StoryScreen() {
         }
       }
     },
-    [applyStoryUpdate, canUseProtectedApi],
+    [applyStoryUpdate, isLoggedIn],
   );
 
   const openStoryDetailByRemoteId = useCallback(async (remoteId: number) => {
@@ -677,7 +739,9 @@ export function StoryScreen() {
     setStoryMenu(null);
 
     try {
-      const detail = await fetchBookStoryDetail(remoteId);
+      const detail = await fetchBookStoryDetail(remoteId, {
+        viewerAuthenticated: isLoggedIn,
+      });
       if (!detail) {
         showToast('해당 책이야기를 찾을 수 없습니다.');
         return;
@@ -694,7 +758,7 @@ export function StoryScreen() {
         showToast('책이야기 상세를 불러오지 못했습니다.');
       }
     }
-  }, [animateTransition, detailTranslateX]);
+  }, [animateTransition, detailTranslateX, isLoggedIn]);
 
   const startEditStory = useCallback((story: Story) => {
     if (typeof story.remoteId !== 'number') return;
@@ -749,7 +813,7 @@ export function StoryScreen() {
 
     const storyId = selectedStory.remoteId ?? selectedStory.id.replace('story-', '');
     const url = `https://checkmo.co.kr/book-stories/${storyId}`;
-    Clipboard.setString(url);
+    void Clipboard.setStringAsync(url);
     showToast('URL이 클립보드에 복사되었습니다.');
   }, [selectedStory]);
 
@@ -762,15 +826,21 @@ export function StoryScreen() {
   }, []);
 
   const openReportModal = useCallback(
-    (nickname: string, defaultType: MemberReportType) => {
+    (
+      nickname: string,
+      profileImageUrl: string | undefined,
+      defaultType: MemberReportType,
+    ) => {
       const targetNickname = nickname.trim();
       if (!targetNickname) {
         showToast('신고 대상을 확인할 수 없습니다.');
         return;
       }
-      setReportModal({ nickname: targetNickname });
-      setReportType(defaultType);
-      setReportContent('');
+      setReportModal({
+        nickname: targetNickname,
+        profileImageUrl,
+        initialType: defaultType,
+      });
     },
     [],
   );
@@ -778,12 +848,11 @@ export function StoryScreen() {
   const closeReportModal = useCallback(() => {
     if (submittingReport) return;
     setReportModal(null);
-    setReportContent('');
   }, [submittingReport]);
 
-  const submitReport = useCallback(() => {
+  const submitReport = useCallback((payload: { reportType: MemberReportType; content?: string }) => {
     if (!reportModal?.nickname) return;
-    const content = reportContent.trim();
+    const content = payload.content?.trim() ?? '';
     if (content.length > 400) {
       showToast('신고 내용은 400자 이하로 입력해주세요.');
       return;
@@ -795,12 +864,11 @@ export function StoryScreen() {
         try {
           await reportMember({
             reportedMemberNickname: reportModal.nickname,
-            reportType,
+            reportType: payload.reportType,
             content: content || undefined,
           });
           showToast('신고가 접수되었습니다.');
           setReportModal(null);
-          setReportContent('');
         } catch (error) {
           if (!(error instanceof ApiError)) {
             showToast('신고 접수에 실패했습니다.');
@@ -811,7 +879,7 @@ export function StoryScreen() {
       };
       void submit();
     });
-  }, [reportContent, reportModal, reportType, requireAuth]);
+  }, [reportModal, requireAuth]);
 
   const handleSelectStoryMenuAction = useCallback(
     (action: 'edit' | 'delete' | 'report' | 'share') => {
@@ -820,19 +888,19 @@ export function StoryScreen() {
       setStoryMenu(null);
 
       if (action === 'edit') {
-        if (!selectedStory.mine) return;
+        if (!isLoggedIn || !selectedStory.mine) return;
         startEditStory(selectedStory);
         return;
       }
 
       if (action === 'delete') {
-        if (!selectedStory.mine) return;
+        if (!isLoggedIn || !selectedStory.mine) return;
         handleDeleteStory(selectedStory);
         return;
       }
 
       if (action === 'report') {
-        openReportModal(selectedStory.author, 'BOOK_STORY');
+        openReportModal(selectedStory.author, selectedStory.profileImageUrl, 'BOOK_STORY');
         return;
       }
 
@@ -868,6 +936,7 @@ export function StoryScreen() {
     (comment: Comment) => {
       if (
         !selectedStory ||
+        !isLoggedIn ||
         !comment.mine ||
         typeof comment.remoteId !== 'number' ||
         typeof selectedStory.remoteId !== 'number'
@@ -928,7 +997,7 @@ export function StoryScreen() {
       }
 
       if (action === 'report') {
-        openReportModal(current.author, 'COMMENT');
+        openReportModal(current.author, current.profileImageUrl, 'COMMENT');
         return;
       }
 
@@ -980,67 +1049,53 @@ export function StoryScreen() {
     }
     requireAuth(() => {
       const post = async () => {
-        if (canUseProtectedApi) {
-          try {
-            const payload = {
-              title: title.trim(),
-              description: body.trim(),
-              bookInfo: selectedBook
-                ? {
-                    isbn: selectedBook.id,
-                    title: selectedBook.title,
-                    author: selectedBook.author,
-                    imgUrl: selectedBook.image,
-                    description: selectedBook.description,
-                  }
-                : undefined,
-            };
-
-            if (editingStoryId) {
-              await updateBookStory(editingStoryId, payload);
-              showToast('책이야기를 수정했습니다.');
-            } else {
-              await createBookStory(payload);
-              showToast('책이야기를 등록했습니다.');
-            }
-
-            await loadStories({ reset: true });
-          } catch (error) {
-            if (!(error instanceof ApiError)) {
-              showToast(
-                editingStoryId
-                  ? '책이야기 수정에 실패했습니다.'
-                  : '책이야기 등록에 실패했습니다.',
-              );
-            }
-          }
-        } else {
-          const book = selectedBook ?? bookOptions[0];
-          const newStory: Story = {
-            id: `story-${Date.now()}`,
-            author: 'hy_0716',
-            timeAgo: '방금 전',
-            views: 0,
+        const loadingStartedAt = Date.now();
+        setSubmittingStory(true);
+        try {
+          const payload = {
             title: title.trim(),
-            body: body.trim(),
-            fullText: body.trim(),
-            likes: 0,
-            comments: 0,
-            tag: '전체',
-            subscribed: false,
-            liked: false,
-            book,
-            commentList: [],
+            description: body.trim(),
+            bookInfo: selectedBook
+              ? {
+                  isbn: selectedBook.id,
+                  title: selectedBook.title,
+                  author: selectedBook.author,
+                  imgUrl: selectedBook.image,
+                  description: selectedBook.description,
+                }
+              : undefined,
           };
-          setStories((prev) => [newStory, ...prev]);
+
+          if (editingStoryId) {
+            await updateBookStory(editingStoryId, payload);
+            showToast('책이야기를 수정했습니다.');
+          } else {
+            await createBookStory(payload);
+            showToast('책이야기를 등록했습니다.');
+          }
+
+          await loadStories({ reset: true });
+        } catch (error) {
+          if (!(error instanceof ApiError)) {
+            showToast(
+              editingStoryId
+                ? '책이야기 수정에 실패했습니다.'
+                : '책이야기 등록에 실패했습니다.',
+            );
+          }
         }
 
-        setTitle('');
-        setBody('');
-        setSelectedBook(null);
-        setEditingStoryId(null);
-        closeCompose();
-        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+        try {
+          setTitle('');
+          setBody('');
+          setSelectedBook(null);
+          setEditingStoryId(null);
+          closeCompose();
+          listRef.current?.scrollToOffset({ offset: 0, animated: true });
+        } finally {
+          await waitForMinimumLoading(loadingStartedAt);
+          setSubmittingStory(false);
+        }
       };
 
       void post();
@@ -1050,7 +1105,7 @@ export function StoryScreen() {
   const handleToggleSubscribe = (id: string) => {
     requireAuth(() => {
       const target = stories.find((story) => story.id === id);
-      if (!target) return;
+      if (!target || typeof target.remoteId !== 'number') return;
       const nextSubscribed = !target.subscribed;
 
       const update = () => {
@@ -1068,30 +1123,26 @@ export function StoryScreen() {
 
       update();
 
-      if (canUseProtectedApi) {
-        const submit = async () => {
-          try {
-            await setFollowingMember(target.author, nextSubscribed);
-            showToast(nextSubscribed ? '구독했습니다.' : '구독을 취소했습니다.');
-          } catch {
-            // Rollback on failure
-            setStories((prev) =>
-              prev.map((story) =>
-                story.id === id ? { ...story, subscribed: !nextSubscribed } : story,
-              ),
+      const submit = async () => {
+        try {
+          await setFollowingMember(target.author, nextSubscribed);
+          showToast(nextSubscribed ? '구독했습니다.' : '구독을 취소했습니다.');
+        } catch {
+          // Rollback on failure
+          setStories((prev) =>
+            prev.map((story) =>
+              story.id === id ? { ...story, subscribed: !nextSubscribed } : story,
+            ),
+          );
+          if (selectedStory?.id === id) {
+            setSelectedStory((prev) =>
+              prev ? { ...prev, subscribed: !nextSubscribed } : prev,
             );
-            if (selectedStory?.id === id) {
-              setSelectedStory((prev) =>
-                prev ? { ...prev, subscribed: !nextSubscribed } : prev,
-              );
-            }
-            showToast('구독 상태를 변경하지 못했습니다.');
           }
-        };
-        void submit();
-      } else {
-        showToast(nextSubscribed ? '구독했습니다.' : '구독을 취소했습니다.');
-      }
+          showToast('구독 상태를 변경하지 못했습니다.');
+        }
+      };
+      void submit();
     });
   };
 
@@ -1128,7 +1179,7 @@ export function StoryScreen() {
     setRefreshing(true);
     const refresh = async () => {
       if (canLoadApiFeed) {
-        await loadStories({ reset: true });
+        await loadStories({ reset: true, forceRefresh: true });
       } else {
         setStories([]);
       }
@@ -1154,10 +1205,39 @@ export function StoryScreen() {
     void loadStoryDetail(story);
   };
 
+  const handleRefreshSelectedStory = useCallback(() => {
+    if (!selectedStory || typeof selectedStory.remoteId !== 'number') {
+      return;
+    }
+
+    setDetailRefreshing(true);
+
+    const refresh = async () => {
+      try {
+        const detail = await fetchBookStoryDetail(selectedStory.remoteId as number);
+        if (!detail) {
+          showToast('해당 책이야기를 찾을 수 없습니다.');
+          return;
+        }
+        const mapped = mapRemoteDetailToStory(detail, selectedStory);
+        applyStoryUpdate(mapped);
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('책이야기 상세를 새로고침하지 못했습니다.');
+        }
+      } finally {
+        setDetailRefreshing(false);
+      }
+    };
+
+    void refresh();
+  }, [applyStoryUpdate, selectedStory]);
+
   const handleToggleLike = (id: string) => {
     requireAuth(() => {
       const target = stories.find((story) => story.id === id);
-      if (!target) return;
+      if (!target || typeof target.remoteId !== 'number') return;
+      const remoteId = target.remoteId;
       const nextLiked = !target.liked;
 
       setStories((prev) =>
@@ -1173,29 +1253,26 @@ export function StoryScreen() {
         return { ...prev, liked: nextLiked, likes };
       });
 
-      const remoteId = target.remoteId;
-      if (canUseProtectedApi && typeof remoteId === 'number') {
-        const submit = async () => {
-          try {
-            await toggleBookStoryLike(remoteId);
-          } catch {
-            // Rollback on failure
-            setStories((prev) =>
-              prev.map((story) => {
-                if (story.id !== id) return story;
-                const likes = !nextLiked ? story.likes + 1 : Math.max(0, story.likes - 1);
-                return { ...story, liked: !nextLiked, likes };
-              }),
-            );
-            setSelectedStory((prev) => {
-              if (!prev || prev.id !== id) return prev;
-              const likes = !nextLiked ? prev.likes + 1 : Math.max(0, prev.likes - 1);
-              return { ...prev, liked: !nextLiked, likes };
-            });
-          }
-        };
-        void submit();
-      }
+      const submit = async () => {
+        try {
+          await toggleBookStoryLike(remoteId);
+        } catch {
+          // Rollback on failure
+          setStories((prev) =>
+            prev.map((story) => {
+              if (story.id !== id) return story;
+              const likes = !nextLiked ? story.likes + 1 : Math.max(0, story.likes - 1);
+              return { ...story, liked: !nextLiked, likes };
+            }),
+          );
+          setSelectedStory((prev) => {
+            if (!prev || prev.id !== id) return prev;
+            const likes = !nextLiked ? prev.likes + 1 : Math.max(0, prev.likes - 1);
+            return { ...prev, liked: !nextLiked, likes };
+          });
+        }
+      };
+      void submit();
     });
   };
 
@@ -1251,20 +1328,20 @@ export function StoryScreen() {
       setCommentMenu(null);
 
       const remoteId = selectedStory.remoteId;
-      if (canUseProtectedApi && typeof remoteId === 'number') {
-        const submit = async () => {
-          try {
-            if (isEditing && typeof editingCommentId === 'number') {
-              await updateBookStoryComment(remoteId, editingCommentId, content);
-            } else {
-              await createBookStoryComment(remoteId, content, parentCommentId);
-            }
-          } catch {
-            applyStoryUpdate(selectedStory);
+      if (typeof remoteId !== 'number') return;
+
+      const submit = async () => {
+        try {
+          if (isEditing && typeof editingCommentId === 'number') {
+            await updateBookStoryComment(remoteId, editingCommentId, content);
+          } else {
+            await createBookStoryComment(remoteId, content, parentCommentId);
           }
-        };
-        void submit();
-      }
+        } catch {
+          applyStoryUpdate(selectedStory);
+        }
+      };
+      void submit();
     });
   };
 
@@ -1300,12 +1377,10 @@ export function StoryScreen() {
           : NaN;
     if (!Number.isInteger(remoteId) || remoteId <= 0) return;
 
-    requireAuth(() => {
-      void openStoryDetailByRemoteId(remoteId);
-    });
+    void openStoryDetailByRemoteId(remoteId);
 
     navigation.setParams({ openStoryId: undefined });
-  }, [navigation, openStoryDetailByRemoteId, requireAuth, route.params?.openStoryId]);
+  }, [navigation, openStoryDetailByRemoteId, route.params?.openStoryId]);
 
   useEffect(() => {
     const parent = navigation.getParent();
@@ -1371,6 +1446,14 @@ export function StoryScreen() {
     return unsubscribe;
   }, [closeCompose, hasUnsavedStoryChanges, navigation]);
 
+  if (submittingStory) {
+    return (
+      <ScreenLayout title="책 이야기" onPressLogo={handlePressHeaderLogo}>
+        <BookFlipLoadingScreen />
+      </ScreenLayout>
+    );
+  }
+
   if (selectedStory) {
     const book = selectedStory.book;
     return (
@@ -1386,6 +1469,14 @@ export function StoryScreen() {
           <ScrollView
             contentContainerStyle={styles.detailContent}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={detailRefreshing}
+                onRefresh={handleRefreshSelectedStory}
+                tintColor={colors.primary1}
+                colors={[colors.primary1]}
+              />
+            }
           >
           <View style={styles.breadcrumbRow}>
             <Pressable
@@ -1414,17 +1505,21 @@ export function StoryScreen() {
 
           <View style={styles.detailHeader}>
             <View style={styles.storyAvatar}>
-              <MaterialIcons
-                name="person-outline"
-                size={28}
-                color={colors.gray5}
-              />
+              {selectedStory.profileImageUrl ? (
+                <Image source={{ uri: selectedStory.profileImageUrl }} style={styles.storyAvatarImage} />
+              ) : (
+                <MaterialIcons
+                  name="person-outline"
+                  size={28}
+                  color={colors.gray5}
+                />
+              )}
             </View>
             <View style={styles.detailAuthorBlock}>
               <Text style={styles.storyAuthor}>{selectedStory.author}</Text>
             </View>
             <View style={styles.detailHeaderActions}>
-              {!selectedStory.mine && (
+              {!(isLoggedIn && selectedStory.mine) && (
                 <Pressable
                   style={[
                     styles.chipButton,
@@ -1460,7 +1555,15 @@ export function StoryScreen() {
 
           {book && (
             <View style={styles.detailBookRow}>
-              <View style={styles.detailBookThumb} />
+              <View style={styles.detailBookThumb}>
+                {book.image ? (
+                  <Image
+                    source={{ uri: book.image }}
+                    style={styles.detailBookThumbImage}
+                    resizeMode="cover"
+                  />
+                ) : null}
+              </View>
               <View style={styles.detailBookInfo}>
                 <Text style={styles.detailBookTitle}>{book.title}</Text>
                 <Text style={styles.detailBookAuthor}>{book.author}</Text>
@@ -1503,17 +1606,35 @@ export function StoryScreen() {
               <View style={styles.commentInputRow}>
                 <TextInput
                   ref={commentInputRef}
-                  style={styles.commentInput}
+                  style={[
+                    styles.commentInput,
+                    { height: commentInputHeight },
+                  ]}
                   placeholder={editingCommentId ? '댓글 수정' : '댓글 내용'}
                   placeholderTextColor={colors.gray3}
                   value={commentInput}
                   onChangeText={setCommentInput}
+                  multiline
+                  scrollEnabled={false}
+                  textAlignVertical="top"
+                  onContentSizeChange={(event) => {
+                    handleCommentInputSizeChange(event.nativeEvent.contentSize.height);
+                  }}
                 />
                 <Pressable
-                  style={styles.commentSubmit}
+                  style={[
+                    styles.commentSubmit,
+                    isCommentSubmitDisabled && styles.commentSubmitDisabled,
+                  ]}
                   onPress={handleSubmitComment}
+                  disabled={isCommentSubmitDisabled}
                 >
-                  <Text style={styles.commentSubmitText}>
+                  <Text
+                    style={[
+                      styles.commentSubmitText,
+                      isCommentSubmitDisabled && styles.commentSubmitTextDisabled,
+                    ]}
+                  >
                     {editingCommentId ? '수정' : '입력'}
                   </Text>
                 </Pressable>
@@ -1561,17 +1682,37 @@ export function StoryScreen() {
                       <View style={styles.inlineReplyRow}>
                         <TextInput
                           ref={inlineReplyInputRef}
-                          style={styles.commentInput}
+                          style={[
+                            styles.commentInput,
+                            { height: commentInputHeight },
+                          ]}
                           placeholder="댓글 내용"
                           placeholderTextColor={colors.gray3}
                           value={commentInput}
                           onChangeText={setCommentInput}
+                          multiline
+                          scrollEnabled={false}
+                          textAlignVertical="top"
+                          onContentSizeChange={(event) => {
+                            handleCommentInputSizeChange(event.nativeEvent.contentSize.height);
+                          }}
                         />
                         <Pressable
-                          style={styles.commentSubmit}
+                          style={[
+                            styles.commentSubmit,
+                            isCommentSubmitDisabled && styles.commentSubmitDisabled,
+                          ]}
                           onPress={handleSubmitComment}
+                          disabled={isCommentSubmitDisabled}
                         >
-                          <Text style={styles.commentSubmitText}>입력</Text>
+                          <Text
+                            style={[
+                              styles.commentSubmitText,
+                              isCommentSubmitDisabled && styles.commentSubmitTextDisabled,
+                            ]}
+                          >
+                            입력
+                          </Text>
                         </Pressable>
                       </View>
                     )}
@@ -1604,7 +1745,7 @@ export function StoryScreen() {
                 ]}
                 onPress={(event) => event.stopPropagation()}
               >
-                {commentMenu.comment.mine ? (
+                {isLoggedIn && commentMenu.comment.mine ? (
                   <>
                     <Pressable
                       style={styles.commentMenuItem}
@@ -1666,7 +1807,7 @@ export function StoryScreen() {
                 ]}
                 onPress={(event) => event.stopPropagation()}
               >
-                {selectedStory.mine ? (
+                {isLoggedIn && selectedStory.mine ? (
                   <>
                     <Pressable
                       style={styles.commentMenuItem}
@@ -1705,85 +1846,13 @@ export function StoryScreen() {
             )}
           </Pressable>
         </Modal>
-        <Modal
+        <ReportMemberModal
           visible={Boolean(reportModal)}
-          transparent
-          animationType="fade"
-          onRequestClose={closeReportModal}
-        >
-          <Pressable
-            style={styles.reportModalBackdrop}
-            onPress={closeReportModal}
-          >
-            {reportModal ? (
-              <Pressable
-                style={styles.reportModalCard}
-                onPress={(event) => event.stopPropagation()}
-              >
-                <View style={styles.reportModalHeader}>
-                  <Text style={styles.reportModalTitle}>신고하기</Text>
-                  <Pressable
-                    style={styles.reportModalCloseButton}
-                    onPress={closeReportModal}
-                  >
-                    <MaterialIcons name="close" size={24} color={colors.primary1} />
-                  </Pressable>
-                </View>
-                <Text style={styles.reportTargetText}>신고 대상: {reportModal.nickname}</Text>
-                <Text style={styles.reportLabel}>종류</Text>
-                <View style={styles.reportTypeRow}>
-                  {reportTypeOptions.map((option) => {
-                    const active = reportType === option.type;
-                    return (
-                      <Pressable
-                        key={option.type}
-                        style={[
-                          styles.reportTypeButton,
-                          active ? styles.reportTypeButtonActive : null,
-                        ]}
-                        onPress={() => setReportType(option.type)}
-                      >
-                        <Text
-                          style={[
-                            styles.reportTypeButtonText,
-                            active ? styles.reportTypeButtonTextActive : null,
-                          ]}
-                        >
-                          {option.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                <Text style={styles.reportLabel}>내용</Text>
-                <View style={styles.reportContentBox}>
-                  <TextInput
-                    value={reportContent}
-                    onChangeText={setReportContent}
-                    placeholder="신고 내용 작성 (최대 400자)"
-                    placeholderTextColor={colors.gray3}
-                    style={styles.reportContentInput}
-                    multiline
-                    maxLength={400}
-                    textAlignVertical="top"
-                  />
-                </View>
-                <Pressable
-                  style={[
-                    styles.reportSubmitButton,
-                    submittingReport ? styles.reportSubmitButtonDisabled : null,
-                  ]}
-                  onPress={submitReport}
-                  disabled={submittingReport}
-                >
-                  <Text style={styles.reportSubmitButtonText}>
-                    {submittingReport ? '등록 중...' : '신고 등록'}
-                  </Text>
-                </Pressable>
-              </Pressable>
-            ) : null}
-          </Pressable>
-        </Modal>
+          target={reportModal}
+          submitting={submittingReport}
+          onClose={closeReportModal}
+          onSubmit={submitReport}
+        />
         </KeyboardAvoidingView>
         </Animated.View>
       </ScreenLayout>
@@ -2031,6 +2100,7 @@ export function StoryScreen() {
                       followingCount={user.followingCount}
                       followerCount={user.followerCount}
                       subscribed={user.subscribed}
+                      onPressProfile={() => openUserProfile(user.nickname)}
                       onPressSubscribe={() => handleToggleRecommendedSubscribe(user.id)}
                     />
                   ))}
@@ -2039,9 +2109,11 @@ export function StoryScreen() {
             }
 
             const story = item.story;
+            const isMineForViewer = isLoggedIn && (story.mine ?? false);
             return (
               <BookStoryFeedCard
                 authorName={story.author}
+                profileImgSrc={story.profileImageUrl}
                 timeAgo={story.timeAgo}
                 viewCount={story.views}
                 title={story.title}
@@ -2049,13 +2121,15 @@ export function StoryScreen() {
                 likeCount={story.likes}
                 commentCount={story.comments}
                 liked={story.liked}
-                subscribed={story.mine ? undefined : story.subscribed}
+                isAuthor={isMineForViewer}
+                subscribed={isMineForViewer ? undefined : story.subscribed}
                 coverImgSrc={story.book?.image}
                 onPress={() => handleSelectStory(story)}
                 onToggleLike={() => handleToggleLike(story.id)}
                 onToggleSubscribe={
-                  story.mine ? undefined : () => handleToggleSubscribe(story.id)
+                  isMineForViewer ? undefined : () => handleToggleSubscribe(story.id)
                 }
+                onPressAuthor={() => openUserProfile(story.author)}
               />
             );
           }}
@@ -2077,9 +2151,9 @@ export function StoryScreen() {
             />
           }
         />
-        <Pressable style={styles.fab} onPress={() => openCompose()}>
-          <SvgUri uri={writeIconUri} width={48} height={48} />
-        </Pressable>
+        <FloatingActionButton onPress={() => openCompose()}>
+          <SvgUri uri={writeIconUri} width={20} height={20} />
+        </FloatingActionButton>
       </KeyboardAvoidingView>
     </ScreenLayout>
   );
@@ -2087,12 +2161,12 @@ export function StoryScreen() {
 
 function mapRemoteStoryToStory(item: RemoteStoryItem): Story {
   const book: Book | undefined = item.bookInfo
-    ? {
+      ? {
         id: item.bookInfo.isbn ?? `book-${item.id}`,
         title: item.bookInfo.title ?? '책 제목',
         author: item.bookInfo.author ?? '작가 미상',
         description: item.bookInfo.description ?? '',
-        image: item.bookInfo.imgUrl,
+        image: normalizeRemoteImageUrl(item.bookInfo.imgUrl),
       }
     : undefined;
 
@@ -2100,6 +2174,7 @@ function mapRemoteStoryToStory(item: RemoteStoryItem): Story {
     id: `story-${item.id}`,
     remoteId: item.id,
     author: item.nickname,
+    profileImageUrl: normalizeRemoteImageUrl(item.profileImageUrl),
     mine: item.mine ?? false,
     timeAgo: toKstTimeAgoLabel(item.createdAt),
     views: item.viewCount,
@@ -2121,6 +2196,7 @@ function mapRemoteCommentToComment(comment: RemoteStoryComment): Comment {
     id: `comment-${comment.id}`,
     remoteId: comment.id,
     author: comment.nickname,
+    profileImageUrl: normalizeRemoteImageUrl(comment.profileImageUrl),
     time: toKstTimeAgoLabel(comment.createdAt),
     text: comment.deleted ? '삭제된 댓글입니다.' : comment.content,
     mine: comment.mine,
@@ -2417,6 +2493,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray1,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  storyAvatarImage: {
+    width: '100%',
+    height: '100%',
   },
   storyMeta: {
     flex: 1,
@@ -2430,24 +2511,21 @@ const styles = StyleSheet.create({
     color: colors.gray4,
   },
   chipButton: {
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    borderRadius: radius.lg,
-    borderWidth: 1,
+    borderRadius: radius.sm,
   },
   chipActive: {
-    backgroundColor: colors.subbrown4,
-    borderColor: colors.subbrown4,
+    backgroundColor: colors.primary1,
   },
   chipInactive: {
     backgroundColor: colors.primary2,
-    borderColor: colors.primary2,
   },
   chipText: {
     ...typography.body2_2,
   },
   chipTextActive: {
-    color: colors.primary3,
+    color: colors.white,
   },
   chipTextInactive: {
     color: colors.white,
@@ -2493,16 +2571,6 @@ const styles = StyleSheet.create({
   postActionText: {
     ...typography.body2_3,
     color: colors.gray5,
-  },
-  fab: {
-    position: 'absolute',
-    right: spacing.xl,
-    bottom: spacing.xl,
-    width: 48,
-    height: 48,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   composeContent: {
     padding: spacing.md,
@@ -2581,6 +2649,11 @@ const styles = StyleSheet.create({
     height: 90,
     borderRadius: radius.xs,
     backgroundColor: colors.subbrown4,
+    overflow: 'hidden',
+  },
+  detailBookThumbImage: {
+    width: '100%',
+    height: '100%',
   },
   detailBookInfo: {
     flex: 1,
@@ -2627,7 +2700,7 @@ const styles = StyleSheet.create({
   },
   commentInputRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: spacing.xs,
   },
   commentInput: {
@@ -2646,9 +2719,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary1,
     borderRadius: radius.md,
   },
+  commentSubmitDisabled: {
+    backgroundColor: colors.gray2,
+  },
   commentSubmitText: {
     ...typography.body1_2,
     color: colors.white,
+  },
+  commentSubmitTextDisabled: {
+    color: colors.gray4,
   },
   commentList: {
     gap: spacing.sm,
@@ -2838,7 +2917,7 @@ const styles = StyleSheet.create({
   },
   inlineReplyRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: spacing.xs,
     marginTop: spacing.xs,
   },

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -19,7 +20,10 @@ import { colors, radius, spacing, typography } from '../theme';
 import {
   checkNicknameDuplicate,
   confirmEmailVerification,
+  fetchLoginStatusSilently,
   findEmailByNamePhone,
+  getOAuthLoginUrl,
+  type OAuthProvider,
   loginByEmail,
   requestEmailVerification,
   issueProfileImageUploadUrl,
@@ -236,10 +240,17 @@ const kakaoUri = Image.resolveAssetSource(
   require('../../assets/icons/kakaoImage.svg'),
 ).uri;
 const oauthProviders = [
-  { key: 'google', uri: googleUri, size: 40, offsetX: 0 },
-  { key: 'naver', uri: naverUri, size: 40, offsetX: 0 },
-  { key: 'kakao', uri: kakaoUri, size: 36, offsetX: -1 },
+  { key: 'google', label: 'Google 로그인', uri: googleUri, width: 40, height: 40 },
+  { key: 'naver', label: 'Naver 로그인', uri: naverUri, width: 40, height: 40 },
+  { key: 'kakao', label: 'Kakao 로그인', uri: kakaoUri, width: 40, height: 40 },
 ] as const;
+const oauthProviderLabelByKey: Record<OAuthProvider, string> = {
+  google: '구글',
+  naver: '네이버',
+  kakao: '카카오',
+};
+const SocialLoginWebView =
+  Platform.OS === 'web' ? null : (require('react-native-webview').WebView as React.ComponentType<any>);
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[!@#$%^&*]).{6,12}$/;
@@ -345,6 +356,10 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const [findEmailSubmitting, setFindEmailSubmitting] = useState(false);
   const [resetPasswordEmail, setResetPasswordEmail] = useState('');
   const [sendingTempPassword, setSendingTempPassword] = useState(false);
+  const [socialLoginProvider, setSocialLoginProvider] = useState<OAuthProvider | null>(null);
+  const [socialLoginWebViewKey, setSocialLoginWebViewKey] = useState(0);
+  const [socialLoginChecking, setSocialLoginChecking] = useState(false);
+  const [socialLoginLoadError, setSocialLoginLoadError] = useState<string | null>(null);
 
   const canGoNextFromTerms = agreeService && agreeCheckmo;
   const allAgreed = agreeService && agreeCheckmo && agreeThirdParty && agreeMarketing;
@@ -463,14 +478,62 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     setStep('terms');
   };
 
-  const completeAuthFlow = (nextToast?: string) => {
+  const closeSocialLoginModal = useCallback(() => {
+    setSocialLoginProvider(null);
+    setSocialLoginLoadError(null);
+    setSocialLoginChecking(false);
+  }, []);
+
+  const completeAuthFlow = useCallback((nextToast?: string) => {
+    closeSocialLoginModal();
     if (nextToast) showToast(nextToast);
     if (onLoginSuccess) {
       onLoginSuccess();
       return;
     }
     onClose?.();
-  };
+  }, [closeSocialLoginModal, onClose, onLoginSuccess]);
+
+  const checkSocialLoginStatus = useCallback(async () => {
+    if (socialLoginChecking) return;
+
+    setSocialLoginChecking(true);
+    try {
+      const status = await fetchLoginStatusSilently(true);
+      if (!status) return;
+      completeAuthFlow('로그인에 성공했습니다.');
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        return;
+      }
+      setSocialLoginLoadError('로그인 상태를 확인하지 못했습니다.');
+    } finally {
+      setSocialLoginChecking(false);
+    }
+  }, [completeAuthFlow, socialLoginChecking]);
+
+  const handleSocialLoginPress = useCallback(
+    (providerKey: OAuthProvider) => {
+      const loginUrl = getOAuthLoginUrl(providerKey);
+
+      if (Platform.OS === 'web' || !SocialLoginWebView) {
+        const open = async () => {
+          try {
+            await Linking.openURL(loginUrl);
+          } catch {
+            showToast(`${oauthProviderLabelByKey[providerKey]} 로그인 페이지를 열지 못했습니다.`);
+          }
+        };
+        void open();
+        return;
+      }
+
+      setSocialLoginLoadError(null);
+      setSocialLoginProvider(providerKey);
+      setSocialLoginWebViewKey((prev) => prev + 1);
+    },
+    [],
+  );
 
   const handleLogin = async () => {
     const email = loginEmail.trim();
@@ -808,6 +871,67 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <Modal
+        visible={socialLoginProvider !== null}
+        animationType="slide"
+        onRequestClose={closeSocialLoginModal}
+      >
+        <View style={styles.socialLoginModal}>
+          <View style={styles.socialLoginHeader}>
+            <View style={styles.socialLoginHeaderTextWrap}>
+              <Text style={styles.socialLoginTitle}>
+                {socialLoginProvider ? `${oauthProviderLabelByKey[socialLoginProvider]} 로그인` : '소셜 로그인'}
+              </Text>
+              <Text style={styles.socialLoginSubtitle}>
+                로그인 완료 후 이 창은 자동으로 닫힙니다.
+              </Text>
+            </View>
+            <Pressable onPress={closeSocialLoginModal} hitSlop={8}>
+              <MaterialIcons name="close" size={24} color={colors.gray6} />
+            </Pressable>
+          </View>
+
+          {socialLoginLoadError ? (
+            <View style={styles.socialLoginErrorCard}>
+              <Text style={styles.socialLoginErrorText}>{socialLoginLoadError}</Text>
+              <Pressable
+                style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+                onPress={() => {
+                  setSocialLoginLoadError(null);
+                  setSocialLoginWebViewKey((prev) => prev + 1);
+                }}
+              >
+                <Text style={styles.primaryText}>다시 시도</Text>
+              </Pressable>
+            </View>
+          ) : SocialLoginWebView && socialLoginProvider ? (
+            <View style={styles.socialLoginWebViewWrap}>
+              <SocialLoginWebView
+                key={`${socialLoginProvider}-${socialLoginWebViewKey}`}
+                source={{ uri: getOAuthLoginUrl(socialLoginProvider) }}
+                sharedCookiesEnabled
+                thirdPartyCookiesEnabled
+                javaScriptEnabled
+                domStorageEnabled
+                startInLoadingState
+                onLoadEnd={() => {
+                  void checkSocialLoginStatus();
+                }}
+                onError={() => {
+                  setSocialLoginLoadError(
+                    `${oauthProviderLabelByKey[socialLoginProvider]} 로그인 페이지를 불러오지 못했습니다.`,
+                  );
+                }}
+              />
+              {socialLoginChecking ? (
+                <View style={styles.socialLoginCheckingBanner}>
+                  <Text style={styles.socialLoginCheckingText}>로그인 상태를 확인하는 중입니다...</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+      </Modal>
     </View>
   );
 
@@ -1574,16 +1698,18 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         {oauthProviders.map(provider => (
           <Pressable
             key={provider.key}
-            style={({ pressed }) => [styles.oauthBtn, pressed && styles.pressed]}
-            onPress={() => showToast('소셜 로그인은 준비 중입니다.')}
+            style={({ pressed }) => [
+              styles.oauthBtn,
+              socialLoginProvider === provider.key && styles.oauthBtnDisabled,
+              pressed && styles.pressed,
+            ]}
+            onPress={() => handleSocialLoginPress(provider.key)}
+            accessibilityRole="button"
+            accessibilityLabel={provider.label}
+            disabled={socialLoginProvider !== null}
           >
-            <View
-              style={[
-                styles.oauthIconWrap,
-                provider.offsetX !== 0 && { transform: [{ translateX: provider.offsetX }] },
-              ]}
-            >
-              <SvgUri uri={provider.uri} width={provider.size} height={provider.size} />
+            <View style={styles.oauthIconWrap}>
+              <SvgUri uri={provider.uri} width={provider.width} height={provider.height} />
             </View>
           </Pressable>
         ))}
@@ -2029,9 +2155,70 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray2,
   },
+  oauthBtnDisabled: {
+    opacity: 0.45,
+  },
   oauthIconWrap: {
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  socialLoginModal: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  socialLoginHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray2,
+    backgroundColor: colors.white,
+  },
+  socialLoginHeaderTextWrap: {
+    flex: 1,
+    gap: spacing.xs / 2,
+  },
+  socialLoginTitle: {
+    ...typography.subhead4_1,
+    color: colors.gray6,
+  },
+  socialLoginSubtitle: {
+    ...typography.body2_3,
+    color: colors.gray4,
+  },
+  socialLoginWebViewWrap: {
+    flex: 1,
+  },
+  socialLoginCheckingBanner: {
+    position: 'absolute',
+    left: spacing.md,
+    right: spacing.md,
+    bottom: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  socialLoginCheckingText: {
+    ...typography.body2_2,
+    color: colors.white,
+    textAlign: 'center',
+  },
+  socialLoginErrorCard: {
+    flex: 1,
+    padding: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  socialLoginErrorText: {
+    ...typography.body1_3,
+    color: colors.gray6,
+    textAlign: 'center',
   },
   pressed: {
     opacity: 0.75,

@@ -1,4 +1,5 @@
 import { ApiEnvelope, requestJson, unwrapResult } from './http';
+import { normalizeRemoteImageUrl } from '../../utils/image';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -66,7 +67,9 @@ function normalizeBookItem(raw: unknown): BookItem | null {
     toStringValue(firstDefined(record.author, record.authorName, record.writer)) ?? '';
   const description =
     toStringValue(firstDefined(record.description, record.content, record.summary)) ?? '';
-  const imgUrl = toStringValue(firstDefined(record.imgUrl, record.imageUrl, record.cover));
+  const imgUrl = normalizeRemoteImageUrl(
+    toStringValue(firstDefined(record.imgUrl, record.imageUrl, record.cover, record.thumbnailUrl)),
+  );
   const publisher = toStringValue(firstDefined(record.publisher, record.publisherName));
 
   if (!isbn && !title) return null;

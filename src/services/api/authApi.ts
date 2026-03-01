@@ -10,6 +10,8 @@ type LoginStatus = {
 };
 
 export type EmailVerificationType = 'SIGN_UP' | 'UPDATE_EMAIL';
+export type ImageUploadType = 'PROFILE' | 'CLUB' | 'NOTICE';
+export type OAuthProvider = 'google' | 'kakao' | 'naver';
 
 export type AdditionalInfoPayload = {
   nickname: string;
@@ -37,6 +39,11 @@ function buildUrl(path: string, query?: Record<string, string | undefined>) {
     url.searchParams.set(key, value);
   });
   return url.toString();
+}
+
+function getApiOrigin() {
+  const url = new URL(API_BASE_URL);
+  return `${url.protocol}//${url.host}`;
 }
 
 export async function loginByEmail(email: string, password: string): Promise<void> {
@@ -128,11 +135,12 @@ export async function submitAdditionalInfo(payload: AdditionalInfoPayload): Prom
   });
 }
 
-export async function issueProfileImageUploadUrl(
+export async function issueImageUploadUrl(
+  type: ImageUploadType,
   originalFileName: string,
   contentType: string,
 ): Promise<{ presignedUrl: string; imageUrl: string } | null> {
-  const response = await requestJson<ApiEnvelope<PresignedUrl>>('/image/PROFILE/upload-url', {
+  const response = await requestJson<ApiEnvelope<PresignedUrl>>(`/image/${type}/upload-url`, {
     method: 'POST',
     body: {
       originalFileName,
@@ -146,6 +154,13 @@ export async function issueProfileImageUploadUrl(
     presignedUrl: result.presignedUrl,
     imageUrl: result.imageUrl,
   };
+}
+
+export async function issueProfileImageUploadUrl(
+  originalFileName: string,
+  contentType: string,
+): Promise<{ presignedUrl: string; imageUrl: string } | null> {
+  return issueImageUploadUrl('PROFILE', originalFileName, contentType);
 }
 
 export async function findEmailByNamePhone(
@@ -173,10 +188,21 @@ export async function sendTemporaryPassword(email: string): Promise<void> {
 }
 
 export async function fetchLoginStatus(): Promise<LoginStatus | null> {
+  return fetchLoginStatusSilently(false);
+}
+
+export async function fetchLoginStatusSilently(
+  suppressErrorToast = true,
+): Promise<LoginStatus | null> {
   const response = await requestJson<ApiEnvelope<LoginStatus>>('/members/me/login-status', {
     method: 'GET',
+    suppressErrorToast,
   });
   return unwrapResult(response) ?? null;
+}
+
+export function getOAuthLoginUrl(provider: OAuthProvider): string {
+  return `${getApiOrigin()}/auth/oauth2/${provider}`;
 }
 
 export async function logoutSession(): Promise<void> {
