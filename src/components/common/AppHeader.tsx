@@ -23,6 +23,7 @@ import { IconButton, IconName } from './IconButton';
 import { useAuthGate } from '../../contexts/AuthGateContext';
 import { navigateToHome } from '../../navigation/navigateToHome';
 import { ApiError } from '../../services/api/http';
+import { triggerSelectionHaptic } from '../../utils/haptics';
 import {
   fetchBookDetail,
   fetchRecommendedBooks,
@@ -169,6 +170,7 @@ export function AppHeader(props: Props) {
       }
       if (!isBookLikeTogglable(book)) return;
 
+      triggerSelectionHaptic();
       const submit = async () => {
         const liked = await toggleBookLike(book);
         showToast(liked ? '내 서재에 담았습니다.' : '내 서재에서 제거했습니다.');

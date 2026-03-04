@@ -1,11 +1,15 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import {
+  Animated,
   Image,
+  PanResponder,
+  type PanResponderGestureState,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -17,6 +21,7 @@ import { navigateToHome } from '../navigation/navigateToHome';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import { useAuthGate } from '../contexts/AuthGateContext';
+import { triggerSelectionHaptic } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { ApiError } from '../services/api/http';
 import {
@@ -62,6 +67,11 @@ const likeIconUri = Image.resolveAssetSource(
 const commentIconUri = Image.resolveAssetSource(
   require('../../assets/book-story/bookstory-comment.svg'),
 ).uri;
+const PROFILE_BACK_EDGE_WIDTH = 32;
+const PROFILE_BACK_ACTIVATE_DISTANCE = 12;
+const PROFILE_BACK_ACTIVATE_MAX_DY = 18;
+const PROFILE_BACK_TRIGGER_DISTANCE = 96;
+const PROFILE_BACK_TRIGGER_MAX_DY = 72;
 
 function mapRemoteStoryToCard(item: RemoteStoryItem): StoryCard {
   return {
@@ -78,6 +88,8 @@ export function UserProfileScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { requireAuth } = useAuthGate();
+  const { width: screenWidth } = useWindowDimensions();
+  const translateX = useRef(new Animated.Value(0)).current;
   const [activeTab, setActiveTab] = useState<TabKey>('책 이야기');
   const [refreshing, setRefreshing] = useState(false);
   const [submittingFollow, setSubmittingFollow] = useState(false);
@@ -93,6 +105,14 @@ export function UserProfileScreen() {
 
   const books: BookCard[] = useMemo(() => [], []);
   const groups: GroupItem[] = useMemo(() => [], []);
+
+  const handleGoBack = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigateToHome(navigation);
+  }, [navigation]);
 
   const loadProfile = useCallback(async () => {
     const [profileResult, storiesResult] = await Promise.all([
@@ -152,6 +172,7 @@ export function UserProfileScreen() {
     if (!profile || submittingFollow) return;
 
     const nextFollowing = !(profile.following ?? false);
+    triggerSelectionHaptic();
     setSubmittingFollow(true);
 
     const submit = async () => {
@@ -295,106 +316,158 @@ export function UserProfileScreen() {
     return renderMeetings();
   };
 
+  const isBackSwipe = useCallback((gestureState: PanResponderGestureState) => {
+    return (
+      gestureState.x0 <= PROFILE_BACK_EDGE_WIDTH
+      && gestureState.dx > PROFILE_BACK_ACTIVATE_DISTANCE
+      && Math.abs(gestureState.dy) < PROFILE_BACK_ACTIVATE_MAX_DY
+    );
+  }, []);
+
+  const backSwipeResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, gestureState) => isBackSwipe(gestureState),
+        onMoveShouldSetPanResponderCapture: (_, gestureState) => isBackSwipe(gestureState),
+        onPanResponderMove: (_, gestureState) => {
+          translateX.setValue(Math.max(0, Math.min(gestureState.dx, screenWidth)));
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          const dragDistance = Math.max(0, gestureState.dx);
+          const shouldGoBack =
+            dragDistance >= PROFILE_BACK_TRIGGER_DISTANCE
+            && Math.abs(gestureState.dy) <= PROFILE_BACK_TRIGGER_MAX_DY;
+
+          if (shouldGoBack) {
+            Animated.timing(translateX, {
+              toValue: screenWidth,
+              duration: 180,
+              useNativeDriver: true,
+            }).start(({ finished }) => {
+              if (!finished) return;
+              translateX.setValue(0);
+              handleGoBack();
+            });
+            return;
+          }
+
+          Animated.spring(translateX, {
+            toValue: 0,
+            speed: 22,
+            bounciness: 0,
+            useNativeDriver: true,
+          }).start();
+        },
+        onPanResponderTerminate: () => {
+          Animated.spring(translateX, {
+            toValue: 0,
+            speed: 22,
+            bounciness: 0,
+            useNativeDriver: true,
+          }).start();
+        },
+      }),
+    [handleGoBack, isBackSwipe, screenWidth, translateX],
+  );
+
   return (
     <ScreenLayout title="다른사람 프로필">
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary1}
-            colors={[colors.primary1]}
-          />
-        }
+      <Animated.View
+        style={[styles.container, { transform: [{ translateX }] }]}
+        {...backSwipeResponder.panHandlers}
       >
-        <Pressable
-          style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
-          onPress={() => {
-            if (navigation.canGoBack()) {
-              navigation.goBack();
-              return;
-            }
-            navigateToHome(navigation);
-          }}
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary1}
+              colors={[colors.primary1]}
+            />
+          }
         >
-          <Text style={styles.breadcrumbText}>전체</Text>
-          <MaterialIcons name="chevron-right" size={16} color={colors.gray4} />
-          <Text style={[styles.breadcrumbText, styles.breadcrumbActive]}>다른사람 프로필</Text>
-        </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
+            onPress={handleGoBack}
+          >
+            <MaterialIcons name="chevron-left" size={18} color={colors.gray5} />
+            <Text style={styles.breadcrumbText}>뒤로가기</Text>
+          </Pressable>
 
-        <View style={styles.profileRow}>
-          <View style={styles.profileAvatar}>
-            {profile?.profileImageUrl ? (
-              <Image source={{ uri: profile.profileImageUrl }} style={styles.profileAvatarImage} />
+          <View style={styles.profileRow}>
+            <View style={styles.profileAvatar}>
+              {profile?.profileImageUrl ? (
+                <Image source={{ uri: profile.profileImageUrl }} style={styles.profileAvatarImage} />
+              ) : (
+                <MaterialIcons name="person" size={48} color={colors.gray3} />
+              )}
+            </View>
+            <View style={styles.profileMeta}>
+              <Text style={styles.profileName}>{profileName}</Text>
+              <Text style={styles.profileSub}>
+                구독중 {profile?.followingCount ?? 0} · 구독자 {profile?.followerCount ?? 0}
+              </Text>
+              <Text style={styles.profileDesc} numberOfLines={3}>
+                {profileDesc}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.actionButtons}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.primaryButton,
+                following ? styles.primaryButtonDisabled : null,
+                pressed && styles.pressed,
+              ]}
+              onPress={handleSubscribe}
+              disabled={submittingFollow || profileLoading}
+            >
+              <Text style={[styles.primaryButtonText, following ? styles.disabledText : null]}>
+                {submittingFollow ? '처리 중...' : following ? '구독 중' : '구독하기'}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+              onPress={handleOpenReportModal}
+            >
+              <Text style={styles.secondaryButtonText}>신고하기</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.tabRow}>
+            {tabs.map((tab) => {
+              const active = tab === activeTab;
+              return (
+                <Pressable
+                  key={tab}
+                  style={({ pressed }) => [
+                    styles.tabButton,
+                    active ? styles.tabActive : null,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() => setActiveTab(tab)}
+                >
+                  <Text style={[styles.tabLabel, active ? styles.tabLabelActive : null]}>
+                    {tab}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={styles.tabContent}>
+            {profileLoading && !refreshing ? (
+              <Text style={styles.emptyText}>불러오는 중...</Text>
             ) : (
-              <MaterialIcons name="person" size={48} color={colors.gray3} />
+              renderTabContent()
             )}
           </View>
-          <View style={styles.profileMeta}>
-            <Text style={styles.profileName}>{profileName}</Text>
-            <Text style={styles.profileSub}>
-              구독중 {profile?.followingCount ?? 0} · 구독자 {profile?.followerCount ?? 0}
-            </Text>
-            <Text style={styles.profileDesc} numberOfLines={3}>
-              {profileDesc}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.actionButtons}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              following ? styles.primaryButtonDisabled : null,
-              pressed && styles.pressed,
-            ]}
-            onPress={handleSubscribe}
-            disabled={submittingFollow || profileLoading}
-          >
-            <Text style={[styles.primaryButtonText, following ? styles.disabledText : null]}>
-              {submittingFollow ? '처리 중...' : following ? '구독 중' : '구독하기'}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            onPress={handleOpenReportModal}
-          >
-            <Text style={styles.secondaryButtonText}>신고하기</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.tabRow}>
-          {tabs.map((tab) => {
-            const active = tab === activeTab;
-            return (
-              <Pressable
-                key={tab}
-                style={({ pressed }) => [
-                  styles.tabButton,
-                  active ? styles.tabActive : null,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => setActiveTab(tab)}
-              >
-                <Text style={[styles.tabLabel, active ? styles.tabLabelActive : null]}>
-                  {tab}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <View style={styles.tabContent}>
-          {profileLoading && !refreshing ? (
-            <Text style={styles.emptyText}>불러오는 중...</Text>
-          ) : (
-            renderTabContent()
-          )}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </Animated.View>
       <ReportMemberModal
         visible={Boolean(reportModal)}
         target={reportModal}
@@ -423,13 +496,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs / 2,
+    alignSelf: 'flex-start',
   },
   breadcrumbText: {
     ...typography.body2_3,
-    color: colors.gray4,
-  },
-  breadcrumbActive: {
-    color: colors.gray6,
+    color: colors.gray5,
   },
   profileRow: {
     flexDirection: 'row',

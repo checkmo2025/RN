@@ -1,4 +1,4 @@
-import { ApiEnvelope, requestJson, unwrapResult } from './http';
+import { API_BASE_URL, ApiEnvelope, ApiError, requestJson, unwrapResult } from './http';
 import { normalizeRemoteImageUrl } from '../../utils/image';
 
 export type ClubCategoryCode =
@@ -168,6 +168,11 @@ export type ClubNoticeList = {
   hasNext: boolean;
 };
 
+export type ClubLatestNoticePreview = {
+  id: number;
+  title: string;
+};
+
 export type ClubNoticeVoteItem = {
   itemNumber: number;
   item: string;
@@ -335,6 +340,7 @@ export type CreateClubBookshelfPayload = {
 export type ClubBookshelfTopic = {
   topicId: number;
   content: string;
+  createdAt?: string;
   authorNickname: string;
   authorProfileImageUrl?: string;
   isAuthor: boolean;
@@ -350,6 +356,7 @@ export type ClubBookshelfReview = {
   bookReviewId: number;
   description: string;
   rate: number;
+  createdAt?: string;
   authorNickname: string;
   authorProfileImageUrl?: string;
   isAuthor: boolean;
@@ -359,6 +366,15 @@ export type ClubBookshelfReviewList = {
   items: ClubBookshelfReview[];
   hasNext: boolean;
   nextCursor: number | null;
+};
+
+export type CreateClubBookshelfTopicPayload = {
+  description: string;
+};
+
+export type CreateClubBookshelfReviewPayload = {
+  description: string;
+  rate: number;
 };
 
 export type ClubMeetingTeamKey = {
@@ -384,6 +400,11 @@ export type ClubMeetingInfo = {
   isStaff: boolean;
 };
 
+export type ClubMeetingMemberList = {
+  teams: ClubMeetingTeamKey[];
+  members: ClubMeetingMember[];
+};
+
 export type ClubMeetingTopic = {
   topicId: number;
   content: string;
@@ -399,6 +420,18 @@ export type ClubMeetingTeamTopics = {
   topics: ClubMeetingTopic[];
   hasNext: boolean;
   nextCursor: number | null;
+};
+
+export type ManageClubMeetingTeamsPayload = {
+  teamMemberList: Array<{
+    teamNumber: number;
+    clubMemberIds: number[];
+  }>;
+};
+
+export type ClubNextMeetingRedirect = {
+  meetingId?: number;
+  redirectUrl?: string;
 };
 
 type ApiResponseBoolean = ApiEnvelope<boolean>;
@@ -460,6 +493,7 @@ type ApiResponseBookshelfReviews = ApiEnvelope<{
   nextCursor?: number | null;
 }>;
 type ApiResponseMeetingInfo = ApiEnvelope<unknown>;
+type ApiResponseMeetingMemberList = ApiEnvelope<unknown>;
 type ApiResponseMeetingTeamTopics = ApiEnvelope<unknown>;
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -485,6 +519,31 @@ function toNumberValue(value: unknown): number | undefined {
 
 function firstDefined(...values: unknown[]): unknown {
   return values.find((value) => value !== null && typeof value !== 'undefined');
+}
+
+function buildAbsoluteApiUrl(path: string): string {
+  const normalizedPath = path.replace(/^\/+/, '').replace(/^api\//, '');
+  return new URL(normalizedPath, `${API_BASE_URL}/`).toString();
+}
+
+function extractMeetingIdFromUrl(value?: string): number | undefined {
+  if (!value) return undefined;
+
+  const patterns = [
+    /[?&]meetingId=(\d+)/i,
+    /\/meetings\/(\d+)(?:\/|$|\?)/i,
+    /\/bookshelves\/(\d+)(?:\/|$|\?)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const matched = value.match(pattern);
+    const meetingId = toNumberValue(matched?.[1]);
+    if (typeof meetingId === 'number') {
+      return meetingId;
+    }
+  }
+
+  return undefined;
 }
 
 function toClubMembershipStatus(value: unknown): ClubMembershipStatus | undefined {
@@ -578,6 +637,18 @@ function normalizeClubNoticePreview(raw: unknown): ClubNoticePreview | null {
     isPinned: toBooleanValue(record.isPinned) ?? false,
     tagCode: tag.code,
     tagDescription: tag.description,
+  };
+}
+
+function normalizeClubLatestNoticePreview(raw: unknown): ClubLatestNoticePreview | null {
+  const record = asRecord(raw);
+  if (!record) return null;
+  const id = toNumberValue(record.id);
+  if (!id) return null;
+
+  return {
+    id,
+    title: toStringValue(record.title) ?? '공지사항',
   };
 }
 
@@ -754,6 +825,7 @@ function normalizeClubBookshelfTopic(raw: unknown): ClubBookshelfTopic | null {
   return {
     topicId,
     content: toStringValue(record.content) ?? '',
+    createdAt: toStringValue(record.createdAt),
     authorNickname: authorInfo.nickname,
     authorProfileImageUrl: authorInfo.profileImageUrl,
     isAuthor: toBooleanValue(record.isAuthor) ?? false,
@@ -770,6 +842,7 @@ function normalizeClubBookshelfReview(raw: unknown): ClubBookshelfReview | null 
     bookReviewId,
     description: toStringValue(firstDefined(record.description, record.content)) ?? '',
     rate: toNumberValue(firstDefined(record.rate, record.rating)) ?? 0,
+    createdAt: toStringValue(record.createdAt),
     authorNickname: authorInfo.nickname,
     authorProfileImageUrl: authorInfo.profileImageUrl,
     isAuthor: toBooleanValue(record.isAuthor) ?? false,
@@ -800,6 +873,23 @@ function normalizeMeetingMember(raw: unknown): ClubMeetingMember | null {
     profileImageUrl: memberInfo.profileImageUrl,
     teamId: teamKey?.teamId,
     teamNumber: teamKey?.teamNumber,
+  };
+}
+
+function normalizeMeetingMemberList(raw: unknown): ClubMeetingMemberList {
+  const record = asRecord(raw);
+
+  return {
+    teams: Array.isArray(record?.existingTeams)
+      ? record.existingTeams
+          .map(normalizeTeamKey)
+          .filter((item): item is ClubMeetingTeamKey => Boolean(item))
+      : [],
+    members: Array.isArray(record?.clubMembers)
+      ? record.clubMembers
+          .map(normalizeMeetingMember)
+          .filter((item): item is ClubMeetingMember => Boolean(item))
+      : [],
   };
 }
 
@@ -1065,6 +1155,26 @@ export async function fetchClubNotices(clubId: number, page = 1): Promise<ClubNo
   };
 }
 
+export async function fetchClubLatestNotice(
+  clubId: number,
+  options?: { suppressErrorToast?: boolean },
+): Promise<ClubLatestNoticePreview | null> {
+  try {
+    const response = await requestJson<ApiEnvelope<unknown>>(`/clubs/${clubId}/notices/latest`, {
+      method: 'GET',
+      suppressErrorToast: options?.suppressErrorToast,
+    });
+
+    return normalizeClubLatestNoticePreview(unwrapResult(response));
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 export async function fetchClubNoticeDetail(
   clubId: number,
   noticeId: number,
@@ -1141,6 +1251,28 @@ export async function createClubNoticeComment(
   });
 }
 
+export async function updateClubNoticeComment(
+  clubId: number,
+  noticeId: number,
+  commentId: number,
+  payload: CreateClubNoticeCommentPayload,
+): Promise<void> {
+  await requestJson<ApiResponseString>(`/clubs/${clubId}/notices/${noticeId}/comments/${commentId}`, {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
+export async function deleteClubNoticeComment(
+  clubId: number,
+  noticeId: number,
+  commentId: number,
+): Promise<void> {
+  await requestJson<ApiResponseString>(`/clubs/${clubId}/notices/${noticeId}/comments/${commentId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function submitClubNoticeVote(
   clubId: number,
   noticeId: number,
@@ -1180,11 +1312,13 @@ export async function fetchClubBookshelves(
 export async function fetchClubBookshelfDetail(
   clubId: number,
   meetingId: number,
+  options?: { suppressErrorToast?: boolean },
 ): Promise<ClubBookshelfDetail | null> {
   const response = await requestJson<ApiResponseBookshelfDetail>(
     `/clubs/${clubId}/bookshelves/${meetingId}`,
     {
       method: 'GET',
+      suppressErrorToast: options?.suppressErrorToast,
     },
   );
 
@@ -1205,6 +1339,7 @@ export async function fetchClubBookshelfTopics(
   clubId: number,
   meetingId: number,
   cursorId?: number,
+  options?: { suppressErrorToast?: boolean },
 ): Promise<ClubBookshelfTopicList> {
   const response = await requestJson<ApiResponseBookshelfTopics>(
     `/clubs/${clubId}/bookshelves/${meetingId}/topics`,
@@ -1213,6 +1348,7 @@ export async function fetchClubBookshelfTopics(
       query: {
         cursorId,
       },
+      suppressErrorToast: options?.suppressErrorToast,
     },
   );
 
@@ -1232,6 +1368,7 @@ export async function fetchClubBookshelfReviews(
   clubId: number,
   meetingId: number,
   cursorId?: number,
+  options?: { suppressErrorToast?: boolean },
 ): Promise<ClubBookshelfReviewList> {
   const response = await requestJson<ApiResponseBookshelfReviews>(
     `/clubs/${clubId}/bookshelves/${meetingId}/reviews`,
@@ -1240,6 +1377,7 @@ export async function fetchClubBookshelfReviews(
       query: {
         cursorId,
       },
+      suppressErrorToast: options?.suppressErrorToast,
     },
   );
 
@@ -1255,15 +1393,107 @@ export async function fetchClubBookshelfReviews(
   };
 }
 
-export async function fetchClubMeeting(clubId: number, meetingId: number): Promise<ClubMeetingInfo | null> {
+export async function createClubBookshelfTopic(
+  clubId: number,
+  meetingId: number,
+  payload: CreateClubBookshelfTopicPayload,
+): Promise<void> {
+  await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves/${meetingId}/topics`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export async function createClubBookshelfReview(
+  clubId: number,
+  meetingId: number,
+  payload: CreateClubBookshelfReviewPayload,
+): Promise<void> {
+  await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves/${meetingId}/reviews`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export async function updateClubBookshelfTopic(
+  clubId: number,
+  meetingId: number,
+  topicId: number,
+  payload: CreateClubBookshelfTopicPayload,
+): Promise<void> {
+  await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves/${meetingId}/topics/${topicId}`, {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
+export async function deleteClubBookshelfTopic(
+  clubId: number,
+  meetingId: number,
+  topicId: number,
+): Promise<void> {
+  await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves/${meetingId}/topics/${topicId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function updateClubBookshelfReview(
+  clubId: number,
+  meetingId: number,
+  reviewId: number,
+  payload: CreateClubBookshelfReviewPayload,
+): Promise<void> {
+  await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves/${meetingId}/reviews/${reviewId}`, {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
+export async function deleteClubBookshelfReview(
+  clubId: number,
+  meetingId: number,
+  reviewId: number,
+): Promise<void> {
+  await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves/${meetingId}/reviews/${reviewId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function fetchClubMeeting(
+  clubId: number,
+  meetingId: number,
+  options?: { suppressErrorToast?: boolean },
+): Promise<ClubMeetingInfo | null> {
   const response = await requestJson<ApiResponseMeetingInfo>(`/clubs/${clubId}/meetings/${meetingId}`, {
     method: 'GET',
+    suppressErrorToast: options?.suppressErrorToast,
   });
 
   const result = asRecord(unwrapResult(response));
   if (!result) return null;
   const normalizedMeetingId = toNumberValue(result.meetingId);
   if (!normalizedMeetingId) return null;
+
+  const normalizedMembers = Array.isArray(result.teamMembers)
+    ? result.teamMembers.flatMap((entry) => {
+        const record = asRecord(entry);
+        const groupedMembers = Array.isArray(record?.members) ? record.members : null;
+
+        if (groupedMembers) {
+          return groupedMembers
+            .map((member) =>
+              normalizeMeetingMember({
+                ...(asRecord(member) ?? {}),
+                teamKey: firstDefined(asRecord(member)?.teamKey, record?.teamKey),
+              }),
+            )
+            .filter((item): item is ClubMeetingMember => Boolean(item));
+        }
+
+        const normalized = normalizeMeetingMember(entry);
+        return normalized ? [normalized] : [];
+      })
+    : [];
 
   return {
     meetingId: normalizedMeetingId,
@@ -1275,13 +1505,103 @@ export async function fetchClubMeeting(clubId: number, meetingId: number): Promi
           .map(normalizeTeamKey)
           .filter((item): item is ClubMeetingTeamKey => Boolean(item))
       : [],
-    members: Array.isArray(result.teamMembers)
-      ? result.teamMembers
-          .map(normalizeMeetingMember)
-          .filter((item): item is ClubMeetingMember => Boolean(item))
-      : [],
+    members: normalizedMembers,
     isStaff: toBooleanValue(result.isStaff) ?? false,
   };
+}
+
+export async function fetchClubMeetingMembers(
+  clubId: number,
+  meetingId: number,
+  options?: { suppressErrorToast?: boolean },
+): Promise<ClubMeetingMemberList> {
+  const response = await requestJson<ApiResponseMeetingMemberList>(
+    `/clubs/${clubId}/meetings/${meetingId}/members`,
+    {
+      method: 'GET',
+      suppressErrorToast: options?.suppressErrorToast,
+    },
+  );
+
+  return normalizeMeetingMemberList(unwrapResult(response));
+}
+
+export async function fetchClubNextMeetingRedirect(
+  clubId: number,
+): Promise<ClubNextMeetingRedirect | null> {
+  let response: Response;
+
+  try {
+    response = await fetch(buildAbsoluteApiUrl(`/clubs/${clubId}/meetings/next`), {
+      method: 'GET',
+      credentials: 'include',
+      redirect: 'manual',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+  } catch (error) {
+    throw new ApiError('네트워크 연결을 확인해주세요.', 0, 'NETWORK_ERROR', error);
+  }
+
+  const text = await response.text();
+  let parsed: unknown = null;
+
+  if (text) {
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = text;
+    }
+  }
+
+  const parsedResult = unwrapResult(parsed as ApiEnvelope<unknown>);
+  const resultRecord = asRecord(parsedResult);
+  const locationHeader = response.headers.get('Location') ?? response.headers.get('location') ?? undefined;
+  const redirectUrl = toStringValue(
+    firstDefined(
+      resultRecord?.redirectUrl,
+      resultRecord?.url,
+      locationHeader,
+      response.redirected ? response.url : undefined,
+    ),
+  );
+  const meetingId = toNumberValue(
+    firstDefined(
+      resultRecord?.meetingId,
+      extractMeetingIdFromUrl(redirectUrl),
+      extractMeetingIdFromUrl(locationHeader),
+      extractMeetingIdFromUrl(response.url),
+    ),
+  );
+
+  if (response.status >= 400) {
+    const parsedRecord = asRecord(parsed);
+    const message =
+      toStringValue(parsedRecord?.message) ?? `요청에 실패했습니다. (${response.status})`;
+    const code = toStringValue(parsedRecord?.code);
+    throw new ApiError(message, response.status, code, parsed);
+  }
+
+  if (!meetingId && !redirectUrl) {
+    return null;
+  }
+
+  return {
+    meetingId,
+    redirectUrl,
+  };
+}
+
+export async function manageClubMeetingTeams(
+  clubId: number,
+  meetingId: number,
+  payload: ManageClubMeetingTeamsPayload,
+): Promise<void> {
+  await requestJson<ApiResponseVoid>(`/clubs/${clubId}/meetings/${meetingId}/teams`, {
+    method: 'PUT',
+    body: payload,
+  });
 }
 
 export async function fetchClubMeetingTeamTopics(
@@ -1289,6 +1609,7 @@ export async function fetchClubMeetingTeamTopics(
   meetingId: number,
   teamId: number,
   cursorId?: number,
+  options?: { suppressErrorToast?: boolean },
 ): Promise<ClubMeetingTeamTopics> {
   const response = await requestJson<ApiResponseMeetingTeamTopics>(
     `/clubs/${clubId}/meetings/${meetingId}/teams/${teamId}/topics`,
@@ -1297,6 +1618,7 @@ export async function fetchClubMeetingTeamTopics(
       query: {
         cursorId,
       },
+      suppressErrorToast: options?.suppressErrorToast,
     },
   );
 

@@ -99,6 +99,17 @@ function toNotificationType(value: unknown): NotificationType | undefined {
   return undefined;
 }
 
+function readFirstNumber(record: UnknownRecord, keys: string[]): number | undefined {
+  for (const key of keys) {
+    const value = toNumber(record[key]);
+    if (typeof value === 'number') {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
 function normalizeNotificationItem(raw: unknown): NotificationItem | null {
   const record = asRecord(raw);
   if (!record) return null;
@@ -107,11 +118,29 @@ function normalizeNotificationItem(raw: unknown): NotificationItem | null {
   const notificationType = toNotificationType(record.notificationType);
   if (typeof notificationId !== 'number' || !notificationType) return null;
 
+  const domainId =
+    notificationType === 'LIKE' || notificationType === 'COMMENT'
+      ? readFirstNumber(record, ['domainId', 'bookStoryId', 'storyId'])
+      : notificationType === 'JOIN_CLUB' ||
+          notificationType === 'CLUB_MEETING_CREATED' ||
+          notificationType === 'CLUB_NOTICE_CREATED'
+        ? readFirstNumber(record, ['domainId', 'clubId'])
+        : readFirstNumber(record, ['domainId']);
+
+  const sourceId =
+    notificationType === 'CLUB_NOTICE_CREATED'
+      ? readFirstNumber(record, ['sourceId', 'noticeId'])
+      : notificationType === 'CLUB_MEETING_CREATED'
+        ? readFirstNumber(record, ['sourceId', 'meetingId'])
+        : notificationType === 'JOIN_CLUB'
+          ? readFirstNumber(record, ['sourceId', 'clubMemberId', 'memberId'])
+          : readFirstNumber(record, ['sourceId']);
+
   return {
     notificationId,
     notificationType,
-    domainId: toNumber(record.domainId),
-    sourceId: toNumber(record.sourceId),
+    domainId,
+    sourceId,
     displayName: toStringValue(record.displayName) ?? '',
     read: toBoolean(record.read) ?? false,
     createdAt: toStringValue(record.createdAt) ?? '',

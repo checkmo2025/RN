@@ -1,4 +1,5 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import * as Haptics from 'expo-haptics';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 
@@ -83,6 +84,11 @@ export default function BottomTabs() {
 
   return (
     <Tab.Navigator
+      screenListeners={{
+        tabPress: () => {
+          void Haptics.selectionAsync().catch(() => null);
+        },
+      }}
       screenOptions={{
         tabBarActiveTintColor: colors.primary1,
         tabBarInactiveTintColor: colors.gray4,

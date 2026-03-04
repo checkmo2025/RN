@@ -50,7 +50,7 @@ export function resolveNotificationTarget(notification: NotificationItem): Notif
     case 'JOIN_CLUB':
     case 'CLUB_MEETING_CREATED':
     case 'CLUB_NOTICE_CREATED':
-      const clubId = notification.sourceId ?? notification.domainId;
+      const clubId = notification.domainId ?? notification.sourceId;
       return {
         screen: 'Meeting',
         params: typeof clubId === 'number' ? { openClubId: clubId } : undefined,

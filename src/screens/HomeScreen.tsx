@@ -31,6 +31,7 @@ import { fetchMyProfile, fetchRecommendedMembers, setFollowingMember } from '../
 import { fetchNewsCarousel } from '../services/api/newsApi';
 import { ApiError } from '../services/api/http';
 import { toKstTimeAgoLabel } from '../utils/date';
+import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
 
@@ -271,6 +272,7 @@ export function HomeScreen() {
       if (!target) return;
       const nextSubscribed = !target.subscribed;
 
+      triggerSelectionHaptic();
       setUserRecommendations((prev) =>
         prev.map((user) =>
           user.id === id ? { ...user, subscribed: nextSubscribed } : user,
@@ -309,6 +311,7 @@ export function HomeScreen() {
       if (!target) return;
       const nextLiked = !target.liked;
 
+      triggerSelectionHaptic();
       setPosts((prev) =>
         prev.map((post) => {
           if (post.id !== id) return post;
@@ -352,6 +355,7 @@ export function HomeScreen() {
       if (!target) return;
       const nextSubscribed = !target.subscribed;
 
+      triggerSelectionHaptic();
       setPosts((prev) =>
         prev.map((post) =>
           post.id === id ? { ...post, subscribed: nextSubscribed } : post,
@@ -458,7 +462,7 @@ export function HomeScreen() {
       ) : null}
 
       <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
-        <Text style={styles.sectionTitle}>책이야기(전체)</Text>
+        <Text style={styles.sectionTitle}>책이야기</Text>
       </View>
       <View style={styles.headerToStorySpacer} />
     </View>
@@ -572,7 +576,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   headerToStorySpacer: {
-    height: spacing.md,
+    height: spacing.sm,
   },
   contentBlock: {
     width: '100%',

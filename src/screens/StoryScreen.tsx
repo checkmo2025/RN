@@ -64,6 +64,7 @@ import {
 import { ApiError } from '../services/api/http';
 import { searchBooks, type BookItem } from '../services/api/bookApi';
 import { toKstTimeAgoLabel } from '../utils/date';
+import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
 
@@ -1108,6 +1109,7 @@ export function StoryScreen() {
       if (!target || typeof target.remoteId !== 'number') return;
       const nextSubscribed = !target.subscribed;
 
+      triggerSelectionHaptic();
       const update = () => {
         setStories((prev) =>
           prev.map((story) =>
@@ -1152,6 +1154,7 @@ export function StoryScreen() {
       if (!target) return;
       const nextSubscribed = !target.subscribed;
 
+      triggerSelectionHaptic();
       setRecommendedUsers((prev) =>
         prev.map((user) =>
           user.id === id ? { ...user, subscribed: nextSubscribed } : user,
@@ -1240,6 +1243,7 @@ export function StoryScreen() {
       const remoteId = target.remoteId;
       const nextLiked = !target.liked;
 
+      triggerSelectionHaptic();
       setStories((prev) =>
         prev.map((story) => {
           if (story.id !== id) return story;
@@ -1959,95 +1963,100 @@ export function StoryScreen() {
           animationType="slide"
           onRequestClose={closeBookPicker}
         >
-          <Pressable style={styles.bookPickerBackdrop} onPress={closeBookPicker}>
-            <Pressable
-              style={styles.bookPickerSheet}
-              onPress={(event) => event.stopPropagation()}
-            >
-              <View style={styles.bookPickerHeaderRow}>
-                <Text style={styles.bookPickerHeaderText}>책 검색</Text>
-                <IconButton
-                  name="close"
-                  color={colors.gray5}
-                  size={20}
-                  onPress={closeBookPicker}
-                />
-              </View>
-              <View style={styles.bookSearchInputRow}>
-                <Pressable onPress={handleSubmitBookSearch}>
-                  <MaterialIcons name="search" size={22} color={colors.gray4} />
-                </Pressable>
-                <TextInput
-                  value={bookSearchQuery}
-                  onChangeText={setBookSearchQuery}
-                  placeholder="책 제목, 작가 이름을 검색해보세요"
-                  placeholderTextColor={colors.gray3}
-                  style={styles.bookSearchInput}
-                  onSubmitEditing={handleSubmitBookSearch}
-                  returnKeyType="search"
-                  autoFocus
-                />
-                {bookSearchQuery.length > 0 ? (
+          <KeyboardAvoidingView
+            style={styles.bookPickerModalRoot}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <Pressable style={styles.bookPickerBackdrop} onPress={closeBookPicker}>
+              <Pressable
+                style={styles.bookPickerSheet}
+                onPress={(event) => event.stopPropagation()}
+              >
+                <View style={styles.bookPickerHeaderRow}>
+                  <Text style={styles.bookPickerHeaderText}>책 검색</Text>
                   <IconButton
                     name="close"
-                    color={colors.gray4}
-                    size={18}
-                    onPress={() => {
-                      setBookSearchQuery('');
-                      setBookSearchSearched(false);
-                      setBookSearchKeyword('');
-                      setBookSearchResults([]);
-                    }}
+                    color={colors.gray5}
+                    size={20}
+                    onPress={closeBookPicker}
                   />
-                ) : null}
-              </View>
-              {bookSearchSearched ? (
-                bookSearchLoading ? (
-                  <Text style={styles.bookSearchGuideText}>검색 중...</Text>
-                ) : (
-                  <Text style={styles.bookSearchGuideText}>
-                    "{bookSearchKeyword}" 총 {bookSearchResults.length}개의 검색결과가 있습니다.
-                  </Text>
-                )
-              ) : (
-                <Text style={styles.bookSearchGuideText}>검색어를 입력하고 책을 선택해주세요.</Text>
-              )}
-
-              <ScrollView
-                style={styles.bookPickerScroll}
-                contentContainerStyle={styles.bookPickerContent}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-              >
-                {bookSearchSearched && !bookSearchLoading && bookSearchResults.length === 0 ? (
-                  <Text style={styles.bookPickerEmptyText}>검색 결과가 없습니다.</Text>
-                ) : null}
-
-                {bookSearchResults.map((bookItem, index) => (
-                  <Pressable
-                    key={`${bookItem.isbn}-${index}`}
-                    onPress={() => handleSelectBookFromSearch(bookItem)}
-                    style={styles.bookOption}
-                  >
-                    {bookItem.imgUrl ? (
-                      <Image source={{ uri: bookItem.imgUrl }} style={styles.bookThumb} />
-                    ) : (
-                      <View style={styles.bookThumb} />
-                    )}
-                    <View style={styles.bookInfo}>
-                      <Text style={styles.bookTitle} numberOfLines={2}>
-                        {bookItem.title}
-                      </Text>
-                      <Text style={styles.bookAuthor}>{bookItem.author}</Text>
-                      <Text style={styles.bookDescription} numberOfLines={2}>
-                        {bookItem.description || bookItem.publisher || '책 설명이 없습니다.'}
-                      </Text>
-                    </View>
+                </View>
+                <View style={styles.bookSearchInputRow}>
+                  <Pressable onPress={handleSubmitBookSearch}>
+                    <MaterialIcons name="search" size={22} color={colors.gray4} />
                   </Pressable>
-                ))}
-              </ScrollView>
+                  <TextInput
+                    value={bookSearchQuery}
+                    onChangeText={setBookSearchQuery}
+                    placeholder="책 제목, 작가 이름을 검색해보세요"
+                    placeholderTextColor={colors.gray3}
+                    style={styles.bookSearchInput}
+                    onSubmitEditing={handleSubmitBookSearch}
+                    returnKeyType="search"
+                    autoFocus
+                  />
+                  {bookSearchQuery.length > 0 ? (
+                    <IconButton
+                      name="close"
+                      color={colors.gray4}
+                      size={18}
+                      onPress={() => {
+                        setBookSearchQuery('');
+                        setBookSearchSearched(false);
+                        setBookSearchKeyword('');
+                        setBookSearchResults([]);
+                      }}
+                    />
+                  ) : null}
+                </View>
+                {bookSearchSearched ? (
+                  bookSearchLoading ? (
+                    <Text style={styles.bookSearchGuideText}>검색 중...</Text>
+                  ) : (
+                    <Text style={styles.bookSearchGuideText}>
+                      "{bookSearchKeyword}" 총 {bookSearchResults.length}개의 검색결과가 있습니다.
+                    </Text>
+                  )
+                ) : (
+                  <Text style={styles.bookSearchGuideText}>검색어를 입력하고 책을 선택해주세요.</Text>
+                )}
+
+                <ScrollView
+                  style={styles.bookPickerScroll}
+                  contentContainerStyle={styles.bookPickerContent}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  {bookSearchSearched && !bookSearchLoading && bookSearchResults.length === 0 ? (
+                    <Text style={styles.bookPickerEmptyText}>검색 결과가 없습니다.</Text>
+                  ) : null}
+
+                  {bookSearchResults.map((bookItem, index) => (
+                    <Pressable
+                      key={`${bookItem.isbn}-${index}`}
+                      onPress={() => handleSelectBookFromSearch(bookItem)}
+                      style={styles.bookOption}
+                    >
+                      {bookItem.imgUrl ? (
+                        <Image source={{ uri: bookItem.imgUrl }} style={styles.bookThumb} />
+                      ) : (
+                        <View style={styles.bookThumb} />
+                      )}
+                      <View style={styles.bookInfo}>
+                        <Text style={styles.bookTitle} numberOfLines={2}>
+                          {bookItem.title}
+                        </Text>
+                        <Text style={styles.bookAuthor}>{bookItem.author}</Text>
+                        <Text style={styles.bookDescription} numberOfLines={2}>
+                          {bookItem.description || bookItem.publisher || '책 설명이 없습니다.'}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </Pressable>
             </Pressable>
-          </Pressable>
+          </KeyboardAvoidingView>
         </Modal>
         </KeyboardAvoidingView>
       </ScreenLayout>
@@ -2378,6 +2387,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.overlay30,
     justifyContent: 'flex-end',
+  },
+  bookPickerModalRoot: {
+    flex: 1,
   },
   bookPickerSheet: {
     backgroundColor: colors.white,
