@@ -3,6 +3,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../../theme';
+import { DefaultProfileAvatar } from '../../common/DefaultProfileAvatar';
 
 type Props = {
   authorName: string;
@@ -39,7 +40,7 @@ export default function BookStoryCardLarge({
     <Pressable style={styles.card} onPress={onPress}>
       <View style={styles.headerRow}>
         <View style={styles.avatar}>
-          <MaterialIcons name="person-outline" size={24} color={colors.gray5} />
+          <DefaultProfileAvatar size={32} />
           {profileImgSrc ? (
             <Image source={{ uri: profileImgSrc }} style={styles.avatarImg} />
           ) : null}

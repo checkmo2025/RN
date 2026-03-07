@@ -30,6 +30,7 @@ type RequestOptions = {
   query?: Record<string, QueryValue>;
   body?: unknown;
   headers?: Record<string, string>;
+  credentials?: RequestCredentials;
   suppressErrorToast?: boolean;
 };
 
@@ -55,6 +56,7 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
     query,
     body,
     headers = {},
+    credentials = 'include',
     suppressErrorToast = false,
   } = options;
 
@@ -72,7 +74,7 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
       method,
       headers: requestHeaders,
       body: typeof body !== 'undefined' ? JSON.stringify(body) : undefined,
-      credentials: 'include',
+      credentials,
     });
   } catch (error) {
     const message = '네트워크 연결을 확인해주세요.';

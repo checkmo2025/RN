@@ -56,11 +56,14 @@ const logoUri = Image.resolveAssetSource(
 const searchUri = Image.resolveAssetSource(
   require('../../../assets/header/header-search.svg'),
 ).uri;
+const searchDarkUri = Image.resolveAssetSource(
+  require('../../../assets/icons/search.svg'),
+).uri;
 const alarmUri = Image.resolveAssetSource(
   require('../../../assets/header/header-alarm.svg'),
 ).uri;
 const writeIconUri = Image.resolveAssetSource(
-  require('../../../assets/write-floating.svg'),
+  require('../../../assets/icons/pencil_icon.svg'),
 ).uri;
 const ALADIN_RANKING_URL =
   'https://www.aladin.co.kr/shop/common/wbest.aspx?BranchType=1&srsltid=AfmBOornQyMCOv3ygMSCscA9kqmQE8y9CQqvGYao_g_7dvR9B_VXPBll';
@@ -805,11 +808,7 @@ export function AppHeader(props: Props) {
                       hitSlop={8}
                       style={styles.searchPageSubmitButton}
                     >
-                      <MaterialIcons
-                        name="search"
-                        size={22}
-                        color={query.trim().length > 0 ? colors.primary1 : colors.gray3}
-                      />
+                      <SvgUri uri={searchDarkUri} width={24} height={24} />
                     </Pressable>
                   </View>
 
@@ -888,12 +887,6 @@ export function AppHeader(props: Props) {
                     style={styles.detailBackRow}
                     onPress={() => {
                       setSearchStage('results');
-                      setQuery('');
-                      setSearched(false);
-                      setSearchedKeyword('');
-                      setSearchResults([]);
-                      setSelectedBook(null);
-                      setBookStories([]);
                     }}
                   >
                     <MaterialIcons name="chevron-left" size={20} color={colors.gray5} />

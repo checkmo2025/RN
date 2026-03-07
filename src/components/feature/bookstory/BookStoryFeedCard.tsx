@@ -10,6 +10,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../../theme';
+import { DefaultProfileAvatar } from '../../common/DefaultProfileAvatar';
 
 type Props = {
   authorName: string;
@@ -66,7 +67,7 @@ export default function BookStoryFeedCard({
               {profileImgSrc ? (
                 <Image source={{ uri: profileImgSrc }} style={styles.avatarImg} />
               ) : (
-                <MaterialIcons name="person-outline" size={22} color={colors.gray4} />
+                <DefaultProfileAvatar size={32} />
               )}
             </View>
             <View style={styles.meta}>
@@ -82,7 +83,7 @@ export default function BookStoryFeedCard({
               {profileImgSrc ? (
                 <Image source={{ uri: profileImgSrc }} style={styles.avatarImg} />
               ) : (
-                <MaterialIcons name="person-outline" size={22} color={colors.gray4} />
+                <DefaultProfileAvatar size={32} />
               )}
             </View>
             <View style={styles.meta}>

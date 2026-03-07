@@ -12,6 +12,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
 import { colors, radius, spacing, typography } from '../../../theme';
+import { DefaultProfileAvatar } from '../../common/DefaultProfileAvatar';
 
 type Props = {
   author: string;
@@ -63,7 +64,7 @@ export function BookStoryCard({
           }}
         >
           <View style={styles.avatar}>
-            <MaterialIcons name="person-outline" size={24} color={colors.gray5} />
+            <DefaultProfileAvatar size={32} />
           </View>
           <View style={styles.meta}>
             <Text style={styles.author}>{author}</Text>

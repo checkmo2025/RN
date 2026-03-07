@@ -167,12 +167,32 @@ export async function findEmailByNamePhone(
   name: string,
   phoneNumber: string,
 ): Promise<string | null> {
+  try {
+    const response = await requestJson<ApiEnvelope<FindEmailResult>>('/members/find-email', {
+      method: 'POST',
+      body: {
+        name,
+        phoneNumber,
+      },
+      credentials: 'omit',
+      suppressErrorToast: true,
+    });
+    const result = unwrapResult(response);
+    return typeof result?.email === 'string' ? result.email : null;
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 401) {
+      throw error;
+    }
+  }
+
+  // Backend auth filter issue 대응: POST가 401일 때 GET으로 한 번 더 조회합니다.
   const response = await requestJson<ApiEnvelope<FindEmailResult>>('/members/find-email', {
     method: 'GET',
     query: {
       name,
       phoneNumber,
     },
+    credentials: 'omit',
   });
   const result = unwrapResult(response);
   return typeof result?.email === 'string' ? result.email : null;
@@ -184,6 +204,7 @@ export async function sendTemporaryPassword(email: string): Promise<void> {
     query: {
       email,
     },
+    credentials: 'omit',
   });
 }
 

@@ -21,6 +21,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import * as ImagePicker from 'expo-image-picker';
 
 import { colors, radius, spacing, typography } from '../theme';
+import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { issueProfileImageUploadUrl, logoutSession } from '../services/api/authApi';
@@ -1469,13 +1470,13 @@ export function MyPageScreen() {
       </View>
 
       <View style={styles.followProfileArea}>
-        {profileImageUrl ? (
-          <Image source={{ uri: profileImageUrl }} style={styles.followProfileAvatarImage} />
-        ) : (
-          <View style={styles.followProfileAvatar}>
-            <MaterialIcons name="person" size={44} color={profileDefaultColor} />
-          </View>
-        )}
+        <View style={styles.followProfileAvatar}>
+          {profileImageUrl ? (
+            <Image source={{ uri: profileImageUrl }} style={styles.followProfileAvatarImage} />
+          ) : (
+            <DefaultProfileAvatar size={92} />
+          )}
+        </View>
         <Text style={styles.followProfileName}>{profileName}</Text>
       </View>
 
@@ -1527,13 +1528,13 @@ export function MyPageScreen() {
               style={({ pressed }) => [styles.followUserMeta, pressed && styles.pressed]}
               onPress={() => openMemberProfile(user.nickname)}
             >
-              {user.profileImageUrl ? (
-                <Image source={{ uri: user.profileImageUrl }} style={styles.followUserAvatarImage} />
-              ) : (
-                <View style={styles.followUserAvatar}>
-                  <MaterialIcons name="person" size={18} color={colors.gray3} />
-                </View>
-              )}
+              <View style={styles.followUserAvatar}>
+                {user.profileImageUrl ? (
+                  <Image source={{ uri: user.profileImageUrl }} style={styles.followUserAvatarImage} />
+                ) : (
+                  <DefaultProfileAvatar size={28} />
+                )}
+              </View>
               <Text style={styles.followUserName}>{user.nickname}</Text>
             </Pressable>
 
@@ -2303,13 +2304,13 @@ export function MyPageScreen() {
         </View>
 
         <View style={styles.profileRow}>
-          {profileImageUrl ? (
-            <Image source={{ uri: profileImageUrl }} style={styles.profileAvatarImage} />
-          ) : (
-            <View style={styles.profileAvatar}>
-              <MaterialIcons name="person" size={36} color={profileDefaultColor} />
-            </View>
-          )}
+          <View style={styles.profileAvatar}>
+            {profileImageUrl ? (
+              <Image source={{ uri: profileImageUrl }} style={styles.profileAvatarImage} />
+            ) : (
+              <DefaultProfileAvatar size={64} />
+            )}
+          </View>
           <View style={styles.profileMeta}>
             <Text style={styles.profileName}>{profileName}</Text>
             <View style={styles.profileFollowRow}>
@@ -2835,14 +2836,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.white,
+    overflow: 'hidden',
   },
   followProfileAvatarImage: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-    borderWidth: 1,
-    borderColor: colors.subbrown3,
-    backgroundColor: colors.white,
+    width: '100%',
+    height: '100%',
   },
   followProfileName: {
     ...typography.subhead3,
@@ -2898,12 +2896,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray1,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   followUserAvatarImage: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.gray1,
+    width: '100%',
+    height: '100%',
   },
   followUserName: {
     ...typography.body1_3,

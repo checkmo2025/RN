@@ -12,8 +12,6 @@ export type UserRecommendation = {
   nickname: string;
   subscribed: boolean;
   profileImageUrl?: string;
-  followingCount?: number;
-  followerCount?: number;
 };
 
 type Props = {
@@ -72,8 +70,6 @@ export default function HomeColumns({
             key={user.id}
             nickname={user.nickname}
             profileImageUrl={user.profileImageUrl}
-            followingCount={user.followingCount}
-            followerCount={user.followerCount}
             subscribed={user.subscribed}
             onPressSubscribe={() => onToggleSubscribe(user.id)}
           />

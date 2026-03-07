@@ -1,14 +1,12 @@
-import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Image, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 import { colors, radius, spacing, typography } from '../../../theme';
+import { DefaultProfileAvatar } from '../../common/DefaultProfileAvatar';
 
 type Props = {
   nickname: string;
   profileImageUrl?: string;
-  followingCount?: number;
-  followerCount?: number;
   subscribed?: boolean;
   onPressSubscribe?: () => void;
   onPressProfile?: () => void;
@@ -18,8 +16,6 @@ type Props = {
 export default function SubscribeUserItem({
   nickname,
   profileImageUrl,
-  followingCount,
-  followerCount,
   subscribed = false,
   onPressSubscribe,
   onPressProfile,
@@ -35,15 +31,12 @@ export default function SubscribeUserItem({
           {profileImageUrl ? (
             <Image source={{ uri: profileImageUrl }} style={styles.avatarImage} />
           ) : (
-            <MaterialIcons name="person" size={30} color={colors.gray3} />
+            <DefaultProfileAvatar size={42} />
           )}
         </View>
 
         <View style={styles.textCol}>
           <Text style={styles.nickname}>{nickname}</Text>
-          <Text style={styles.metaText}>
-            구독중 {followingCount ?? '-'} 구독자 {followerCount ?? '-'}
-          </Text>
         </View>
       </Pressable>
 
@@ -100,15 +93,10 @@ const styles = StyleSheet.create({
   },
   textCol: {
     flex: 1,
-    gap: 1,
   },
   nickname: {
     ...typography.body1_2,
     color: colors.gray6,
-  },
-  metaText: {
-    ...typography.body2_3,
-    color: colors.gray3,
   },
   subscribeButton: {
     minWidth: 82,

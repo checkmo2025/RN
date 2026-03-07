@@ -258,6 +258,14 @@ const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[!@#$%^&*]).{6,12}$/;
 const phoneRegex = /^01(?:0|1|[6-9])-(?:\d{3}|\d{4})-\d{4}$/;
 const VERIFICATION_COUNTDOWN_SECONDS = 10 * 60;
 
+function formatPhoneNumberInput(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  if (digits.length <= 10) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+}
+
 function inferMimeType(fileName?: string, fallback?: string): string {
   if (typeof fallback === 'string' && fallback.startsWith('image/')) return fallback;
   const lower = (fileName ?? '').toLowerCase();
@@ -798,7 +806,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
   const handleFindEmail = async () => {
     const normalizedName = findName.trim();
-    const normalizedPhone = findPhoneNumber.trim();
+    const normalizedPhone = formatPhoneNumberInput(findPhoneNumber.trim());
 
     if (!normalizedName || !normalizedPhone) {
       showToast('이름과 전화번호를 입력해주세요.');
@@ -811,6 +819,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
     setFindEmailSubmitting(true);
     try {
+      setFindPhoneNumber(normalizedPhone);
       const email = await findEmailByNamePhone(normalizedName, normalizedPhone);
       if (!email) {
         showToast('가입된 이메일을 찾지 못했습니다.');
@@ -1360,7 +1369,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           <Text style={styles.label}>전화번호</Text>
           <TextInput
             value={phoneNumber}
-            onChangeText={setPhoneNumber}
+            onChangeText={(value) => setPhoneNumber(formatPhoneNumberInput(value))}
             placeholder="010-0000-0000"
             style={styles.input}
             placeholderTextColor={colors.gray3}
@@ -1581,7 +1590,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           />
           <TextInput
             value={findPhoneNumber}
-            onChangeText={setFindPhoneNumber}
+            onChangeText={(value) => setFindPhoneNumber(formatPhoneNumberInput(value))}
             placeholder="전화번호"
             style={styles.input}
             placeholderTextColor={colors.gray3}
@@ -1768,14 +1777,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     top: 0,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    paddingVertical: spacing.xs / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.gray2,
-    backgroundColor: colors.gray1,
   },
   cardHeader: {
     alignItems: 'center',

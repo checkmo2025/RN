@@ -25,6 +25,10 @@ import { colors, radius, spacing, typography } from '../theme';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import {
+  NewsPromotionCarousel,
+  type NewsPromotionCarouselItem,
+} from '../components/feature/news/NewsPromotionCarousel';
+import {
   fetchNewsCarousel,
   fetchNewsDetail,
   fetchNewsList,
@@ -158,18 +162,15 @@ export function NewsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { width } = useWindowDimensions();
-  const promotionWidth = width - spacing.xl * 2;
-  const promotionStep = promotionWidth + spacing.sm;
+  const horizontalInset = width >= 768 ? spacing.xl : spacing.md;
   const [selected, setSelected] = useState<NewsItem | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingNews, setLoadingNews] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [activeSlide, setActiveSlide] = useState(0);
   const [promotions, setPromotions] = useState<NewsItem[]>(fallbackPromotions);
   const [items, setItems] = useState<NewsItem[]>([]);
   const [recommendedBooks, setRecommendedBooks] = useState<RecommendedBook[]>([]);
   const detailTranslateX = useRef(new Animated.Value(0)).current;
-  const carouselRef = useRef<ScrollView | null>(null);
 
   const animateTransition = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -199,7 +200,6 @@ export function NewsScreen() {
 
       setItems(mappedList);
       setPromotions(mappedPromotions);
-      setActiveSlide((prev) => Math.min(prev, Math.max(0, mappedPromotions.length - 1)));
     } catch (error) {
       setPromotions(fallbackPromotions);
       if (error instanceof ApiError) return;
@@ -323,25 +323,6 @@ export function NewsScreen() {
     openNewsDetailById(newsId);
   }, [navigation, openNewsDetailById, route.params?.openNewsId]);
 
-  useEffect(() => {
-    if (selected || promotions.length <= 1) return;
-
-    const intervalId = setInterval(() => {
-      setActiveSlide((prev) => {
-        const next = prev >= promotions.length - 1 ? 0 : prev + 1;
-        carouselRef.current?.scrollTo({
-          x: next * promotionStep,
-          animated: true,
-        });
-        return next;
-      });
-    }, 3000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [promotionStep, promotions.length, selected]);
-
   const handleRefresh = () => {
     setRefreshing(true);
     const refresh = async () => {
@@ -378,6 +359,17 @@ export function NewsScreen() {
       && Math.abs(gestureState.dy) < DETAIL_BACK_ACTIVATE_MAX_DY
     );
   }, [selected]);
+
+  const promotionCarouselItems = useMemo<NewsPromotionCarouselItem[]>(
+    () =>
+      promotions.map((promo) => ({
+        id: promo.id,
+        title: promo.title,
+        description: promo.excerpt,
+        imageUri: promo.cover,
+      })),
+    [promotions],
+  );
 
   const detailBackSwipeResponder = useMemo(
     () =>
@@ -494,49 +486,16 @@ export function NewsScreen() {
           keyExtractor={(item) => item.id}
           ListHeaderComponent={
             <View style={styles.headerWrap}>
-              <ScrollView
-                ref={carouselRef}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                snapToInterval={promotionStep}
-                disableIntervalMomentum
-                onScroll={(event) => {
-                  const index = Math.round(
-                    event.nativeEvent.contentOffset.x / promotionStep,
-                  );
-                  const safeIndex = Math.max(0, Math.min(promotions.length - 1, index));
-                  setActiveSlide(safeIndex);
-                }}
-                scrollEventThrottle={16}
-                decelerationRate="fast"
-                contentContainerStyle={styles.carousel}
-              >
-                {promotions.map((promo) => (
-                  <Pressable key={promo.id} style={styles.promoWrapper} onPress={() => onSelect(promo)}>
-                    <ImageBackground
-                      source={promo.cover ? { uri: promo.cover } : undefined}
-                      style={[styles.promoCard, { width: promotionWidth }]}
-                    >
-                      <View style={styles.promoGradient} />
-                      <View style={styles.promoContent}>
-                        <Text style={styles.promoTitle}>{promo.title}</Text>
-                        <Text style={styles.promoDesc}>{promo.excerpt}</Text>
-                      </View>
-                    </ImageBackground>
-                  </Pressable>
-                ))}
-              </ScrollView>
-              <View style={styles.dots}>
-                {promotions.map((promo, index) => (
-                  <View
-                    key={promo.id}
-                    style={[
-                      styles.dot,
-                      index === activeSlide ? styles.dotActive : null,
-                      index === activeSlide ? styles.dotActiveSize : null,
-                    ]}
-                  />
-                ))}
+              <View style={styles.carouselFullBleed}>
+                <NewsPromotionCarousel
+                  items={promotionCarouselItems}
+                  horizontalInset={horizontalInset}
+                  onPressItem={(index) => {
+                    const target = promotions[index];
+                    if (!target) return;
+                    onSelect(target);
+                  }}
+                />
               </View>
               <View style={styles.recommendedSection}>
                 <Text style={styles.recommendedTitle}>오늘의 추천 책</Text>
@@ -619,6 +578,9 @@ const styles = StyleSheet.create({
   },
   headerWrap: {
     marginBottom: spacing.md,
+  },
+  carouselFullBleed: {
+    marginHorizontal: -spacing.md,
   },
   carousel: {
     paddingVertical: spacing.xs,

@@ -18,6 +18,7 @@ import { SvgUri } from 'react-native-svg';
 
 import { colors, radius, spacing, typography } from '../theme';
 import { navigateToHome } from '../navigation/navigateToHome';
+import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import { useAuthGate } from '../contexts/AuthGateContext';
@@ -438,7 +439,7 @@ export function UserProfileScreen() {
               {profile?.profileImageUrl ? (
                 <Image source={{ uri: profile.profileImageUrl }} style={styles.profileAvatarImage} />
               ) : (
-                <MaterialIcons name="person" size={48} color={colors.gray3} />
+                <DefaultProfileAvatar size={96} />
               )}
             </View>
             <View style={styles.profileMeta}>

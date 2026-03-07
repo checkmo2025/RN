@@ -8,16 +8,14 @@ import {
   View,
   useWindowDimensions,
   Image,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import { colors, radius, spacing, typography } from '../theme';
 import { ScreenLayout } from '../components/common/ScreenLayout';
-import HomePromotions, { Promotion } from '../components/feature/home/HomePromotions';
 import HomePostCard from '../components/feature/home/HomePostCard';
 import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
+import { NewsPromotionCarousel, type NewsPromotionCarouselItem } from '../components/feature/news/NewsPromotionCarousel';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { resolveHomeAccessPolicy } from '../constants/homeAccessPolicy';
 import {
@@ -28,7 +26,6 @@ import {
   type RemoteStoryItem,
 } from '../services/api/bookStoryApi';
 import {
-  fetchMemberProfile,
   fetchMyProfile,
   fetchRecommendedMembers,
   setFollowingMember,
@@ -62,8 +59,6 @@ type UserRecommendation = {
   nickname: string;
   subscribed: boolean;
   profileImageUrl?: string;
-  followingCount?: number;
-  followerCount?: number;
 };
 
 const defaultPromotionImages = [
@@ -72,7 +67,7 @@ const defaultPromotionImages = [
   Image.resolveAssetSource(require('../../assets/images/news_sample3.png')).uri,
 ];
 
-const defaultPromotions: Promotion[] = [
+const defaultPromotions: NewsPromotionCarouselItem[] = [
   {
     id: 'p1',
     title: '봄메이트',
@@ -99,16 +94,13 @@ export function HomeScreen() {
   const accessPolicy = resolveHomeAccessPolicy({ isLoggedIn });
   const { width } = useWindowDimensions();
   const horizontalInset = width >= 768 ? spacing.xl : spacing.md;
-  const promotionWidth = Math.max(260, width - horizontalInset * 2);
-  const promotionStep = promotionWidth + spacing.sm;
-  const [activeSlide, setActiveSlide] = useState(0);
   const [userRecommendations, setUserRecommendations] = useState<UserRecommendation[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [myNickname, setMyNickname] = useState('');
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [loadingMorePosts, setLoadingMorePosts] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [promotions, setPromotions] = useState<Promotion[]>(defaultPromotions);
+  const [promotions, setPromotions] = useState<NewsPromotionCarouselItem[]>(defaultPromotions);
   const loadingPostsRef = useRef(false);
   const loadingMorePostsRef = useRef(false);
   const hasNextPostsRef = useRef(true);
@@ -127,32 +119,14 @@ export function HomeScreen() {
         return;
       }
 
-      const enriched = await Promise.all(
-        users.slice(0, 3).map(async (user) => {
-          try {
-            const profile = await fetchMemberProfile(user.nickname);
-            return {
-              id: user.nickname,
-              nickname: user.nickname,
-              profileImageUrl: user.profileImageUrl ?? profile?.profileImageUrl,
-              followingCount: profile?.followingCount ?? user.followingCount,
-              followerCount: profile?.followerCount ?? user.followerCount,
-              subscribed: Boolean(profile?.following),
-            };
-          } catch {
-            return {
-              id: user.nickname,
-              nickname: user.nickname,
-              profileImageUrl: user.profileImageUrl,
-              followingCount: user.followingCount,
-              followerCount: user.followerCount,
-              subscribed: false,
-            };
-          }
-        }),
+      setUserRecommendations(
+        users.slice(0, 3).map((user) => ({
+          id: user.nickname,
+          nickname: user.nickname,
+          profileImageUrl: user.profileImageUrl,
+          subscribed: false,
+        })),
       );
-
-      setUserRecommendations(enriched);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         setUserRecommendations([]);
@@ -414,14 +388,6 @@ export function HomeScreen() {
     void refresh();
   };
 
-  const handlePromotionScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const rawIndex = Math.round(event.nativeEvent.contentOffset.x / promotionStep);
-    const safeIndex = Math.max(0, Math.min(promotions.length - 1, rawIndex));
-    if (safeIndex !== activeSlide) {
-      setActiveSlide(safeIndex);
-    }
-  };
-
   const openUserProfile = useCallback(
     (nickname: string) => {
       const memberNickname = nickname.trim();
@@ -461,14 +427,7 @@ export function HomeScreen() {
       <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
         <Text style={styles.sectionTitle}>소식</Text>
       </View>
-      <HomePromotions
-        promotions={promotions}
-        horizontalInset={horizontalInset}
-        promotionWidth={promotionWidth}
-        promotionStep={promotionStep}
-        activeSlide={activeSlide}
-        onScroll={handlePromotionScroll}
-      />
+      <NewsPromotionCarousel items={promotions} horizontalInset={horizontalInset} />
       {isLoggedIn ? (
         <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
           <View style={styles.userRecommendationCard}>
@@ -480,8 +439,6 @@ export function HomeScreen() {
                     key={user.id}
                     nickname={user.nickname}
                     profileImageUrl={user.profileImageUrl}
-                    followingCount={user.followingCount}
-                    followerCount={user.followerCount}
                     subscribed={user.subscribed}
                     onPressProfile={() => openUserProfile(user.nickname)}
                     onPressSubscribe={() => handleSubscribeToggle(user.id)}

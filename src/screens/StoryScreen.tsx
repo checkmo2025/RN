@@ -30,6 +30,7 @@ import * as Clipboard from 'expo-clipboard';
 import { colors, radius, spacing, typography } from '../theme';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
+import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { IconButton } from '../components/common/IconButton';
@@ -138,8 +139,6 @@ type RecommendedUser = {
   id: string;
   nickname: string;
   profileImageUrl?: string;
-  followerCount?: number;
-  followingCount?: number;
   subscribed: boolean;
 };
 
@@ -594,8 +593,6 @@ export function StoryScreen() {
           id: user.nickname,
           nickname: user.nickname,
           profileImageUrl: user.profileImageUrl,
-          followerCount: user.followerCount,
-          followingCount: user.followingCount,
           subscribed: false,
         })),
       );
@@ -1552,11 +1549,7 @@ export function StoryScreen() {
               {selectedStory.profileImageUrl ? (
                 <Image source={{ uri: selectedStory.profileImageUrl }} style={styles.storyAvatarImage} />
               ) : (
-                <MaterialIcons
-                  name="person-outline"
-                  size={28}
-                  color={colors.gray5}
-                />
+                <DefaultProfileAvatar size={32} />
               )}
             </View>
             <View style={styles.detailAuthorBlock}>
@@ -1692,11 +1685,11 @@ export function StoryScreen() {
                   style={styles.commentItem}
                 >
                   <View style={styles.commentAvatar}>
-                    <MaterialIcons
-                      name="person-outline"
-                      size={20}
-                      color={colors.gray5}
-                    />
+                    {comment.profileImageUrl ? (
+                      <Image source={{ uri: comment.profileImageUrl }} style={styles.commentAvatarImage} />
+                    ) : (
+                      <DefaultProfileAvatar size={28} />
+                    )}
                   </View>
                   <View style={styles.commentBody}>
                     <View style={styles.commentHeaderRow}>
@@ -2146,8 +2139,6 @@ export function StoryScreen() {
                       key={user.id}
                       nickname={user.nickname}
                       profileImageUrl={user.profileImageUrl}
-                      followingCount={user.followingCount}
-                      followerCount={user.followerCount}
                       subscribed={user.subscribed}
                       onPressProfile={() => openUserProfile(user.nickname)}
                       onPressSubscribe={() => handleToggleRecommendedSubscribe(user.id)}
@@ -2799,6 +2790,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray1,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  commentAvatarImage: {
+    width: '100%',
+    height: '100%',
   },
   commentBody: {
     flex: 1,
