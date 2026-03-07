@@ -322,19 +322,12 @@ export type ClubBookshelfDetail = {
 };
 
 export type CreateClubBookshelfPayload = {
+  isbn: string;
   title?: string;
   meetingTime?: string;
   location?: string;
-  generation: number;
+  generation?: number;
   tag?: string;
-  bookInfo: {
-    isbn?: string;
-    title?: string;
-    author?: string;
-    imgUrl?: string;
-    publisher?: string;
-    description?: string;
-  };
 };
 
 export type ClubBookshelfTopic = {

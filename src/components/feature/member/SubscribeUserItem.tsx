@@ -51,7 +51,14 @@ export default function SubscribeUserItem({
         style={[styles.subscribeButton, subscribed ? styles.subscribeButtonActive : null]}
         onPress={onPressSubscribe}
       >
-        <Text style={styles.subscribeButtonText}>{subscribed ? '구독중' : '구독'}</Text>
+        <Text
+          style={[
+            styles.subscribeButtonText,
+            subscribed ? styles.subscribeButtonTextActive : styles.subscribeButtonTextInactive,
+          ]}
+        >
+          {subscribed ? '구독중' : '구독'}
+        </Text>
       </Pressable>
     </View>
   );
@@ -113,10 +120,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary1,
   },
   subscribeButtonActive: {
-    backgroundColor: colors.subbrown2,
+    backgroundColor: colors.subbrown4,
   },
   subscribeButtonText: {
     ...typography.body1_2,
+  },
+  subscribeButtonTextActive: {
+    color: colors.primary3,
+  },
+  subscribeButtonTextInactive: {
     color: colors.white,
   },
   pressed: {

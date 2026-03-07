@@ -5,6 +5,7 @@ import {
   FlatList,
   GestureResponderEvent,
   KeyboardAvoidingView,
+  LayoutChangeEvent,
   PanResponder,
   PanResponderGestureState,
   Modal,
@@ -167,6 +168,7 @@ const DETAIL_BACK_TRIGGER_DISTANCE = 72;
 const DETAIL_BACK_ACTIVATE_MAX_DY = 16;
 const DETAIL_BACK_TRIGGER_MAX_DY = 60;
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
+const ISBN13_REGEX = /^\d{13}$/;
 
 async function waitForMinimumLoading(startedAt: number, minimumMs = MIN_BOOK_FLIP_LOADING_MS) {
   const elapsed = Date.now() - startedAt;
@@ -266,8 +268,11 @@ export function StoryScreen() {
   const [submittingReport, setSubmittingReport] = useState(false);
   const [submittingStory, setSubmittingStory] = useState(false);
   const listRef = useRef<FlatList<StoryFeedItem>>(null);
+  const detailScrollRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
   const inlineReplyInputRef = useRef<TextInput>(null);
+  const commentSectionYRef = useRef(0);
+  const pendingDetailFocusRef = useRef<'comments' | null>(null);
   const writeIconUri = Image.resolveAssetSource(require('../../assets/icons/pencil_icon.svg')).uri;
   const detailTranslateX = useRef(new Animated.Value(0)).current;
 
@@ -286,7 +291,31 @@ export function StoryScreen() {
     setCommentMenu(null);
     setStoryMenu(null);
     setCommentInput('');
+    pendingDetailFocusRef.current = null;
+    commentSectionYRef.current = 0;
   }, [animateTransition, detailTranslateX]);
+
+  const scrollToCommentSection = useCallback((animated = true) => {
+    if (commentSectionYRef.current <= 0) return false;
+    detailScrollRef.current?.scrollTo({
+      y: Math.max(0, commentSectionYRef.current - spacing.sm),
+      animated,
+    });
+    return true;
+  }, []);
+
+  const handleCommentSectionLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      commentSectionYRef.current = event.nativeEvent.layout.y;
+
+      if (pendingDetailFocusRef.current !== 'comments') return;
+      requestAnimationFrame(() => {
+        if (!scrollToCommentSection(true)) return;
+        pendingDetailFocusRef.current = null;
+      });
+    },
+    [scrollToCommentSection],
+  );
 
   const isDetailBackSwipe = useCallback((gestureState: PanResponderGestureState) => {
     if (!selectedStory) return false;
@@ -724,42 +753,47 @@ export function StoryScreen() {
     [applyStoryUpdate, isLoggedIn],
   );
 
-  const openStoryDetailByRemoteId = useCallback(async (remoteId: number) => {
-    if (!Number.isInteger(remoteId) || remoteId <= 0) return;
+  const openStoryDetailByRemoteId = useCallback(
+    async (remoteId: number, options?: { focusComments?: boolean }) => {
+      if (!Number.isInteger(remoteId) || remoteId <= 0) return;
+      pendingDetailFocusRef.current = options?.focusComments ? 'comments' : null;
+      commentSectionYRef.current = 0;
 
-    animateTransition();
-    detailTranslateX.stopAnimation(() => {
-      detailTranslateX.setValue(0);
-    });
-    setIsComposing(false);
-    setEditingStoryId(null);
-    setCommentInput('');
-    setEditingCommentId(null);
-    setReplyTarget(null);
-    setCommentMenu(null);
-    setStoryMenu(null);
+      animateTransition();
+      detailTranslateX.stopAnimation(() => {
+        detailTranslateX.setValue(0);
+      });
+      setIsComposing(false);
+      setEditingStoryId(null);
+      setCommentInput('');
+      setEditingCommentId(null);
+      setReplyTarget(null);
+      setCommentMenu(null);
+      setStoryMenu(null);
 
-    try {
-      const detail = await fetchBookStoryDetail(remoteId, {
-        viewerAuthenticated: isLoggedIn,
-      });
-      if (!detail) {
-        showToast('해당 책이야기를 찾을 수 없습니다.');
-        return;
+      try {
+        const detail = await fetchBookStoryDetail(remoteId, {
+          viewerAuthenticated: isLoggedIn,
+        });
+        if (!detail) {
+          showToast('해당 책이야기를 찾을 수 없습니다.');
+          return;
+        }
+        const mapped = mapRemoteDetailToStory(detail);
+        setStories((prev) => {
+          const exists = prev.some((story) => story.id === mapped.id);
+          if (!exists) return [mapped, ...prev];
+          return prev.map((story) => (story.id === mapped.id ? mapped : story));
+        });
+        setSelectedStory(mapped);
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('책이야기 상세를 불러오지 못했습니다.');
+        }
       }
-      const mapped = mapRemoteDetailToStory(detail);
-      setStories((prev) => {
-        const exists = prev.some((story) => story.id === mapped.id);
-        if (!exists) return [mapped, ...prev];
-        return prev.map((story) => (story.id === mapped.id ? mapped : story));
-      });
-      setSelectedStory(mapped);
-    } catch (error) {
-      if (!(error instanceof ApiError)) {
-        showToast('책이야기 상세를 불러오지 못했습니다.');
-      }
-    }
-  }, [animateTransition, detailTranslateX, isLoggedIn]);
+    },
+    [animateTransition, detailTranslateX, isLoggedIn],
+  );
 
   const startEditStory = useCallback((story: Story) => {
     if (typeof story.remoteId !== 'number') return;
@@ -1053,25 +1087,23 @@ export function StoryScreen() {
         const loadingStartedAt = Date.now();
         setSubmittingStory(true);
         try {
-          const payload = {
-            title: title.trim(),
-            description: body.trim(),
-            bookInfo: selectedBook
-              ? {
-                  isbn: selectedBook.id,
-                  title: selectedBook.title,
-                  author: selectedBook.author,
-                  imgUrl: selectedBook.image,
-                  description: selectedBook.description,
-                }
-              : undefined,
-          };
+          const nextTitle = title.trim();
+          const nextDescription = body.trim();
 
           if (editingStoryId) {
-            await updateBookStory(editingStoryId, payload);
+            await updateBookStory(editingStoryId, { description: nextDescription });
             showToast('책이야기를 수정했습니다.');
           } else {
-            await createBookStory(payload);
+            const isbn = selectedBook.id.trim();
+            if (!ISBN13_REGEX.test(isbn)) {
+              showToast('책 ISBN 형식을 확인해주세요.');
+              return;
+            }
+            await createBookStory({
+              isbn,
+              title: nextTitle,
+              description: nextDescription,
+            });
             showToast('책이야기를 등록했습니다.');
           }
 
@@ -1193,20 +1225,25 @@ export function StoryScreen() {
     void refresh();
   };
 
-  const handleSelectStory = (story: Story) => {
-    animateTransition();
-    detailTranslateX.stopAnimation(() => {
-      detailTranslateX.setValue(0);
-    });
-    setIsComposing(false);
-    setSelectedStory(story);
-    setEditingCommentId(null);
-    setReplyTarget(null);
-    setCommentMenu(null);
-    setStoryMenu(null);
-    setCommentInput('');
-    void loadStoryDetail(story);
-  };
+  const handleSelectStory = useCallback(
+    (story: Story, options?: { focusComments?: boolean }) => {
+      pendingDetailFocusRef.current = options?.focusComments ? 'comments' : null;
+      commentSectionYRef.current = 0;
+      animateTransition();
+      detailTranslateX.stopAnimation(() => {
+        detailTranslateX.setValue(0);
+      });
+      setIsComposing(false);
+      setSelectedStory(story);
+      setEditingCommentId(null);
+      setReplyTarget(null);
+      setCommentMenu(null);
+      setStoryMenu(null);
+      setCommentInput('');
+      void loadStoryDetail(story);
+    },
+    [animateTransition, detailTranslateX, loadStoryDetail],
+  );
 
   const handleRefreshSelectedStory = useCallback(() => {
     if (!selectedStory || typeof selectedStory.remoteId !== 'number') {
@@ -1373,6 +1410,8 @@ export function StoryScreen() {
 
   useEffect(() => {
     const value = route.params?.openStoryId;
+    const focus = route.params?.openStoryFocus;
+    const shouldFocusComments = focus === 'comments';
     const remoteId =
       typeof value === 'number'
         ? value
@@ -1381,10 +1420,10 @@ export function StoryScreen() {
           : NaN;
     if (!Number.isInteger(remoteId) || remoteId <= 0) return;
 
-    void openStoryDetailByRemoteId(remoteId);
+    void openStoryDetailByRemoteId(remoteId, { focusComments: shouldFocusComments });
 
-    navigation.setParams({ openStoryId: undefined });
-  }, [navigation, openStoryDetailByRemoteId, route.params?.openStoryId]);
+    navigation.setParams({ openStoryId: undefined, openStoryFocus: undefined });
+  }, [navigation, openStoryDetailByRemoteId, route.params?.openStoryFocus, route.params?.openStoryId]);
 
   useEffect(() => {
     const parent = navigation.getParent();
@@ -1471,6 +1510,7 @@ export function StoryScreen() {
         >
         <KeyboardAvoidingView style={styles.container} behavior="padding">
           <ScrollView
+            ref={detailScrollRef}
             contentContainerStyle={styles.detailContent}
             showsVerticalScrollIndicator={false}
             refreshControl={
@@ -1604,7 +1644,7 @@ export function StoryScreen() {
           <Text style={styles.detailTitle}>{selectedStory.title}</Text>
           <Text style={styles.detailBody}>{selectedStory.fullText}</Text>
 
-          <View style={styles.commentSection}>
+          <View style={styles.commentSection} onLayout={handleCommentSectionLayout}>
             <Text style={styles.commentHeader}>댓글</Text>
             {(editingCommentId || !replyTarget) && (
               <View style={styles.commentInputRow}>
@@ -2134,6 +2174,7 @@ export function StoryScreen() {
                 subscribed={isMineForViewer ? undefined : story.subscribed}
                 coverImgSrc={story.book?.image}
                 onPress={() => handleSelectStory(story)}
+                onPressComment={() => handleSelectStory(story, { focusComments: true })}
                 onToggleLike={() => handleToggleLike(story.id)}
                 onToggleSubscribe={
                   isMineForViewer ? undefined : () => handleToggleSubscribe(story.id)
@@ -2528,16 +2569,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   chipActive: {
-    backgroundColor: colors.primary1,
+    backgroundColor: colors.subbrown4,
   },
   chipInactive: {
-    backgroundColor: colors.primary2,
+    backgroundColor: colors.primary1,
   },
   chipText: {
     ...typography.body2_2,
   },
   chipTextActive: {
-    color: colors.white,
+    color: colors.primary3,
   },
   chipTextInactive: {
     color: colors.white,

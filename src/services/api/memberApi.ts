@@ -141,6 +141,16 @@ export async function setFollowingMember(
   });
 }
 
+export async function deleteFollowerMember(
+  nickname: string,
+): Promise<void> {
+  const encodedNickname = encodeURIComponent(nickname);
+
+  await requestJson<unknown>(`/members/${encodedNickname}/follower`, {
+    method: 'DELETE',
+  });
+}
+
 export async function fetchMyProfile(options?: {
   suppressErrorToast?: boolean;
 }): Promise<MyProfile | null> {
@@ -315,7 +325,7 @@ export async function withdrawMember(): Promise<void> {
 }
 
 export async function fetchMyReports(): Promise<ReportItem[]> {
-  const candidatePaths = ['/members/me/reports', '/members/reports'];
+  const candidatePaths = ['/members/me/reports'];
 
   for (const path of candidatePaths) {
     try {

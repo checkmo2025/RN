@@ -230,10 +230,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   subButtonActive: {
-    backgroundColor: colors.primary1,
+    backgroundColor: colors.subbrown4,
   },
   subButtonInactive: {
-    backgroundColor: colors.primary2,
+    backgroundColor: colors.primary1,
   },
   subButtonText: {
     ...typography.body2_2,
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     color: colors.gray5,
   },
   subTextActive: {
-    color: colors.white,
+    color: colors.primary3,
   },
   subTextInactive: {
     color: colors.white,

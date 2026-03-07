@@ -34,6 +34,7 @@ import {
 } from '../services/api/bookLikeApi';
 import { fetchMyClubs, leaveClub } from '../services/api/clubApi';
 import {
+  deleteFollowerMember,
   fetchMyReports,
   fetchMemberLoginStatus,
   fetchMyFollowers,
@@ -386,6 +387,7 @@ export function MyPageScreen() {
   const [followingCount, setFollowingCount] = useState(0);
   const [followerUsers, setFollowerUsers] = useState<FollowUser[]>([]);
   const [followingUsers, setFollowingUsers] = useState<FollowUser[]>([]);
+  const [deletingFollowerNickname, setDeletingFollowerNickname] = useState<string | null>(null);
   const [showFollowPage, setShowFollowPage] = useState(false);
   const [activeFollowTab, setActiveFollowTab] = useState<'FOLLOWER' | 'FOLLOWING'>('FOLLOWER');
   const [loadingStories, setLoadingStories] = useState(false);
@@ -1215,6 +1217,49 @@ export function MyPageScreen() {
     [followerUsers, followingUsers],
   );
 
+  const handleDeleteFollower = useCallback(
+    (nickname: string) => {
+      const targetNickname = nickname.trim();
+      if (!targetNickname) return;
+      if (deletingFollowerNickname === targetNickname) return;
+
+      const targetFollower = followerUsers.find((item) => item.nickname === targetNickname);
+      if (!targetFollower) return;
+
+      Alert.alert('구독자 삭제', `'${targetFollower.nickname}'님을 삭제하시겠습니까?`, [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: () => {
+            if (deletingFollowerNickname === targetNickname) return;
+            setDeletingFollowerNickname(targetNickname);
+
+            const submit = async () => {
+              try {
+                await deleteFollowerMember(targetNickname);
+                setFollowerUsers((prev) =>
+                  prev.filter((item) => item.nickname !== targetNickname),
+                );
+                showToast('구독자를 삭제했습니다.');
+              } catch (error) {
+                if (!(error instanceof ApiError)) {
+                  showToast('구독자 삭제에 실패했습니다.');
+                }
+              } finally {
+                setDeletingFollowerNickname((prev) =>
+                  prev === targetNickname ? null : prev,
+                );
+              }
+            };
+            void submit();
+          },
+        },
+      ]);
+    },
+    [deletingFollowerNickname, followerUsers],
+  );
+
   const handleToggleBookLike = useCallback((book: BookCard) => {
     const submit = async () => {
       const liked = await toggleBookLike({
@@ -1458,7 +1503,7 @@ export function MyPageScreen() {
               activeFollowTab === 'FOLLOWING' && styles.followTabTextActive,
             ]}
           >
-            구독 중 {followingCount}
+            구독중 {followingCount}
           </Text>
         </Pressable>
       </View>
@@ -1472,8 +1517,12 @@ export function MyPageScreen() {
           <Text style={styles.emptyText}>표시할 사용자가 없습니다.</Text>
         ) : null}
 
-        {activeFollowUsers.map((user) => (
-          <View key={`${activeFollowTab}-${user.nickname}`} style={styles.followUserRow}>
+        {activeFollowUsers.map((user) => {
+          const isFollowerTab = activeFollowTab === 'FOLLOWER';
+          const deleting = deletingFollowerNickname === user.nickname;
+
+          return (
+            <View key={`${activeFollowTab}-${user.nickname}`} style={styles.followUserRow}>
             <Pressable
               style={({ pressed }) => [styles.followUserMeta, pressed && styles.pressed]}
               onPress={() => openMemberProfile(user.nickname)}
@@ -1488,24 +1537,38 @@ export function MyPageScreen() {
               <Text style={styles.followUserName}>{user.nickname}</Text>
             </Pressable>
 
-            <Pressable
-              style={[
-                styles.followButton,
-                user.following ? styles.followButtonActive : styles.followButtonInactive,
-              ]}
-              onPress={() => handleToggleFollowUser(user.nickname, !user.following)}
-            >
-              <Text
+            {isFollowerTab ? (
+              <Pressable
                 style={[
-                  styles.followButtonText,
-                  user.following ? styles.followButtonTextActive : styles.followButtonTextInactive,
+                  styles.followDeleteButton,
+                  deleting ? styles.followDeleteButtonDisabled : null,
                 ]}
+                onPress={() => handleDeleteFollower(user.nickname)}
+                disabled={deleting}
               >
-                {user.following ? '구독중' : '구독'}
-              </Text>
-            </Pressable>
+                <Text style={styles.followDeleteButtonText}>{deleting ? '삭제중...' : '삭제'}</Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={[
+                  styles.followButton,
+                  user.following ? styles.followButtonActive : styles.followButtonInactive,
+                ]}
+                onPress={() => handleToggleFollowUser(user.nickname, !user.following)}
+              >
+                <Text
+                  style={[
+                    styles.followButtonText,
+                    user.following ? styles.followButtonTextActive : styles.followButtonTextInactive,
+                  ]}
+                >
+                  {user.following ? '구독중' : '구독'}
+                </Text>
+              </Pressable>
+            )}
           </View>
-        ))}
+          );
+        })}
       </View>
     </View>
   );
@@ -2855,7 +2918,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   followButtonActive: {
-    backgroundColor: colors.primary2,
+    backgroundColor: colors.subbrown4,
   },
   followButtonInactive: {
     backgroundColor: colors.primary1,
@@ -2864,10 +2927,28 @@ const styles = StyleSheet.create({
     ...typography.body2_2,
   },
   followButtonTextActive: {
-    color: colors.white,
+    color: colors.primary3,
   },
   followButtonTextInactive: {
     color: colors.white,
+  },
+  followDeleteButton: {
+    minWidth: 56,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.xs / 1.5,
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    backgroundColor: colors.white,
+  },
+  followDeleteButtonDisabled: {
+    opacity: 0.6,
+  },
+  followDeleteButtonText: {
+    ...typography.body2_2,
+    color: colors.gray5,
   },
   profileRow: {
     flexDirection: 'row',

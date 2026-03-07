@@ -41,6 +41,7 @@ type TabKey = '책 이야기' | '서재' | '모임';
 
 type StoryCard = {
   id: string;
+  remoteId: number;
   title: string;
   excerpt: string;
   likes: number;
@@ -76,6 +77,7 @@ const PROFILE_BACK_TRIGGER_MAX_DY = 72;
 function mapRemoteStoryToCard(item: RemoteStoryItem): StoryCard {
   return {
     id: `story-${item.id}`,
+    remoteId: item.id,
     title: item.title,
     excerpt: item.description,
     likes: item.likeCount,
@@ -238,6 +240,40 @@ export function UserProfileScreen() {
     [memberNickname, requireAuth],
   );
 
+  const handleOpenStoryDetail = useCallback(
+    (story: StoryCard) => {
+      const chain: any[] = [];
+      const visited = new Set<any>();
+      let current: any = navigation;
+
+      while (current && !visited.has(current)) {
+        chain.push(current);
+        visited.add(current);
+        current = current.getParent?.();
+      }
+
+      for (const nav of chain) {
+        const routeNames: string[] = nav?.getState?.()?.routeNames ?? [];
+
+        if (routeNames.includes('Story')) {
+          nav.navigate('Story', { openStoryId: story.remoteId });
+          return;
+        }
+
+        if (routeNames.includes('Tabs')) {
+          nav.navigate('Tabs', {
+            screen: 'Story',
+            params: { openStoryId: story.remoteId },
+          });
+          return;
+        }
+      }
+
+      showToast('책이야기 화면으로 이동하지 못했습니다.');
+    },
+    [navigation],
+  );
+
   const renderStoryCards = () => (
     <View style={[styles.gridContent, styles.cardWrap]}>
       {stories.length === 0 ? <Text style={styles.emptyText}>작성한 책이야기가 없습니다.</Text> : null}
@@ -245,7 +281,7 @@ export function UserProfileScreen() {
         <Pressable
           key={story.id}
           style={({ pressed }) => [styles.storyCard, pressed && styles.pressed]}
-          onPress={() => showToast('책이야기 상세는 준비 중입니다.')}
+          onPress={() => handleOpenStoryDetail(story)}
         >
           <View style={styles.storyThumb}>
             {story.imageUrl ? (
@@ -552,14 +588,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButtonDisabled: {
-    backgroundColor: colors.gray2,
+    backgroundColor: colors.subbrown4,
   },
   primaryButtonText: {
     ...typography.body1_2,
     color: colors.white,
   },
   disabledText: {
-    color: colors.gray5,
+    color: colors.primary3,
   },
   secondaryButton: {
     flex: 1,

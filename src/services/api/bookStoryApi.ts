@@ -524,16 +524,16 @@ export async function fetchBookStoryDetail(
 }
 
 export async function createBookStory(payload: {
+  isbn: string;
   title: string;
   description: string;
-  bookInfo?: StoryBookInfo;
 }): Promise<void> {
   await requestJson<unknown>('/book-stories', {
     method: 'POST',
     body: {
+      isbn: payload.isbn,
       title: payload.title,
       description: payload.description,
-      ...(payload.bookInfo ? { bookInfo: payload.bookInfo } : {}),
     },
   });
 }
@@ -541,9 +541,7 @@ export async function createBookStory(payload: {
 export async function updateBookStory(
   bookStoryId: number,
   payload: {
-    title: string;
     description: string;
-    bookInfo?: StoryBookInfo;
   },
 ): Promise<void> {
   await requestJson<unknown>(`/book-stories/${bookStoryId}`, {

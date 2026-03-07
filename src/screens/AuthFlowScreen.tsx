@@ -15,6 +15,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius, spacing, typography } from '../theme';
 import {
@@ -240,9 +241,9 @@ const kakaoUri = Image.resolveAssetSource(
   require('../../assets/icons/kakaoImage.svg'),
 ).uri;
 const oauthProviders = [
-  { key: 'google', label: 'Google 로그인', uri: googleUri, width: 40, height: 40 },
-  { key: 'naver', label: 'Naver 로그인', uri: naverUri, width: 40, height: 40 },
-  { key: 'kakao', label: 'Kakao 로그인', uri: kakaoUri, width: 40, height: 40 },
+  { key: 'google', label: 'Google 로그인', uri: googleUri, width: 40, height: 40, iconOffsetX: 0 },
+  { key: 'naver', label: 'Naver 로그인', uri: naverUri, width: 40, height: 40, iconOffsetX: 0 },
+  { key: 'kakao', label: 'Kakao 로그인', uri: kakaoUri, width: 40, height: 40, iconOffsetX: -2 },
 ] as const;
 const oauthProviderLabelByKey: Record<OAuthProvider, string> = {
   google: '구글',
@@ -307,6 +308,8 @@ const defaultProfilePalette = [
 ];
 
 export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
+  const insets = useSafeAreaInsets();
+  const socialLoginTopInset = Platform.OS === 'ios' ? Math.max(insets.top, 44) : insets.top;
   const [step, setStep] = useState<Step>('login');
 
   const [loginEmail, setLoginEmail] = useState('');
@@ -374,6 +377,9 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   }, [remainingVerificationSeconds]);
   const hideTopBrand =
     step === 'login' ||
+    step === 'findId' ||
+    step === 'findIdResult' ||
+    step === 'resetPw' ||
     step === 'terms' ||
     step === 'emailVerification' ||
     step === 'passwordSet' ||
@@ -842,7 +848,12 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     }
   };
 
-  const renderCard = (children: React.ReactNode) => (
+  const renderCard = (
+    children: React.ReactNode,
+    options?: {
+      showTopBackButton?: boolean;
+    },
+  ) => (
     <View style={styles.container}>
       <KeyboardAvoidingView
         style={styles.container}
@@ -860,6 +871,17 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           ) : null}
           <View style={styles.card}>
             <View style={styles.closeRow}>
+              {options?.showTopBackButton ? (
+                <Pressable
+                  onPress={goToLogin}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="뒤로가기"
+                  style={({ pressed }) => [styles.cardTopBackButton, pressed && styles.pressed]}
+                >
+                  <MaterialIcons name="arrow-back-ios-new" size={20} color={colors.primary1} />
+                </Pressable>
+              ) : null}
               <Pressable onPress={onClose} hitSlop={8}>
                 <MaterialIcons name="close" size={30} color={colors.primary1} />
               </Pressable>
@@ -876,7 +898,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         animationType="slide"
         onRequestClose={closeSocialLoginModal}
       >
-        <View style={styles.socialLoginModal}>
+        <View style={[styles.socialLoginModal, { paddingTop: socialLoginTopInset }]}>
           <View style={styles.socialLoginHeader}>
             <View style={styles.socialLoginHeaderTextWrap}>
               <Text style={styles.socialLoginTitle}>
@@ -886,22 +908,28 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
                 로그인 완료 후 이 창은 자동으로 닫힙니다.
               </Text>
             </View>
-            <Pressable onPress={closeSocialLoginModal} hitSlop={8}>
+            <Pressable
+              style={({ pressed }) => [styles.socialLoginCloseBtn, pressed && styles.pressed]}
+              onPress={closeSocialLoginModal}
+              hitSlop={8}
+            >
               <MaterialIcons name="close" size={24} color={colors.gray6} />
             </Pressable>
           </View>
 
           {socialLoginLoadError ? (
             <View style={styles.socialLoginErrorCard}>
+              <MaterialIcons name="error-outline" size={30} color={colors.gray4} />
               <Text style={styles.socialLoginErrorText}>{socialLoginLoadError}</Text>
               <Pressable
-                style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+                style={({ pressed }) => [styles.socialLoginRetryBtn, pressed && styles.pressed]}
                 onPress={() => {
                   setSocialLoginLoadError(null);
                   setSocialLoginWebViewKey((prev) => prev + 1);
                 }}
               >
-                <Text style={styles.primaryText}>다시 시도</Text>
+                <MaterialIcons name="refresh" size={18} color={colors.white} />
+                <Text style={styles.socialLoginRetryBtnText}>다시 시도</Text>
               </Pressable>
             </View>
           ) : SocialLoginWebView && socialLoginProvider ? (
@@ -1560,26 +1588,19 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             keyboardType="phone-pad"
           />
         </View>
-        <View style={styles.buttonRow}>
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            onPress={goToLogin}
-          >
-            <Text style={styles.secondaryText}>뒤로가기</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.primaryButton, styles.buttonFlex, pressed && styles.pressed]}
-            onPress={() => {
-              void handleFindEmail();
-            }}
-            disabled={findEmailSubmitting}
-          >
-            <Text style={styles.primaryText}>
-              {findEmailSubmitting ? '조회 중...' : '아이디 찾기'}
-            </Text>
-          </Pressable>
-        </View>
+        <Pressable
+          style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+          onPress={() => {
+            void handleFindEmail();
+          }}
+          disabled={findEmailSubmitting}
+        >
+          <Text style={styles.primaryText}>
+            {findEmailSubmitting ? '조회 중...' : '아이디 찾기'}
+          </Text>
+        </Pressable>
       </>,
+      { showTopBackButton: true },
     );
   }
 
@@ -1591,21 +1612,14 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         <View style={styles.formGroup}>
           <TextInput value={foundEmail || '-'} style={styles.input} editable={false} />
         </View>
-        <View style={styles.buttonRow}>
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            onPress={goToLogin}
-          >
-            <Text style={styles.secondaryText}>뒤로가기</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.primaryButton, styles.buttonFlex, pressed && styles.pressed]}
-            onPress={() => setStep('findId')}
-          >
-            <Text style={styles.primaryText}>아이디 찾기</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+          onPress={() => setStep('findId')}
+        >
+          <Text style={styles.primaryText}>아이디 다시 찾기</Text>
+        </Pressable>
       </>,
+      { showTopBackButton: true },
     );
   }
 
@@ -1626,26 +1640,19 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             autoCorrect={false}
           />
         </View>
-        <View style={styles.buttonRow}>
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            onPress={goToLogin}
-          >
-            <Text style={styles.secondaryText}>뒤로가기</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.primaryButton, styles.buttonFlex, pressed && styles.pressed]}
-            onPress={() => {
-              void handleSendTempPassword();
-            }}
-            disabled={sendingTempPassword}
-          >
-            <Text style={styles.primaryText}>
-              {sendingTempPassword ? '발송 중...' : '임시 비밀번호 발송'}
-            </Text>
-          </Pressable>
-        </View>
+        <Pressable
+          style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+          onPress={() => {
+            void handleSendTempPassword();
+          }}
+          disabled={sendingTempPassword}
+        >
+          <Text style={styles.primaryText}>
+            {sendingTempPassword ? '발송 중...' : '임시 비밀번호 발송'}
+          </Text>
+        </Pressable>
       </>,
+      { showTopBackButton: true },
     );
   }
 
@@ -1708,7 +1715,14 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             accessibilityLabel={provider.label}
             disabled={socialLoginProvider !== null}
           >
-            <View style={styles.oauthIconWrap}>
+            <View
+              style={[
+                styles.oauthIconWrap,
+                provider.iconOffsetX !== 0
+                  ? { transform: [{ translateX: provider.iconOffsetX }] }
+                  : null,
+              ]}
+            >
               <SvgUri uri={provider.uri} width={provider.width} height={provider.height} />
             </View>
           </Pressable>
@@ -1744,8 +1758,24 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   closeRow: {
+    position: 'relative',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
     alignItems: 'flex-end',
     minHeight: 24,
+  },
+  cardTopBackButton: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    backgroundColor: colors.gray1,
   },
   cardHeader: {
     alignItems: 'center',
@@ -2180,6 +2210,7 @@ const styles = StyleSheet.create({
   },
   socialLoginHeaderTextWrap: {
     flex: 1,
+    paddingRight: spacing.sm,
     gap: spacing.xs / 2,
   },
   socialLoginTitle: {
@@ -2189,6 +2220,14 @@ const styles = StyleSheet.create({
   socialLoginSubtitle: {
     ...typography.body2_3,
     color: colors.gray4,
+  },
+  socialLoginCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.gray1,
   },
   socialLoginWebViewWrap: {
     flex: 1,
@@ -2213,12 +2252,34 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
+    gap: spacing.sm + 2,
   },
   socialLoginErrorText: {
     ...typography.body1_3,
     color: colors.gray6,
     textAlign: 'center',
+    lineHeight: 22,
+  },
+  socialLoginRetryBtn: {
+    marginTop: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    minWidth: 150,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: 999,
+    backgroundColor: colors.primary1,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  socialLoginRetryBtnText: {
+    ...typography.body1_2,
+    color: colors.white,
   },
   pressed: {
     opacity: 0.75,

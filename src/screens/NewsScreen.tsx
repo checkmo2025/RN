@@ -158,6 +158,8 @@ export function NewsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { width } = useWindowDimensions();
+  const promotionWidth = width - spacing.xl * 2;
+  const promotionStep = promotionWidth + spacing.sm;
   const [selected, setSelected] = useState<NewsItem | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingNews, setLoadingNews] = useState(false);
@@ -167,6 +169,7 @@ export function NewsScreen() {
   const [items, setItems] = useState<NewsItem[]>([]);
   const [recommendedBooks, setRecommendedBooks] = useState<RecommendedBook[]>([]);
   const detailTranslateX = useRef(new Animated.Value(0)).current;
+  const carouselRef = useRef<ScrollView | null>(null);
 
   const animateTransition = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -319,6 +322,25 @@ export function NewsScreen() {
     navigation.setParams({ openNewsId: undefined });
     openNewsDetailById(newsId);
   }, [navigation, openNewsDetailById, route.params?.openNewsId]);
+
+  useEffect(() => {
+    if (selected || promotions.length <= 1) return;
+
+    const intervalId = setInterval(() => {
+      setActiveSlide((prev) => {
+        const next = prev >= promotions.length - 1 ? 0 : prev + 1;
+        carouselRef.current?.scrollTo({
+          x: next * promotionStep,
+          animated: true,
+        });
+        return next;
+      });
+    }, 3000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [promotionStep, promotions.length, selected]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -473,15 +495,17 @@ export function NewsScreen() {
           ListHeaderComponent={
             <View style={styles.headerWrap}>
               <ScrollView
+                ref={carouselRef}
                 horizontal
-                pagingEnabled
                 showsHorizontalScrollIndicator={false}
-                snapToAlignment="center"
+                snapToInterval={promotionStep}
+                disableIntervalMomentum
                 onScroll={(event) => {
                   const index = Math.round(
-                    event.nativeEvent.contentOffset.x / (width - spacing.xl * 2),
+                    event.nativeEvent.contentOffset.x / promotionStep,
                   );
-                  setActiveSlide(index);
+                  const safeIndex = Math.max(0, Math.min(promotions.length - 1, index));
+                  setActiveSlide(safeIndex);
                 }}
                 scrollEventThrottle={16}
                 decelerationRate="fast"
@@ -491,7 +515,7 @@ export function NewsScreen() {
                   <Pressable key={promo.id} style={styles.promoWrapper} onPress={() => onSelect(promo)}>
                     <ImageBackground
                       source={promo.cover ? { uri: promo.cover } : undefined}
-                      style={[styles.promoCard, { width: width - spacing.xl * 2 }]}
+                      style={[styles.promoCard, { width: promotionWidth }]}
                     >
                       <View style={styles.promoGradient} />
                       <View style={styles.promoContent}>
@@ -509,6 +533,7 @@ export function NewsScreen() {
                     style={[
                       styles.dot,
                       index === activeSlide ? styles.dotActive : null,
+                      index === activeSlide ? styles.dotActiveSize : null,
                     ]}
                   />
                 ))}
@@ -628,6 +653,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xs,
     paddingHorizontal: spacing.xs,
+    alignItems: 'center',
   },
   recommendedSection: {
     marginTop: spacing.md,
@@ -690,6 +716,10 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     backgroundColor: colors.primary1,
+  },
+  dotActiveSize: {
+    width: 16,
+    borderRadius: 8,
   },
   banner: {
     borderRadius: radius.md,

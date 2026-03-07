@@ -134,6 +134,7 @@ const outputFilterOptions: Array<{ label: string; value: ClubSearchOutputFilter 
 ];
 const BOOKSHELF_MEETING_TITLE_MAX_LENGTH = 12;
 const BOOKSHELF_MEETING_LOCATION_MAX_LENGTH = 12;
+const ISBN13_REGEX = /^\d{13}$/;
 const MAX_REGULAR_GROUP_COUNT = 10;
 
 const categoryLabelByCode: Record<string, string> = {
@@ -466,7 +467,7 @@ function mapMyClubToGroup(club: { clubId: number; clubName: string }): Group {
     tags: [],
     topic: '모임 대상 · 정보 없음',
     region: '활동 지역 · 정보 없음',
-    applicationStatus: '가입중',
+    applicationStatus: '가입 완료',
   };
 }
 
@@ -477,7 +478,7 @@ function mapClubStatusToApplication(status?: string): string | undefined {
     case 'MEMBER':
     case 'STAFF':
     case 'OWNER':
-      return '가입중';
+      return '가입 완료';
     default:
       return undefined;
   }
@@ -1040,6 +1041,7 @@ export function MeetingScreen() {
             tags={group.tags}
             topic={group.topic}
             region={group.region}
+            profileImageUrl={group.profileImageUrl}
             isPrivate={group.isPrivate}
             applicationStatus={group.applicationStatus}
             applyOpen={applyOpenId === group.id}
@@ -6953,6 +6955,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     }
 
     const sourceBook = bookshelfCreateDraft.sourceBook;
+    const sourceBookIsbn = sourceBook.isbn.trim();
+    if (!ISBN13_REGEX.test(sourceBookIsbn)) {
+      showToast('책 ISBN 형식을 확인해주세요.');
+      return;
+    }
     const primaryCategory = bookshelfCreateDraft.categories[0];
     const submit = async () => {
       setCreatingBookshelf(true);
@@ -6963,19 +6970,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           return;
         }
         await createClubBookshelf(clubId, {
+          isbn: sourceBookIsbn,
           title: regularMeetingName,
           location: meetingLocation,
           meetingTime,
           generation,
           tag: primaryCategory,
-          bookInfo: {
-            isbn: sourceBook.isbn,
-            title: sourceBook.title,
-            author: sourceBook.author,
-            imgUrl: sourceBook.coverImage,
-            publisher: sourceBook.publisher,
-            description: sourceBook.description,
-          },
         });
         const bookshelfList = await fetchClubBookshelves(clubId);
         const nextItems = bookshelfList.items.map(mapApiBookshelfToItem);

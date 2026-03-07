@@ -27,7 +27,12 @@ import {
   toggleBookStoryLike,
   type RemoteStoryItem,
 } from '../services/api/bookStoryApi';
-import { fetchMyProfile, fetchRecommendedMembers, setFollowingMember } from '../services/api/memberApi';
+import {
+  fetchMemberProfile,
+  fetchMyProfile,
+  fetchRecommendedMembers,
+  setFollowingMember,
+} from '../services/api/memberApi';
 import { fetchNewsCarousel } from '../services/api/newsApi';
 import { ApiError } from '../services/api/http';
 import { toKstTimeAgoLabel } from '../utils/date';
@@ -121,16 +126,33 @@ export function HomeScreen() {
         setUserRecommendations([]);
         return;
       }
-      setUserRecommendations(
-        users.slice(0, 3).map((user) => ({
-          id: user.nickname,
-          nickname: user.nickname,
-          profileImageUrl: user.profileImageUrl,
-          followingCount: user.followingCount,
-          followerCount: user.followerCount,
-          subscribed: false,
-        })),
+
+      const enriched = await Promise.all(
+        users.slice(0, 3).map(async (user) => {
+          try {
+            const profile = await fetchMemberProfile(user.nickname);
+            return {
+              id: user.nickname,
+              nickname: user.nickname,
+              profileImageUrl: user.profileImageUrl ?? profile?.profileImageUrl,
+              followingCount: profile?.followingCount ?? user.followingCount,
+              followerCount: profile?.followerCount ?? user.followerCount,
+              subscribed: Boolean(profile?.following),
+            };
+          } catch {
+            return {
+              id: user.nickname,
+              nickname: user.nickname,
+              profileImageUrl: user.profileImageUrl,
+              followingCount: user.followingCount,
+              followerCount: user.followerCount,
+              subscribed: false,
+            };
+          }
+        }),
       );
+
+      setUserRecommendations(enriched);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         setUserRecommendations([]);
@@ -422,6 +444,18 @@ export function HomeScreen() {
     [navigation, posts],
   );
 
+  const openPostComments = useCallback(
+    (id: string) => {
+      const target = posts.find((post) => post.id === id);
+      if (!target || typeof target.remoteId !== 'number') return;
+      navigation.navigate('Story', {
+        openStoryId: target.remoteId,
+        openStoryFocus: 'comments',
+      });
+    },
+    [navigation, posts],
+  );
+
   const header = (
     <View style={styles.headerContainer}>
       <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
@@ -490,6 +524,7 @@ export function HomeScreen() {
               post={item}
               viewerIsLoggedIn={isLoggedIn}
               onPress={openPostDetail}
+              onPressComment={openPostComments}
               onToggleLike={handleToggleLike}
               onToggleSubscribe={handleTogglePostSubscribe}
               onPressAuthor={openUserProfile}

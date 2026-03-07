@@ -24,6 +24,7 @@ type Props = {
   onToggleLike: (id: string) => void;
   onToggleSubscribe: (id: string) => void;
   onPress?: (id: string) => void;
+  onPressComment?: (id: string) => void;
   onPressAuthor?: (nickname: string) => void;
 };
 
@@ -33,6 +34,7 @@ export default function HomePostCard({
   onToggleLike,
   onToggleSubscribe,
   onPress,
+  onPressComment,
   onPressAuthor,
 }: Props) {
   const isMineForViewer = viewerIsLoggedIn && post.mine;
@@ -52,6 +54,7 @@ export default function HomePostCard({
       subscribed={isMineForViewer ? undefined : post.subscribed}
       coverImgSrc={post.image}
       onPress={onPress ? () => onPress(post.id) : undefined}
+      onPressComment={onPressComment ? () => onPressComment(post.id) : undefined}
       onToggleLike={() => onToggleLike(post.id)}
       onToggleSubscribe={isMineForViewer ? undefined : () => onToggleSubscribe(post.id)}
       onPressAuthor={onPressAuthor ? () => onPressAuthor(post.author) : undefined}

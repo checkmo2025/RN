@@ -663,9 +663,6 @@ export function AppHeader(props: Props) {
               ]}
             >
               <View style={styles.dropdownSearchBar}>
-                <Pressable onPress={handleSearchSubmitFromDropdown}>
-                  <SvgUri uri={searchUri} width={24} height={24} />
-                </Pressable>
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
@@ -683,6 +680,13 @@ export function AppHeader(props: Props) {
                     onPress={() => setQuery('')}
                   />
                 ) : null}
+                <Pressable
+                  onPress={handleSearchSubmitFromDropdown}
+                  hitSlop={8}
+                  style={styles.dropdownSearchSubmitButton}
+                >
+                  <SvgUri uri={searchUri} width={24} height={24} />
+                </Pressable>
               </View>
 
               <Text style={styles.dropdownRecoTitle}>오늘의 추천 책</Text>
@@ -771,9 +775,9 @@ export function AppHeader(props: Props) {
               {searchStage === 'results' ? (
                 <>
                   <View style={styles.searchPageInputRow}>
-                    <Pressable onPress={handleSearchSubmitInPage}>
+                    <View>
                       <SvgUri uri={searchUri} width={24} height={24} />
-                    </Pressable>
+                    </View>
                     <TextInput
                       value={query}
                       onChangeText={setQuery}
@@ -796,6 +800,17 @@ export function AppHeader(props: Props) {
                         }}
                       />
                     ) : null}
+                    <Pressable
+                      onPress={handleSearchSubmitInPage}
+                      hitSlop={8}
+                      style={styles.searchPageSubmitButton}
+                    >
+                      <MaterialIcons
+                        name="search"
+                        size={22}
+                        color={query.trim().length > 0 ? colors.primary1 : colors.gray3}
+                      />
+                    </Pressable>
                   </View>
 
                   {searched ? (
@@ -873,6 +888,10 @@ export function AppHeader(props: Props) {
                     style={styles.detailBackRow}
                     onPress={() => {
                       setSearchStage('results');
+                      setQuery('');
+                      setSearched(false);
+                      setSearchedKeyword('');
+                      setSearchResults([]);
                       setSelectedBook(null);
                       setBookStories([]);
                     }}
@@ -969,6 +988,17 @@ export function AppHeader(props: Props) {
                           liked={story.liked}
                           isAuthor={isMineForViewer}
                           subscribed={isMineForViewer ? undefined : story.following}
+                          onPress={() => {
+                            closeSearchPage();
+                            navigation.navigate('Story', { openStoryId: story.id });
+                          }}
+                          onPressComment={() => {
+                            closeSearchPage();
+                            navigation.navigate('Story', {
+                              openStoryId: story.id,
+                              openStoryFocus: 'comments',
+                            });
+                          }}
                         />
                       );
                     })}
@@ -1096,6 +1126,12 @@ const styles = StyleSheet.create({
     ...typography.subhead4,
     color: colors.white,
   },
+  dropdownSearchSubmitButton: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   dropdownRecoTitle: {
     ...typography.subhead3,
     color: colors.white,
@@ -1197,6 +1233,12 @@ const styles = StyleSheet.create({
     flex: 1,
     ...typography.subhead3,
     color: colors.gray7,
+  },
+  searchPageSubmitButton: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   searchCount: {
     ...typography.body1_3,

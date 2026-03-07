@@ -50,7 +50,7 @@ export async function loginByEmail(email: string, password: string): Promise<voi
   await requestJson<ApiResponseString>('/auth/login', {
     method: 'POST',
     body: {
-      email,
+      identifier: email,
       password,
     },
   });
@@ -168,8 +168,8 @@ export async function findEmailByNamePhone(
   phoneNumber: string,
 ): Promise<string | null> {
   const response = await requestJson<ApiEnvelope<FindEmailResult>>('/members/find-email', {
-    method: 'POST',
-    body: {
+    method: 'GET',
+    query: {
       name,
       phoneNumber,
     },
@@ -202,7 +202,7 @@ export async function fetchLoginStatusSilently(
 }
 
 export function getOAuthLoginUrl(provider: OAuthProvider): string {
-  return `${getApiOrigin()}/auth/oauth2/${provider}`;
+  return `${getApiOrigin()}/oauth2/authorization/${provider}`;
 }
 
 export async function logoutSession(): Promise<void> {

@@ -5,7 +5,7 @@ import { colors, radius, spacing, typography } from '../../theme';
 import { subscribeToast } from '../../utils/toast';
 
 const HIDE_DELAY_MS = 2200;
-const TOAST_VERTICAL_OFFSET = spacing.xxl * 3 + spacing.md + spacing.sm;
+const TOAST_BOTTOM_OFFSET = spacing.xxl * 2 + spacing.lg;
 
 export function ToastHost() {
   const [message, setMessage] = useState('');
@@ -91,8 +91,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: TOAST_VERTICAL_OFFSET,
+    justifyContent: 'flex-end',
+    paddingBottom: TOAST_BOTTOM_OFFSET,
     zIndex: 999,
     elevation: 999,
   },

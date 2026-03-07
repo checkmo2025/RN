@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../../theme';
@@ -9,6 +9,7 @@ type Props = {
   tags: string[];
   topic: string;
   region: string;
+  profileImageUrl?: string;
   isPrivate?: boolean;
   applicationStatus?: string;
   applyOpen?: boolean;
@@ -49,6 +50,7 @@ export function MeetingListCard({
   tags,
   topic,
   region,
+  profileImageUrl,
   isPrivate,
   applicationStatus,
   applyOpen,
@@ -96,7 +98,15 @@ export function MeetingListCard({
       </View>
 
       <View style={styles.infoRow}>
-        <View style={styles.thumb} />
+        <View style={styles.thumb}>
+          {profileImageUrl ? (
+            <Image source={{ uri: profileImageUrl }} style={styles.thumbImage} />
+          ) : (
+            <View style={styles.thumbPlaceholder}>
+              <MaterialIcons name="groups" size={24} color={colors.gray3} />
+            </View>
+          )}
+        </View>
         <View style={styles.metaWrap}>
           <Text style={styles.metaText}>{topic}</Text>
           <Text style={styles.metaText}>{region}</Text>
@@ -175,6 +185,8 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.body1_2,
+    fontSize: 16,
+    lineHeight: 22,
     color: colors.gray7,
   },
   headerRight: {
@@ -228,6 +240,16 @@ const styles = StyleSheet.create({
     height: 74,
     borderRadius: 4,
     backgroundColor: colors.gray1,
+    overflow: 'hidden',
+  },
+  thumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  thumbPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metaWrap: {
     flex: 1,

@@ -51,8 +51,18 @@ export default function BookStoryCardLarge({
           </Text>
         </View>
         {typeof subscribed !== 'undefined' ? (
-          <Pressable style={styles.subBtn} onPress={onSubscribeClick}>
-            <Text style={styles.subBtnText}>{subscribed ? '구독중' : '구독'}</Text>
+          <Pressable
+            style={[styles.subBtn, subscribed ? styles.subBtnActive : styles.subBtnInactive]}
+            onPress={onSubscribeClick}
+          >
+            <Text
+              style={[
+                styles.subBtnText,
+                subscribed ? styles.subBtnTextActive : styles.subBtnTextInactive,
+              ]}
+            >
+              {subscribed ? '구독중' : '구독'}
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -130,10 +140,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radius.lg,
-    backgroundColor: colors.primary2,
+  },
+  subBtnActive: {
+    backgroundColor: colors.subbrown4,
+  },
+  subBtnInactive: {
+    backgroundColor: colors.primary1,
   },
   subBtnText: {
     ...typography.body2_2,
+  },
+  subBtnTextActive: {
+    color: colors.primary3,
+  },
+  subBtnTextInactive: {
     color: colors.white,
   },
   coverBg: {
