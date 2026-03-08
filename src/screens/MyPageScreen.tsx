@@ -2325,7 +2325,7 @@ export function MyPageScreen() {
               {profileDesc}
             </Text>
             {profileCategories.length > 0 ? (
-              <Text style={styles.profileCategory} numberOfLines={1}>
+              <Text style={styles.profileCategory}>
                 관심 카테고리 · {profileCategories.join(', ')}
               </Text>
             ) : null}
@@ -2988,6 +2988,8 @@ const styles = StyleSheet.create({
   profileCategory: {
     ...typography.body2_3,
     color: colors.gray5,
+    lineHeight: 20,
+    flexShrink: 1,
   },
   actionButtons: {
     flexDirection: 'row',

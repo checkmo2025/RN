@@ -235,6 +235,7 @@ export function StoryScreen() {
   const [myClubTabs, setMyClubTabs] = useState<Array<{ clubId: number; clubName: string }>>([]);
   const [recommendedUsers, setRecommendedUsers] = useState<RecommendedUser[]>([]);
   const [myNickname, setMyNickname] = useState('');
+  const [myProfileImageUrl, setMyProfileImageUrl] = useState<string | undefined>(undefined);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [showBookPicker, setShowBookPicker] = useState(false);
   const [bookSearchQuery, setBookSearchQuery] = useState('');
@@ -614,6 +615,7 @@ export function StoryScreen() {
   useEffect(() => {
     if (!isLoggedIn) {
       setMyNickname('');
+      setMyProfileImageUrl(undefined);
       return;
     }
 
@@ -624,13 +626,16 @@ export function StoryScreen() {
         const profile = await fetchMyProfile({ suppressErrorToast: true });
         if (cancelled) return;
         setMyNickname(profile?.nickname?.trim() ?? '');
+        setMyProfileImageUrl(profile?.profileImageUrl);
       } catch (error) {
         if (cancelled) return;
         if (error instanceof ApiError && error.status === 401) {
           setMyNickname('');
+          setMyProfileImageUrl(undefined);
           return;
         }
         setMyNickname('');
+        setMyProfileImageUrl(undefined);
       }
     };
 
@@ -653,6 +658,17 @@ export function StoryScreen() {
     },
     [isLoggedIn, myNickname, navigation],
   );
+
+  const handleOpenStoryAuthor = useCallback(() => {
+    if (!selectedStory) return;
+
+    if (isLoggedIn && (selectedStory.mine ?? false)) {
+      navigation.navigate('My');
+      return;
+    }
+
+    openUserProfile(selectedStory.author);
+  }, [isLoggedIn, navigation, openUserProfile, selectedStory]);
 
   const loadStories = useCallback(
     async (options?: { reset?: boolean; forceRefresh?: boolean }) => {
@@ -1033,6 +1049,15 @@ export function StoryScreen() {
         return;
       }
 
+      if (current.deleted) {
+        showToast('삭제된 댓글에는 대댓글을 작성할 수 없습니다.');
+        return;
+      }
+      if (typeof current.remoteId !== 'number') {
+        showToast('잠시 후 다시 시도해주세요.');
+        return;
+      }
+
       setEditingCommentId(null);
       setReplyTarget({
         commentId: current.remoteId,
@@ -1336,10 +1361,12 @@ export function StoryScreen() {
       } else {
         const newComment: Comment = {
           id: `c-${Date.now()}`,
-          author: 'hy_me',
+          author: myNickname || '나',
+          profileImageUrl: myProfileImageUrl,
           time: '방금 전',
           text: content,
           mine: true,
+          replyTo: replyCommentKey,
         };
         const nextCommentList = [...selectedStory.commentList];
         if (replyCommentKey) {
@@ -1374,6 +1401,20 @@ export function StoryScreen() {
             await updateBookStoryComment(remoteId, editingCommentId, content);
           } else {
             await createBookStoryComment(remoteId, content, parentCommentId);
+          }
+
+          // Keep local optimistic rendering but sync with server to recover remote IDs/profile.
+          const detail = await fetchBookStoryDetail(remoteId, {
+            viewerAuthenticated: isLoggedIn,
+          });
+          if (detail) {
+            const mapped = mapRemoteDetailToStory(detail);
+            setStories((prev) => {
+              const exists = prev.some((story) => story.id === mapped.id);
+              if (!exists) return [mapped, ...prev];
+              return prev.map((story) => (story.id === mapped.id ? mapped : story));
+            });
+            setSelectedStory(mapped);
           }
         } catch {
           applyStoryUpdate(selectedStory);
@@ -1545,16 +1586,22 @@ export function StoryScreen() {
           </View>
 
           <View style={styles.detailHeader}>
-            <View style={styles.storyAvatar}>
-              {selectedStory.profileImageUrl ? (
-                <Image source={{ uri: selectedStory.profileImageUrl }} style={styles.storyAvatarImage} />
-              ) : (
-                <DefaultProfileAvatar size={32} />
-              )}
-            </View>
-            <View style={styles.detailAuthorBlock}>
-              <Text style={styles.storyAuthor}>{selectedStory.author}</Text>
-            </View>
+            <Pressable
+              style={({ pressed }) => [styles.detailAuthorPressable, pressed && styles.pressed]}
+              onPress={handleOpenStoryAuthor}
+              hitSlop={8}
+            >
+              <View style={styles.storyAvatar}>
+                {selectedStory.profileImageUrl ? (
+                  <Image source={{ uri: selectedStory.profileImageUrl }} style={styles.storyAvatarImage} />
+                ) : (
+                  <DefaultProfileAvatar size={32} />
+                )}
+              </View>
+              <View style={styles.detailAuthorBlock}>
+                <Text style={styles.storyAuthor}>{selectedStory.author}</Text>
+              </View>
+            </Pressable>
             <View style={styles.detailHeaderActions}>
               {!(isLoggedIn && selectedStory.mine) && (
                 <Pressable
@@ -1680,10 +1727,8 @@ export function StoryScreen() {
 
             <View style={styles.commentList}>
               {selectedStory.commentList.map((comment) => (
-                <View
-                  key={comment.id}
-                  style={styles.commentItem}
-                >
+                <View key={comment.id} style={[styles.commentItem, comment.replyTo && styles.commentReply]}>
+                  {comment.replyTo ? <Text style={styles.replyPrefix}>ㄴ</Text> : null}
                   <View style={styles.commentAvatar}>
                     {comment.profileImageUrl ? (
                       <Image source={{ uri: comment.profileImageUrl }} style={styles.commentAvatarImage} />
@@ -1723,7 +1768,7 @@ export function StoryScreen() {
                             styles.commentInput,
                             { height: commentInputHeight },
                           ]}
-                          placeholder="댓글 내용"
+                          placeholder="대댓글 내용"
                           placeholderTextColor={colors.gray3}
                           value={commentInput}
                           onChangeText={setCommentInput}
@@ -1786,6 +1831,13 @@ export function StoryScreen() {
                   <>
                     <Pressable
                       style={styles.commentMenuItem}
+                      onPress={() => handleSelectCommentMenuAction('reply')}
+                    >
+                      <Text style={styles.commentMenuText}>대댓글 쓰기</Text>
+                    </Pressable>
+                    <View style={styles.commentMenuDivider} />
+                    <Pressable
+                      style={styles.commentMenuItem}
                       onPress={() => handleSelectCommentMenuAction('edit')}
                     >
                       <Text style={styles.commentMenuText}>수정하기</Text>
@@ -1813,7 +1865,7 @@ export function StoryScreen() {
                       style={styles.commentMenuItem}
                       onPress={() => handleSelectCommentMenuAction('reply')}
                     >
-                      <Text style={styles.commentMenuText}>댓글 쓰기</Text>
+                      <Text style={styles.commentMenuText}>대댓글 쓰기</Text>
                     </Pressable>
                   </>
                 )}
@@ -2264,7 +2316,7 @@ function getPopoverMenuPosition(
   screenHeight: number,
 ) {
   const menuWidth = 132;
-  const menuHeight = 84;
+  const menuHeight = 124;
   const margin = spacing.sm;
 
   const left = Math.min(
@@ -2669,6 +2721,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  detailAuthorPressable: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   detailAuthorBlock: {
     flex: 1,
   },
@@ -2783,6 +2841,11 @@ const styles = StyleSheet.create({
   commentReply: {
     marginLeft: spacing.md,
   },
+  replyPrefix: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    marginTop: 4,
+  },
   commentAvatar: {
     width: 28,
     height: 28,
@@ -2813,8 +2876,6 @@ const styles = StyleSheet.create({
   },
   commentAuthorBadge: {
     borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.subbrown4,
     backgroundColor: colors.subbrown4,
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
@@ -2969,5 +3030,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: spacing.xs,
     marginTop: spacing.xs,
+  },
+  pressed: {
+    opacity: 0.75,
   },
 });

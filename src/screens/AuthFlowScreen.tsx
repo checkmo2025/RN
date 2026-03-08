@@ -25,7 +25,7 @@ import {
   findEmailByNamePhone,
   getOAuthLoginUrl,
   type OAuthProvider,
-  loginByEmail,
+  loginByIdentifier,
   requestEmailVerification,
   issueProfileImageUploadUrl,
   sendTemporaryPassword,
@@ -320,7 +320,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const socialLoginTopInset = Platform.OS === 'ios' ? Math.max(insets.top, 44) : insets.top;
   const [step, setStep] = useState<Step>('login');
 
-  const [loginEmail, setLoginEmail] = useState('');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginSubmitting, setLoginSubmitting] = useState(false);
 
@@ -550,17 +550,17 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   );
 
   const handleLogin = async () => {
-    const email = loginEmail.trim();
+    const identifier = loginIdentifier.trim();
     const password = loginPassword.trim();
 
-    if (!email || !password) {
-      showToast('이메일과 비밀번호를 입력해주세요.');
+    if (!identifier || !password) {
+      showToast('아이디(이메일/닉네임)와 비밀번호를 입력해주세요.');
       return;
     }
 
     setLoginSubmitting(true);
     try {
-      await loginByEmail(email, password);
+      await loginByIdentifier(identifier, password);
       showToast('로그인에 성공했습니다.');
       completeAuthFlow();
     } catch (error) {
@@ -573,6 +573,8 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   };
 
   const handleSendVerificationCode = async () => {
+    if (emailVerified) return;
+
     const email = signUpEmail.trim();
     if (!emailRegex.test(email)) {
       showToast('올바른 이메일 형식을 입력해주세요.');
@@ -753,7 +755,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       await signUpByEmail(signUpEmail.trim(), signUpPassword.trim());
 
       // 이메일 회원가입 직후 세션 보장을 위해 로그인까지 수행합니다.
-      await loginByEmail(signUpEmail.trim(), signUpPassword.trim());
+      await loginByIdentifier(signUpEmail.trim(), signUpPassword.trim());
 
       let uploadedProfileImageUrl = profileImageUrl.trim() || undefined;
       if (selectedProfileImage?.uri) {
@@ -828,9 +830,11 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       setFoundEmail(email);
       setStep('findIdResult');
     } catch (error) {
-      if (!(error instanceof ApiError)) {
-        showToast('이메일 찾기에 실패했습니다.');
+      if (error instanceof ApiError) {
+        showToast(error.message || '이메일 찾기에 실패했습니다.');
+        return;
       }
+      showToast('이메일 찾기에 실패했습니다.');
     } finally {
       setFindEmailSubmitting(false);
     }
@@ -1081,13 +1085,23 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
               <View style={styles.termsModalButtonRow}>
                 <Pressable
-                  style={({ pressed }) => [styles.secondaryButton, styles.buttonFlex, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.secondaryButton,
+                    styles.buttonFlex,
+                    styles.termsModalActionButton,
+                    pressed && styles.pressed,
+                  ]}
                   onPress={closeTermsModal}
                 >
                   <Text style={styles.secondaryText}>닫기</Text>
                 </Pressable>
                 <Pressable
-                  style={({ pressed }) => [styles.primaryButton, styles.buttonFlex, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    styles.buttonFlex,
+                    styles.termsModalActionButton,
+                    pressed && styles.pressed,
+                  ]}
                   onPress={handleConfirmTermsModal}
                 >
                   <Text style={styles.primaryText}>동의</Text>
@@ -1148,13 +1162,18 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             keyboardType="email-address"
           />
           <Pressable
-            style={({ pressed }) => [styles.outlineButton, styles.actionButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.outlineButton,
+              styles.actionButton,
+              emailVerified && styles.outlineButtonDisabled,
+              pressed && !emailVerified && styles.pressed,
+            ]}
             onPress={() => {
               void handleSendVerificationCode();
             }}
-            disabled={sendingCode}
+            disabled={sendingCode || emailVerified}
           >
-            <Text style={styles.outlineText}>
+            <Text style={[styles.outlineText, emailVerified && styles.outlineTextDisabled]}>
               {sendingCode ? '발송 중...' : verificationSent ? '인증번호 재발송' : '인증번호 발송'}
             </Text>
           </Pressable>
@@ -1670,14 +1689,13 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       <Text style={styles.title}>로그인</Text>
       <View style={styles.formGroup}>
         <TextInput
-          value={loginEmail}
-          onChangeText={setLoginEmail}
-          placeholder="이메일"
+          value={loginIdentifier}
+          onChangeText={setLoginIdentifier}
+          placeholder="아이디(이메일/닉네임)"
           style={styles.input}
           placeholderTextColor={colors.gray3}
           autoCapitalize="none"
           autoCorrect={false}
-          keyboardType="email-address"
         />
         <TextInput
           value={loginPassword}
@@ -1884,6 +1902,11 @@ const styles = StyleSheet.create({
   termsModalButtonRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+  },
+  termsModalActionButton: {
+    height: 52,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   formGroup: {
     gap: spacing.sm,
@@ -2151,9 +2174,16 @@ const styles = StyleSheet.create({
   outlineButtonActive: {
     borderColor: colors.green,
   },
+  outlineButtonDisabled: {
+    borderColor: colors.gray2,
+    backgroundColor: colors.gray1,
+  },
   outlineText: {
     ...typography.body2_2,
     color: colors.primary1,
+  },
+  outlineTextDisabled: {
+    color: colors.gray4,
   },
   outlineTextActive: {
     color: colors.green,

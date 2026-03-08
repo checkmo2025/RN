@@ -1240,7 +1240,7 @@ const styles = StyleSheet.create({
   tag: {
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 1,
+    paddingVertical: spacing.xs - 2,
   },
   tagAmber: {
     backgroundColor: '#EFB56D',
@@ -4764,6 +4764,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     imageUrl: group.profileImageUrl ?? '',
   }));
   const [noticeItems, setNoticeItems] = useState<NoticeItem[]>([]);
+  const [latestNoticeId, setLatestNoticeId] = useState<number | null>(null);
+  const [shouldOpenTopNotice, setShouldOpenTopNotice] = useState(false);
   const [noticeComposerVisible, setNoticeComposerVisible] = useState(false);
   const [noticeBookSelectorVisible, setNoticeBookSelectorVisible] = useState(false);
   const [bookshelfBookSelectorVisible, setBookshelfBookSelectorVisible] = useState(false);
@@ -4991,6 +4993,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         ]);
 
         if (cancelled) return;
+        setLatestNoticeId(typeof latestNotice?.id === 'number' ? latestNotice.id : null);
 
         const nextCanManageClub = Boolean(bookshelfList.isStaff);
         setCanManageClub(nextCanManageClub);
@@ -5433,6 +5436,63 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     return Array.from({ length: end - start + 1 }).map((_, idx) => start + idx);
   }, [currentNoticePage, totalNoticePages]);
 
+  const handleOpenNoticeDetailByRemoteId = useCallback(
+    async (remoteNoticeId: number | null) => {
+      const existingByRemoteId =
+        typeof remoteNoticeId === 'number'
+          ? noticeItems.find((item) => item.remoteId === remoteNoticeId) ?? null
+          : null;
+
+      if (existingByRemoteId) {
+        const targetIndex = noticeItems.findIndex((item) => item.id === existingByRemoteId.id);
+        if (targetIndex >= 0) {
+          setNoticePage(Math.floor(targetIndex / noticePageSize) + 1);
+        }
+        setSelectedNoticeId(existingByRemoteId.id);
+        return;
+      }
+
+      if (typeof remoteNoticeId === 'number' && typeof group.clubId === 'number') {
+        try {
+          const detail = await fetchClubNoticeDetail(group.clubId, remoteNoticeId);
+          if (detail) {
+            const merged = mergeNoticeDetail(null, detail);
+            const nextItems = sortNoticeItems([
+              merged,
+              ...noticeItems.filter((item) => item.id !== merged.id),
+            ]);
+            setNoticeItems(nextItems);
+            const targetIndex = nextItems.findIndex((item) => item.id === merged.id);
+            if (targetIndex >= 0) {
+              setNoticePage(Math.floor(targetIndex / noticePageSize) + 1);
+            }
+            setSelectedNoticeId(merged.id);
+            return;
+          }
+        } catch (error) {
+          if (!(error instanceof ApiError)) {
+            showToast('공지 상세를 불러오지 못했습니다.');
+          }
+        }
+      }
+
+      if (noticeItems.length > 0) {
+        setNoticePage(1);
+        setSelectedNoticeId(noticeItems[0].id);
+        return;
+      }
+
+      showToast('등록된 공지가 없습니다.');
+    },
+    [group.clubId, noticeItems, noticePageSize],
+  );
+
+  const handlePressTopNotice = useCallback(() => {
+    if (!managedGroup.notice?.trim()) return;
+    setShouldOpenTopNotice(true);
+    setActiveTab('notice');
+  }, [managedGroup.notice]);
+
   useEffect(() => {
     if (activeTab === 'bookshelf' && skipNextBookshelfResetRef.current) {
       skipNextBookshelfResetRef.current = false;
@@ -5451,6 +5511,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     setActiveRegularChatGroupId(null);
     setRegularChatInput('');
   }, [activeTab, group.id]);
+
+  useEffect(() => {
+    if (!shouldOpenTopNotice || activeTab !== 'notice') return;
+
+    setShouldOpenTopNotice(false);
+    void handleOpenNoticeDetailByRemoteId(latestNoticeId);
+  }, [activeTab, handleOpenNoticeDetailByRemoteId, latestNoticeId, shouldOpenTopNotice]);
 
   useEffect(() => {
     if (bookshelfViewMode === 'GRID') return;
@@ -7185,6 +7252,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           ...refreshed.normalNotices.map(mapNoticePreviewToNoticeItem),
         ]);
         setNoticeItems(mapped);
+        setLatestNoticeId(typeof latestNotice?.id === 'number' ? latestNotice.id : null);
         setManagedGroup((prev) => ({ ...prev, notice: latestNotice?.title }));
         setSelectedNoticeId(mapped[0]?.id ?? null);
         setNoticeComposerVisible(false);
@@ -7221,6 +7289,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           ...refreshed.pinnedNotices.map(mapNoticePreviewToNoticeItem),
           ...refreshed.normalNotices.map(mapNoticePreviewToNoticeItem),
         ]));
+        setLatestNoticeId(typeof latestNotice?.id === 'number' ? latestNotice.id : null);
         setManagedGroup((prev) => ({ ...prev, notice: latestNotice?.title }));
         setNoticeCommentsById((prev) => {
           const next = { ...prev };
@@ -7425,10 +7494,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       {activeTab === 'home' ? (
         <View style={styles.detailCard}>
           {managedGroup.notice ? (
-            <View style={styles.noticeBox}>
+            <Pressable
+              style={({ pressed }) => [styles.noticeBox, pressed && styles.pressed]}
+              onPress={handlePressTopNotice}
+            >
               <MaterialIcons name="campaign" size={18} color={colors.primary1} />
               <Text style={styles.noticeText}>{managedGroup.notice}</Text>
-            </View>
+            </Pressable>
           ) : null}
 
 	          <View style={styles.detailMain}>

@@ -5,7 +5,7 @@ import { colors, radius, spacing, typography } from '../../theme';
 import { subscribeToast } from '../../utils/toast';
 
 const HIDE_DELAY_MS = 2200;
-const TOAST_BOTTOM_OFFSET = spacing.xxl * 2 + spacing.lg;
+const TOAST_BOTTOM_OFFSET = spacing.xxl * 2 + spacing.lg + spacing.xs + spacing.xxs * 2;
 
 export function ToastHost() {
   const [message, setMessage] = useState('');

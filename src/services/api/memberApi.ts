@@ -113,6 +113,7 @@ export type MemberProfile = {
   followerCount?: number;
   followingCount?: number;
   following?: boolean;
+  categories: string[];
 };
 
 function normalizeFollowInfo(item: FollowInfo): FollowInfo {
@@ -206,6 +207,9 @@ export async function fetchMemberProfile(nickname: string): Promise<MemberProfil
           : typeof result.subscribed === 'boolean'
             ? result.subscribed
             : undefined,
+    categories: Array.isArray(result.categories)
+      ? result.categories.filter((value): value is string => typeof value === 'string')
+      : [],
   };
 }
 
@@ -232,6 +236,46 @@ export async function fetchMyFollowing(cursorId?: number): Promise<FollowList> {
       cursorId,
     },
   });
+  const result = unwrapResult(response) ?? {};
+
+  return {
+    items: Array.isArray(result.followList) ? result.followList.map(normalizeFollowInfo) : [],
+    hasNext: Boolean(result.hasNext),
+    nextCursor: typeof result.nextCursor === 'number' ? result.nextCursor : null,
+  };
+}
+
+export async function fetchMemberFollowers(nickname: string, cursorId?: number): Promise<FollowList> {
+  const encodedNickname = encodeURIComponent(nickname);
+  const response = await requestJson<ApiEnvelope<FollowListResult>>(
+    `/members/${encodedNickname}/followers`,
+    {
+      method: 'GET',
+      query: {
+        cursorId,
+      },
+    },
+  );
+  const result = unwrapResult(response) ?? {};
+
+  return {
+    items: Array.isArray(result.followList) ? result.followList.map(normalizeFollowInfo) : [],
+    hasNext: Boolean(result.hasNext),
+    nextCursor: typeof result.nextCursor === 'number' ? result.nextCursor : null,
+  };
+}
+
+export async function fetchMemberFollowings(nickname: string, cursorId?: number): Promise<FollowList> {
+  const encodedNickname = encodeURIComponent(nickname);
+  const response = await requestJson<ApiEnvelope<FollowListResult>>(
+    `/members/${encodedNickname}/followings`,
+    {
+      method: 'GET',
+      query: {
+        cursorId,
+      },
+    },
+  );
   const result = unwrapResult(response) ?? {};
 
   return {

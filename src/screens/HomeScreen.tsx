@@ -26,6 +26,7 @@ import {
   type RemoteStoryItem,
 } from '../services/api/bookStoryApi';
 import {
+  fetchMemberProfile,
   fetchMyProfile,
   fetchRecommendedMembers,
   setFollowingMember,
@@ -119,14 +120,29 @@ export function HomeScreen() {
         return;
       }
 
-      setUserRecommendations(
-        users.slice(0, 3).map((user) => ({
-          id: user.nickname,
-          nickname: user.nickname,
-          profileImageUrl: user.profileImageUrl,
-          subscribed: false,
-        })),
+      const topUsers = users.slice(0, 3);
+      const resolvedUsers = await Promise.all(
+        topUsers.map(async (user) => {
+          let subscribed = false;
+          try {
+            const profile = await fetchMemberProfile(user.nickname);
+            subscribed = profile?.following ?? false;
+          } catch (error) {
+            if (!(error instanceof ApiError)) {
+              showToast('추천 사용자 상태를 불러오지 못했습니다.');
+            }
+          }
+
+          return {
+            id: user.nickname,
+            nickname: user.nickname,
+            profileImageUrl: user.profileImageUrl,
+            subscribed,
+          };
+        }),
       );
+
+      setUserRecommendations(resolvedUsers);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         setUserRecommendations([]);
@@ -279,12 +295,16 @@ export function HomeScreen() {
         try {
           await setFollowingMember(target.nickname, nextSubscribed);
           showToast(nextSubscribed ? '구독했습니다.' : '구독을 취소했습니다.');
-        } catch {
+        } catch (error) {
           setUserRecommendations((prev) =>
             prev.map((user) =>
               user.id === id ? { ...user, subscribed: !nextSubscribed } : user,
             ),
           );
+          if (error instanceof ApiError) {
+            showToast(error.message || '구독 상태를 변경하지 못했습니다.');
+            return;
+          }
           showToast('구독 상태를 변경하지 못했습니다.');
         }
       };
@@ -440,6 +460,7 @@ export function HomeScreen() {
                     nickname={user.nickname}
                     profileImageUrl={user.profileImageUrl}
                     subscribed={user.subscribed}
+                    compactSubscribeButton
                     onPressProfile={() => openUserProfile(user.nickname)}
                     onPressSubscribe={() => handleSubscribeToggle(user.id)}
                   />

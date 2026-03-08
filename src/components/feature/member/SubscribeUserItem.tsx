@@ -10,6 +10,7 @@ type Props = {
   subscribed?: boolean;
   onPressSubscribe?: () => void;
   onPressProfile?: () => void;
+  compactSubscribeButton?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -19,6 +20,7 @@ export default function SubscribeUserItem({
   subscribed = false,
   onPressSubscribe,
   onPressProfile,
+  compactSubscribeButton = false,
   style,
 }: Props) {
   return (
@@ -41,12 +43,17 @@ export default function SubscribeUserItem({
       </Pressable>
 
       <Pressable
-        style={[styles.subscribeButton, subscribed ? styles.subscribeButtonActive : null]}
+        style={[
+          styles.subscribeButton,
+          compactSubscribeButton ? styles.subscribeButtonCompact : null,
+          subscribed ? styles.subscribeButtonActive : null,
+        ]}
         onPress={onPressSubscribe}
       >
         <Text
           style={[
             styles.subscribeButtonText,
+            compactSubscribeButton ? styles.subscribeButtonTextCompact : null,
             subscribed ? styles.subscribeButtonTextActive : styles.subscribeButtonTextInactive,
           ]}
         >
@@ -107,11 +114,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm + 2,
     backgroundColor: colors.primary1,
   },
+  subscribeButtonCompact: {
+    minWidth: 68,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
   subscribeButtonActive: {
     backgroundColor: colors.subbrown4,
   },
   subscribeButtonText: {
     ...typography.body1_2,
+  },
+  subscribeButtonTextCompact: {
+    ...typography.body2_2,
   },
   subscribeButtonTextActive: {
     color: colors.primary3,

@@ -11,8 +11,16 @@ type BookListResult = {
   currentPage?: number;
 };
 
+type LikedBookListResult = {
+  books?: unknown[];
+  items?: unknown[];
+  hasNext?: boolean;
+  nextCursor?: number;
+};
+
 type BookListResponse = ApiEnvelope<BookListResult | unknown[]>;
 type BookDetailResponse = ApiEnvelope<unknown>;
+type LikedBookListResponse = ApiEnvelope<LikedBookListResult | unknown[]>;
 
 export type BookItem = {
   isbn: string;
@@ -28,6 +36,21 @@ export type BookSearchResult = {
   items: BookItem[];
   hasNext: boolean;
   currentPage: number;
+};
+
+export type MemberLikedBookItem = {
+  isbn: string;
+  title: string;
+  author: string;
+  imgUrl?: string;
+  likes: number;
+  likedByMe: boolean;
+};
+
+export type MemberLikedBookListResult = {
+  items: MemberLikedBookItem[];
+  hasNext: boolean;
+  nextCursor: number | null;
 };
 
 function asRecord(value: unknown): UnknownRecord | null {
@@ -115,6 +138,64 @@ function normalizeBookList(payload: unknown): BookSearchResult {
   };
 }
 
+function normalizeMemberLikedBookItem(raw: unknown): MemberLikedBookItem | null {
+  const record = asRecord(raw);
+  if (!record) return null;
+
+  const isbn =
+    toStringValue(firstDefined(record.isbn13, record.isbn, record.bookId, record.id)) ?? '';
+  const title = toStringValue(firstDefined(record.title, record.bookTitle)) ?? '';
+  const author =
+    toStringValue(firstDefined(record.author, record.authorName, record.writer)) ?? '';
+  const imgUrl = normalizeRemoteImageUrl(
+    toStringValue(firstDefined(record.imgUrl, record.imageUrl, record.cover, record.thumbnailUrl)),
+  );
+  const likes = toNumber(firstDefined(record.likes, record.likeCount)) ?? 0;
+  const likedByMe = toBoolean(record.likedByMe) ?? false;
+
+  if (!isbn && !title) return null;
+
+  return {
+    isbn: isbn || `book-${title}`,
+    title: title || '책 제목',
+    author: author || '작가 미상',
+    imgUrl,
+    likes,
+    likedByMe,
+  };
+}
+
+function normalizeMemberLikedBookList(payload: unknown): MemberLikedBookListResult {
+  const result = unwrapResult(payload as LikedBookListResponse);
+
+  if (Array.isArray(result)) {
+    return {
+      items: result
+        .map(normalizeMemberLikedBookItem)
+        .filter((item): item is MemberLikedBookItem => Boolean(item)),
+      hasNext: false,
+      nextCursor: null,
+    };
+  }
+
+  const record = asRecord(result);
+  if (!record) {
+    return { items: [], hasNext: false, nextCursor: null };
+  }
+
+  const rawList = firstDefined(record.books, record.items);
+  const list = Array.isArray(rawList) ? rawList : [];
+  const nextCursor = toNumber(record.nextCursor);
+
+  return {
+    items: list
+      .map(normalizeMemberLikedBookItem)
+      .filter((item): item is MemberLikedBookItem => Boolean(item)),
+    hasNext: toBoolean(record.hasNext) ?? false,
+    nextCursor: typeof nextCursor === 'number' ? nextCursor : null,
+  };
+}
+
 export async function fetchRecommendedBooks(): Promise<BookItem[]> {
   const response = await requestJson<BookListResponse>('/books/recommend', {
     method: 'GET',
@@ -141,4 +222,21 @@ export async function fetchBookDetail(isbn: string): Promise<BookItem | null> {
   });
   const result = unwrapResult(response);
   return normalizeBookItem(result);
+}
+
+export async function fetchMemberLikedBooks(
+  memberNickname: string,
+  cursorId?: number,
+): Promise<MemberLikedBookListResult> {
+  const response = await requestJson<LikedBookListResponse>(
+    `/books/${encodeURIComponent(memberNickname)}/likes`,
+    {
+      method: 'GET',
+      query: {
+        cursorId,
+      },
+    },
+  );
+
+  return normalizeMemberLikedBookList(response);
 }

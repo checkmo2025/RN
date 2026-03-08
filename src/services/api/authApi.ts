@@ -46,15 +46,18 @@ function getApiOrigin() {
   return `${url.protocol}//${url.host}`;
 }
 
-export async function loginByEmail(email: string, password: string): Promise<void> {
+export async function loginByIdentifier(identifier: string, password: string): Promise<void> {
   await requestJson<ApiResponseString>('/auth/login', {
     method: 'POST',
     body: {
-      identifier: email,
+      identifier,
       password,
     },
   });
 }
+
+// Backward-compatible alias for existing callers.
+export const loginByEmail = loginByIdentifier;
 
 export async function signUpByEmail(email: string, password: string): Promise<void> {
   await requestJson<ApiResponseString>('/auth/signup', {
@@ -180,22 +183,34 @@ export async function findEmailByNamePhone(
     const result = unwrapResult(response);
     return typeof result?.email === 'string' ? result.email : null;
   } catch (error) {
-    if (!(error instanceof ApiError) || error.status !== 401) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null;
+    }
+
+    if (!(error instanceof ApiError) || (error.status !== 401 && error.status !== 405)) {
       throw error;
     }
   }
 
-  // Backend auth filter issue 대응: POST가 401일 때 GET으로 한 번 더 조회합니다.
-  const response = await requestJson<ApiEnvelope<FindEmailResult>>('/members/find-email', {
-    method: 'GET',
-    query: {
-      name,
-      phoneNumber,
-    },
-    credentials: 'omit',
-  });
-  const result = unwrapResult(response);
-  return typeof result?.email === 'string' ? result.email : null;
+  // Backend auth filter issue 대응: POST가 인증/메서드 이슈로 실패하면 GET으로 한 번 더 조회합니다.
+  try {
+    const response = await requestJson<ApiEnvelope<FindEmailResult>>('/members/find-email', {
+      method: 'GET',
+      query: {
+        name,
+        phoneNumber,
+      },
+      credentials: 'omit',
+      suppressErrorToast: true,
+    });
+    const result = unwrapResult(response);
+    return typeof result?.email === 'string' ? result.email : null;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function sendTemporaryPassword(email: string): Promise<void> {

@@ -253,15 +253,18 @@ function applyViewerContextToStoryItem(
   };
 }
 
-function normalizeStoryComment(raw: unknown): RemoteStoryComment | null {
+function normalizeStoryCommentTree(raw: unknown, fallbackParentCommentId?: number): RemoteStoryComment[] {
   const record = asRecord(raw);
-  if (!record) return null;
+  if (!record) return [];
 
   const authorInfo = asRecord(firstDefined(record.authorInfo, record.memberInfo, record.author));
   const id = toNumber(firstDefined(record.commentId, record.id));
-  if (!id) return null;
+  if (!id) return [];
 
-  return {
+  const parentCommentId =
+    toNumber(firstDefined(record.parentCommentId, record.parentId)) ?? fallbackParentCommentId;
+
+  const current: RemoteStoryComment = {
     id,
     nickname:
       toStringValue(
@@ -291,7 +294,7 @@ function normalizeStoryComment(raw: unknown): RemoteStoryComment | null {
     ),
     content: toStringValue(firstDefined(record.content, record.comment, record.description)) ?? '',
     createdAt: toStringValue(firstDefined(record.createdAt, record.updatedAt)),
-    parentCommentId: toNumber(firstDefined(record.parentCommentId, record.parentId)),
+    parentCommentId,
     deleted: toBoolean(firstDefined(record.deleted, record.isDeleted)) ?? false,
     mine:
       toBoolean(
@@ -299,6 +302,14 @@ function normalizeStoryComment(raw: unknown): RemoteStoryComment | null {
       ) ??
       false,
   };
+
+  const rawReplies = firstDefined(record.replies, record.replyList, record.children);
+  if (!Array.isArray(rawReplies) || rawReplies.length === 0) {
+    return [current];
+  }
+
+  const flattenedReplies = rawReplies.flatMap((reply) => normalizeStoryCommentTree(reply, id));
+  return [current, ...flattenedReplies];
 }
 
 function applyViewerContextToStoryComment(
@@ -372,8 +383,7 @@ function normalizeStoryDetail(payload: unknown, viewerAuthenticated = true): Rem
 
   const commentList = Array.isArray(rawComments)
     ? rawComments
-        .map(normalizeStoryComment)
-        .filter((comment): comment is RemoteStoryComment => Boolean(comment))
+        .flatMap((comment) => normalizeStoryCommentTree(comment))
         .map((comment) => applyViewerContextToStoryComment(comment, viewerAuthenticated))
     : [];
 
