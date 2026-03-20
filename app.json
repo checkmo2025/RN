@@ -3,6 +3,7 @@
     "name": "책모",
     "slug": "checkmo_rn",
     "version": "1.0.0",
+    "scheme": "checkmo",
     "orientation": "portrait",
     "icon": "./assets/icon-checkmo.png",
     "userInterfaceStyle": "light",
@@ -14,7 +15,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.checkmo-rn"
+      "bundleIdentifier": "kr.co.checkmo.app",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -31,9 +36,12 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "프로필 이미지를 등록하기 위해 사진 접근 권한이 필요합니다."
+          "photosPermission": "프로필 이미지를 등록하기 위해 사진 접근 권한이 필요합니다.",
+          "cameraPermission": "프로필 이미지를 촬영하기 위해 카메라 접근 권한이 필요합니다.",
+          "microphonePermission": "동영상 촬영 시 마이크 접근 권한이 필요합니다."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }
