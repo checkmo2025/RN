@@ -20,24 +20,24 @@ import { SvgUri } from 'react-native-svg';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 
+import { PUBLIC_ENV } from '../constants/publicEnv';
 import { colors, radius, spacing, typography } from '../theme';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { issueProfileImageUploadUrl, logoutSession } from '../services/api/authApi';
 import { ApiError } from '../services/api/http';
-import { fetchMyBookStories } from '../services/api/bookStoryApi';
 import {
-  fetchLikedBooks,
-  subscribeLikedBooks,
-  toggleBookLike,
-  type LikedBook,
-} from '../services/api/bookLikeApi';
+  fetchAllMyLikedBooks,
+  toggleBookLikeByIsbn,
+  type MemberLikedBookItem,
+} from '../services/api/bookApi';
+import { fetchMyBookStories } from '../services/api/bookStoryApi';
 import { fetchMyClubs, leaveClub } from '../services/api/clubApi';
 import {
   deleteFollowerMember,
+  fetchMyFollowCount,
   fetchMyReports,
-  fetchMemberLoginStatus,
   fetchMyFollowers,
   fetchMyFollowing,
   fetchMyProfile,
@@ -46,7 +46,6 @@ import {
   updateMyPassword,
   updateMyProfile,
   withdrawMember,
-  type MemberLoginStatus,
   type ReportItem,
 } from '../services/api/memberApi';
 import {
@@ -381,6 +380,7 @@ export function MyPageScreen() {
     '이제 다양한 책을 함께 읽고 서로의 생각을 나누는 특별한 시간을 시작해보세요. 한 권의 책이 주는 작은 울림이 ......',
   );
   const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>(undefined);
+  const [profilePhoneNumber, setProfilePhoneNumber] = useState('');
   const [profileDefaultColor, setProfileDefaultColor] = useState(colors.subbrown3);
   const [profileCategoryCodes, setProfileCategoryCodes] = useState<string[]>([]);
   const [profileCategories, setProfileCategories] = useState<string[]>([]);
@@ -421,8 +421,6 @@ export function MyPageScreen() {
   const [passwordNext, setPasswordNext] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [submittingPasswordUpdate, setSubmittingPasswordUpdate] = useState(false);
-  const [loginStatus, setLoginStatus] = useState<MemberLoginStatus | null>(null);
-  const [loadingLoginStatus, setLoadingLoginStatus] = useState(false);
   const [reportHistory, setReportHistory] = useState<ReportHistoryItem[]>([]);
   const [loadingReportHistory, setLoadingReportHistory] = useState(false);
   const [submittingWithdrawal, setSubmittingWithdrawal] = useState(false);
@@ -453,15 +451,30 @@ export function MyPageScreen() {
     [],
   );
 
-  const mapLikedBooksToCards = useCallback((items: LikedBook[]): BookCard[] => {
-    return items.map((book) => ({
-      id: book.id,
-      isbn: book.isbn,
-      bookId: book.bookId,
-      title: book.title || '책 제목',
-      author: book.author || '작가 미상',
-      imageUrl: normalizeImageUrl(book.imgUrl),
-    }));
+  const mapLikedBooksToCards = useCallback((items: MemberLikedBookItem[]): BookCard[] => {
+    const mapped = items.map((book, index) => {
+      const normalizedIsbn = book.isbn.trim();
+      const title = book.title?.trim() || '책 제목';
+      const author = book.author?.trim() || '작가 미상';
+      const id = normalizedIsbn || `${title}-${author}-${index}`;
+
+      return {
+        id,
+        isbn: normalizedIsbn,
+        bookId: book.bookId,
+        title,
+        author,
+        imageUrl: normalizeImageUrl(book.imgUrl),
+      };
+    });
+
+    const uniqueById = new Map<string, BookCard>();
+    mapped.forEach((item) => {
+      if (!uniqueById.has(item.id)) {
+        uniqueById.set(item.id, item);
+      }
+    });
+    return Array.from(uniqueById.values());
   }, []);
 
   const mapMyNewsItems = useCallback((items: RemoteNewsSummary[]): MyNewsItem[] => {
@@ -500,7 +513,7 @@ export function MyPageScreen() {
   const loadLikedBooks = useCallback(async () => {
     setLoadingBooks(true);
     try {
-      const items = await fetchLikedBooks();
+      const items = await fetchAllMyLikedBooks();
       setBooks(mapLikedBooksToCards(items));
     } finally {
       setLoadingBooks(false);
@@ -519,6 +532,7 @@ export function MyPageScreen() {
         '이제 다양한 책을 함께 읽고 서로의 생각을 나누는 특별한 시간을 시작해보세요. 한 권의 책이 주는 작은 울림이 ......',
       );
       setProfileImageUrl(undefined);
+      setProfilePhoneNumber('');
       setProfileCategoryCodes([]);
       setProfileCategories([]);
       setFollowerUsers([]);
@@ -537,12 +551,15 @@ export function MyPageScreen() {
         setProfileName(profile.nickname || '_사용자');
         setProfileDesc(profile.description || '소개글이 없습니다.');
         setProfileImageUrl(normalizeImageUrl(profile.profileImageUrl));
+        setProfilePhoneNumber(profile.phoneNumber ?? '');
         setProfileCategoryCodes(profile.categories);
         setProfileCategories(
           profile.categories
             .map((code) => categoryLabelByCode[code] ?? code)
             .filter((label) => label.length > 0),
         );
+      } else {
+        setProfilePhoneNumber('');
       }
     } catch (error) {
       if (!(error instanceof ApiError)) {
@@ -553,14 +570,15 @@ export function MyPageScreen() {
     }
 
     try {
-      const [followers, followings] = await Promise.all([
+      const [followCount, followers, followings] = await Promise.all([
+        fetchMyFollowCount().catch(() => null),
         fetchAllFollowUsers(fetchMyFollowers),
         fetchAllFollowUsers(fetchMyFollowing),
       ]);
       setFollowerUsers(followers);
       setFollowingUsers(followings);
-      setFollowerCount(followers.length);
-      setFollowingCount(followings.length);
+      setFollowerCount(followCount?.followerCount ?? followers.length);
+      setFollowingCount(followCount?.followingCount ?? followings.length);
     } catch (error) {
       if (!(error instanceof ApiError)) {
         showToast('구독 정보를 불러오지 못했습니다.');
@@ -626,14 +644,15 @@ export function MyPageScreen() {
 
     setLoadingFollowUsers(true);
     try {
-      const [followers, followings] = await Promise.all([
+      const [followCount, followers, followings] = await Promise.all([
+        fetchMyFollowCount().catch(() => null),
         fetchAllFollowUsers(fetchMyFollowers),
         fetchAllFollowUsers(fetchMyFollowing),
       ]);
       setFollowerUsers(followers);
       setFollowingUsers(followings);
-      setFollowerCount(followers.length);
-      setFollowingCount(followings.length);
+      setFollowerCount(followCount?.followerCount ?? followers.length);
+      setFollowingCount(followCount?.followingCount ?? followings.length);
     } catch (error) {
       if (!(error instanceof ApiError)) {
         showToast('구독 정보를 불러오지 못했습니다.');
@@ -824,29 +843,6 @@ export function MyPageScreen() {
     void submit();
   }, [notificationSettings]);
 
-  const loadLoginStatus = useCallback(async () => {
-    if (!isLoggedIn) {
-      setLoginStatus(null);
-      return;
-    }
-
-    setLoadingLoginStatus(true);
-    try {
-      const status = await fetchMemberLoginStatus();
-      setLoginStatus(status);
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        setLoginStatus(null);
-        return;
-      }
-      if (!(error instanceof ApiError)) {
-        showToast('로그인 연동 상태를 불러오지 못했습니다.');
-      }
-    } finally {
-      setLoadingLoginStatus(false);
-    }
-  }, [isLoggedIn]);
-
   const loadReportHistory = useCallback(async () => {
     if (!isLoggedIn) {
       setReportHistory([]);
@@ -979,9 +975,11 @@ export function MyPageScreen() {
         const nextImageUrl = profileEditUseDefaultAvatar
           ? undefined
           : normalizeImageUrl(updated?.profileImageUrl ?? imageUrl);
+        const nextPhoneNumber = updated?.phoneNumber ?? profilePhoneNumber;
 
         setProfileDesc(nextDescription || '소개글이 없습니다.');
         setProfileImageUrl(nextImageUrl);
+        setProfilePhoneNumber(nextPhoneNumber);
         setProfileCategoryCodes(nextCategoryCodes);
         setProfileCategories(
           nextCategoryCodes
@@ -1008,6 +1006,7 @@ export function MyPageScreen() {
     profileEditDescription,
     profileEditImageUrl,
     profileEditUseDefaultAvatar,
+    profilePhoneNumber,
   ]);
 
   const handleSubmitEmailUpdate = useCallback(() => {
@@ -1177,6 +1176,9 @@ export function MyPageScreen() {
     (nickname: string, nextFollowing: boolean) => {
       const prevFollowerUsers = followerUsers;
       const prevFollowingUsers = followingUsers;
+      const prevFollowerCount = followerCount;
+      const prevFollowingCount = followingCount;
+      const wasFollowing = prevFollowingUsers.some((item) => item.nickname === nickname);
 
       setFollowerUsers((prev) =>
         prev.map((item) =>
@@ -1200,6 +1202,12 @@ export function MyPageScreen() {
         }
         return prev.filter((item) => item.nickname !== nickname);
       });
+      setFollowingCount((prev) => {
+        if (nextFollowing) {
+          return wasFollowing ? prev : prev + 1;
+        }
+        return wasFollowing ? Math.max(0, prev - 1) : prev;
+      });
 
       const submit = async () => {
         try {
@@ -1208,6 +1216,8 @@ export function MyPageScreen() {
         } catch (error) {
           setFollowerUsers(prevFollowerUsers);
           setFollowingUsers(prevFollowingUsers);
+          setFollowerCount(prevFollowerCount);
+          setFollowingCount(prevFollowingCount);
           if (!(error instanceof ApiError)) {
             showToast('구독 상태를 변경하지 못했습니다.');
           }
@@ -1215,7 +1225,7 @@ export function MyPageScreen() {
       };
       void submit();
     },
-    [followerUsers, followingUsers],
+    [followerCount, followerUsers, followingCount, followingUsers],
   );
 
   const handleDeleteFollower = useCallback(
@@ -1242,6 +1252,7 @@ export function MyPageScreen() {
                 setFollowerUsers((prev) =>
                   prev.filter((item) => item.nickname !== targetNickname),
                 );
+                setFollowerCount((prev) => Math.max(0, prev - 1));
                 showToast('구독자를 삭제했습니다.');
               } catch (error) {
                 if (!(error instanceof ApiError)) {
@@ -1263,18 +1274,23 @@ export function MyPageScreen() {
 
   const handleToggleBookLike = useCallback((book: BookCard) => {
     const submit = async () => {
-      const liked = await toggleBookLike({
-        isbn: book.isbn,
-        bookId: book.bookId,
-        title: book.title,
-        author: book.author,
-        description: '',
-        imgUrl: book.imageUrl,
-      });
-      showToast(liked ? '내 서재에 담았습니다.' : '내 서재에서 제거했습니다.');
+      if (!book.isbn.trim()) {
+        showToast('ISBN 정보가 없어 서재 상태를 변경할 수 없습니다.');
+        return;
+      }
+
+      try {
+        await toggleBookLikeByIsbn(book.isbn);
+        await loadLikedBooks();
+        showToast('내 서재가 업데이트되었습니다.');
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('내 서재 업데이트에 실패했습니다.');
+        }
+      }
     };
     void submit();
-  }, []);
+  }, [loadLikedBooks]);
 
   const renderStories = () => (
     <View style={[styles.gridContent, styles.cardWrap]}>
@@ -1596,21 +1612,6 @@ export function MyPageScreen() {
   }, [activeTab]);
 
   useEffect(() => {
-    const unsubscribe = subscribeLikedBooks((items) => {
-      setBooks(mapLikedBooksToCards(items));
-    });
-    return unsubscribe;
-  }, [mapLikedBooksToCards]);
-
-  useEffect(() => {
-    setFollowerCount(followerUsers.length);
-  }, [followerUsers]);
-
-  useEffect(() => {
-    setFollowingCount(followingUsers.length);
-  }, [followingUsers]);
-
-  useEffect(() => {
     if (activeTab !== '내 알림') return;
     void loadAllNotifications();
   }, [activeTab, loadAllNotifications]);
@@ -1639,11 +1640,6 @@ export function MyPageScreen() {
     setProfileEditUseDefaultAvatar(!profileImageUrl);
     setShowDefaultAvatarPicker(false);
   }, [profileCategoryCodes, profileDefaultColor, profileDesc, profileImageUrl, selectedSetting]);
-
-  useEffect(() => {
-    if (selectedSetting !== '소셜 로그인/탈퇴/비활성화') return;
-    void loadLoginStatus();
-  }, [loadLoginStatus, selectedSetting]);
 
   useEffect(() => {
     const nextMyTab = route.params?.openMyTab;
@@ -1720,7 +1716,7 @@ export function MyPageScreen() {
   }, [navigation]);
 
   const handleContact = useCallback(() => {
-    Linking.openURL('https://forms.gle/qNjhNN7RBTiWNuX99').catch(() => null);
+    Linking.openURL(PUBLIC_ENV.SUPPORT_FORM_URL).catch(() => null);
   }, []);
 
   const settingsSections = [
@@ -1731,7 +1727,7 @@ export function MyPageScreen() {
         '프로필 편집',
         '이메일 변경',
         '비밀번호 변경',
-        '소셜 로그인/탈퇴/비활성화',
+        '탈퇴/비활성화',
       ],
     },
     {
@@ -1963,27 +1959,12 @@ export function MyPageScreen() {
       );
     }
 
-    if (selectedSetting === '소셜 로그인/탈퇴/비활성화') {
+    if (selectedSetting === '탈퇴/비활성화') {
       return (
         <View style={styles.settingsDetailWrap}>
           {back}
-          <Text style={styles.detailTitle}>소셜 로그인 연동 관리</Text>
+          <Text style={styles.detailTitle}>탈퇴/비활성화</Text>
           <Text style={styles.detailDivider} />
-          <View style={styles.socialCard}>
-            {loadingLoginStatus ? (
-              <Text style={styles.detailBody}>연동 상태를 불러오는 중...</Text>
-            ) : (
-              <>
-                <Text style={styles.detailLabel}>
-                  로그인 방식: {loginStatus?.provider ? loginStatus.provider : '정보 없음'}
-                </Text>
-                <Text style={styles.socialEmail}>
-                  {loginStatus?.email ? loginStatus.email : '이메일 정보 없음'}
-                </Text>
-              </>
-            )}
-          </View>
-          <Text style={[styles.detailTitle, { marginTop: spacing.md }]}>탈퇴/비활성화</Text>
           <View style={styles.detailList}>
             <Text style={styles.detailBody}>
               1. 탈퇴 신청 후 보류 기간{'\n'}- 탈퇴 신청 시 즉시 탈퇴가 아닌 7일간의 유예 기간이 적용됩니다.{'\n'}- 이 기간
@@ -2667,17 +2648,6 @@ const styles = StyleSheet.create({
   },
   reportTypeChipTextActive: {
     color: colors.primary1,
-  },
-  socialCard: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray2,
-    padding: spacing.md,
-    borderRadius: radius.md,
-  },
-  socialEmail: {
-    ...typography.body1_2,
-    color: colors.black,
   },
   detailList: {
     gap: spacing.sm,

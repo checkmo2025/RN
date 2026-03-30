@@ -27,6 +27,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import * as Clipboard from 'expo-clipboard';
 
+import { PUBLIC_ENV } from '../constants/publicEnv';
 import { colors, radius, spacing, typography } from '../theme';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
@@ -323,6 +324,7 @@ export function StoryScreen() {
       gestureState.x0 <= DETAIL_BACK_EDGE_WIDTH
       && gestureState.dx > DETAIL_BACK_ACTIVATE_DISTANCE
       && Math.abs(gestureState.dy) < DETAIL_BACK_ACTIVATE_MAX_DY
+      && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.4
     );
   }, [selectedStory]);
 
@@ -860,7 +862,8 @@ export function StoryScreen() {
     if (!selectedStory) return;
 
     const storyId = selectedStory.remoteId ?? selectedStory.id.replace('story-', '');
-    const url = `https://checkmo.co.kr/book-stories/${storyId}`;
+    const webBaseUrl = PUBLIC_ENV.WEB_BASE_URL.replace(/\/+$/, '');
+    const url = `${webBaseUrl}/book-stories/${storyId}`;
     void Clipboard.setStringAsync(url);
     showToast('URL이 클립보드에 복사되었습니다.');
   }, [selectedStory]);
@@ -1544,8 +1547,11 @@ export function StoryScreen() {
             styles.detailSwipeContainer,
             { transform: [{ translateX: detailTranslateX }] },
           ]}
-          {...detailBackSwipeResponder.panHandlers}
         >
+        <View
+          style={styles.detailBackSwipeEdge}
+          {...detailBackSwipeResponder.panHandlers}
+        />
         <KeyboardAvoidingView style={styles.container} behavior="padding">
           <ScrollView
             ref={detailScrollRef}
@@ -2340,6 +2346,14 @@ const styles = StyleSheet.create({
   },
   detailSwipeContainer: {
     flex: 1,
+  },
+  detailBackSwipeEdge: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: DETAIL_BACK_EDGE_WIDTH,
+    zIndex: 20,
   },
   listContent: {
     paddingBottom: spacing.xl,

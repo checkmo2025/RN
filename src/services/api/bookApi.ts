@@ -40,6 +40,7 @@ export type BookSearchResult = {
 
 export type MemberLikedBookItem = {
   isbn: string;
+  bookId?: number;
   title: string;
   author: string;
   imgUrl?: string;
@@ -144,6 +145,7 @@ function normalizeMemberLikedBookItem(raw: unknown): MemberLikedBookItem | null 
 
   const isbn =
     toStringValue(firstDefined(record.isbn13, record.isbn, record.bookId, record.id)) ?? '';
+  const bookId = toNumber(firstDefined(record.bookId, record.id));
   const title = toStringValue(firstDefined(record.title, record.bookTitle)) ?? '';
   const author =
     toStringValue(firstDefined(record.author, record.authorName, record.writer)) ?? '';
@@ -156,7 +158,8 @@ function normalizeMemberLikedBookItem(raw: unknown): MemberLikedBookItem | null 
   if (!isbn && !title) return null;
 
   return {
-    isbn: isbn || `book-${title}`,
+    isbn,
+    bookId,
     title: title || '책 제목',
     author: author || '작가 미상',
     imgUrl,
@@ -239,4 +242,68 @@ export async function fetchMemberLikedBooks(
   );
 
   return normalizeMemberLikedBookList(response);
+}
+
+export async function fetchMyLikedBooks(cursorId?: number): Promise<MemberLikedBookListResult> {
+  const response = await requestJson<LikedBookListResponse>('/books/me/likes', {
+    method: 'GET',
+    query: {
+      cursorId,
+    },
+  });
+
+  return normalizeMemberLikedBookList(response);
+}
+
+export async function fetchAllMemberLikedBooks(memberNickname: string): Promise<MemberLikedBookItem[]> {
+  const merged: MemberLikedBookItem[] = [];
+  const seen = new Set<string>();
+  let cursorId: number | undefined;
+
+  for (let index = 0; index < 20; index += 1) {
+    const response = await fetchMemberLikedBooks(memberNickname, cursorId);
+    response.items.forEach((item) => {
+      const isbn = item.isbn.trim();
+      const key = isbn || `${item.title}-${item.author}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      merged.push(item);
+    });
+
+    if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+    cursorId = response.nextCursor;
+  }
+
+  return merged;
+}
+
+export async function fetchAllMyLikedBooks(): Promise<MemberLikedBookItem[]> {
+  const merged: MemberLikedBookItem[] = [];
+  const seen = new Set<string>();
+  let cursorId: number | undefined;
+
+  for (let index = 0; index < 20; index += 1) {
+    const response = await fetchMyLikedBooks(cursorId);
+    response.items.forEach((item) => {
+      const isbn = item.isbn.trim();
+      const key = isbn || `${item.title}-${item.author}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      merged.push(item);
+    });
+
+    if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+    cursorId = response.nextCursor;
+  }
+
+  return merged;
+}
+
+export async function toggleBookLikeByIsbn(isbn: string): Promise<void> {
+  const normalizedIsbn = isbn.trim();
+  if (!normalizedIsbn) return;
+
+  await requestJson<unknown>(`/books/${encodeURIComponent(normalizedIsbn)}/like`, {
+    method: 'POST',
+  });
 }

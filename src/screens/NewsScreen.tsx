@@ -21,6 +21,7 @@ import {
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 
+import { PUBLIC_ENV } from '../constants/publicEnv';
 import { colors, radius, spacing, typography } from '../theme';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { FloatingActionButton } from '../components/common/FloatingActionButton';
@@ -97,7 +98,7 @@ const fallbackPromotions: NewsItem[] = [
     body: '',
   },
 ];
-const NEWS_CONTACT_URL = 'https://forms.gle/qNjhNN7RBTiWNuX99';
+const NEWS_CONTACT_URL = PUBLIC_ENV.SUPPORT_FORM_URL;
 
 function shuffleItems<T>(items: T[]): T[] {
   const copied = [...items];

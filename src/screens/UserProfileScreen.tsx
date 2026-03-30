@@ -25,7 +25,8 @@ import { useAuthGate } from '../contexts/AuthGateContext';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { ApiError } from '../services/api/http';
-import { fetchMemberLikedBooks, type MemberLikedBookItem } from '../services/api/bookApi';
+import { fetchAllMemberLikedBooks, type MemberLikedBookItem } from '../services/api/bookApi';
+import { fetchMemberClubs } from '../services/api/clubApi';
 import {
   fetchMemberFollowers,
   fetchMemberFollowings,
@@ -55,6 +56,8 @@ type StoryCard = {
 
 type BookCard = {
   id: string;
+  isbn: string;
+  bookId?: number;
   title: string;
   author: string;
   imageUrl?: string;
@@ -166,6 +169,8 @@ export function UserProfileScreen() {
   const [stories, setStories] = useState<StoryCard[]>([]);
   const [books, setBooks] = useState<BookCard[]>([]);
   const [loadingBooks, setLoadingBooks] = useState(false);
+  const [groups, setGroups] = useState<GroupItem[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
   const [followerUsers, setFollowerUsers] = useState<FollowUser[]>([]);
   const [followingUsers, setFollowingUsers] = useState<FollowUser[]>([]);
   const [showFollowPage, setShowFollowPage] = useState(false);
@@ -178,8 +183,6 @@ export function UserProfileScreen() {
       ? route.params.memberNickname.trim()
       : '_hy_0716';
 
-  const groups: GroupItem[] = useMemo(() => [], []);
-
   useEffect(() => {
     setShowFollowPage(false);
     setActiveFollowTab('FOLLOWER');
@@ -187,6 +190,7 @@ export function UserProfileScreen() {
     setFollowingUsers([]);
     setTogglingFollowNickname(null);
     setBooks([]);
+    setGroups([]);
   }, [memberNickname]);
 
   const handleGoBack = useCallback(() => {
@@ -214,13 +218,15 @@ export function UserProfileScreen() {
 
   const mapMemberLikedBooksToCards = useCallback((items: MemberLikedBookItem[]): BookCard[] => {
     const mapped = items.map((book, index) => {
-      const isbn = book.isbn?.trim();
+      const isbn = book.isbn.trim();
       const title = book.title?.trim() || '책 제목';
       const author = book.author?.trim() || '작가 미상';
       const id = isbn || `${title}-${author}-${index}`;
 
       return {
         id,
+        isbn,
+        bookId: book.bookId,
         title,
         author,
         imageUrl: normalizeRemoteImageUrl(book.imgUrl),
@@ -239,17 +245,7 @@ export function UserProfileScreen() {
   const loadLikedBooks = useCallback(async () => {
     setLoadingBooks(true);
     try {
-      let cursorId: number | undefined;
-      const all: MemberLikedBookItem[] = [];
-
-      for (let i = 0; i < 20; i += 1) {
-        const result = await fetchMemberLikedBooks(memberNickname, cursorId);
-        all.push(...result.items);
-
-        if (!result.hasNext || typeof result.nextCursor !== 'number') break;
-        cursorId = result.nextCursor;
-      }
-
+      const all: MemberLikedBookItem[] = await fetchAllMemberLikedBooks(memberNickname);
       setBooks(mapMemberLikedBooksToCards(all));
     } catch (error) {
       setBooks([]);
@@ -260,6 +256,26 @@ export function UserProfileScreen() {
       setLoadingBooks(false);
     }
   }, [mapMemberLikedBooksToCards, memberNickname]);
+
+  const loadGroups = useCallback(async () => {
+    setLoadingGroups(true);
+    try {
+      const items = await fetchMemberClubs(memberNickname, { suppressErrorToast: true });
+      setGroups(
+        items.map((club) => ({
+          id: `club-${club.clubId}`,
+          name: club.clubName,
+        })),
+      );
+    } catch (error) {
+      setGroups([]);
+      if (!(error instanceof ApiError)) {
+        showToast('모임 목록을 불러오지 못했습니다.');
+      }
+    } finally {
+      setLoadingGroups(false);
+    }
+  }, [memberNickname]);
 
   const loadFollowUsers = useCallback(async () => {
     setLoadingFollowUsers(true);
@@ -285,7 +301,7 @@ export function UserProfileScreen() {
     const load = async () => {
       setProfileLoading(true);
       try {
-        await Promise.all([loadProfile(), loadLikedBooks()]);
+        await Promise.all([loadProfile(), loadLikedBooks(), loadGroups()]);
       } catch (error) {
         if (cancelled) return;
         if (!(error instanceof ApiError)) {
@@ -303,14 +319,14 @@ export function UserProfileScreen() {
     return () => {
       cancelled = true;
     };
-  }, [loadLikedBooks, loadProfile]);
+  }, [loadGroups, loadLikedBooks, loadProfile]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
 
     const refresh = async () => {
       try {
-        await Promise.all([loadProfile(), loadLikedBooks()]);
+        await Promise.all([loadProfile(), loadLikedBooks(), loadGroups()]);
       } catch (error) {
         if (!(error instanceof ApiError)) {
           showToast('프로필을 새로고침하지 못했습니다.');
@@ -321,7 +337,7 @@ export function UserProfileScreen() {
     };
 
     void refresh();
-  }, [loadLikedBooks, loadProfile]);
+  }, [loadGroups, loadLikedBooks, loadProfile]);
 
   const handleFollowPageRefresh = useCallback(() => {
     setRefreshing(true);
@@ -537,6 +553,24 @@ export function UserProfileScreen() {
     [navigation],
   );
 
+  const handleOpenBookSearchDetail = useCallback(
+    (book: BookCard) => {
+      navigation.navigate('Tabs', {
+        screen: 'Home',
+        params: {
+          openSearchBook: {
+            isbn: book.isbn,
+            bookId: book.bookId,
+            title: book.title,
+            author: book.author,
+            imgUrl: book.imageUrl,
+          },
+        },
+      });
+    },
+    [navigation],
+  );
+
   const renderStoryCards = () => (
     <View style={[styles.gridContent, styles.cardWrap]}>
       {stories.length === 0 ? <Text style={styles.emptyText}>작성한 책이야기가 없습니다.</Text> : null}
@@ -576,7 +610,11 @@ export function UserProfileScreen() {
       {loadingBooks ? <Text style={styles.emptyText}>서재를 불러오는 중...</Text> : null}
       {!loadingBooks && books.length === 0 ? <Text style={styles.emptyText}>공개된 서재가 없습니다.</Text> : null}
       {books.map((book) => (
-        <View key={book.id} style={styles.bookCard}>
+        <Pressable
+          key={book.id}
+          style={({ pressed }) => [styles.bookCard, pressed && styles.pressed]}
+          onPress={() => handleOpenBookSearchDetail(book)}
+        >
           <View style={styles.bookThumb}>
             {book.imageUrl ? (
               <Image source={{ uri: book.imageUrl }} style={styles.bookThumbImage} resizeMode="cover" />
@@ -591,14 +629,17 @@ export function UserProfileScreen() {
           <Text style={styles.bookAuthor} numberOfLines={1}>
             {book.author}
           </Text>
-        </View>
+        </Pressable>
       ))}
     </View>
   );
 
   const renderMeetings = () => (
     <View style={styles.listContainer}>
-      {groups.length === 0 ? <Text style={styles.emptyText}>공개된 모임이 없습니다.</Text> : null}
+      {loadingGroups ? <Text style={styles.emptyText}>모임을 불러오는 중...</Text> : null}
+      {!loadingGroups && groups.length === 0 ? (
+        <Text style={styles.emptyText}>공개된 모임이 없습니다.</Text>
+      ) : null}
       {groups.map((group) => (
         <View key={group.id} style={styles.groupRow}>
           <Text style={styles.groupName}>{group.name}</Text>

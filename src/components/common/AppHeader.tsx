@@ -2,6 +2,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import {
   Animated,
   Image,
@@ -18,6 +19,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
+import { PUBLIC_ENV } from '../../constants/publicEnv';
 import { colors, radius, spacing, typography } from '../../theme';
 import { IconButton, IconName } from './IconButton';
 import { useAuthGate } from '../../contexts/AuthGateContext';
@@ -65,9 +67,8 @@ const alarmUri = Image.resolveAssetSource(
 const writeIconUri = Image.resolveAssetSource(
   require('../../../assets/icons/pencil_icon.svg'),
 ).uri;
-const ALADIN_RANKING_URL =
-  'https://www.aladin.co.kr/shop/common/wbest.aspx?BranchType=1&srsltid=AfmBOornQyMCOv3ygMSCscA9kqmQE8y9CQqvGYao_g_7dvR9B_VXPBll';
-const ALADIN_HOME_URL = 'https://www.aladin.co.kr/';
+const ALADIN_RANKING_URL = PUBLIC_ENV.ALADIN_RANKING_URL;
+const ALADIN_HOME_URL = PUBLIC_ENV.ALADIN_HOME_URL;
 
 type HeaderAction = {
   key?: string;
@@ -86,7 +87,6 @@ type Props = {
 type SearchStage = 'results' | 'detail';
 
 const HEADER_HEIGHT = 56;
-const TAB_BAR_HEIGHT = 84;
 
 function resolveBookId(book: BookItem | null): number | null {
   if (!book) return null;
@@ -110,12 +110,51 @@ function toSearchDescription(book: BookItem): string {
   return '책 설명이 없습니다.';
 }
 
+function toBookItemFromRouteParam(raw: unknown): BookItem | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const record = raw as Record<string, unknown>;
+  const title = typeof record.title === 'string' ? record.title.trim() : '';
+  if (!title) return null;
+
+  const author =
+    typeof record.author === 'string' && record.author.trim().length > 0
+      ? record.author.trim()
+      : '작가 미상';
+  const isbn =
+    typeof record.isbn === 'string' && record.isbn.trim().length > 0
+      ? record.isbn.trim()
+      : '';
+
+  const parsedBookId =
+    typeof record.bookId === 'number' && Number.isInteger(record.bookId) && record.bookId > 0
+      ? record.bookId
+      : typeof record.bookId === 'string' && /^\d+$/.test(record.bookId)
+        ? Number(record.bookId)
+        : undefined;
+
+  return {
+    isbn,
+    bookId: parsedBookId,
+    title,
+    author,
+    description:
+      typeof record.description === 'string' && record.description.trim().length > 0
+        ? record.description
+        : typeof record.publisher === 'string' && record.publisher.trim().length > 0
+          ? record.publisher
+          : '책 설명이 없습니다.',
+    imgUrl: typeof record.imgUrl === 'string' ? record.imgUrl : undefined,
+    publisher: typeof record.publisher === 'string' ? record.publisher : undefined,
+  };
+}
+
 export function AppHeader(props: Props) {
   const { title, actions, onPressSearch, onPressBell, onPressLogo } = props;
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { isLoggedIn, requireAuth } = useAuthGate();
   const { top } = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
 
   const [showNoti, setShowNoti] = useState(false);
   const [notificationPreview, setNotificationPreview] = useState<NotificationItem[]>([]);
@@ -331,24 +370,27 @@ export function AppHeader(props: Props) {
 
     let enrichedBook = book;
 
-    try {
-      const detail = await fetchBookDetail(book.isbn);
-      if (detail && activeBookRequestId.current === requestId) {
-        enrichedBook = {
-          ...book,
-          ...detail,
-          bookId: detail.bookId ?? book.bookId,
-        };
-        setSelectedBook(enrichedBook);
+    const normalizedIsbn = book.isbn.trim();
+    if (normalizedIsbn.length > 0 && !normalizedIsbn.startsWith('placeholder-')) {
+      try {
+        const detail = await fetchBookDetail(normalizedIsbn);
+        if (detail && activeBookRequestId.current === requestId) {
+          enrichedBook = {
+            ...book,
+            ...detail,
+            bookId: detail.bookId ?? book.bookId,
+          };
+          setSelectedBook(enrichedBook);
+        }
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('도서 상세를 불러오지 못했습니다.');
+        }
       }
-    } catch (error) {
-      if (!(error instanceof ApiError)) {
-        showToast('도서 상세를 불러오지 못했습니다.');
-      }
-    } finally {
-      if (activeBookRequestId.current === requestId) {
-        setBookDetailLoading(false);
-      }
+    }
+
+    if (activeBookRequestId.current === requestId) {
+      setBookDetailLoading(false);
     }
 
     const bookId = resolveBookId(enrichedBook);
@@ -380,6 +422,24 @@ export function AppHeader(props: Props) {
       }
     }
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    const routeBook = toBookItemFromRouteParam(route.params?.openSearchBook);
+    if (!routeBook) return;
+
+    hideDropdownImmediately();
+    setShowNoti(false);
+    setShowSearchPage(true);
+    setSearchStage('detail');
+    setQuery(routeBook.title);
+    void loadSelectedBookData(routeBook);
+    navigation.setParams({ openSearchBook: undefined });
+  }, [
+    hideDropdownImmediately,
+    loadSelectedBookData,
+    navigation,
+    route.params?.openSearchBook,
+  ]);
 
   const handleSearchSubmitFromDropdown = useCallback(() => {
     const keyword = query.trim();
@@ -445,7 +505,8 @@ export function AppHeader(props: Props) {
   );
 
   const headerTitle = showSearchPage ? '책 검색' : title;
-  const searchPageHeight = Math.max(280, windowHeight - top - HEADER_HEIGHT - TAB_BAR_HEIGHT);
+  const searchPageHeight = Math.max(280, windowHeight - top - HEADER_HEIGHT);
+  const notiCardWidth = Math.min(280, windowWidth - spacing.md * 2);
 
   const handleHeaderBack = useCallback(() => {
     if (!showSearchPage) return;
@@ -591,44 +652,54 @@ export function AppHeader(props: Props) {
         </View>
       </View>
 
-      {showNoti ? (
+      <Modal
+        visible={showNoti}
+        transparent
+        animationType="none"
+        onRequestClose={() => setShowNoti(false)}
+      >
         <Pressable
-          style={[styles.notiOverlay, { top: HEADER_HEIGHT }]}
+          style={styles.notiBackdrop}
           onPress={() => setShowNoti(false)}
         >
-          <Pressable style={styles.notiCard} onPress={(event) => event.stopPropagation()}>
-            {notificationPreviewLoading ? (
-              <Text style={styles.notiEmptyText}>알림을 불러오는 중...</Text>
-            ) : null}
-            {!notificationPreviewLoading && notificationPreview.length === 0 ? (
-              <Text style={styles.notiEmptyText}>표시할 알림이 없습니다.</Text>
-            ) : null}
-            {!notificationPreviewLoading
-              ? notificationPreview.map((notification) => (
-                  <Pressable
-                    key={`noti-${notification.notificationId}`}
-                    style={({ pressed }) => [styles.notiRow, pressed ? styles.notiRowPressed : null]}
-                    onPress={() => handlePressNotification(notification)}
-                  >
-                    <View
-                      style={[
-                        styles.notiDot,
-                        !notification.read ? styles.notiDotActive : null,
-                      ]}
-                    />
-                    <Text style={styles.notiText} numberOfLines={2}>
-                      {formatNotificationText(
-                        notification.notificationType,
-                        notification.displayName,
-                      )}
-                    </Text>
-                    <Text style={styles.notiTime}>{toKstTimeAgoLabel(notification.createdAt)}</Text>
-                  </Pressable>
-                ))
-              : null}
-          </Pressable>
+          <View style={[styles.notiPositioner, { paddingTop: top + HEADER_HEIGHT }]}>
+            <Pressable
+              style={[styles.notiCard, { width: notiCardWidth }]}
+              onPress={(event) => event.stopPropagation()}
+            >
+              {notificationPreviewLoading ? (
+                <Text style={styles.notiEmptyText}>알림을 불러오는 중...</Text>
+              ) : null}
+              {!notificationPreviewLoading && notificationPreview.length === 0 ? (
+                <Text style={styles.notiEmptyText}>표시할 알림이 없습니다.</Text>
+              ) : null}
+              {!notificationPreviewLoading
+                ? notificationPreview.map((notification) => (
+                    <Pressable
+                      key={`noti-${notification.notificationId}`}
+                      style={({ pressed }) => [styles.notiRow, pressed ? styles.notiRowPressed : null]}
+                      onPress={() => handlePressNotification(notification)}
+                    >
+                      <View
+                        style={[
+                          styles.notiDot,
+                          !notification.read ? styles.notiDotActive : null,
+                        ]}
+                      />
+                      <Text style={styles.notiText} numberOfLines={2}>
+                        {formatNotificationText(
+                          notification.notificationType,
+                          notification.displayName,
+                        )}
+                      </Text>
+                      <Text style={styles.notiTime}>{toKstTimeAgoLabel(notification.createdAt)}</Text>
+                    </Pressable>
+                  ))
+                : null}
+            </Pressable>
+          </View>
         </Pressable>
-      ) : null}
+      </Modal>
 
       <Modal
         visible={showSearchDropdown}
@@ -1045,14 +1116,14 @@ const styles = StyleSheet.create({
   activeAction: {
     opacity: 0.88,
   },
-  notiOverlay: {
-    position: 'absolute',
-    right: spacing.md,
-    paddingTop: spacing.xs,
-    zIndex: 10,
+  notiBackdrop: {
+    flex: 1,
+  },
+  notiPositioner: {
+    paddingHorizontal: spacing.md,
+    alignItems: 'flex-end',
   },
   notiCard: {
-    width: 240,
     backgroundColor: colors.white,
     borderRadius: spacing.md,
     borderWidth: 1,
@@ -1131,7 +1202,7 @@ const styles = StyleSheet.create({
   },
   dropdownRecoRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   dropdownRecoCard: {
     flex: 1,
@@ -1139,13 +1210,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.subbrown3,
     backgroundColor: colors.subbrown2,
-    padding: spacing.xs,
-    minHeight: 198,
-    gap: spacing.xs,
+    padding: spacing.xs / 2,
+    minHeight: 210,
+    gap: spacing.xs / 2,
   },
   dropdownRecoThumbWrap: {
     width: '100%',
-    aspectRatio: 3 / 4,
+    aspectRatio: 5 / 7,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: colors.subbrown4,

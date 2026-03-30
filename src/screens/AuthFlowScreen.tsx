@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
-  Linking,
   Modal,
   Platform,
   Pressable,
@@ -15,16 +14,12 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius, spacing, typography } from '../theme';
 import {
   checkNicknameDuplicate,
   confirmEmailVerification,
-  fetchLoginStatusSilently,
   findEmailByNamePhone,
-  getOAuthLoginUrl,
-  type OAuthProvider,
   loginByIdentifier,
   requestEmailVerification,
   issueProfileImageUploadUrl,
@@ -231,27 +226,6 @@ const logoUri = Image.resolveAssetSource(
 const topLogoUri = Image.resolveAssetSource(
   require('../../assets/mobile-header-logo.svg'),
 ).uri;
-const googleUri = Image.resolveAssetSource(
-  require('../../assets/icons/googleLogo.svg'),
-).uri;
-const naverUri = Image.resolveAssetSource(
-  require('../../assets/icons/naverLogo.svg'),
-).uri;
-const kakaoUri = Image.resolveAssetSource(
-  require('../../assets/icons/kakaoImage.svg'),
-).uri;
-const oauthProviders = [
-  { key: 'google', label: 'Google 로그인', uri: googleUri, width: 40, height: 40, iconOffsetX: 0 },
-  { key: 'naver', label: 'Naver 로그인', uri: naverUri, width: 40, height: 40, iconOffsetX: 0 },
-  { key: 'kakao', label: 'Kakao 로그인', uri: kakaoUri, width: 40, height: 40, iconOffsetX: -2 },
-] as const;
-const oauthProviderLabelByKey: Record<OAuthProvider, string> = {
-  google: '구글',
-  naver: '네이버',
-  kakao: '카카오',
-};
-const SocialLoginWebView =
-  Platform.OS === 'web' ? null : (require('react-native-webview').WebView as React.ComponentType<any>);
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[!@#$%^&*]).{6,12}$/;
@@ -316,12 +290,11 @@ const defaultProfilePalette = [
 ];
 
 export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
-  const insets = useSafeAreaInsets();
-  const socialLoginTopInset = Platform.OS === 'ios' ? Math.max(insets.top, 44) : insets.top;
   const [step, setStep] = useState<Step>('login');
 
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginSubmitting, setLoginSubmitting] = useState(false);
 
   const [agreeService, setAgreeService] = useState(false);
@@ -367,10 +340,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const [findEmailSubmitting, setFindEmailSubmitting] = useState(false);
   const [resetPasswordEmail, setResetPasswordEmail] = useState('');
   const [sendingTempPassword, setSendingTempPassword] = useState(false);
-  const [socialLoginProvider, setSocialLoginProvider] = useState<OAuthProvider | null>(null);
-  const [socialLoginWebViewKey, setSocialLoginWebViewKey] = useState(0);
-  const [socialLoginChecking, setSocialLoginChecking] = useState(false);
-  const [socialLoginLoadError, setSocialLoginLoadError] = useState<string | null>(null);
 
   const canGoNextFromTerms = agreeService && agreeCheckmo;
   const allAgreed = agreeService && agreeCheckmo && agreeThirdParty && agreeMarketing;
@@ -492,62 +461,14 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     setStep('terms');
   };
 
-  const closeSocialLoginModal = useCallback(() => {
-    setSocialLoginProvider(null);
-    setSocialLoginLoadError(null);
-    setSocialLoginChecking(false);
-  }, []);
-
   const completeAuthFlow = useCallback((nextToast?: string) => {
-    closeSocialLoginModal();
     if (nextToast) showToast(nextToast);
     if (onLoginSuccess) {
       onLoginSuccess();
       return;
     }
     onClose?.();
-  }, [closeSocialLoginModal, onClose, onLoginSuccess]);
-
-  const checkSocialLoginStatus = useCallback(async () => {
-    if (socialLoginChecking) return;
-
-    setSocialLoginChecking(true);
-    try {
-      const status = await fetchLoginStatusSilently(true);
-      if (!status) return;
-      completeAuthFlow('로그인에 성공했습니다.');
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        return;
-      }
-      setSocialLoginLoadError('로그인 상태를 확인하지 못했습니다.');
-    } finally {
-      setSocialLoginChecking(false);
-    }
-  }, [completeAuthFlow, socialLoginChecking]);
-
-  const handleSocialLoginPress = useCallback(
-    (providerKey: OAuthProvider) => {
-      const loginUrl = getOAuthLoginUrl(providerKey);
-
-      if (Platform.OS === 'web' || !SocialLoginWebView) {
-        const open = async () => {
-          try {
-            await Linking.openURL(loginUrl);
-          } catch {
-            showToast(`${oauthProviderLabelByKey[providerKey]} 로그인 페이지를 열지 못했습니다.`);
-          }
-        };
-        void open();
-        return;
-      }
-
-      setSocialLoginLoadError(null);
-      setSocialLoginProvider(providerKey);
-      setSocialLoginWebViewKey((prev) => prev + 1);
-    },
-    [],
-  );
+  }, [onClose, onLoginSuccess]);
 
   const handleLogin = async () => {
     const identifier = loginIdentifier.trim();
@@ -906,73 +827,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-      <Modal
-        visible={socialLoginProvider !== null}
-        animationType="slide"
-        onRequestClose={closeSocialLoginModal}
-      >
-        <View style={[styles.socialLoginModal, { paddingTop: socialLoginTopInset }]}>
-          <View style={styles.socialLoginHeader}>
-            <View style={styles.socialLoginHeaderTextWrap}>
-              <Text style={styles.socialLoginTitle}>
-                {socialLoginProvider ? `${oauthProviderLabelByKey[socialLoginProvider]} 로그인` : '소셜 로그인'}
-              </Text>
-              <Text style={styles.socialLoginSubtitle}>
-                로그인 완료 후 이 창은 자동으로 닫힙니다.
-              </Text>
-            </View>
-            <Pressable
-              style={({ pressed }) => [styles.socialLoginCloseBtn, pressed && styles.pressed]}
-              onPress={closeSocialLoginModal}
-              hitSlop={8}
-            >
-              <MaterialIcons name="close" size={24} color={colors.gray6} />
-            </Pressable>
-          </View>
-
-          {socialLoginLoadError ? (
-            <View style={styles.socialLoginErrorCard}>
-              <MaterialIcons name="error-outline" size={30} color={colors.gray4} />
-              <Text style={styles.socialLoginErrorText}>{socialLoginLoadError}</Text>
-              <Pressable
-                style={({ pressed }) => [styles.socialLoginRetryBtn, pressed && styles.pressed]}
-                onPress={() => {
-                  setSocialLoginLoadError(null);
-                  setSocialLoginWebViewKey((prev) => prev + 1);
-                }}
-              >
-                <MaterialIcons name="refresh" size={18} color={colors.white} />
-                <Text style={styles.socialLoginRetryBtnText}>다시 시도</Text>
-              </Pressable>
-            </View>
-          ) : SocialLoginWebView && socialLoginProvider ? (
-            <View style={styles.socialLoginWebViewWrap}>
-              <SocialLoginWebView
-                key={`${socialLoginProvider}-${socialLoginWebViewKey}`}
-                source={{ uri: getOAuthLoginUrl(socialLoginProvider) }}
-                sharedCookiesEnabled
-                thirdPartyCookiesEnabled
-                javaScriptEnabled
-                domStorageEnabled
-                startInLoadingState
-                onLoadEnd={() => {
-                  void checkSocialLoginStatus();
-                }}
-                onError={() => {
-                  setSocialLoginLoadError(
-                    `${oauthProviderLabelByKey[socialLoginProvider]} 로그인 페이지를 불러오지 못했습니다.`,
-                  );
-                }}
-              />
-              {socialLoginChecking ? (
-                <View style={styles.socialLoginCheckingBanner}>
-                  <Text style={styles.socialLoginCheckingText}>로그인 상태를 확인하는 중입니다...</Text>
-                </View>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-      </Modal>
     </View>
   );
 
@@ -1697,18 +1551,31 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           autoCapitalize="none"
           autoCorrect={false}
         />
-        <TextInput
-          value={loginPassword}
-          onChangeText={setLoginPassword}
-          placeholder="비밀번호"
-          style={styles.input}
-          placeholderTextColor={colors.gray3}
-          secureTextEntry
-          returnKeyType="done"
-          onSubmitEditing={() => {
-            void handleLogin();
-          }}
-        />
+        <View style={styles.passwordInputRow}>
+          <TextInput
+            value={loginPassword}
+            onChangeText={setLoginPassword}
+            placeholder="비밀번호"
+            style={[styles.input, styles.passwordInput]}
+            placeholderTextColor={colors.gray3}
+            secureTextEntry={!showLoginPassword}
+            returnKeyType="done"
+            onSubmitEditing={() => {
+              void handleLogin();
+            }}
+          />
+          <Pressable
+            style={styles.passwordToggleButton}
+            hitSlop={8}
+            onPress={() => setShowLoginPassword((prev) => !prev)}
+          >
+            <MaterialIcons
+              name={showLoginPassword ? 'visibility-off' : 'visibility'}
+              size={20}
+              color={colors.gray4}
+            />
+          </Pressable>
+        </View>
       </View>
       <View style={styles.inlineLinks}>
         <Pressable onPress={() => setStep('findId')}>
@@ -1728,33 +1595,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       >
         <Text style={styles.primaryText}>{loginSubmitting ? '로그인 중...' : '로그인'}</Text>
       </Pressable>
-      <View style={styles.oauthRow}>
-        {oauthProviders.map(provider => (
-          <Pressable
-            key={provider.key}
-            style={({ pressed }) => [
-              styles.oauthBtn,
-              socialLoginProvider === provider.key && styles.oauthBtnDisabled,
-              pressed && styles.pressed,
-            ]}
-            onPress={() => handleSocialLoginPress(provider.key)}
-            accessibilityRole="button"
-            accessibilityLabel={provider.label}
-            disabled={socialLoginProvider !== null}
-          >
-            <View
-              style={[
-                styles.oauthIconWrap,
-                provider.iconOffsetX !== 0
-                  ? { transform: [{ translateX: provider.iconOffsetX }] }
-                  : null,
-              ]}
-            >
-              <SvgUri uri={provider.uri} width={provider.width} height={provider.height} />
-            </View>
-          </Pressable>
-        ))}
-      </View>
       <Pressable onPress={startSignUp}>
         <Text style={styles.linkText}>아직 회원이 아니신가요? 회원가입하러가기</Text>
       </Pressable>
@@ -2203,117 +2043,6 @@ const styles = StyleSheet.create({
     width: 1,
     height: 12,
     backgroundColor: colors.gray3,
-  },
-  oauthRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.md,
-  },
-  oauthBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.gray2,
-  },
-  oauthBtnDisabled: {
-    opacity: 0.45,
-  },
-  oauthIconWrap: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  socialLoginModal: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  socialLoginHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray2,
-    backgroundColor: colors.white,
-  },
-  socialLoginHeaderTextWrap: {
-    flex: 1,
-    paddingRight: spacing.sm,
-    gap: spacing.xs / 2,
-  },
-  socialLoginTitle: {
-    ...typography.subhead4_1,
-    color: colors.gray6,
-  },
-  socialLoginSubtitle: {
-    ...typography.body2_3,
-    color: colors.gray4,
-  },
-  socialLoginCloseBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.gray1,
-  },
-  socialLoginWebViewWrap: {
-    flex: 1,
-  },
-  socialLoginCheckingBanner: {
-    position: 'absolute',
-    left: spacing.md,
-    right: spacing.md,
-    bottom: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  socialLoginCheckingText: {
-    ...typography.body2_2,
-    color: colors.white,
-    textAlign: 'center',
-  },
-  socialLoginErrorCard: {
-    flex: 1,
-    padding: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm + 2,
-  },
-  socialLoginErrorText: {
-    ...typography.body1_3,
-    color: colors.gray6,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  socialLoginRetryBtn: {
-    marginTop: spacing.xs,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    minWidth: 150,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: 999,
-    backgroundColor: colors.primary1,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
-  },
-  socialLoginRetryBtnText: {
-    ...typography.body1_2,
-    color: colors.white,
   },
   pressed: {
     opacity: 0.75,

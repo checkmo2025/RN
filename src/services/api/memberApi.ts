@@ -21,6 +21,9 @@ type DetailInfo = {
   profileImageUrl?: string;
   imgUrl?: string;
   imageUrl?: string;
+  phoneNumber?: string;
+  phone?: string;
+  mobilePhoneNumber?: string;
   categories?: string[];
 };
 
@@ -35,21 +38,17 @@ type RecommendedMemberResult = {
   }>;
 };
 
-type LoginStatusResult = {
-  provider?: string;
-  email?: string;
+type FollowCountResult = {
+  followerCount?: number;
+  followingCount?: number;
 };
 
 export type MyProfile = {
   nickname: string;
   description: string;
   profileImageUrl?: string;
+  phoneNumber?: string;
   categories: string[];
-};
-
-export type MemberLoginStatus = {
-  provider?: string;
-  email?: string;
 };
 
 export type UpdateMyProfilePayload = {
@@ -106,6 +105,11 @@ export type RecommendedMember = {
   followingCount?: number;
 };
 
+export type FollowCount = {
+  followerCount: number;
+  followingCount: number;
+};
+
 export type MemberProfile = {
   nickname: string;
   description: string;
@@ -129,6 +133,18 @@ function extractReportItems(payload: ReportListPayload | null | undefined): Repo
   if (Array.isArray(payload)) return payload;
   if (payload && Array.isArray(payload.reports)) return payload.reports;
   return [];
+}
+
+function pickPhoneNumber(payload: {
+  phoneNumber?: string;
+  phone?: string;
+  mobilePhoneNumber?: string;
+}): string | undefined {
+  const candidate =
+    payload.phoneNumber ?? payload.phone ?? payload.mobilePhoneNumber;
+  return typeof candidate === 'string' && candidate.trim().length > 0
+    ? candidate.trim()
+    : undefined;
 }
 
 export async function setFollowingMember(
@@ -169,6 +185,7 @@ export async function fetchMyProfile(options?: {
     profileImageUrl: normalizeRemoteImageUrl(
       result.profileImageUrl ?? result.imgUrl ?? result.imageUrl,
     ),
+    phoneNumber: pickPhoneNumber(result),
     categories: Array.isArray(result.categories)
       ? result.categories.filter((value): value is string => typeof value === 'string')
       : [],
@@ -242,6 +259,18 @@ export async function fetchMyFollowing(cursorId?: number): Promise<FollowList> {
     items: Array.isArray(result.followList) ? result.followList.map(normalizeFollowInfo) : [],
     hasNext: Boolean(result.hasNext),
     nextCursor: typeof result.nextCursor === 'number' ? result.nextCursor : null,
+  };
+}
+
+export async function fetchMyFollowCount(): Promise<FollowCount> {
+  const response = await requestJson<ApiEnvelope<FollowCountResult>>('/members/me/follow-count', {
+    method: 'GET',
+  });
+  const result = unwrapResult(response) ?? {};
+
+  return {
+    followerCount: typeof result.followerCount === 'number' ? result.followerCount : 0,
+    followingCount: typeof result.followingCount === 'number' ? result.followingCount : 0,
   };
 }
 
@@ -328,6 +357,7 @@ export async function updateMyProfile(payload: UpdateMyProfilePayload): Promise<
     profileImageUrl: normalizeRemoteImageUrl(
       result.profileImageUrl ?? result.imgUrl ?? result.imageUrl,
     ),
+    phoneNumber: pickPhoneNumber(result),
     categories: Array.isArray(result.categories)
       ? result.categories.filter((value): value is string => typeof value === 'string')
       : [],
@@ -346,13 +376,6 @@ export async function updateMyPassword(payload: UpdateMyPasswordPayload): Promis
     method: 'PATCH',
     body: payload,
   });
-}
-
-export async function fetchMemberLoginStatus(): Promise<MemberLoginStatus | null> {
-  const response = await requestJson<ApiEnvelope<LoginStatusResult>>('/members/me/login-status', {
-    method: 'GET',
-  });
-  return unwrapResult(response) ?? null;
 }
 
 export async function reportMember(payload: ReportMemberPayload): Promise<void> {

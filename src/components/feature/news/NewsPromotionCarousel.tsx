@@ -37,11 +37,8 @@ export function NewsPromotionCarousel({
   const [activeSlide, setActiveSlide] = useState(0);
   const carouselRef = useRef<ScrollView | null>(null);
   const snapOffsets = useMemo(
-    () =>
-      items.map((_, index) =>
-        index === 0 ? 0 : horizontalInset + promotionStep * index,
-      ),
-    [horizontalInset, items, promotionStep],
+    () => items.map((_, index) => promotionStep * index),
+    [items, promotionStep],
   );
 
   useEffect(() => {

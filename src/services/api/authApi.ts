@@ -11,7 +11,6 @@ type LoginStatus = {
 
 export type EmailVerificationType = 'SIGN_UP' | 'UPDATE_EMAIL';
 export type ImageUploadType = 'PROFILE' | 'CLUB' | 'NOTICE';
-export type OAuthProvider = 'google' | 'kakao' | 'naver';
 
 export type AdditionalInfoPayload = {
   nickname: string;
@@ -39,11 +38,6 @@ function buildUrl(path: string, query?: Record<string, string | undefined>) {
     url.searchParams.set(key, value);
   });
   return url.toString();
-}
-
-function getApiOrigin() {
-  const url = new URL(API_BASE_URL);
-  return `${url.protocol}//${url.host}`;
 }
 
 export async function loginByIdentifier(identifier: string, password: string): Promise<void> {
@@ -235,10 +229,6 @@ export async function fetchLoginStatusSilently(
     suppressErrorToast,
   });
   return unwrapResult(response) ?? null;
-}
-
-export function getOAuthLoginUrl(provider: OAuthProvider): string {
-  return `${getApiOrigin()}/oauth2/authorization/${provider}`;
 }
 
 export async function logoutSession(): Promise<void> {

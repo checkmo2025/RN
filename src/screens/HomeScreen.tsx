@@ -62,13 +62,17 @@ type UserRecommendation = {
   profileImageUrl?: string;
 };
 
+type HomePromotionItem = NewsPromotionCarouselItem & {
+  newsId?: number;
+};
+
 const defaultPromotionImages = [
   Image.resolveAssetSource(require('../../assets/images/background.png')).uri,
   Image.resolveAssetSource(require('../../assets/images/news_sample2.png')).uri,
   Image.resolveAssetSource(require('../../assets/images/news_sample3.png')).uri,
 ];
 
-const defaultPromotions: NewsPromotionCarouselItem[] = [
+const defaultPromotions: HomePromotionItem[] = [
   {
     id: 'p1',
     title: '봄메이트',
@@ -101,7 +105,7 @@ export function HomeScreen() {
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [loadingMorePosts, setLoadingMorePosts] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [promotions, setPromotions] = useState<NewsPromotionCarouselItem[]>(defaultPromotions);
+  const [promotions, setPromotions] = useState<HomePromotionItem[]>(defaultPromotions);
   const loadingPostsRef = useRef(false);
   const loadingMorePostsRef = useRef(false);
   const hasNextPostsRef = useRef(true);
@@ -199,6 +203,7 @@ export function HomeScreen() {
       setPromotions(
         news.map((item, index) => ({
           id: `news-promo-${item.id}`,
+          newsId: item.id,
           title: item.title,
           description:
             item.excerpt.trim() || '새로운 소식을 확인해보세요.',
@@ -447,7 +452,19 @@ export function HomeScreen() {
       <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
         <Text style={styles.sectionTitle}>소식</Text>
       </View>
-      <NewsPromotionCarousel items={promotions} horizontalInset={horizontalInset} />
+      <NewsPromotionCarousel
+        items={promotions}
+        horizontalInset={horizontalInset}
+        onPressItem={(index) => {
+          const target = promotions[index];
+          if (!target) return;
+          if (typeof target.newsId === 'number' && target.newsId > 0) {
+            navigation.navigate('News', { openNewsId: target.newsId });
+            return;
+          }
+          navigation.navigate('News');
+        }}
+      />
       {isLoggedIn ? (
         <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
           <View style={styles.userRecommendationCard}>

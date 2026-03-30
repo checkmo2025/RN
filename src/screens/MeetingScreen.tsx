@@ -5185,12 +5185,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         if (isStale()) return;
         setLatestNoticeId(typeof latestNotice?.id === 'number' ? latestNotice.id : null);
 
-        const hasStaffFlag = typeof myMembership?.staff === 'boolean';
-        const nextCanManageClub = hasStaffFlag
-          ? Boolean(myMembership?.staff)
-          : myMembership?.myStatus === 'STAFF' || myMembership?.myStatus === 'OWNER'
-            ? true
-            : Boolean(bookshelfList.isStaff);
+        const nextCanManageClub =
+          myMembership?.myStatus === 'STAFF' ||
+          myMembership?.myStatus === 'OWNER' ||
+          myMembership?.staff === true ||
+          Boolean(bookshelfList.isStaff);
         setCanManageClub(nextCanManageClub);
 
         if (homeDetail) {
@@ -5551,14 +5550,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         bookshelfMeetingDetailRequestIdRef.current[meetingId] !== requestId;
 
       try {
-        const [topicPage, reviews, meeting, detail] = await Promise.all([
+        const [topicPage, reviews, detail] = await Promise.all([
           fetchClubBookshelfTopics(clubId, meetingId, undefined, {
             suppressErrorToast: options?.suppressErrorToast,
           }),
           fetchAllBookshelfReviewsForMeeting(clubId, meetingId, {
-            suppressErrorToast: options?.suppressErrorToast,
-          }),
-          fetchClubMeeting(clubId, meetingId, {
             suppressErrorToast: options?.suppressErrorToast,
           }),
           fetchClubBookshelfDetail(clubId, meetingId, {
@@ -5602,20 +5598,35 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           );
         }
 
+        const regularMeetingId = detail?.meetingId ?? meetingId;
+        let meeting: ClubMeetingInfo | null = null;
+        let meetingFetchSucceeded = false;
+
+        try {
+          meeting = await fetchClubMeeting(clubId, regularMeetingId, {
+            suppressErrorToast: options?.suppressErrorToast,
+          });
+          meetingFetchSucceeded = true;
+        } catch (error) {
+          if (!(error instanceof ApiError) && !options?.suppressErrorToast) {
+            showToast('정기모임 정보를 불러오지 못했습니다.');
+          }
+        }
+
         if (meeting) {
-          const [topicResponses, chatResponses] = await Promise.all([
-            Promise.all(
+          const [topicSettled, chatSettled] = await Promise.all([
+            Promise.allSettled(
               meeting.teams.map(async (team) => [
                 team.teamId,
-                await fetchAllMeetingTeamTopics(clubId, meetingId, team.teamId, {
+                await fetchAllMeetingTeamTopics(clubId, regularMeetingId, team.teamId, {
                   suppressErrorToast: options?.suppressErrorToast,
                 }),
               ] as const),
             ),
-            Promise.all(
+            Promise.allSettled(
               meeting.teams.map(async (team) => [
                 team.teamId,
-                await fetchAllMeetingTeamChats(clubId, meetingId, team.teamId, {
+                await fetchAllMeetingTeamChats(clubId, regularMeetingId, team.teamId, {
                   suppressErrorToast: options?.suppressErrorToast,
                 }),
               ] as const),
@@ -5623,8 +5634,46 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           ]);
 
           if (isStale()) return;
-          const topicsByTeamId = Object.fromEntries(topicResponses);
-          const chatsByTeamId = Object.fromEntries(chatResponses);
+          const topicEntries: Array<[number, ClubMeetingTeamTopics]> = meeting.teams.map(
+            (team, index) => {
+              const settled = topicSettled[index];
+              if (settled?.status === 'fulfilled') {
+                return settled.value as [number, ClubMeetingTeamTopics];
+              }
+
+              return [
+                team.teamId,
+                {
+                  existingTeams: meeting.teams,
+                  requestedTeam: team,
+                  topics: [],
+                  hasNext: false,
+                  nextCursor: null,
+                },
+              ];
+            },
+          );
+
+          const chatEntries: Array<[number, ClubMeetingChatHistory]> = meeting.teams.map(
+            (team, index) => {
+              const settled = chatSettled[index];
+              if (settled?.status === 'fulfilled') {
+                return settled.value as [number, ClubMeetingChatHistory];
+              }
+
+              return [
+                team.teamId,
+                {
+                  chats: [],
+                  hasNext: false,
+                  nextCursor: null,
+                },
+              ];
+            },
+          );
+
+          const topicsByTeamId = Object.fromEntries(topicEntries);
+          const chatsByTeamId = Object.fromEntries(chatEntries);
           const regularInfo = mapMeetingToRegularMeetingInfo(
             book,
             meeting,
@@ -5638,7 +5687,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               [meetingId]: regularInfo,
             }));
           }
-        } else {
+        } else if (meetingFetchSucceeded) {
           setRegularMeetingInfoByMeetingId((prev) => {
             const next = { ...prev };
             delete next[meetingId];

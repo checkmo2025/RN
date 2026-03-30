@@ -1,6 +1,7 @@
+import { PUBLIC_ENV } from '../../constants/publicEnv';
 import { showToast } from '../../utils/toast';
 
-export const API_BASE_URL = 'https://api.checkmo.co.kr/api';
+export const API_BASE_URL = PUBLIC_ENV.API_BASE_URL;
 
 type QueryValue = string | number | boolean | null | undefined;
 
@@ -33,6 +34,31 @@ type RequestOptions = {
   credentials?: RequestCredentials;
   suppressErrorToast?: boolean;
 };
+
+function toDefaultHttpErrorMessage(status: number): string {
+  switch (status) {
+    case 400:
+      return '요청 형식이 올바르지 않습니다.';
+    case 401:
+      return '로그인 상태를 확인해주세요.';
+    case 403:
+      return '접근 권한이 없습니다.';
+    case 404:
+      return '요청한 정보를 찾을 수 없습니다.';
+    case 409:
+      return '이미 처리된 요청이거나 충돌이 발생했습니다.';
+    case 429:
+      return '요청이 많습니다. 잠시 후 다시 시도해주세요.';
+    case 500:
+      return '서버 오류가 발생했습니다.';
+    case 502:
+    case 503:
+    case 504:
+      return '서버 연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.';
+    default:
+      return `요청에 실패했습니다. (${status})`;
+  }
+}
 
 function buildUrl(path: string, query?: Record<string, QueryValue>) {
   const normalizedPath = path
@@ -99,7 +125,7 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
     const message =
       (typeof parsed === 'object' && parsed !== null && 'message' in parsed
         ? String((parsed as { message?: unknown }).message)
-        : null) ?? `요청에 실패했습니다. (${response.status})`;
+        : null) ?? toDefaultHttpErrorMessage(response.status);
 
     const code =
       typeof parsed === 'object' && parsed !== null && 'code' in parsed
