@@ -15,7 +15,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import type { GestureResponderEvent } from 'react-native';
+import type {
+  GestureResponderEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -40,6 +44,8 @@ import {
   createClubBookshelfTopic,
   createClubNotice,
   createClubNoticeComment,
+  deleteClub,
+  deleteClubBookshelf,
   deleteClubBookshelfReview,
   deleteClubBookshelfTopic,
   deleteClubNoticeComment,
@@ -48,6 +54,7 @@ import {
   type ClubBookshelfReview,
   type ClubBookshelfTopic,
   fetchClubBookshelfDetail,
+  fetchClubBookshelfEditInfo,
   fetchClubBookshelfReviews,
   fetchClubBookshelfTopics,
   fetchClubBookshelves,
@@ -57,6 +64,8 @@ import {
   fetchClubLatestNotice,
   fetchClubMeeting,
   fetchClubMeetingMembers,
+  fetchClubMeetingTeamChatMessages,
+  fetchClubMyMembership,
   fetchClubNextMeetingRedirect,
   fetchClubMeetingTeamTopics,
   fetchClubMembers,
@@ -67,8 +76,10 @@ import {
   joinClub,
   manageClubMeetingTeams,
   searchClubs,
+  sendClubMeetingTeamChatMessage,
   submitClubNoticeVote,
   updateClub,
+  updateClubBookshelf,
   updateClubBookshelfReview,
   updateClubBookshelfTopic,
   updateClubMemberStatus,
@@ -78,6 +89,8 @@ import {
   type ClubCategoryCode,
   type ClubContact,
   type ClubManagedMember,
+  type ClubMeetingChatHistory,
+  type ClubMeetingChatMessage,
   type ClubMeetingInfo,
   type ClubMeetingTeamTopics,
   type ClubMembershipStatus,
@@ -1703,6 +1716,15 @@ const styles = StyleSheet.create({
     ...typography.subhead4_1,
     color: colors.gray6,
   },
+  groupHomeHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  groupHomeTitle: {
+    marginTop: spacing.xs,
+  },
   pillNav: {
     flexDirection: 'row',
     gap: spacing.xs,
@@ -1745,6 +1767,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+  },
+  detailTitleActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
   detailTitleManageLink: {
     paddingVertical: spacing.xs / 2,
@@ -2365,10 +2392,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   managementFooterButton: {
+    flex: 1,
     borderRadius: radius.md,
     paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  managementFooterButtonRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  managementFooterDangerButton: {
+    borderColor: colors.likeRed,
+    backgroundColor: colors.white,
+  },
+  managementFooterDangerButtonDisabled: {
+    borderColor: colors.gray2,
+  },
+  managementFooterDangerButtonText: {
+    ...typography.body1_2,
+    color: colors.likeRed,
   },
   managementMessageCard: {
     width: '100%',
@@ -3246,6 +3289,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  bookshelfCreateSelectorDisabled: {
+    backgroundColor: colors.gray1,
+  },
   bookshelfCreateSelectorText: {
     ...typography.body1_3,
     color: colors.gray6,
@@ -4108,6 +4154,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.subbrown4,
   },
+  regularChatSendButtonDisabled: {
+    backgroundColor: colors.gray1,
+  },
 });
 
 type CreateStep = 1 | 2 | 3 | 4;
@@ -4185,6 +4234,12 @@ type NoticeComment = {
   isAuthor?: boolean;
 };
 
+type CursorPageState = {
+  hasNext: boolean;
+  nextCursor: number | null;
+  loadingMore: boolean;
+};
+
 type BookshelfItem = {
   id: string;
   remoteMeetingId?: number;
@@ -4220,8 +4275,15 @@ type RegularGroupPostItem = {
   id: string;
   remoteTopicId?: number;
   author: string;
+  authorProfileImageUrl?: string;
   content: string;
   completed: boolean;
+};
+
+type RegularGroupMemberItem = {
+  id: string;
+  nickname: string;
+  profileImageUrl?: string;
 };
 
 type RegularGroupChatMessage = {
@@ -4237,7 +4299,7 @@ type RegularMeetingGroupItem = {
   teamId?: number;
   label: string;
   memberCount: number;
-  members: string[];
+  members: RegularGroupMemberItem[];
   posts: RegularGroupPostItem[];
   chatMessages: RegularGroupChatMessage[];
 };
@@ -4285,6 +4347,16 @@ type GroupMemberItem = {
   email: string;
   joinedAt: string;
   role: GroupMemberRole;
+};
+
+type GroupEditDraft = {
+  name: string;
+  description: string;
+  region: string;
+  categories: string[];
+  targets: string[];
+  isPrivate: boolean;
+  imageUrl: string;
 };
 
 type BookshelfCreateDraft = {
@@ -4386,6 +4458,36 @@ function mapClubStatusToRole(status?: ClubMembershipStatus): GroupMemberRole {
   if (status === 'OWNER') return '개설자';
   if (status === 'STAFF') return '운영진';
   return '회원';
+}
+
+function toGroupTargets(topic: string): string[] {
+  const stripped = topic.replace(/^모임 대상 · /, '').trim();
+  if (!stripped || stripped === '정보 없음') return [];
+  return stripped
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function toEditDraft(group: Group): GroupEditDraft {
+  return {
+    name: group.name,
+    description: group.description ?? '',
+    region: group.region.replace(/^활동 지역 · /, ''),
+    categories: group.tags,
+    targets: toGroupTargets(group.topic),
+    isPrivate: group.isPrivate ?? false,
+    imageUrl: group.profileImageUrl ?? '',
+  };
+}
+
+function logMeetingAction(key: string, payload?: Record<string, unknown>) {
+  if (!__DEV__) return;
+  if (payload) {
+    console.info(`[meeting] ${key}`, payload);
+    return;
+  }
+  console.info(`[meeting] ${key}`);
 }
 
 function mapManagedClubDetailToGroup(detail: ClubDetailResult, prev: Group): Group {
@@ -4514,16 +4616,61 @@ function sortBookshelfPostsByLatest(items: BookshelfPostItem[]): BookshelfPostIt
       return rightTime - leftTime;
     }
 
-    if (Number.isFinite(rightTime) && !Number.isFinite(leftTime)) {
-      return 1;
-    }
-
-    if (!Number.isFinite(rightTime) && Number.isFinite(leftTime)) {
-      return -1;
+    if (right.remoteId !== left.remoteId) {
+      return right.remoteId - left.remoteId;
     }
 
     return right.id.localeCompare(left.id, 'ko', { numeric: true });
   });
+}
+
+function areRegularGroupPostsEqual(
+  left: RegularGroupPostItem[],
+  right: RegularGroupPostItem[],
+) {
+  if (left.length !== right.length) return false;
+
+  for (let index = 0; index < left.length; index += 1) {
+    const leftItem = left[index];
+    const rightItem = right[index];
+
+    if (
+      leftItem.id !== rightItem.id ||
+      leftItem.remoteTopicId !== rightItem.remoteTopicId ||
+      leftItem.author !== rightItem.author ||
+      leftItem.authorProfileImageUrl !== rightItem.authorProfileImageUrl ||
+      leftItem.content !== rightItem.content ||
+      leftItem.completed !== rightItem.completed
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function areRegularGroupChatMessagesEqual(
+  left: RegularGroupChatMessage[],
+  right: RegularGroupChatMessage[],
+) {
+  if (left.length !== right.length) return false;
+
+  for (let index = 0; index < left.length; index += 1) {
+    const leftItem = left[index];
+    const rightItem = right[index];
+
+    if (
+      leftItem.id !== rightItem.id ||
+      leftItem.author !== rightItem.author ||
+      leftItem.content !== rightItem.content ||
+      leftItem.time !== rightItem.time ||
+      leftItem.mine !== rightItem.mine
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function getStarIconName(rating: number, index: number): keyof typeof MaterialIcons.glyphMap {
@@ -4645,19 +4792,46 @@ function mapNoticeCommentToUi(item: ClubNoticeComment, currentNickname?: string)
   };
 }
 
+function mapMeetingChatMessageToUi(
+  item: ClubMeetingChatMessage,
+  currentNickname?: string,
+): RegularGroupChatMessage {
+  const normalizedCurrentNickname = currentNickname?.trim();
+  const normalizedAuthor = item.senderNickname.trim();
+
+  return {
+    id: `meeting-chat-${item.messageId}`,
+    author: item.senderNickname,
+    content: item.content,
+    time: formatDotDateTime(item.sendAt),
+    mine:
+      Boolean(normalizedCurrentNickname) &&
+      normalizedAuthor.localeCompare(normalizedCurrentNickname ?? '', 'ko', {
+        sensitivity: 'accent',
+      }) === 0,
+  };
+}
+
 function mapMeetingToRegularMeetingInfo(
   book: BookshelfItem | null,
   meeting: ClubMeetingInfo,
   topicsByTeamId: Record<number, ClubMeetingTeamTopics>,
+  chatsByTeamId: Record<number, ClubMeetingChatHistory>,
+  currentNickname?: string,
 ): RegularMeetingInfo | null {
   if (!book) return null;
 
   const groups: RegularMeetingGroupItem[] = meeting.teams.map((team) => {
     const teamMembers = meeting.members.filter((member) => member.teamId === team.teamId);
     const teamTopics = topicsByTeamId[team.teamId]?.topics ?? [];
+    const teamChats = chatsByTeamId[team.teamId]?.chats ?? [];
     const label = toTeamLabel(team.teamNumber);
     const groupId = `${book.id}-regular-group-${team.teamId}`;
-    const members = teamMembers.map((member) => member.nickname);
+    const members = teamMembers.map((member) => ({
+      id: `${groupId}-member-${member.clubMemberId}`,
+      nickname: member.nickname,
+      profileImageUrl: member.profileImageUrl,
+    }));
 
     return {
       id: groupId,
@@ -4669,10 +4843,11 @@ function mapMeetingToRegularMeetingInfo(
         id: `${groupId}-topic-${topic.topicId}`,
         remoteTopicId: topic.topicId,
         author: topic.authorNickname,
+        authorProfileImageUrl: topic.authorProfileImageUrl,
         content: topic.content,
         completed: topic.isSelected,
       })),
-      chatMessages: [],
+      chatMessages: teamChats.map((chat) => mapMeetingChatMessageToUi(chat, currentNickname)),
     };
   });
 
@@ -4715,6 +4890,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [regularChatPickerVisible, setRegularChatPickerVisible] = useState(false);
   const [activeRegularChatGroupId, setActiveRegularChatGroupId] = useState<string | null>(null);
   const [regularChatInput, setRegularChatInput] = useState('');
+  const [submittingRegularChat, setSubmittingRegularChat] = useState(false);
   const [managementMenuVisible, setManagementMenuVisible] = useState(false);
   const [activeManagementScreen, setActiveManagementScreen] = useState<GroupManagementScreen | null>(null);
   const [joinRequests, setJoinRequests] = useState<GroupJoinRequestItem[]>([]);
@@ -4730,7 +4906,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [uploadingClubImage, setUploadingClubImage] = useState(false);
   const [uploadingNoticePhoto, setUploadingNoticePhoto] = useState(false);
   const [creatingBookshelf, setCreatingBookshelf] = useState(false);
+  const [updatingBookshelf, setUpdatingBookshelf] = useState(false);
+  const [deletingBookshelf, setDeletingBookshelf] = useState(false);
+  const [editingBookshelfMeetingId, setEditingBookshelfMeetingId] = useState<number | null>(null);
   const [openingNextMeeting, setOpeningNextMeeting] = useState(false);
+  const [groupHomeRefreshing, setGroupHomeRefreshing] = useState(false);
   const [bookshelfComposerType, setBookshelfComposerType] = useState<'TOPIC' | 'REVIEW' | null>(null);
   const [editingBookshelfPost, setEditingBookshelfPost] = useState<BookshelfPostItem | null>(null);
   const [bookshelfComposerInput, setBookshelfComposerInput] = useState('');
@@ -4747,22 +4927,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   >({});
   const [draggingTeamMemberId, setDraggingTeamMemberId] = useState<number | null>(null);
   const [draggingTeamMemberPosition, setDraggingTeamMemberPosition] = useState<{ x: number; y: number } | null>(null);
-  const [editDraft, setEditDraft] = useState(() => ({
-    name: group.name,
-    description: group.description ?? '',
-    region: group.region.replace(/^활동 지역 · /, ''),
-    categories: group.tags,
-    targets:
-      group.topic.replace(/^모임 대상 · /, '') === '정보 없음'
-        ? []
-        : group.topic
-            .replace(/^모임 대상 · /, '')
-            .split(',')
-            .map((item) => item.trim())
-            .filter((item) => item.length > 0),
-    isPrivate: group.isPrivate ?? false,
-    imageUrl: group.profileImageUrl ?? '',
-  }));
+  const [editDraft, setEditDraft] = useState<GroupEditDraft>(() => toEditDraft(group));
   const [noticeItems, setNoticeItems] = useState<NoticeItem[]>([]);
   const [latestNoticeId, setLatestNoticeId] = useState<number | null>(null);
   const [shouldOpenTopNotice, setShouldOpenTopNotice] = useState(false);
@@ -4795,7 +4960,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     voters: string[];
   } | null>(null);
   const teamManageDropRefs = useRef<Record<string, View | null>>({});
-  const skipNextBookshelfResetRef = useRef(false);
+  const clubWorkspaceRequestIdRef = useRef(0);
+  const bookshelfMeetingDetailRequestIdRef = useRef<Record<number, number>>({});
   const dragStartRef = useRef<{
     memberId: number;
     pageX: number;
@@ -4866,11 +5032,17 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [bookshelfTopicsByMeetingId, setBookshelfTopicsByMeetingId] = useState<
     Record<number, BookshelfPostItem[]>
   >({});
+  const [bookshelfTopicPageStateByMeetingId, setBookshelfTopicPageStateByMeetingId] = useState<
+    Record<number, CursorPageState>
+  >({});
   const [bookshelfReviewsByMeetingId, setBookshelfReviewsByMeetingId] = useState<
     Record<number, BookshelfPostItem[]>
   >({});
   const [regularMeetingInfoByMeetingId, setRegularMeetingInfoByMeetingId] = useState<
     Record<number, RegularMeetingInfo>
+  >({});
+  const [noticeCommentPageStateByNoticeId, setNoticeCommentPageStateByNoticeId] = useState<
+    Record<string, CursorPageState>
   >({});
   const noticePageSize = 8;
   const bookshelfSessions = useMemo(() => {
@@ -4889,6 +5061,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   );
 
   useEffect(() => {
+    clubWorkspaceRequestIdRef.current += 1;
+    bookshelfMeetingDetailRequestIdRef.current = {};
     setManagedGroup(group);
     setCanManageClub(false);
     setJoinRequests([]);
@@ -4896,30 +5070,20 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     setContactModalVisible(false);
     setBookshelfItems([]);
     setBookshelfTopicsByMeetingId({});
+    setBookshelfTopicPageStateByMeetingId({});
     setBookshelfReviewsByMeetingId({});
     setRegularMeetingInfoByMeetingId({});
+    setRegularGroupPostsById({});
+    setRegularGroupChatMessagesById({});
+    setSubmittingRegularChat(false);
     setManagementMenuVisible(false);
     setActiveManagementScreen(null);
     setSelectedJoinRequestActionId(null);
     setSelectedJoinRequestMessage(null);
     setSelectedMemberActionId(null);
-    setEditDraft({
-      name: group.name,
-      description: group.description ?? '',
-      region: group.region.replace(/^활동 지역 · /, ''),
-      categories: group.tags,
-      targets:
-        group.topic.replace(/^모임 대상 · /, '') === '정보 없음'
-          ? []
-          : group.topic
-              .replace(/^모임 대상 · /, '')
-              .split(',')
-              .map((item) => item.trim())
-              .filter((item) => item.length > 0),
-      isPrivate: group.isPrivate ?? false,
-      imageUrl: group.profileImageUrl ?? '',
-    });
+    setEditDraft(toEditDraft(group));
     setNoticeItems([]);
+    setNoticeCommentPageStateByNoticeId({});
     setNoticeComposerVisible(false);
     setNoticeBookSelectorVisible(false);
     closeBookshelfBookSelector();
@@ -4930,6 +5094,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     setBookshelfCreateDraft(
       buildBookshelfCreateDraft(),
     );
+    setEditingBookshelfMeetingId(null);
+    setUpdatingBookshelf(false);
+    setDeletingBookshelf(false);
     setEditingNoticeCommentId(null);
     setSubmittingNoticeComment(false);
   }, [closeBookshelfBookSelector, closeBookshelfCalendar, group]);
@@ -4980,22 +5147,50 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   }, [currentMemberNickname]);
 
   useEffect(() => {
-    if (!isManagedClub) return;
-    let cancelled = false;
+    setRegularGroupChatMessagesById((prev) =>
+      Object.fromEntries(
+        Object.entries(prev).map(([groupId, messages]) => [
+          groupId,
+          messages.map((message) => ({
+            ...message,
+            mine:
+              Boolean(currentMemberNickname) &&
+              message.author.trim().localeCompare(currentMemberNickname.trim(), 'ko', {
+                sensitivity: 'accent',
+              }) === 0,
+          })),
+        ]),
+      ),
+    );
+  }, [currentMemberNickname]);
 
-    const loadClubWorkspace = async () => {
+  const reloadClubWorkspace = useCallback(
+    async (options?: { suppressErrorToast?: boolean; isCancelled?: () => boolean }) => {
+      if (!isManagedClub || typeof group.clubId !== 'number') return;
+      const requestId = clubWorkspaceRequestIdRef.current + 1;
+      clubWorkspaceRequestIdRef.current = requestId;
+      const isCancelled = options?.isCancelled ?? (() => false);
+      const isStale = () =>
+        isCancelled() || requestId !== clubWorkspaceRequestIdRef.current;
+
       try {
-        const [homeDetail, bookshelfList, noticeList, latestNotice] = await Promise.all([
-          fetchClubHome(group.clubId as number),
-          fetchClubBookshelves(group.clubId as number),
-          fetchClubNotices(group.clubId as number, 1),
-          fetchClubLatestNotice(group.clubId as number, { suppressErrorToast: true }),
+        const [homeDetail, bookshelfList, noticeList, latestNotice, myMembership] = await Promise.all([
+          fetchClubHome(group.clubId),
+          fetchClubBookshelves(group.clubId),
+          fetchClubNotices(group.clubId, 1),
+          fetchClubLatestNotice(group.clubId, { suppressErrorToast: true }),
+          fetchClubMyMembership(group.clubId, { suppressErrorToast: true }),
         ]);
 
-        if (cancelled) return;
+        if (isStale()) return;
         setLatestNoticeId(typeof latestNotice?.id === 'number' ? latestNotice.id : null);
 
-        const nextCanManageClub = Boolean(bookshelfList.isStaff);
+        const hasStaffFlag = typeof myMembership?.staff === 'boolean';
+        const nextCanManageClub = hasStaffFlag
+          ? Boolean(myMembership?.staff)
+          : myMembership?.myStatus === 'STAFF' || myMembership?.myStatus === 'OWNER'
+            ? true
+            : Boolean(bookshelfList.isStaff);
         setCanManageClub(nextCanManageClub);
 
         if (homeDetail) {
@@ -5003,26 +5198,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           setManagedGroup({
             ...nextGroup,
             notice: latestNotice?.title,
+            applicationStatus:
+              mapClubStatusToApplication(myMembership?.myStatus) ?? nextGroup.applicationStatus,
           });
-          setEditDraft((prev) => {
-            return {
-              ...prev,
-              name: nextGroup.name,
-              description: nextGroup.description ?? '',
-              region: nextGroup.region.replace(/^활동 지역 · /, ''),
-              categories: nextGroup.tags,
-              targets:
-                nextGroup.topic.replace(/^모임 대상 · /, '') === '정보 없음'
-                  ? []
-                  : nextGroup.topic
-                      .replace(/^모임 대상 · /, '')
-                      .split(',')
-                      .map((item) => item.trim())
-                      .filter((item) => item.length > 0),
-              isPrivate: nextGroup.isPrivate ?? false,
-              imageUrl: nextGroup.profileImageUrl ?? '',
-            };
-          });
+          setEditDraft((prev) => ({ ...prev, ...toEditDraft(nextGroup) }));
         }
 
         const nextBookshelves = bookshelfList.items.map(mapApiBookshelfToItem);
@@ -5051,54 +5230,49 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         }
 
         const [detail, pendingMembers, activeMembers] = await Promise.all([
-          fetchClubDetail(group.clubId as number),
-          fetchClubMembers(group.clubId as number, 'PENDING'),
-          fetchClubMembers(group.clubId as number, 'ACTIVE'),
+          fetchClubDetail(group.clubId),
+          fetchClubMembers(group.clubId, 'PENDING'),
+          fetchClubMembers(group.clubId, 'ACTIVE'),
         ]);
 
-        if (cancelled) return;
+        if (isStale()) return;
 
         if (detail) {
           const nextGroup = mapManagedClubDetailToGroup(detail, group);
           setManagedGroup({
             ...nextGroup,
             notice: latestNotice?.title,
+            applicationStatus:
+              mapClubStatusToApplication(myMembership?.myStatus) ?? nextGroup.applicationStatus,
           });
-          setEditDraft((prev) => {
-            return {
-              ...prev,
-              name: nextGroup.name,
-              description: nextGroup.description ?? '',
-              region: nextGroup.region.replace(/^활동 지역 · /, ''),
-              categories: nextGroup.tags,
-              targets:
-                nextGroup.topic.replace(/^모임 대상 · /, '') === '정보 없음'
-                  ? []
-                  : nextGroup.topic
-                      .replace(/^모임 대상 · /, '')
-                      .split(',')
-                      .map((item) => item.trim())
-                      .filter((item) => item.length > 0),
-              isPrivate: nextGroup.isPrivate ?? false,
-              imageUrl: nextGroup.profileImageUrl ?? '',
-            };
-          });
+          setEditDraft((prev) => ({ ...prev, ...toEditDraft(nextGroup) }));
         }
 
         setJoinRequests(pendingMembers.items.map(mapClubManagedMemberToJoinRequest));
         setMembers(activeMembers.items.map(mapClubManagedMemberToGroupMember));
       } catch (error) {
+        if (isStale()) return;
         if (error instanceof ApiError) return;
-        showToast('모임 데이터를 불러오지 못했습니다.');
+        if (!options?.suppressErrorToast) {
+          showToast('모임 데이터를 불러오지 못했습니다.');
+        }
       }
-    };
+    },
+    [group, group.clubId, isManagedClub],
+  );
 
-    void loadClubWorkspace();
+  useEffect(() => {
+    if (!isManagedClub) return;
+    let cancelled = false;
+
+    void reloadClubWorkspace({
+      isCancelled: () => cancelled,
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [group, group.clubId, group.id, isManagedClub]);
+  }, [isManagedClub, reloadClubWorkspace]);
 
   useEffect(() => {
     if (bookshelfSessions.length === 0) return;
@@ -5112,6 +5286,14 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       setNoticeCommentsById((prev) => ({
         ...prev,
         [noticeKey]: comments.items.map(mapNoticeCommentItemToUi),
+      }));
+      setNoticeCommentPageStateByNoticeId((prev) => ({
+        ...prev,
+        [noticeKey]: {
+          hasNext: Boolean(comments.hasNext),
+          nextCursor: comments.nextCursor,
+          loadingMore: false,
+        },
       }));
     },
     [mapNoticeCommentItemToUi],
@@ -5139,6 +5321,14 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         setNoticeCommentsById((prev) => ({
           ...prev,
           [merged.id]: comments.items.map(mapNoticeCommentItemToUi),
+        }));
+        setNoticeCommentPageStateByNoticeId((prev) => ({
+          ...prev,
+          [merged.id]: {
+            hasNext: Boolean(comments.hasNext),
+            nextCursor: comments.nextCursor,
+            loadingMore: false,
+          },
         }));
         if (merged.poll) {
           setNoticePollOptionsById((prev) => ({
@@ -5191,18 +5381,181 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     );
   }, [bookshelfItems, selectedBookshelfBookId, visibleBookshelfItems]);
 
+  const fetchAllBookshelfReviewsForMeeting = useCallback(
+    async (
+      clubId: number,
+      meetingId: number,
+      options?: { suppressErrorToast?: boolean },
+    ): Promise<ClubBookshelfReview[]> => {
+      const merged: ClubBookshelfReview[] = [];
+      const seenReviewIds = new Set<number>();
+      const visitedCursors = new Set<number>();
+      let cursorId: number | undefined;
+
+      for (let page = 0; page < 20; page += 1) {
+        const response = await fetchClubBookshelfReviews(clubId, meetingId, cursorId, {
+          suppressErrorToast: options?.suppressErrorToast,
+        });
+
+        response.items.forEach((item) => {
+          if (seenReviewIds.has(item.bookReviewId)) return;
+          seenReviewIds.add(item.bookReviewId);
+          merged.push(item);
+        });
+
+        if (!response.hasNext || typeof response.nextCursor !== 'number') {
+          break;
+        }
+        if (visitedCursors.has(response.nextCursor)) {
+          break;
+        }
+
+        visitedCursors.add(response.nextCursor);
+        cursorId = response.nextCursor;
+      }
+
+      return merged;
+    },
+    [],
+  );
+
+  const fetchAllMeetingTeamTopics = useCallback(
+    async (
+      clubId: number,
+      meetingId: number,
+      teamId: number,
+      options?: { suppressErrorToast?: boolean },
+    ): Promise<ClubMeetingTeamTopics> => {
+      const mergedTopics: ClubMeetingTeamTopics['topics'] = [];
+      const seenTopicIds = new Set<number>();
+      const visitedCursors = new Set<number>();
+      let cursorId: number | undefined;
+      let latestMeta: ClubMeetingTeamTopics | null = null;
+
+      for (let page = 0; page < 20; page += 1) {
+        const response = await fetchClubMeetingTeamTopics(clubId, meetingId, teamId, cursorId, {
+          suppressErrorToast: options?.suppressErrorToast,
+        });
+        latestMeta = response;
+
+        response.topics.forEach((item) => {
+          if (seenTopicIds.has(item.topicId)) return;
+          seenTopicIds.add(item.topicId);
+          mergedTopics.push(item);
+        });
+
+        if (!response.hasNext || typeof response.nextCursor !== 'number') {
+          break;
+        }
+        if (visitedCursors.has(response.nextCursor)) {
+          break;
+        }
+
+        visitedCursors.add(response.nextCursor);
+        cursorId = response.nextCursor;
+      }
+
+      if (!latestMeta) {
+        return {
+          existingTeams: [],
+          requestedTeam: undefined,
+          topics: [],
+          hasNext: false,
+          nextCursor: null,
+        };
+      }
+
+      return {
+        existingTeams: latestMeta.existingTeams,
+        requestedTeam: latestMeta.requestedTeam,
+        topics: mergedTopics,
+        hasNext: false,
+        nextCursor: null,
+      };
+    },
+    [],
+  );
+
+  const fetchAllMeetingTeamChats = useCallback(
+    async (
+      clubId: number,
+      meetingId: number,
+      teamId: number,
+      options?: { suppressErrorToast?: boolean },
+    ): Promise<ClubMeetingChatHistory> => {
+      const mergedChats: ClubMeetingChatMessage[] = [];
+      const seenMessageIds = new Set<number>();
+      const visitedCursors = new Set<number>();
+      let cursorId: number | undefined;
+      let latestMeta: ClubMeetingChatHistory | null = null;
+
+      for (let page = 0; page < 20; page += 1) {
+        const response = await fetchClubMeetingTeamChatMessages(clubId, meetingId, teamId, cursorId, {
+          suppressErrorToast: options?.suppressErrorToast,
+        });
+        latestMeta = response;
+
+        response.chats.forEach((item) => {
+          if (seenMessageIds.has(item.messageId)) return;
+          seenMessageIds.add(item.messageId);
+          mergedChats.push(item);
+        });
+
+        if (!response.hasNext || typeof response.nextCursor !== 'number') {
+          break;
+        }
+        if (visitedCursors.has(response.nextCursor)) {
+          break;
+        }
+
+        visitedCursors.add(response.nextCursor);
+        cursorId = response.nextCursor;
+      }
+
+      const sortedChats = [...mergedChats].sort((left, right) => {
+        const leftTime = left.sendAt ? Date.parse(left.sendAt) : NaN;
+        const rightTime = right.sendAt ? Date.parse(right.sendAt) : NaN;
+
+        if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+          return leftTime - rightTime;
+        }
+
+        return left.messageId - right.messageId;
+      });
+
+      if (!latestMeta) {
+        return {
+          chats: sortedChats,
+          hasNext: false,
+          nextCursor: null,
+        };
+      }
+
+      return {
+        chats: sortedChats,
+        hasNext: false,
+        nextCursor: null,
+      };
+    },
+    [],
+  );
+
   const reloadBookshelfMeetingDetail = useCallback(
     async (book: BookshelfItem, options?: { suppressErrorToast?: boolean }) => {
       const clubId = group.clubId;
       const meetingId = book.remoteMeetingId;
       if (typeof clubId !== 'number' || typeof meetingId !== 'number') return;
+      const requestId = (bookshelfMeetingDetailRequestIdRef.current[meetingId] ?? 0) + 1;
+      bookshelfMeetingDetailRequestIdRef.current[meetingId] = requestId;
+      const isStale = () =>
+        bookshelfMeetingDetailRequestIdRef.current[meetingId] !== requestId;
 
       try {
-        const [topics, reviews, meeting, detail] = await Promise.all([
+        const [topicPage, reviews, meeting, detail] = await Promise.all([
           fetchClubBookshelfTopics(clubId, meetingId, undefined, {
             suppressErrorToast: options?.suppressErrorToast,
           }),
-          fetchClubBookshelfReviews(clubId, meetingId, undefined, {
+          fetchAllBookshelfReviewsForMeeting(clubId, meetingId, {
             suppressErrorToast: options?.suppressErrorToast,
           }),
           fetchClubMeeting(clubId, meetingId, {
@@ -5213,13 +5566,22 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           }),
         ]);
 
+        if (isStale()) return;
         setBookshelfTopicsByMeetingId((prev) => ({
           ...prev,
-          [meetingId]: topics.items.map(mapBookshelfTopicToPostItem),
+          [meetingId]: topicPage.items.map(mapBookshelfTopicToPostItem),
+        }));
+        setBookshelfTopicPageStateByMeetingId((prev) => ({
+          ...prev,
+          [meetingId]: {
+            hasNext: Boolean(topicPage.hasNext),
+            nextCursor: topicPage.nextCursor,
+            loadingMore: false,
+          },
         }));
         setBookshelfReviewsByMeetingId((prev) => ({
           ...prev,
-          [meetingId]: reviews.items.map(mapBookshelfReviewToPostItem),
+          [meetingId]: reviews.map(mapBookshelfReviewToPostItem),
         }));
 
         if (detail) {
@@ -5241,17 +5603,35 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         }
 
         if (meeting) {
-          const topicResponses = await Promise.all(
-            meeting.teams.map(async (team) => [
-              team.teamId,
-              await fetchClubMeetingTeamTopics(clubId, meetingId, team.teamId, undefined, {
-                suppressErrorToast: options?.suppressErrorToast,
-              }),
-            ] as const),
-          );
+          const [topicResponses, chatResponses] = await Promise.all([
+            Promise.all(
+              meeting.teams.map(async (team) => [
+                team.teamId,
+                await fetchAllMeetingTeamTopics(clubId, meetingId, team.teamId, {
+                  suppressErrorToast: options?.suppressErrorToast,
+                }),
+              ] as const),
+            ),
+            Promise.all(
+              meeting.teams.map(async (team) => [
+                team.teamId,
+                await fetchAllMeetingTeamChats(clubId, meetingId, team.teamId, {
+                  suppressErrorToast: options?.suppressErrorToast,
+                }),
+              ] as const),
+            ),
+          ]);
 
+          if (isStale()) return;
           const topicsByTeamId = Object.fromEntries(topicResponses);
-          const regularInfo = mapMeetingToRegularMeetingInfo(book, meeting, topicsByTeamId);
+          const chatsByTeamId = Object.fromEntries(chatResponses);
+          const regularInfo = mapMeetingToRegularMeetingInfo(
+            book,
+            meeting,
+            topicsByTeamId,
+            chatsByTeamId,
+            currentMemberNickname,
+          );
           if (regularInfo) {
             setRegularMeetingInfoByMeetingId((prev) => ({
               ...prev,
@@ -5266,13 +5646,20 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           });
         }
       } catch (error) {
+        if (isStale()) return;
         if (error instanceof ApiError) return;
         if (!options?.suppressErrorToast) {
           showToast('책장 상세를 불러오지 못했습니다.');
         }
       }
     },
-    [group.clubId],
+    [
+      fetchAllBookshelfReviewsForMeeting,
+      fetchAllMeetingTeamChats,
+      fetchAllMeetingTeamTopics,
+      currentMemberNickname,
+      group.clubId,
+    ],
   );
 
   useEffect(() => {
@@ -5317,6 +5704,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     [bookshelfReviewsByMeetingId, selectedBookshelfBook?.remoteMeetingId],
   );
 
+  const currentBookshelfTopicPageState = useMemo<CursorPageState | null>(() => {
+    const remoteMeetingId = selectedBookshelfBook?.remoteMeetingId;
+    if (typeof remoteMeetingId !== 'number') return null;
+    return bookshelfTopicPageStateByMeetingId[remoteMeetingId] ?? null;
+  }, [bookshelfTopicPageStateByMeetingId, selectedBookshelfBook?.remoteMeetingId]);
+
   const canSubmitBookshelfComposer =
     bookshelfComposerInput.trim().length > 0 &&
     (bookshelfComposerType !== 'REVIEW' || bookshelfComposerRating >= 0.5);
@@ -5340,9 +5733,25 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       let changed = false;
 
       baseRegularMeetingInfo.groups.forEach((groupItem) => {
-        if (next[groupItem.id]) return;
-        next[groupItem.id] = groupItem.posts;
-        changed = true;
+        const currentPosts = next[groupItem.id];
+        if (!currentPosts) {
+          next[groupItem.id] = groupItem.posts;
+          changed = true;
+          return;
+        }
+
+        const currentCompletedByPostId = new Map(
+          currentPosts.map((post) => [post.id, post.completed] as const),
+        );
+        const mergedPosts = groupItem.posts.map((post) => ({
+          ...post,
+          completed: currentCompletedByPostId.get(post.id) ?? post.completed,
+        }));
+
+        if (!areRegularGroupPostsEqual(currentPosts, mergedPosts)) {
+          next[groupItem.id] = mergedPosts;
+          changed = true;
+        }
       });
 
       return changed ? next : prev;
@@ -5353,9 +5762,17 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       let changed = false;
 
       baseRegularMeetingInfo.groups.forEach((groupItem) => {
-        if (next[groupItem.id]) return;
-        next[groupItem.id] = groupItem.chatMessages;
-        changed = true;
+        const currentMessages = next[groupItem.id];
+        if (!currentMessages) {
+          next[groupItem.id] = groupItem.chatMessages;
+          changed = true;
+          return;
+        }
+
+        if (!areRegularGroupChatMessagesEqual(currentMessages, groupItem.chatMessages)) {
+          next[groupItem.id] = groupItem.chatMessages;
+          changed = true;
+        }
       });
 
       return changed ? next : prev;
@@ -5399,6 +5816,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     return noticeCommentsById[selectedNotice.id] ?? [];
   }, [noticeCommentsById, selectedNotice]);
 
+  const currentNoticeCommentPageState = useMemo<CursorPageState | null>(() => {
+    if (!selectedNotice) return null;
+    return noticeCommentPageStateByNoticeId[selectedNotice.id] ?? null;
+  }, [noticeCommentPageStateByNoticeId, selectedNotice]);
+
   const currentNoticePollOptions = useMemo(() => {
     if (!selectedNotice?.poll) return [];
     return noticePollOptionsById[selectedNotice.id] ?? selectedNotice.poll.options;
@@ -5435,6 +5857,169 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     start = Math.max(1, end - pageWindow + 1);
     return Array.from({ length: end - start + 1 }).map((_, idx) => start + idx);
   }, [currentNoticePage, totalNoticePages]);
+
+  const loadMoreBookshelfTopics = useCallback(
+    async (meetingId: number) => {
+      const clubId = group.clubId;
+      if (typeof clubId !== 'number') return;
+
+      const pageState = bookshelfTopicPageStateByMeetingId[meetingId];
+      if (
+        !pageState ||
+        pageState.loadingMore ||
+        !pageState.hasNext ||
+        typeof pageState.nextCursor !== 'number'
+      ) {
+        return;
+      }
+
+      setBookshelfTopicPageStateByMeetingId((prev) => ({
+        ...prev,
+        [meetingId]: {
+          ...pageState,
+          loadingMore: true,
+        },
+      }));
+
+      try {
+        const response = await fetchClubBookshelfTopics(clubId, meetingId, pageState.nextCursor, {
+          suppressErrorToast: true,
+        });
+
+        setBookshelfTopicsByMeetingId((prev) => {
+          const currentItems = prev[meetingId] ?? [];
+          const appended = response.items.map(mapBookshelfTopicToPostItem);
+          const seen = new Set(currentItems.map((item) => item.id));
+          const merged = [
+            ...currentItems,
+            ...appended.filter((item) => !seen.has(item.id)),
+          ];
+
+          return {
+            ...prev,
+            [meetingId]: merged,
+          };
+        });
+        setBookshelfTopicPageStateByMeetingId((prev) => ({
+          ...prev,
+          [meetingId]: {
+            hasNext: Boolean(response.hasNext),
+            nextCursor: response.nextCursor,
+            loadingMore: false,
+          },
+        }));
+      } catch (error) {
+        setBookshelfTopicPageStateByMeetingId((prev) => ({
+          ...prev,
+          [meetingId]: {
+            ...pageState,
+            loadingMore: false,
+          },
+        }));
+        if (!(error instanceof ApiError)) {
+          showToast('발제를 추가로 불러오지 못했습니다.');
+        }
+      }
+    },
+    [bookshelfTopicPageStateByMeetingId, group.clubId],
+  );
+
+  const loadMoreNoticeComments = useCallback(
+    async (notice: NoticeItem) => {
+      const clubId = group.clubId;
+      const noticeId = notice.remoteId;
+      const noticeKey = notice.id;
+      const pageState = noticeCommentPageStateByNoticeId[noticeKey];
+
+      if (
+        typeof clubId !== 'number' ||
+        typeof noticeId !== 'number' ||
+        !pageState ||
+        pageState.loadingMore ||
+        !pageState.hasNext ||
+        typeof pageState.nextCursor !== 'number'
+      ) {
+        return;
+      }
+
+      setNoticeCommentPageStateByNoticeId((prev) => ({
+        ...prev,
+        [noticeKey]: {
+          ...pageState,
+          loadingMore: true,
+        },
+      }));
+
+      try {
+        const comments = await fetchClubNoticeComments(clubId, noticeId, pageState.nextCursor);
+        const mappedItems = comments.items.map(mapNoticeCommentItemToUi);
+
+        setNoticeCommentsById((prev) => {
+          const currentItems = prev[noticeKey] ?? [];
+          const seen = new Set(currentItems.map((item) => item.id));
+          const merged = [
+            ...currentItems,
+            ...mappedItems.filter((item) => !seen.has(item.id)),
+          ];
+
+          return {
+            ...prev,
+            [noticeKey]: merged,
+          };
+        });
+        setNoticeCommentPageStateByNoticeId((prev) => ({
+          ...prev,
+          [noticeKey]: {
+            hasNext: Boolean(comments.hasNext),
+            nextCursor: comments.nextCursor,
+            loadingMore: false,
+          },
+        }));
+      } catch (error) {
+        setNoticeCommentPageStateByNoticeId((prev) => ({
+          ...prev,
+          [noticeKey]: {
+            ...pageState,
+            loadingMore: false,
+          },
+        }));
+        if (!(error instanceof ApiError)) {
+          showToast('댓글을 추가로 불러오지 못했습니다.');
+        }
+      }
+    },
+    [group.clubId, mapNoticeCommentItemToUi, noticeCommentPageStateByNoticeId],
+  );
+
+  const handleGroupHomeScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+      const distanceFromBottom = contentSize.height - (layoutMeasurement.height + contentOffset.y);
+      if (distanceFromBottom > 180) return;
+
+      if (
+        activeTab === 'bookshelf' &&
+        bookshelfViewMode === 'DETAIL' &&
+        bookshelfDetailTab === 'TOPIC' &&
+        typeof selectedBookshelfBook?.remoteMeetingId === 'number'
+      ) {
+        void loadMoreBookshelfTopics(selectedBookshelfBook.remoteMeetingId);
+      }
+
+      if (activeTab === 'notice' && selectedNotice) {
+        void loadMoreNoticeComments(selectedNotice);
+      }
+    },
+    [
+      activeTab,
+      bookshelfDetailTab,
+      bookshelfViewMode,
+      loadMoreBookshelfTopics,
+      loadMoreNoticeComments,
+      selectedBookshelfBook?.remoteMeetingId,
+      selectedNotice,
+    ],
+  );
 
   const handleOpenNoticeDetailByRemoteId = useCallback(
     async (remoteNoticeId: number | null) => {
@@ -5494,15 +6079,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   }, [managedGroup.notice]);
 
   useEffect(() => {
-    if (activeTab === 'bookshelf' && skipNextBookshelfResetRef.current) {
-      skipNextBookshelfResetRef.current = false;
-      return;
-    }
     setNoticePage(1);
     setSelectedNoticeId(null);
     setNoticeCommentInput('');
     setVoteVotersModal(null);
-    setSelectedBookshelfSession(bookshelfSessions[0] ?? '');
+    setSelectedBookshelfSession('');
     setBookshelfViewMode('GRID');
     setBookshelfDetailTab('TOPIC');
     setSelectedBookshelfBookId(null);
@@ -5510,7 +6091,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     setRegularChatPickerVisible(false);
     setActiveRegularChatGroupId(null);
     setRegularChatInput('');
-  }, [activeTab, group.id]);
+  }, [group.id]);
 
   useEffect(() => {
     if (!shouldOpenTopNotice || activeTab !== 'notice') return;
@@ -5938,7 +6519,6 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         return false;
       }
 
-      skipNextBookshelfResetRef.current = true;
       setActiveTab('bookshelf');
       setSelectedBookshelfSession(targetBook.session);
       openBookshelfDetail(targetBook, 'TOPIC');
@@ -6020,16 +6600,24 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           ...prev,
           [meetingId]: topics.items.map(mapBookshelfTopicToPostItem),
         }));
+        setBookshelfTopicPageStateByMeetingId((prev) => ({
+          ...prev,
+          [meetingId]: {
+            hasNext: Boolean(topics.hasNext),
+            nextCursor: topics.nextCursor,
+            loadingMore: false,
+          },
+        }));
         return;
       }
 
-      const reviews = await fetchClubBookshelfReviews(clubId, meetingId);
+      const reviews = await fetchAllBookshelfReviewsForMeeting(clubId, meetingId);
       setBookshelfReviewsByMeetingId((prev) => ({
         ...prev,
-        [meetingId]: reviews.items.map(mapBookshelfReviewToPostItem),
+        [meetingId]: reviews.map(mapBookshelfReviewToPostItem),
       }));
     },
-    [],
+    [fetchAllBookshelfReviewsForMeeting],
   );
 
   const closeBookshelfComposer = useCallback(() => {
@@ -6100,6 +6688,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           }
 
           await refreshBookshelfPostsByType(clubId, meetingId, 'TOPIC');
+          if (selectedBookshelfBook) {
+            await reloadBookshelfMeetingDetail(selectedBookshelfBook, {
+              suppressErrorToast: true,
+            });
+          }
           showToast(isEditing ? '발제가 수정되었습니다.' : '발제가 등록되었습니다.');
         } else {
           if (isEditing && typeof editingBookshelfPost?.remoteId === 'number') {
@@ -6118,11 +6711,25 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           showToast(isEditing ? '한줄평이 수정되었습니다.' : '한줄평이 등록되었습니다.');
         }
 
+        logMeetingAction('bookshelf_post_submit_success', {
+          clubId,
+          meetingId,
+          postType: bookshelfComposerType,
+          mode: isEditing ? 'edit' : 'create',
+        });
+
         setEditingBookshelfPost(null);
         setBookshelfComposerType(null);
         setBookshelfComposerInput('');
         setBookshelfComposerRating(0);
       } catch (error) {
+        logMeetingAction('bookshelf_post_submit_failure', {
+          clubId,
+          meetingId,
+          postType: bookshelfComposerType,
+          mode: editingBookshelfPost ? 'edit' : 'create',
+          message: error instanceof Error ? error.message : String(error),
+        });
         if (!(error instanceof ApiError)) {
           showToast(
             bookshelfComposerType === 'TOPIC'
@@ -6146,7 +6753,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     bookshelfComposerRating,
     bookshelfComposerType,
     group.clubId,
+    reloadBookshelfMeetingDetail,
     refreshBookshelfPostsByType,
+    selectedBookshelfBook,
     selectedBookshelfBook?.remoteMeetingId,
   ]);
 
@@ -6538,12 +7147,23 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           suppressErrorToast: true,
         });
 
+        logMeetingAction('team_manage_save_success', {
+          clubId,
+          meetingId,
+          teamCount: teamManageTeams.length,
+        });
         showToast('조 편성이 저장되었습니다.');
         setBookshelfDetailTab('REGULAR');
         setBookshelfViewMode('DETAIL');
         setSelectedRegularGroupId(null);
         closeTeamManage();
       } catch (error) {
+        logMeetingAction('team_manage_save_failure', {
+          clubId,
+          meetingId,
+          teamCount: teamManageTeams.length,
+          message: error instanceof Error ? error.message : String(error),
+        });
         if (!(error instanceof ApiError)) {
           showToast('조 편성 저장에 실패했습니다.');
         }
@@ -6625,6 +7245,49 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     });
   }, []);
 
+  const refreshRegularChatGroupMessages = useCallback(
+    async (
+      groupItem: RegularMeetingGroupItem,
+      options?: { suppressErrorToast?: boolean },
+    ) => {
+      const clubId = group.clubId;
+      const meetingId = selectedBookshelfBook?.remoteMeetingId;
+      const teamId = groupItem.teamId;
+
+      if (
+        typeof clubId !== 'number' ||
+        typeof meetingId !== 'number' ||
+        typeof teamId !== 'number'
+      ) {
+        return;
+      }
+
+      const history = await fetchAllMeetingTeamChats(clubId, meetingId, teamId, {
+        suppressErrorToast: options?.suppressErrorToast,
+      });
+      const nextMessages = history.chats.map((item) =>
+        mapMeetingChatMessageToUi(item, currentMemberNickname),
+      );
+
+      setRegularGroupChatMessagesById((prev) => {
+        const currentMessages = prev[groupItem.id] ?? [];
+        if (areRegularGroupChatMessagesEqual(currentMessages, nextMessages)) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [groupItem.id]: nextMessages,
+        };
+      });
+    },
+    [
+      currentMemberNickname,
+      fetchAllMeetingTeamChats,
+      group.clubId,
+      selectedBookshelfBook?.remoteMeetingId,
+    ],
+  );
+
   const handleOpenRegularChatPicker = useCallback(() => {
     setRegularChatPickerVisible(true);
     setActiveRegularChatGroupId(null);
@@ -6632,10 +7295,14 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   }, []);
 
   const handleSelectRegularChatGroup = useCallback((groupId: string) => {
+    const groupItem = regularMeetingInfo?.groups.find((item) => item.id === groupId);
     setActiveRegularChatGroupId(groupId);
     setRegularChatPickerVisible(false);
     setRegularChatInput('');
-  }, []);
+    if (groupItem) {
+      void refreshRegularChatGroupMessages(groupItem, { suppressErrorToast: true });
+    }
+  }, [refreshRegularChatGroupMessages, regularMeetingInfo]);
 
   const handleBackToRegularChatPicker = useCallback(() => {
     setActiveRegularChatGroupId(null);
@@ -6651,9 +7318,46 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
   const handleSubmitRegularChat = useCallback(() => {
     const content = regularChatInput.trim();
-    if (!activeRegularChatGroup || !content) return;
-    showToast('조 채팅 API 연동 전입니다.');
-  }, [activeRegularChatGroup, regularChatInput]);
+    if (!activeRegularChatGroup || !content || submittingRegularChat) return;
+
+    const clubId = group.clubId;
+    const meetingId = selectedBookshelfBook?.remoteMeetingId;
+    const teamId = activeRegularChatGroup.teamId;
+
+    if (
+      typeof clubId !== 'number' ||
+      typeof meetingId !== 'number' ||
+      typeof teamId !== 'number'
+    ) {
+      showToast('채팅 전송 대상을 찾을 수 없습니다.');
+      return;
+    }
+
+    const submit = async () => {
+      setSubmittingRegularChat(true);
+      try {
+        await sendClubMeetingTeamChatMessage(clubId, meetingId, teamId, content);
+        setRegularChatInput('');
+        await refreshRegularChatGroupMessages(activeRegularChatGroup, {
+          suppressErrorToast: true,
+        });
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('채팅 전송에 실패했습니다.');
+        }
+      } finally {
+        setSubmittingRegularChat(false);
+      }
+    };
+    void submit();
+  }, [
+    activeRegularChatGroup,
+    group.clubId,
+    refreshRegularChatGroupMessages,
+    regularChatInput,
+    selectedBookshelfBook?.remoteMeetingId,
+    submittingRegularChat,
+  ]);
 
   const runAfterClosingManagementMenu = useCallback(
     (callback: () => void) => {
@@ -6670,6 +7374,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       setSelectedJoinRequestMessage(null);
       setSelectedMemberActionId(null);
       if (screen === 'BOOKSHELF_CREATE') {
+        setEditingBookshelfMeetingId(null);
         setBookshelfCreateDraft(
           buildBookshelfCreateDraft(String(parseGenerationNumber(bookshelfSessions[0]) ?? 1)),
         );
@@ -6684,6 +7389,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     setSelectedJoinRequestActionId(null);
     setSelectedJoinRequestMessage(null);
     setSelectedMemberActionId(null);
+    setEditingBookshelfMeetingId(null);
     closeBookshelfBookSelector();
     closeBookshelfCalendar();
   }, [closeBookshelfBookSelector, closeBookshelfCalendar]);
@@ -6704,6 +7410,110 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     closeManagementMenu,
     handleCloseManagementScreen,
   ]);
+
+  const handleOpenBookshelfEdit = useCallback(() => {
+    const clubId = group.clubId;
+    const meetingId = selectedBookshelfBook?.remoteMeetingId;
+    const fallbackBook = selectedBookshelfBook;
+
+    if (!canManageClub || typeof clubId !== 'number' || typeof meetingId !== 'number' || !fallbackBook) {
+      showToast('수정할 책장 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    const open = async () => {
+      try {
+        const detail = await fetchClubBookshelfEditInfo(clubId, meetingId);
+        if (!detail) {
+          showToast('수정할 책장 정보를 찾을 수 없습니다.');
+          setActiveManagementScreen(null);
+          setEditingBookshelfMeetingId(null);
+          return;
+        }
+
+        setActiveManagementScreen('BOOKSHELF_CREATE');
+        setSelectedJoinRequestActionId(null);
+        setSelectedJoinRequestMessage(null);
+        setSelectedMemberActionId(null);
+        setEditingBookshelfMeetingId(meetingId);
+        closeBookshelfBookSelector();
+        closeBookshelfCalendar();
+        setBookshelfCreateDraft({
+          sourceBook: {
+            isbn: (detail.book.bookId ?? fallbackBook.bookId ?? '').trim(),
+            title: detail.book.title ?? fallbackBook.title,
+            author: detail.book.author ?? fallbackBook.author,
+            coverImage: detail.book.imgUrl ?? fallbackBook.coverImage,
+            publisher: detail.book.publisher,
+            description: detail.book.description,
+          },
+          session: String(
+            detail.generation ??
+              parseGenerationNumber(fallbackBook.session) ??
+              1,
+          ),
+          categories: detail.tag?.trim() ? [detail.tag.trim()] : [],
+          regularMeetingName:
+            detail.title?.trim() ??
+            fallbackBook.regularMeetingName ??
+            '',
+          meetingLocation:
+            detail.location?.trim() ??
+            fallbackBook.meetingLocation ??
+            '',
+          meetingDate: formatDotDate(detail.meetingTime),
+        });
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('책장 수정 정보를 불러오지 못했습니다.');
+        }
+        setActiveManagementScreen(null);
+        setEditingBookshelfMeetingId(null);
+      }
+    };
+
+    void open();
+  }, [
+    canManageClub,
+    closeBookshelfBookSelector,
+    closeBookshelfCalendar,
+    group.clubId,
+    selectedBookshelfBook,
+  ]);
+
+  const handleDeleteManagedClub = useCallback(() => {
+    if (!canManageClub || typeof group.clubId !== 'number') {
+      showToast('모임 삭제 API를 사용할 수 없습니다.');
+      return;
+    }
+
+    const clubId = group.clubId;
+    const clubName = managedGroup.name || '모임';
+
+    runAfterClosingManagementMenu(() => {
+      Alert.alert('모임 삭제', `'${clubName}' 모임을 삭제하시겠습니까?`, [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: () => {
+            const submit = async () => {
+              try {
+                await deleteClub(clubId);
+                showToast('모임이 삭제되었습니다.');
+                onBack();
+              } catch (error) {
+                if (!(error instanceof ApiError)) {
+                  showToast('모임 삭제에 실패했습니다.');
+                }
+              }
+            };
+            void submit();
+          },
+        },
+      ]);
+    });
+  }, [canManageClub, group.clubId, managedGroup.name, onBack, runAfterClosingManagementMenu]);
 
   const handleProcessJoinRequest = useCallback((request: GroupJoinRequestItem, action: 'APPROVE' | 'REJECT') => {
     const clubId = group.clubId;
@@ -6986,16 +7796,19 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   }, [closeBookshelfBookSelector]);
 
   const handleSubmitBookshelfCreate = useCallback(() => {
-    if (creatingBookshelf) {
+    if (creatingBookshelf || updatingBookshelf || deletingBookshelf) {
       return;
     }
-    if (!bookshelfCreateDraft.sourceBook) {
+    const editingMeetingId = editingBookshelfMeetingId;
+    const isEditMode = typeof editingMeetingId === 'number';
+
+    if (!isEditMode && !bookshelfCreateDraft.sourceBook) {
       showToast('책을 선택해주세요.');
       return;
     }
     const clubId = group.clubId;
     if (!canManageClub || typeof clubId !== 'number') {
-      showToast('책장 생성 API를 사용할 수 없습니다.');
+      showToast(isEditMode ? '책장 수정 API를 사용할 수 없습니다.' : '책장 생성 API를 사용할 수 없습니다.');
       return;
     }
 
@@ -7022,49 +7835,149 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     }
 
     const sourceBook = bookshelfCreateDraft.sourceBook;
-    const sourceBookIsbn = sourceBook.isbn.trim();
-    if (!ISBN13_REGEX.test(sourceBookIsbn)) {
+    if (isEditMode && !sourceBook) {
+      showToast('수정할 책장 정보를 다시 불러와주세요.');
+      return;
+    }
+    const sourceBookIsbn = sourceBook?.isbn.trim() ?? '';
+    if (!isEditMode && !ISBN13_REGEX.test(sourceBookIsbn)) {
       showToast('책 ISBN 형식을 확인해주세요.');
       return;
     }
     const primaryCategory = bookshelfCreateDraft.categories[0];
     const submit = async () => {
-      setCreatingBookshelf(true);
+      if (isEditMode) {
+        setUpdatingBookshelf(true);
+      } else {
+        setCreatingBookshelf(true);
+      }
       try {
         const meetingTime = toApiDateTime(meetingDate);
         if (!meetingTime) {
           showToast('올바른 모임 날짜를 선택해주세요.');
           return;
         }
-        await createClubBookshelf(clubId, {
-          isbn: sourceBookIsbn,
-          title: regularMeetingName,
-          location: meetingLocation,
-          meetingTime,
-          generation,
-          tag: primaryCategory,
-        });
+
+        if (isEditMode && typeof editingMeetingId === 'number') {
+          await updateClubBookshelf(clubId, editingMeetingId, {
+            title: regularMeetingName,
+            location: meetingLocation,
+            meetingTime,
+            generation,
+            tag: primaryCategory,
+          });
+        } else {
+          await createClubBookshelf(clubId, {
+            isbn: sourceBookIsbn,
+            title: regularMeetingName,
+            location: meetingLocation,
+            meetingTime,
+            generation,
+            tag: primaryCategory,
+          });
+        }
+
         const bookshelfList = await fetchClubBookshelves(clubId);
         const nextItems = bookshelfList.items.map(mapApiBookshelfToItem);
         setBookshelfItems(nextItems);
-        const createdSession = formatGenerationLabel(generation);
-        setSelectedBookshelfSession(createdSession);
         setActiveTab('bookshelf');
-        setBookshelfViewMode('GRID');
-        setActiveManagementScreen(null);
-        setBookshelfCreateDraft(buildBookshelfCreateDraft(String(generation)));
-        showToast('책장이 생성되었습니다.');
+
+        if (isEditMode && typeof editingMeetingId === 'number') {
+          const updatedItem =
+            nextItems.find((item) => item.remoteMeetingId === editingMeetingId) ?? null;
+
+          if (updatedItem) {
+            setSelectedBookshelfBookId(updatedItem.id);
+            await reloadBookshelfMeetingDetail(updatedItem, {
+              suppressErrorToast: true,
+            });
+            setBookshelfViewMode('DETAIL');
+            setBookshelfDetailTab('REGULAR');
+          } else {
+            setBookshelfViewMode('GRID');
+          }
+          setActiveManagementScreen(null);
+          setEditingBookshelfMeetingId(null);
+          showToast('책장이 수정되었습니다.');
+        } else {
+          const createdSession = formatGenerationLabel(generation);
+          setSelectedBookshelfSession(createdSession);
+          setBookshelfViewMode('GRID');
+          setActiveManagementScreen(null);
+          setBookshelfCreateDraft(buildBookshelfCreateDraft(String(generation)));
+          showToast('책장이 생성되었습니다.');
+        }
       } catch (error) {
         if (!(error instanceof ApiError)) {
-          showToast('책장 생성에 실패했습니다.');
+          showToast(isEditMode ? '책장 수정에 실패했습니다.' : '책장 생성에 실패했습니다.');
         }
       } finally {
-        setCreatingBookshelf(false);
+        if (isEditMode) {
+          setUpdatingBookshelf(false);
+        } else {
+          setCreatingBookshelf(false);
+        }
       }
     };
 
     void submit();
-  }, [bookshelfCreateDraft, canManageClub, creatingBookshelf, group.clubId]);
+  }, [
+    bookshelfCreateDraft,
+    canManageClub,
+    creatingBookshelf,
+    deletingBookshelf,
+    editingBookshelfMeetingId,
+    group.clubId,
+    reloadBookshelfMeetingDetail,
+    updatingBookshelf,
+  ]);
+
+  const handleDeleteEditingBookshelf = useCallback(() => {
+    const clubId = group.clubId;
+    const meetingId = editingBookshelfMeetingId;
+
+    if (
+      deletingBookshelf ||
+      !canManageClub ||
+      typeof clubId !== 'number' ||
+      typeof meetingId !== 'number'
+    ) {
+      showToast('책장 삭제 API를 사용할 수 없습니다.');
+      return;
+    }
+
+    Alert.alert('책장 삭제', '이 책장을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: () => {
+          const submit = async () => {
+            setDeletingBookshelf(true);
+            try {
+              await deleteClubBookshelf(clubId, meetingId);
+              const bookshelfList = await fetchClubBookshelves(clubId);
+              const nextItems = bookshelfList.items.map(mapApiBookshelfToItem);
+              setBookshelfItems(nextItems);
+              setSelectedBookshelfBookId(nextItems[0]?.id ?? null);
+              setBookshelfViewMode('GRID');
+              setActiveManagementScreen(null);
+              setEditingBookshelfMeetingId(null);
+              showToast('책장이 삭제되었습니다.');
+            } catch (error) {
+              if (!(error instanceof ApiError)) {
+                showToast('책장 삭제에 실패했습니다.');
+              }
+            } finally {
+              setDeletingBookshelf(false);
+            }
+          };
+
+          void submit();
+        },
+      },
+    ]);
+  }, [canManageClub, deletingBookshelf, editingBookshelfMeetingId, group.clubId]);
 
   const handleOpenNoticeComposer = useCallback((notice?: NoticeItem) => {
     if (notice) {
@@ -7259,7 +8172,18 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         setEditingNoticeId(null);
         setNoticeDraft(buildNoticeDraft());
         showToast(editingNoticeId ? '공지가 수정되었습니다.' : '공지가 등록되었습니다.');
+        logMeetingAction('notice_submit_success', {
+          clubId: group.clubId,
+          mode: editingNoticeId ? 'edit' : 'create',
+          hasVote: noticeDraft.pollEnabled,
+          hasBookshelfAttachment: Boolean(bookshelfAttachment?.remoteMeetingId),
+        });
       } catch (error) {
+        logMeetingAction('notice_submit_failure', {
+          clubId: group.clubId,
+          mode: editingNoticeId ? 'edit' : 'create',
+          message: error instanceof Error ? error.message : String(error),
+        });
         if (!(error instanceof ApiError)) {
           showToast(editingNoticeId ? '공지 수정에 실패했습니다.' : '공지 등록에 실패했습니다.');
         }
@@ -7292,6 +8216,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         setLatestNoticeId(typeof latestNotice?.id === 'number' ? latestNotice.id : null);
         setManagedGroup((prev) => ({ ...prev, notice: latestNotice?.title }));
         setNoticeCommentsById((prev) => {
+          const next = { ...prev };
+          delete next[selectedNotice.id];
+          return next;
+        });
+        setNoticeCommentPageStateByNoticeId((prev) => {
           const next = { ...prev };
           delete next[selectedNotice.id];
           return next;
@@ -7432,31 +8361,62 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     }
   }, [closeContactModal]);
 
+  const handleRefreshGroupHome = useCallback(() => {
+    if (groupHomeRefreshing) return;
+
+    const refresh = async () => {
+      setGroupHomeRefreshing(true);
+      try {
+        await reloadClubWorkspace({ suppressErrorToast: true });
+        if (
+          activeTab === 'bookshelf' &&
+          bookshelfViewMode !== 'GRID' &&
+          selectedBookshelfBook
+        ) {
+          await reloadBookshelfMeetingDetail(selectedBookshelfBook, {
+            suppressErrorToast: true,
+          });
+        }
+      } finally {
+        setGroupHomeRefreshing(false);
+      }
+    };
+
+    void refresh();
+  }, [
+    activeTab,
+    bookshelfViewMode,
+    groupHomeRefreshing,
+    reloadBookshelfMeetingDetail,
+    reloadClubWorkspace,
+    selectedBookshelfBook,
+  ]);
+
   return (
     <View style={styles.screenWrap}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={[styles.content, { paddingBottom: spacing.xl * 2 }]}
         showsVerticalScrollIndicator={false}
+        onScroll={handleGroupHomeScroll}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
-            refreshing={false}
-            onRefresh={() => {}}
+            refreshing={groupHomeRefreshing}
+            onRefresh={handleRefreshGroupHome}
             tintColor={colors.primary1}
             colors={[colors.primary1]}
           />
         }
       >
-      <Pressable
-        style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
-        onPress={handleBackFromGroupHome}
-      >
-        <MaterialIcons name="chevron-left" size={18} color={colors.gray5} />
-        <Text style={styles.breadcrumbText}>모임 목록</Text>
-      </Pressable>
-
-      <View style={styles.detailTitleRow}>
-        <Text style={[styles.sectionTitle, styles.detailTitle]}>{managedGroup.name}</Text>
+      <View style={styles.groupHomeHeaderRow}>
+        <Pressable
+          style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
+          onPress={handleBackFromGroupHome}
+        >
+          <MaterialIcons name="chevron-left" size={18} color={colors.gray5} />
+          <Text style={styles.breadcrumbText}>모임 목록</Text>
+        </Pressable>
         {canManageClub ? (
           <Pressable
             style={({ pressed }) => [styles.detailTitleManageLink, pressed && styles.pressed]}
@@ -7466,6 +8426,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           </Pressable>
         ) : null}
       </View>
+      <Text style={[styles.sectionTitle, styles.detailTitle, styles.groupHomeTitle]}>
+        {managedGroup.name}
+      </Text>
 
       <View style={styles.pillNav}>
         {tabItems.map((tab) => {
@@ -7867,6 +8830,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     <Text style={styles.managementEmptyText}>등록된 댓글이 없습니다.</Text>
                   </View>
                 ) : null}
+                {currentNoticeCommentPageState?.loadingMore ? (
+                  <Text style={styles.helperText}>다음 댓글을 불러오는 중...</Text>
+                ) : null}
               </View>
             </View>
           </View>
@@ -8091,12 +9057,20 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   <Text style={styles.breadcrumbText}>책장</Text>
                 </Pressable>
                 {canManageClub && bookshelfDetailTab === 'REGULAR' ? (
-                  <Pressable
-                    style={({ pressed }) => [styles.detailTitleManageLink, pressed && styles.pressed]}
-                    onPress={handlePressManageRegularGroups}
-                  >
-                    <Text style={styles.detailTitleManageLinkText}>조 관리하기</Text>
-                  </Pressable>
+                  <View style={styles.detailTitleActionRow}>
+                    <Pressable
+                      style={({ pressed }) => [styles.detailTitleManageLink, pressed && styles.pressed]}
+                      onPress={handleOpenBookshelfEdit}
+                    >
+                      <Text style={styles.detailTitleManageLinkText}>책장 수정</Text>
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [styles.detailTitleManageLink, pressed && styles.pressed]}
+                      onPress={handlePressManageRegularGroups}
+                    >
+                      <Text style={styles.detailTitleManageLinkText}>조 관리하기</Text>
+                    </Pressable>
+                  </View>
                 ) : null}
               </View>
 
@@ -8226,6 +9200,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                       <View style={styles.managementEmptyCard}>
                         <Text style={styles.managementEmptyText}>등록된 발제가 없습니다.</Text>
                       </View>
+                    ) : null}
+                    {currentBookshelfTopicPageState?.loadingMore ? (
+                      <Text style={styles.helperText}>다음 발제를 불러오는 중...</Text>
                     ) : null}
                   </View>
                 </View>
@@ -8376,11 +9353,19 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                           <Text style={styles.bookshelfRegularGroupPreviewLabel}>참여자</Text>
                           <View style={styles.bookshelfRegularGroupMemberList}>
                             {selectedRegularGroup.members.map((member) => (
-                              <View key={`${selectedRegularGroup.id}-${member}`} style={styles.bookshelfRegularGroupMemberRow}>
+                              <View key={member.id} style={styles.bookshelfRegularGroupMemberRow}>
                                 <View style={styles.bookshelfPostAvatar}>
-                                  <MaterialIcons name="person" size={16} color={colors.gray3} />
+                                  {member.profileImageUrl ? (
+                                    <Image
+                                      source={{ uri: member.profileImageUrl }}
+                                      style={styles.bookshelfPostAvatarImage}
+                                      resizeMode="cover"
+                                    />
+                                  ) : (
+                                    <MaterialIcons name="person" size={16} color={colors.gray3} />
+                                  )}
                                 </View>
-                                <Text style={styles.bookshelfRegularGroupMemberName}>{member}</Text>
+                                <Text style={styles.bookshelfRegularGroupMemberName}>{member.nickname}</Text>
                               </View>
                             ))}
                           </View>
@@ -8425,18 +9410,26 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                                     <View style={styles.bookshelfRegularGroupMemberList}>
                                       {selectedRegularGroup.members.map((member) => (
                                         <View
-                                          key={`${selectedRegularGroup.id}-member-dropdown-${member}`}
+                                          key={`${member.id}-dropdown`}
                                           style={styles.bookshelfRegularGroupMemberRow}
                                         >
                                           <View style={styles.bookshelfPostAvatar}>
-                                            <MaterialIcons
-                                              name="person"
-                                              size={16}
-                                              color={colors.gray3}
-                                            />
+                                            {member.profileImageUrl ? (
+                                              <Image
+                                                source={{ uri: member.profileImageUrl }}
+                                                style={styles.bookshelfPostAvatarImage}
+                                                resizeMode="cover"
+                                              />
+                                            ) : (
+                                              <MaterialIcons
+                                                name="person"
+                                                size={16}
+                                                color={colors.gray3}
+                                              />
+                                            )}
                                           </View>
                                           <Text style={styles.bookshelfRegularGroupMemberName}>
-                                            {member}
+                                            {member.nickname}
                                           </Text>
                                         </View>
                                       ))}
@@ -8483,7 +9476,15 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                                 <View style={styles.bookshelfPostTop}>
                                   <View style={styles.bookshelfPostAuthorRow}>
                                     <View style={styles.bookshelfPostAvatar}>
-                                      <MaterialIcons name="person" size={16} color={colors.gray3} />
+                                      {post.authorProfileImageUrl ? (
+                                        <Image
+                                          source={{ uri: post.authorProfileImageUrl }}
+                                          style={styles.bookshelfPostAvatarImage}
+                                          resizeMode="cover"
+                                        />
+                                      ) : (
+                                        <MaterialIcons name="person" size={16} color={colors.gray3} />
+                                      )}
                                     </View>
                                     <Text style={styles.bookshelfPostAuthor}>{post.author}</Text>
                                   </View>
@@ -9062,7 +10063,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   : activeManagementScreen === 'MEMBERS'
                     ? '모임 회원 관리'
                     : activeManagementScreen === 'BOOKSHELF_CREATE'
-                      ? '책장 생성하기'
+                      ? typeof editingBookshelfMeetingId === 'number'
+                        ? '책장 수정하기'
+                        : '책장 생성하기'
                       : '모임 정보 수정하기'}
               </Text>
               <Pressable onPress={handleCloseManagementScreen} hitSlop={8}>
@@ -9406,16 +10409,26 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
             {activeManagementScreen === 'BOOKSHELF_CREATE' ? (
               <View style={styles.managementEditSection}>
                 <View style={styles.sectionBox}>
-                  <Text style={styles.sectionTitle}>책장 생성하기</Text>
+                  <Text style={styles.sectionTitle}>
+                    {typeof editingBookshelfMeetingId === 'number' ? '책장 수정하기' : '책장 생성하기'}
+                  </Text>
                   <Text style={styles.helperText}>
-                    책을 선택하고 정기모임 정보까지 한 화면에서 등록할 수 있습니다.
+                    {typeof editingBookshelfMeetingId === 'number'
+                      ? '정기모임 정보를 수정하고 저장할 수 있습니다.'
+                      : '책을 선택하고 정기모임 정보까지 한 화면에서 등록할 수 있습니다.'}
                   </Text>
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
                     책 선택
                   </Text>
                   <Pressable
-                      style={({ pressed }) => [styles.input, styles.bookshelfCreateSelector, pressed && styles.pressed]}
+                    style={({ pressed }) => [
+                      styles.input,
+                      styles.bookshelfCreateSelector,
+                      pressed && typeof editingBookshelfMeetingId !== 'number' && styles.pressed,
+                      typeof editingBookshelfMeetingId === 'number' && styles.bookshelfCreateSelectorDisabled,
+                    ]}
+                    disabled={typeof editingBookshelfMeetingId === 'number'}
                     onPress={() => setBookshelfBookSelectorVisible(true)}
                   >
                     <Text
@@ -9429,6 +10442,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                         : '선택하기'}
                     </Text>
                   </Pressable>
+                  {typeof editingBookshelfMeetingId === 'number' ? (
+                    <Text style={styles.helperText}>수정 모드에서는 책을 변경할 수 없습니다.</Text>
+                  ) : null}
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
                     기수
@@ -9551,32 +10567,67 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
             {activeManagementScreen === 'EDIT' || activeManagementScreen === 'BOOKSHELF_CREATE' ? (
               <View style={styles.managementFooter}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.primaryButton,
-                    styles.managementFooterButton,
-                    activeManagementScreen === 'BOOKSHELF_CREATE' &&
-                    creatingBookshelf &&
-                    styles.primaryButtonDisabled,
-                    pressed &&
-                    !(activeManagementScreen === 'BOOKSHELF_CREATE' && creatingBookshelf) &&
-                    styles.pressed,
-                  ]}
-                  onPress={
-                    activeManagementScreen === 'EDIT'
-                      ? handleSaveGroupEdit
-                      : handleSubmitBookshelfCreate
-                  }
-                  disabled={activeManagementScreen === 'BOOKSHELF_CREATE' && creatingBookshelf}
-                >
-                  <Text style={styles.primaryButtonText}>
-                    {activeManagementScreen === 'EDIT'
-                      ? '저장하기'
-                      : creatingBookshelf
-                        ? '등록중...'
-                        : '등록하기'}
-                  </Text>
-                </Pressable>
+                {activeManagementScreen === 'BOOKSHELF_CREATE' &&
+                typeof editingBookshelfMeetingId === 'number' ? (
+                  <View style={styles.managementFooterButtonRow}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.outlineButton,
+                        styles.managementFooterButton,
+                        styles.managementFooterDangerButton,
+                        (updatingBookshelf || deletingBookshelf) && styles.managementFooterDangerButtonDisabled,
+                        pressed && !(updatingBookshelf || deletingBookshelf) && styles.pressed,
+                      ]}
+                      onPress={handleDeleteEditingBookshelf}
+                      disabled={updatingBookshelf || deletingBookshelf}
+                    >
+                      <Text style={styles.managementFooterDangerButtonText}>
+                        {deletingBookshelf ? '삭제중...' : '삭제하기'}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.primaryButton,
+                        styles.managementFooterButton,
+                        (updatingBookshelf || deletingBookshelf) && styles.primaryButtonDisabled,
+                        pressed && !(updatingBookshelf || deletingBookshelf) && styles.pressed,
+                      ]}
+                      onPress={handleSubmitBookshelfCreate}
+                      disabled={updatingBookshelf || deletingBookshelf}
+                    >
+                      <Text style={styles.primaryButtonText}>
+                        {updatingBookshelf ? '저장중...' : '저장하기'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.primaryButton,
+                      styles.managementFooterButton,
+                      activeManagementScreen === 'BOOKSHELF_CREATE' &&
+                      creatingBookshelf &&
+                      styles.primaryButtonDisabled,
+                      pressed &&
+                      !(activeManagementScreen === 'BOOKSHELF_CREATE' && creatingBookshelf) &&
+                      styles.pressed,
+                    ]}
+                    onPress={
+                      activeManagementScreen === 'EDIT'
+                        ? handleSaveGroupEdit
+                        : handleSubmitBookshelfCreate
+                    }
+                    disabled={activeManagementScreen === 'BOOKSHELF_CREATE' && creatingBookshelf}
+                  >
+                    <Text style={styles.primaryButtonText}>
+                      {activeManagementScreen === 'EDIT'
+                        ? '저장하기'
+                        : creatingBookshelf
+                          ? '등록중...'
+                          : '등록하기'}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             ) : null}
             {selectedJoinRequestMessage ? (
@@ -9817,6 +10868,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   description: '정기모임용 책장 추가',
                   icon: 'library-add' as const,
                   onPress: () => handleOpenManagementScreen('BOOKSHELF_CREATE'),
+                },
+                {
+                  key: 'DELETE_CLUB' as const,
+                  title: '모임 삭제하기',
+                  description: '삭제 후 복구할 수 없습니다',
+                  icon: 'delete-outline' as const,
+                  onPress: handleDeleteManagedClub,
                 },
               ].map((item) => (
                 <Pressable
@@ -10583,15 +11641,30 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   placeholderTextColor={colors.gray3}
                   value={regularChatInput}
                   onChangeText={setRegularChatInput}
+                  editable={!submittingRegularChat}
+                  onSubmitEditing={handleSubmitRegularChat}
                 />
                 <Pressable
                   style={({ pressed }) => [
                     styles.regularChatSendButton,
-                    pressed && styles.pressed,
+                    (submittingRegularChat || regularChatInput.trim().length === 0) &&
+                      styles.regularChatSendButtonDisabled,
+                    pressed &&
+                      !(submittingRegularChat || regularChatInput.trim().length === 0) &&
+                      styles.pressed,
                   ]}
                   onPress={handleSubmitRegularChat}
+                  disabled={submittingRegularChat || regularChatInput.trim().length === 0}
                 >
-                  <MaterialIcons name="send" size={18} color={colors.gray4} />
+                  <MaterialIcons
+                    name="send"
+                    size={18}
+                    color={
+                      submittingRegularChat || regularChatInput.trim().length === 0
+                        ? colors.gray3
+                        : colors.gray4
+                    }
+                  />
                 </Pressable>
               </View>
             </Pressable>
