@@ -6535,12 +6535,24 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     }
   }, []);
 
-  const openBookshelfDetail = useCallback((book: BookshelfItem, tab: BookshelfDetailTab) => {
-    setSelectedBookshelfBookId(book.id);
-    setBookshelfDetailTab(tab);
-    setSelectedRegularGroupId(null);
-    setBookshelfViewMode('DETAIL');
-  }, []);
+  const openBookshelfDetail = useCallback(
+    (book: BookshelfItem, tab: BookshelfDetailTab) => {
+      const open = () => {
+        setSelectedBookshelfBookId(book.id);
+        setBookshelfDetailTab(tab);
+        setSelectedRegularGroupId(null);
+        setBookshelfViewMode('DETAIL');
+      };
+
+      if (tab === 'REGULAR' && !isLoggedIn) {
+        requireAuth(open);
+        return;
+      }
+
+      open();
+    },
+    [isLoggedIn, requireAuth],
+  );
 
   const openBookshelfTopicByMeetingId = useCallback(
     async (meetingId: number) => {
@@ -7241,15 +7253,27 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     setSelectedRegularGroupId(null);
   }, []);
 
-  const handleChangeBookshelfTab = useCallback((tab: BookshelfDetailTab) => {
-    setBookshelfDetailTab(tab);
-    if (tab !== 'REGULAR') {
-      setSelectedRegularGroupId(null);
-      setBookshelfViewMode('DETAIL');
-      return;
-    }
-    setBookshelfViewMode('DETAIL');
-  }, []);
+  const handleChangeBookshelfTab = useCallback(
+    (tab: BookshelfDetailTab) => {
+      const change = () => {
+        setBookshelfDetailTab(tab);
+        if (tab !== 'REGULAR') {
+          setSelectedRegularGroupId(null);
+          setBookshelfViewMode('DETAIL');
+          return;
+        }
+        setBookshelfViewMode('DETAIL');
+      };
+
+      if (tab === 'REGULAR' && !isLoggedIn) {
+        requireAuth(change);
+        return;
+      }
+
+      change();
+    },
+    [isLoggedIn, requireAuth],
+  );
 
   const handleSelectRegularGroup = useCallback((groupId: string) => {
     setSelectedRegularGroupId(groupId);

@@ -888,8 +888,10 @@ function normalizeClubBookshelfReview(raw: unknown): ClubBookshelfReview | null 
 function normalizeTeamKey(raw: unknown): ClubMeetingTeamKey | null {
   const record = asRecord(raw);
   if (!record) return null;
-  const teamId = toNumberValue(record.teamId);
-  const teamNumber = toNumberValue(record.teamNumber);
+  const teamId = toNumberValue(firstDefined(record.teamId, record.id));
+  const teamNumber = toNumberValue(
+    firstDefined(record.teamNumber, record.teamNo, record.number, record.order),
+  );
   if (!teamId || !teamNumber) return null;
   return { teamId, teamNumber };
 }
@@ -897,11 +899,24 @@ function normalizeTeamKey(raw: unknown): ClubMeetingTeamKey | null {
 function normalizeMeetingMember(raw: unknown): ClubMeetingMember | null {
   const record = asRecord(raw);
   if (!record) return null;
-  const clubMemberId = toNumberValue(record.clubMemberId);
+  const clubMemberId = toNumberValue(
+    firstDefined(record.clubMemberId, record.memberId, record.id),
+  );
   if (!clubMemberId) return null;
 
-  const memberInfo = normalizeBasicMemberInfo(firstDefined(record.memberInfo, record.authorInfo, record.detailInfo));
-  const teamKey = normalizeTeamKey(record.teamKey);
+  const memberInfo = normalizeBasicMemberInfo(
+    firstDefined(
+      record.memberInfo,
+      record.authorInfo,
+      record.detailInfo,
+      record.member,
+      record.user,
+      record,
+    ),
+  );
+  const teamKey =
+    normalizeTeamKey(firstDefined(record.teamKey, record.teamInfo, record.team)) ??
+    normalizeTeamKey(record);
 
   return {
     clubMemberId,
@@ -914,15 +929,17 @@ function normalizeMeetingMember(raw: unknown): ClubMeetingMember | null {
 
 function normalizeMeetingMemberList(raw: unknown): ClubMeetingMemberList {
   const record = asRecord(raw);
+  const rawTeams = firstDefined(record?.existingTeams, record?.teams);
+  const rawMembers = firstDefined(record?.clubMembers, record?.members, record?.teamMembers);
 
   return {
-    teams: Array.isArray(record?.existingTeams)
-      ? record.existingTeams
+    teams: Array.isArray(rawTeams)
+      ? rawTeams
           .map(normalizeTeamKey)
           .filter((item): item is ClubMeetingTeamKey => Boolean(item))
       : [],
-    members: Array.isArray(record?.clubMembers)
-      ? record.clubMembers
+    members: Array.isArray(rawMembers)
+      ? rawMembers
           .map(normalizeMeetingMember)
           .filter((item): item is ClubMeetingMember => Boolean(item))
       : [],
@@ -1630,20 +1647,42 @@ export async function fetchClubMeeting(
 
   const result = asRecord(unwrapResult(response));
   if (!result) return null;
-  const normalizedMeetingId = toNumberValue(result.meetingId);
+  const meetingInfo = asRecord(firstDefined(result.meetingInfo, result.detailInfo));
+  const normalizedMeetingId = toNumberValue(
+    firstDefined(result.meetingId, meetingInfo?.meetingId, result.id),
+  );
   if (!normalizedMeetingId) return null;
 
-  const normalizedMembers = Array.isArray(result.teamMembers)
-    ? result.teamMembers.flatMap((entry) => {
+  const rawTeamMembers = firstDefined(
+    result.teamMembers,
+    result.clubMembers,
+    result.members,
+    meetingInfo?.teamMembers,
+    meetingInfo?.clubMembers,
+    meetingInfo?.members,
+  );
+  const normalizedMembers = Array.isArray(rawTeamMembers)
+    ? rawTeamMembers.flatMap((entry) => {
         const record = asRecord(entry);
-        const groupedMembers = Array.isArray(record?.members) ? record.members : null;
+        const groupedMembers = Array.isArray(
+          firstDefined(record?.members, record?.clubMembers, record?.teamMembers),
+        )
+          ? (firstDefined(record?.members, record?.clubMembers, record?.teamMembers) as unknown[])
+          : null;
 
         if (groupedMembers) {
           return groupedMembers
             .map((member) =>
               normalizeMeetingMember({
                 ...(asRecord(member) ?? {}),
-                teamKey: firstDefined(asRecord(member)?.teamKey, record?.teamKey),
+                teamKey: firstDefined(
+                  asRecord(member)?.teamKey,
+                  asRecord(member)?.teamInfo,
+                  asRecord(member)?.team,
+                  record?.teamKey,
+                  record?.teamInfo,
+                  record?.team,
+                ),
               }),
             )
             .filter((item): item is ClubMeetingMember => Boolean(item));
@@ -1656,16 +1695,20 @@ export async function fetchClubMeeting(
 
   return {
     meetingId: normalizedMeetingId,
-    title: toStringValue(result.title),
-    meetingTime: toStringValue(result.meetingTime),
-    location: toStringValue(result.location),
-    teams: Array.isArray(result.existingTeams)
-      ? result.existingTeams
+    title: toStringValue(firstDefined(result.title, meetingInfo?.title)),
+    meetingTime: toStringValue(firstDefined(result.meetingTime, meetingInfo?.meetingTime)),
+    location: toStringValue(firstDefined(result.location, meetingInfo?.location)),
+    teams: Array.isArray(firstDefined(result.existingTeams, result.teams, meetingInfo?.existingTeams))
+      ? (firstDefined(
+          result.existingTeams,
+          result.teams,
+          meetingInfo?.existingTeams,
+        ) as unknown[])
           .map(normalizeTeamKey)
           .filter((item): item is ClubMeetingTeamKey => Boolean(item))
       : [],
     members: normalizedMembers,
-    isStaff: toBooleanValue(result.isStaff) ?? false,
+    isStaff: toBooleanValue(firstDefined(result.isStaff, meetingInfo?.isStaff)) ?? false,
   };
 }
 
