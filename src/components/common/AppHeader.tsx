@@ -1,8 +1,13 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
-import { useNavigation } from '@react-navigation/native';
-import { useRoute } from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+  type NavigationProp,
+  type ParamListBase,
+  type RouteProp,
+} from '@react-navigation/native';
 import {
   Animated,
   Image,
@@ -20,7 +25,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
 import { PUBLIC_ENV } from '../../constants/publicEnv';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, scaleSize, spacing, typography } from '../../theme';
 import { IconButton, IconName } from './IconButton';
 import { useAuthGate } from '../../contexts/AuthGateContext';
 import { navigateToHome } from '../../navigation/navigateToHome';
@@ -85,8 +90,11 @@ type Props = {
 };
 
 type SearchStage = 'results' | 'detail';
+type HeaderRouteParams = {
+  openSearchBook?: unknown;
+};
 
-const HEADER_HEIGHT = 56;
+const HEADER_HEIGHT = scaleSize(56);
 
 function resolveBookId(book: BookItem | null): number | null {
   if (!book) return null;
@@ -150,8 +158,8 @@ function toBookItemFromRouteParam(raw: unknown): BookItem | null {
 
 export function AppHeader(props: Props) {
   const { title, actions, onPressSearch, onPressBell, onPressLogo } = props;
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const route = useRoute<RouteProp<{ Header: HeaderRouteParams }, 'Header'>>();
   const { isLoggedIn, requireAuth } = useAuthGate();
   const { top } = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
@@ -505,8 +513,8 @@ export function AppHeader(props: Props) {
   );
 
   const headerTitle = showSearchPage ? '책 검색' : title;
-  const searchPageHeight = Math.max(280, windowHeight - top - HEADER_HEIGHT);
-  const notiCardWidth = Math.min(280, windowWidth - spacing.md * 2);
+  const searchPageHeight = Math.max(scaleSize(280), windowHeight - top - HEADER_HEIGHT);
+  const notiCardWidth = Math.min(scaleSize(280), windowWidth - spacing.md * 2);
 
   const handleHeaderBack = useCallback(() => {
     if (!showSearchPage) return;

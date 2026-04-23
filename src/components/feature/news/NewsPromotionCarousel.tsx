@@ -9,7 +9,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 
-import { colors, radius, spacing, typography } from '../../../theme';
+import { colors, radius, scaleSize, spacing, typography } from '../../../theme';
 
 export type NewsPromotionCarouselItem = {
   id: string;
@@ -32,7 +32,7 @@ export function NewsPromotionCarousel({
   autoPlayIntervalMs = 5000,
 }: Props) {
   const { width } = useWindowDimensions();
-  const promotionWidth = Math.max(260, width - horizontalInset * 2);
+  const promotionWidth = Math.max(scaleSize(260), width - horizontalInset * 2);
   const promotionStep = promotionWidth + spacing.sm;
   const [activeSlide, setActiveSlide] = useState(0);
   const carouselRef = useRef<ScrollView | null>(null);
