@@ -929,8 +929,56 @@ function normalizeMeetingMember(raw: unknown): ClubMeetingMember | null {
 
 function normalizeMeetingMemberList(raw: unknown): ClubMeetingMemberList {
   const record = asRecord(raw);
-  const rawTeams = firstDefined(record?.existingTeams, record?.teams);
-  const rawMembers = firstDefined(record?.clubMembers, record?.members, record?.teamMembers);
+  const rawTeams = firstDefined(
+    record?.existingTeams,
+    record?.teams,
+    record?.teamKeys,
+    record?.teamList,
+    record?.existingTeamList,
+  );
+  const rawMembers = firstDefined(
+    record?.clubMembers,
+    record?.members,
+    record?.teamMembers,
+    record?.teamMemberList,
+    record?.clubMemberList,
+  );
+
+  const members = Array.isArray(rawMembers)
+    ? rawMembers.flatMap((entry) => {
+        const entryRecord = asRecord(entry);
+        const groupedMembers = Array.isArray(
+          firstDefined(entryRecord?.members, entryRecord?.clubMembers, entryRecord?.teamMembers),
+        )
+          ? (firstDefined(
+              entryRecord?.members,
+              entryRecord?.clubMembers,
+              entryRecord?.teamMembers,
+            ) as unknown[])
+          : null;
+
+        if (groupedMembers) {
+          return groupedMembers
+            .map((member) =>
+              normalizeMeetingMember({
+                ...(asRecord(member) ?? {}),
+                teamKey: firstDefined(
+                  asRecord(member)?.teamKey,
+                  asRecord(member)?.teamInfo,
+                  asRecord(member)?.team,
+                  entryRecord?.teamKey,
+                  entryRecord?.teamInfo,
+                  entryRecord?.team,
+                ),
+              }),
+            )
+            .filter((item): item is ClubMeetingMember => Boolean(item));
+        }
+
+        const normalized = normalizeMeetingMember(entry);
+        return normalized ? [normalized] : [];
+      })
+    : [];
 
   return {
     teams: Array.isArray(rawTeams)
@@ -938,11 +986,7 @@ function normalizeMeetingMemberList(raw: unknown): ClubMeetingMemberList {
           .map(normalizeTeamKey)
           .filter((item): item is ClubMeetingTeamKey => Boolean(item))
       : [],
-    members: Array.isArray(rawMembers)
-      ? rawMembers
-          .map(normalizeMeetingMember)
-          .filter((item): item is ClubMeetingMember => Boolean(item))
-      : [],
+    members,
   };
 }
 
@@ -982,10 +1026,11 @@ function normalizeMeetingChatMessage(raw: unknown): ClubMeetingChatMessage | nul
 
 function normalizeMeetingChatHistory(raw: unknown): ClubMeetingChatHistory {
   const record = asRecord(raw);
+  const rawChats = firstDefined(record?.chats, record?.chatList, record?.chatHistoryList);
 
   return {
-    chats: Array.isArray(record?.chats)
-      ? record.chats
+    chats: Array.isArray(rawChats)
+      ? rawChats
           .map(normalizeMeetingChatMessage)
           .filter((item): item is ClubMeetingChatMessage => Boolean(item))
       : [],
@@ -1647,17 +1692,22 @@ export async function fetchClubMeeting(
 
   const result = asRecord(unwrapResult(response));
   if (!result) return null;
-  const meetingInfo = asRecord(firstDefined(result.meetingInfo, result.detailInfo));
+  const meetingInfo = asRecord(
+    firstDefined(result.meetingInfo, result.detailInfo, result.meeting, result.meetingDetail),
+  );
   const normalizedMeetingId = toNumberValue(
     firstDefined(result.meetingId, meetingInfo?.meetingId, result.id),
-  );
-  if (!normalizedMeetingId) return null;
+  ) ?? meetingId;
 
   const rawTeamMembers = firstDefined(
     result.teamMembers,
+    result.teamMemberList,
     result.clubMembers,
+    result.clubMemberList,
     result.members,
+    meetingInfo?.teamMemberList,
     meetingInfo?.teamMembers,
+    meetingInfo?.clubMemberList,
     meetingInfo?.clubMembers,
     meetingInfo?.members,
   );
@@ -1698,11 +1748,29 @@ export async function fetchClubMeeting(
     title: toStringValue(firstDefined(result.title, meetingInfo?.title)),
     meetingTime: toStringValue(firstDefined(result.meetingTime, meetingInfo?.meetingTime)),
     location: toStringValue(firstDefined(result.location, meetingInfo?.location)),
-    teams: Array.isArray(firstDefined(result.existingTeams, result.teams, meetingInfo?.existingTeams))
+    teams: Array.isArray(
+      firstDefined(
+        result.existingTeams,
+        result.existingTeamList,
+        result.teams,
+        result.teamKeys,
+        result.teamList,
+        meetingInfo?.existingTeams,
+        meetingInfo?.existingTeamList,
+        meetingInfo?.teams,
+        meetingInfo?.teamKeys,
+      ),
+    )
       ? (firstDefined(
           result.existingTeams,
+          result.existingTeamList,
           result.teams,
+          result.teamKeys,
+          result.teamList,
           meetingInfo?.existingTeams,
+          meetingInfo?.existingTeamList,
+          meetingInfo?.teams,
+          meetingInfo?.teamKeys,
         ) as unknown[])
           .map(normalizeTeamKey)
           .filter((item): item is ClubMeetingTeamKey => Boolean(item))
@@ -1825,15 +1893,25 @@ export async function fetchClubMeetingTeamTopics(
   );
 
   const result = asRecord(unwrapResult(response)) ?? {};
+  const rawTeams = firstDefined(
+    result.existingTeams,
+    result.existingTeamList,
+    result.teams,
+    result.teamKeys,
+  );
+  const rawTopics = firstDefined(result.topics, result.topicList, result.topicDetailList);
   return {
-    existingTeams: Array.isArray(result.existingTeams)
-      ? result.existingTeams
+    existingTeams: Array.isArray(rawTeams)
+      ? rawTeams
           .map(normalizeTeamKey)
           .filter((item): item is ClubMeetingTeamKey => Boolean(item))
       : [],
-    requestedTeam: normalizeTeamKey(result.requestedTeam) ?? undefined,
-    topics: Array.isArray(result.topics)
-      ? result.topics
+    requestedTeam:
+      normalizeTeamKey(
+        firstDefined(result.requestedTeam, result.requestedTeamKey, result.teamKey),
+      ) ?? undefined,
+    topics: Array.isArray(rawTopics)
+      ? rawTopics
           .map(normalizeMeetingTopic)
           .filter((item): item is ClubMeetingTopic => Boolean(item))
       : [],

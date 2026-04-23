@@ -20,7 +20,7 @@ function SimpleStackNavigator({
     {
       initialRouteName,
       children,
-      screenOptions: screenOptions as any,
+      screenOptions: screenOptions as Record<string, unknown>,
     },
   );
 

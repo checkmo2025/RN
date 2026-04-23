@@ -22,6 +22,7 @@ type Props = {
 
 export function AuthGateProvider({ children }: Props) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const isLoggedInRef = useRef(false);
   const [authPageVisible, setAuthPageVisible] = useState(false);
   const [authTransitionLoading, setAuthTransitionLoading] = useState(false);
   const [authTransitionVariant, setAuthTransitionVariant] = useState<'default' | 'authRequired'>(
@@ -47,6 +48,11 @@ export function AuthGateProvider({ children }: Props) {
     [],
   );
 
+  const setLoginState = useCallback((next: boolean) => {
+    isLoggedInRef.current = next;
+    setIsLoggedIn(next);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -54,15 +60,15 @@ export function AuthGateProvider({ children }: Props) {
       try {
         const status = await fetchLoginStatusSilently(true);
         if (!cancelled) {
-          setIsLoggedIn(status !== null);
+          setLoginState(status !== null);
         }
       } catch (error) {
         if (cancelled) return;
         if (error instanceof ApiError && error.status === 401) {
-          setIsLoggedIn(false);
+          setLoginState(false);
           return;
         }
-        setIsLoggedIn(false);
+        setLoginState(false);
       }
     };
 
@@ -71,7 +77,7 @@ export function AuthGateProvider({ children }: Props) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [setLoginState]);
 
   useEffect(() => {
     return () => {
@@ -88,16 +94,16 @@ export function AuthGateProvider({ children }: Props) {
 
   const completeLogin = useCallback(() => {
     startAuthTransitionLoading('default');
-    setIsLoggedIn(true);
+    setLoginState(true);
     setAuthPageVisible(false);
     const callback = pendingActionRef.current;
     pendingActionRef.current = null;
     callback?.();
-  }, [startAuthTransitionLoading]);
+  }, [setLoginState, startAuthTransitionLoading]);
 
   const requireAuth = useCallback(
     (onAuthed?: () => void) => {
-      if (isLoggedIn) {
+      if (isLoggedInRef.current) {
         onAuthed?.();
         return;
       }
@@ -105,15 +111,15 @@ export function AuthGateProvider({ children }: Props) {
       pendingActionRef.current = onAuthed ?? null;
       setAuthPageVisible(true);
     },
-    [isLoggedIn, startAuthTransitionLoading],
+    [startAuthTransitionLoading],
   );
 
   const logout = useCallback(() => {
     startAuthTransitionLoading('default');
-    setIsLoggedIn(false);
+    setLoginState(false);
     setAuthPageVisible(false);
     pendingActionRef.current = null;
-  }, [startAuthTransitionLoading]);
+  }, [setLoginState, startAuthTransitionLoading]);
 
   const value = useMemo<AuthGateContextValue>(
     () => ({

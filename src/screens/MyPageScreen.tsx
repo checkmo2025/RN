@@ -17,7 +17,14 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+  type NavigationProp,
+  type ParamListBase,
+  type RouteProp,
+} from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
@@ -65,6 +72,10 @@ import { showToast } from '../utils/toast';
 
 const tabs = ['내 책 이야기', '내 서재', '내 모임', '내 알림'] as const;
 type TabKey = (typeof tabs)[number];
+type MyPageRouteParams = {
+  openMyTab?: TabKey | 'ALARM';
+  openFollowTab?: 'FOLLOWER' | 'FOLLOWING';
+};
 
 type StoryCard = {
   id: string;
@@ -363,8 +374,8 @@ function NotificationToggle({
 
 export function MyPageScreen() {
   const { isLoggedIn, logout } = useAuthGate();
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const route = useRoute<RouteProp<{ My: MyPageRouteParams }, 'My'>>();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<TabKey>('내 책 이야기');
   const [refreshing, setRefreshing] = useState(false);

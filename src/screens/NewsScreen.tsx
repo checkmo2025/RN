@@ -18,7 +18,14 @@ import {
   useWindowDimensions,
   Linking,
 } from 'react-native';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+  type NavigationProp,
+  type ParamListBase,
+  type RouteProp,
+} from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
@@ -57,6 +64,10 @@ type RecommendedBook = {
   title: string;
   author: string;
   imageUri?: string;
+};
+
+type NewsRouteParams = {
+  openNewsId?: number | string;
 };
 
 const DETAIL_BACK_EDGE_WIDTH = 28;
@@ -160,8 +171,8 @@ export function NewsScreen() {
     UIManager.setLayoutAnimationEnabledExperimental(true);
   }
 
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const route = useRoute<RouteProp<{ News: NewsRouteParams }, 'News'>>();
   const { width } = useWindowDimensions();
   const horizontalInset = width >= 768 ? spacing.xl : spacing.md;
   const [selected, setSelected] = useState<NewsItem | null>(null);

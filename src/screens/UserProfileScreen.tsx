@@ -12,7 +12,13 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import {
+  useNavigation,
+  useRoute,
+  type NavigationProp,
+  type ParamListBase,
+  type RouteProp,
+} from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
@@ -43,6 +49,9 @@ import {
 import { normalizeRemoteImageUrl } from '../utils/image';
 
 type TabKey = '책 이야기' | '서재' | '모임';
+type UserProfileRouteParams = {
+  memberNickname?: string;
+};
 
 type StoryCard = {
   id: string;
@@ -155,8 +164,8 @@ async function fetchAllFollowUsers(
 }
 
 export function UserProfileScreen() {
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const route = useRoute<RouteProp<{ UserProfile: UserProfileRouteParams }, 'UserProfile'>>();
   const { requireAuth } = useAuthGate();
   const { width: screenWidth } = useWindowDimensions();
   const translateX = useRef(new Animated.Value(0)).current;
@@ -516,14 +525,14 @@ export function UserProfileScreen() {
         return;
       }
 
-      const chain: any[] = [];
-      const visited = new Set<any>();
-      let current: any = navigation;
+      const chain: Array<NavigationProp<ParamListBase>> = [];
+      const visited = new Set<NavigationProp<ParamListBase>>();
+      let current: NavigationProp<ParamListBase> | undefined = navigation;
 
       while (current && !visited.has(current)) {
         chain.push(current);
         visited.add(current);
-        current = current.getParent?.();
+        current = current.getParent();
       }
 
       for (const nav of chain) {

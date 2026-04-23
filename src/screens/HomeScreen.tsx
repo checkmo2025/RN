@@ -9,7 +9,7 @@ import {
   useWindowDimensions,
   Image,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, type NavigationProp, type ParamListBase } from '@react-navigation/native';
 
 import { colors, radius, spacing, typography } from '../theme';
 import { ScreenLayout } from '../components/common/ScreenLayout';
@@ -94,7 +94,7 @@ const defaultPromotions: HomePromotionItem[] = [
 ].slice(0, 5);
 
 export function HomeScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const { requireAuth, isLoggedIn } = useAuthGate();
   const accessPolicy = resolveHomeAccessPolicy({ isLoggedIn });
   const { width } = useWindowDimensions();

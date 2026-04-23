@@ -21,7 +21,15 @@ import type {
   NativeSyntheticEvent,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import {
+  useNavigation,
+  useRoute,
+  type EventArg,
+  type NavigationAction,
+  type NavigationProp,
+  type ParamListBase,
+  type RouteProp,
+} from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { SvgUri } from 'react-native-svg';
 
@@ -130,6 +138,10 @@ type Group = {
   notice?: string;
   nextSession?: string;
   isPrivate?: boolean;
+};
+
+type MeetingRouteParams = {
+  openClubId?: number | string;
 };
 
 type LinkItem = { text: string; url: string };
@@ -559,8 +571,8 @@ function createPendingClubGroup(clubId: number): Group {
 }
 
 export function MeetingScreen() {
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const route = useRoute<RouteProp<{ Meeting: MeetingRouteParams }, 'Meeting'>>();
   const { requireAuth, isLoggedIn } = useAuthGate();
   const [showCreate, setShowCreate] = useState(false);
   const [createDraftDirty, setCreateDraftDirty] = useState(false);
@@ -725,53 +737,66 @@ export function MeetingScreen() {
   }, [navigation, route.params?.openClubId]);
 
   useEffect(() => {
-    const parent = navigation.getParent();
+    const parent = navigation.getParent() as
+      | (NavigationProp<ParamListBase> & {
+          addListener: (
+            eventName: 'tabPress',
+            listener: (event: EventArg<'tabPress', true, undefined>) => void,
+          ) => () => void;
+        })
+      | undefined;
     if (!parent) return undefined;
 
-    const unsubscribe = parent.addListener('tabPress', (event: any) => {
-      if (!(showCreate && createDraftDirty)) return;
+    const unsubscribe = parent.addListener(
+      'tabPress',
+      (event: EventArg<'tabPress', true, undefined>) => {
+        if (!(showCreate && createDraftDirty)) return;
 
-      const targetKey = event?.target;
-      const parentState = parent.getState();
-      const targetRoute = parentState.routes.find(
-        (routeItem: { key: string; name: string }) => routeItem.key === targetKey,
-      );
-      if (!targetRoute || targetRoute.name === 'Meeting') return;
+        const targetKey = event.target;
+        const parentState = parent.getState();
+        const targetRoute = parentState.routes.find(
+          (routeItem: { key: string; name: string }) => routeItem.key === targetKey,
+        );
+        if (!targetRoute || targetRoute.name === 'Meeting') return;
 
-      event.preventDefault();
-      Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '닫기',
-          style: 'destructive',
-          onPress: () => {
-            closeCreateFlow();
-            parent.navigate(targetRoute.name as never);
+        event.preventDefault();
+        Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '닫기',
+            style: 'destructive',
+            onPress: () => {
+              closeCreateFlow();
+              parent.navigate(targetRoute.name);
+            },
           },
-        },
-      ]);
-    });
+        ]);
+      },
+    );
 
     return unsubscribe;
   }, [closeCreateFlow, createDraftDirty, navigation, showCreate]);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (event: any) => {
-      if (!(showCreate && createDraftDirty)) return;
+    const unsubscribe = navigation.addListener(
+      'beforeRemove',
+      (event: EventArg<'beforeRemove', true, { action: NavigationAction }>) => {
+        if (!(showCreate && createDraftDirty)) return;
 
-      event.preventDefault();
-      Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '닫기',
-          style: 'destructive',
-          onPress: () => {
-            closeCreateFlow();
-            navigation.dispatch(event.data.action);
+        event.preventDefault();
+        Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '닫기',
+            style: 'destructive',
+            onPress: () => {
+              closeCreateFlow();
+              navigation.dispatch(event.data.action);
+            },
           },
-        },
-      ]);
-    });
+        ]);
+      },
+    );
 
     return unsubscribe;
   }, [closeCreateFlow, createDraftDirty, navigation, showCreate]);
@@ -4821,12 +4846,39 @@ function mapMeetingToRegularMeetingInfo(
 ): RegularMeetingInfo | null {
   if (!book) return null;
 
-  const groups: RegularMeetingGroupItem[] = meeting.teams.map((team) => {
-    const teamMembers = meeting.members.filter((member) => member.teamId === team.teamId);
-    const teamTopics = topicsByTeamId[team.teamId]?.topics ?? [];
-    const teamChats = chatsByTeamId[team.teamId]?.chats ?? [];
+  const fallbackTeamsFromMembers = Array.from(
+    new Set(
+      meeting.members
+        .map((member) => member.teamNumber)
+        .filter((teamNumber): teamNumber is number => typeof teamNumber === 'number' && teamNumber > 0),
+    ),
+  )
+    .sort((left, right) => left - right)
+    .map((teamNumber) => ({ teamNumber }));
+
+  const normalizedTeams: Array<{ teamId?: number; teamNumber: number }> =
+    meeting.teams.length > 0
+      ? meeting.teams
+          .filter((team) => typeof team.teamNumber === 'number' && team.teamNumber > 0)
+          .map((team) => ({ teamId: team.teamId, teamNumber: team.teamNumber }))
+      : fallbackTeamsFromMembers;
+
+  const groups: RegularMeetingGroupItem[] = normalizedTeams.map((team) => {
+    const teamMembers = meeting.members.filter((member) => {
+      if (typeof team.teamId === 'number' && typeof member.teamId === 'number') {
+        return member.teamId === team.teamId;
+      }
+      return member.teamNumber === team.teamNumber;
+    });
+    const teamTopics =
+      typeof team.teamId === 'number' ? topicsByTeamId[team.teamId]?.topics ?? [] : [];
+    const teamChats =
+      typeof team.teamId === 'number' ? chatsByTeamId[team.teamId]?.chats ?? [] : [];
     const label = toTeamLabel(team.teamNumber);
-    const groupId = `${book.id}-regular-group-${team.teamId}`;
+    const groupId =
+      typeof team.teamId === 'number'
+        ? `${book.id}-regular-group-${team.teamId}`
+        : `${book.id}-regular-group-team-number-${team.teamNumber}`;
     const members = teamMembers.map((member) => ({
       id: `${groupId}-member-${member.clubMemberId}`,
       nickname: member.nickname,
@@ -4835,7 +4887,7 @@ function mapMeetingToRegularMeetingInfo(
 
     return {
       id: groupId,
-      teamId: team.teamId,
+      teamId: typeof team.teamId === 'number' ? team.teamId : undefined,
       label,
       memberCount: members.length,
       members,
@@ -4860,10 +4912,38 @@ function mapMeetingToRegularMeetingInfo(
   };
 }
 
+function ensureRegularMeetingInfo(
+  info: RegularMeetingInfo | null,
+  book: BookshelfItem,
+  detail?: ClubBookshelfDetail | null,
+): RegularMeetingInfo {
+  const fallbackName =
+    detail?.title?.trim() || book.regularMeetingName?.trim() || `${book.title} 정기모임`;
+  const fallbackDate = formatDotDate(detail?.meetingTime) || book.meetingDate || '날짜 미정';
+  const fallbackLocation = detail?.location?.trim() || book.meetingLocation?.trim() || '장소 미정';
+
+  if (!info) {
+    return {
+      id: `${book.id}-regular`,
+      name: fallbackName,
+      date: fallbackDate,
+      location: fallbackLocation,
+      groups: [],
+    };
+  }
+
+  return {
+    ...info,
+    name: info.name?.trim() ? info.name : fallbackName,
+    date: info.date?.trim() ? info.date : fallbackDate,
+    location: info.location?.trim() ? info.location : fallbackLocation,
+  };
+}
+
 function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const insets = useSafeAreaInsets();
-  const { requireAuth, isLoggedIn } = useAuthGate();
+  const { requireAuth, isLoggedIn, logout } = useAuthGate();
   const isManagedClub = typeof group.clubId === 'number';
   const [managedGroup, setManagedGroup] = useState<Group>(group);
   const [canManageClub, setCanManageClub] = useState(false);
@@ -5060,6 +5140,37 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     [bookshelfCalendarMonth],
   );
 
+  const handleAuthExpired = useCallback(
+    (options?: { suppressToast?: boolean }) => {
+      setCanManageClub(false);
+      setJoinRequests([]);
+      setMembers([]);
+      setNoticeItems([]);
+      setSelectedNoticeId(null);
+      setNoticeCommentsById({});
+      setNoticePollOptionsById({});
+      setSelectedVoteOptionIdsByNotice({});
+      setSubmittedVoteOptionIdsByNotice({});
+      setVoteEditEnabledByNotice({});
+      setBookshelfItems([]);
+      setBookshelfTopicsByMeetingId({});
+      setBookshelfTopicPageStateByMeetingId({});
+      setBookshelfReviewsByMeetingId({});
+      setRegularMeetingInfoByMeetingId({});
+      setSelectedBookshelfBookId(null);
+      setSelectedRegularGroupId(null);
+      setBookshelfViewMode('GRID');
+      setBookshelfDetailTab('TOPIC');
+      setActiveTab('home');
+      if (!options?.suppressToast) {
+        showToast('로그인이 만료되었습니다. 다시 로그인해주세요.');
+      }
+      logout();
+      requireAuth();
+    },
+    [logout, requireAuth],
+  );
+
   useEffect(() => {
     clubWorkspaceRequestIdRef.current += 1;
     bookshelfMeetingDetailRequestIdRef.current = {};
@@ -5251,13 +5362,18 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         setMembers(activeMembers.items.map(mapClubManagedMemberToGroupMember));
       } catch (error) {
         if (isStale()) return;
-        if (error instanceof ApiError) return;
+        if (error instanceof ApiError) {
+          if (error.status === 401) {
+            handleAuthExpired({ suppressToast: options?.suppressErrorToast });
+          }
+          return;
+        }
         if (!options?.suppressErrorToast) {
           showToast('모임 데이터를 불러오지 못했습니다.');
         }
       }
     },
-    [group, group.clubId, isManagedClub],
+    [group, group.clubId, handleAuthExpired, isManagedClub],
   );
 
   useEffect(() => {
@@ -5600,6 +5716,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
         const regularMeetingId = detail?.meetingId ?? meetingId;
         let meeting: ClubMeetingInfo | null = null;
+        let regularInfo: RegularMeetingInfo | null = null;
         let meetingFetchSucceeded = false;
 
         try {
@@ -5608,6 +5725,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           });
           meetingFetchSucceeded = true;
         } catch (error) {
+          if (error instanceof ApiError && error.status === 401) {
+            throw error;
+          }
           if (!(error instanceof ApiError) && !options?.suppressErrorToast) {
             showToast('정기모임 정보를 불러오지 못했습니다.');
           }
@@ -5674,40 +5794,77 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
           const topicsByTeamId = Object.fromEntries(topicEntries);
           const chatsByTeamId = Object.fromEntries(chatEntries);
-          const regularInfo = mapMeetingToRegularMeetingInfo(
+          regularInfo = mapMeetingToRegularMeetingInfo(
             book,
             meeting,
             topicsByTeamId,
             chatsByTeamId,
             currentMemberNickname,
           );
-          if (regularInfo) {
-            setRegularMeetingInfoByMeetingId((prev) => ({
-              ...prev,
-              [meetingId]: regularInfo,
-            }));
+        }
+
+        if (!regularInfo) {
+          try {
+            const meetingMembersResponse = await fetchClubMeetingMembers(clubId, regularMeetingId, {
+              suppressErrorToast: true,
+            });
+            const fallbackMeeting: ClubMeetingInfo = {
+              meetingId: regularMeetingId,
+              title: detail?.title ?? book.regularMeetingName ?? `${book.title} 정기모임`,
+              meetingTime: detail?.meetingTime,
+              location: detail?.location,
+              teams: meetingMembersResponse.teams,
+              members: meetingMembersResponse.members,
+              isStaff: canManageClub,
+            };
+            regularInfo = mapMeetingToRegularMeetingInfo(
+              book,
+              fallbackMeeting,
+              {},
+              {},
+              currentMemberNickname,
+            );
+          } catch (fallbackError) {
+            if (fallbackError instanceof ApiError && fallbackError.status === 401) {
+              throw fallbackError;
+            }
           }
-        } else if (meetingFetchSucceeded) {
-          setRegularMeetingInfoByMeetingId((prev) => {
-            const next = { ...prev };
-            delete next[meetingId];
-            return next;
+        }
+
+        const nextRegularInfo = ensureRegularMeetingInfo(regularInfo, book, detail);
+        setRegularMeetingInfoByMeetingId((prev) => ({
+          ...prev,
+          [meetingId]: nextRegularInfo,
+        }));
+
+        if (!meeting && meetingFetchSucceeded && nextRegularInfo.groups.length === 0) {
+          logMeetingAction('regularMeetingFallbackSummaryOnly', {
+            clubId,
+            meetingId: regularMeetingId,
           });
         }
       } catch (error) {
         if (isStale()) return;
-        if (error instanceof ApiError) return;
+        if (error instanceof ApiError) {
+          if (error.status === 401) {
+            handleAuthExpired({ suppressToast: options?.suppressErrorToast });
+          }
+          return;
+        }
         if (!options?.suppressErrorToast) {
           showToast('책장 상세를 불러오지 못했습니다.');
         }
       }
     },
     [
+      canManageClub,
+      fetchClubMeetingMembers,
       fetchAllBookshelfReviewsForMeeting,
       fetchAllMeetingTeamChats,
       fetchAllMeetingTeamTopics,
       currentMemberNickname,
       group.clubId,
+      handleAuthExpired,
     ],
   );
 
@@ -6190,6 +6347,27 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     { key: 'notice', label: '공지사항', icon: 'notifications-none' },
     { key: 'bookshelf', label: '책장', icon: 'collections-bookmark' },
   ];
+
+  const handlePressGroupTab = useCallback(
+    (nextTab: 'home' | 'notice' | 'bookshelf') => {
+      if (nextTab === 'home') {
+        setActiveTab('home');
+        return;
+      }
+
+      const open = () => {
+        setActiveTab(nextTab);
+      };
+
+      if (!isLoggedIn) {
+        requireAuth(open);
+        return;
+      }
+
+      open();
+    },
+    [isLoggedIn, requireAuth],
+  );
 
   const renderNoticeTag = (tag: NoticeTag, key: string) => {
     if (tag === 'PIN') {
@@ -8514,7 +8692,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 active && styles.pillNavItemActive,
                 pressed && styles.pressed,
               ]}
-              onPress={() => setActiveTab(tab.key)}
+              onPress={() => handlePressGroupTab(tab.key)}
             >
               <MaterialIcons
                 name={tab.icon}

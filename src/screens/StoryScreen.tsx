@@ -22,7 +22,16 @@ import {
   useWindowDimensions,
   Image,
 } from 'react-native';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+  type EventArg,
+  type NavigationAction,
+  type NavigationProp,
+  type ParamListBase,
+  type RouteProp,
+} from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import * as Clipboard from 'expo-clipboard';
@@ -150,6 +159,13 @@ type StoryFilterTab = {
   clubId?: number;
 };
 
+type StoryRouteParams = {
+  openCompose?: boolean;
+  composeBook?: unknown;
+  openStoryId?: number | string;
+  openStoryFocus?: 'comments';
+};
+
 const ALL_STORY_TAB: StoryFilterTab = {
   key: 'ALL',
   label: '전체',
@@ -224,8 +240,8 @@ function mapBookItemToBook(item: BookItem): Book {
 }
 
 export function StoryScreen() {
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const route = useRoute<RouteProp<{ Story: StoryRouteParams }, 'Story'>>();
   const { requireAuth, isLoggedIn } = useAuthGate();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -1467,65 +1483,78 @@ export function StoryScreen() {
   }, [navigation, openStoryDetailByRemoteId, route.params?.openStoryFocus, route.params?.openStoryId]);
 
   useEffect(() => {
-    const parent = navigation.getParent();
+    const parent = navigation.getParent() as
+      | (NavigationProp<ParamListBase> & {
+          addListener: (
+            eventName: 'tabPress',
+            listener: (event: EventArg<'tabPress', true, undefined>) => void,
+          ) => () => void;
+        })
+      | undefined;
     if (!parent) return undefined;
 
-    const unsubscribe = parent.addListener('tabPress', (event: any) => {
-      if (!hasUnsavedStoryChanges) return;
+    const unsubscribe = parent.addListener(
+      'tabPress',
+      (event: EventArg<'tabPress', true, undefined>) => {
+        if (!hasUnsavedStoryChanges) return;
 
-      const targetKey = event?.target;
-      const parentState = parent.getState();
-      const targetRoute = parentState.routes.find(
-        (routeItem: { key: string; name: string }) => routeItem.key === targetKey,
-      );
-      if (!targetRoute || targetRoute.name === 'Story') return;
+        const targetKey = event.target;
+        const parentState = parent.getState();
+        const targetRoute = parentState.routes.find(
+          (routeItem: { key: string; name: string }) => routeItem.key === targetKey,
+        );
+        if (!targetRoute || targetRoute.name === 'Story') return;
 
-      event.preventDefault();
-      Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '닫기',
-          style: 'destructive',
-          onPress: () => {
-            setCommentInput('');
-            setEditingCommentId(null);
-            setReplyTarget(null);
-            setCommentMenu(null);
-            setStoryMenu(null);
-            setSelectedStory(null);
-            closeCompose();
-            parent.navigate(targetRoute.name as never);
+        event.preventDefault();
+        Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '닫기',
+            style: 'destructive',
+            onPress: () => {
+              setCommentInput('');
+              setEditingCommentId(null);
+              setReplyTarget(null);
+              setCommentMenu(null);
+              setStoryMenu(null);
+              setSelectedStory(null);
+              closeCompose();
+              parent.navigate(targetRoute.name);
+            },
           },
-        },
-      ]);
-    });
+        ]);
+      },
+    );
 
     return unsubscribe;
   }, [closeCompose, hasUnsavedStoryChanges, navigation]);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (event: any) => {
-      if (!hasUnsavedStoryChanges) return;
+    const unsubscribe = navigation.addListener(
+      'beforeRemove',
+      (event: EventArg<'beforeRemove', true, { action: NavigationAction }>) => {
+        if (!hasUnsavedStoryChanges) return;
 
-      event.preventDefault();
-      Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '닫기',
-          style: 'destructive',
-          onPress: () => {
-            setCommentInput('');
-            setEditingCommentId(null);
-            setReplyTarget(null);
-            setCommentMenu(null);
-            setStoryMenu(null);
-            setSelectedStory(null);
-            closeCompose();
-            navigation.dispatch(event.data.action);
+        event.preventDefault();
+        Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '닫기',
+            style: 'destructive',
+            onPress: () => {
+              setCommentInput('');
+              setEditingCommentId(null);
+              setReplyTarget(null);
+              setCommentMenu(null);
+              setStoryMenu(null);
+              setSelectedStory(null);
+              closeCompose();
+              navigation.dispatch(event.data.action);
+            },
           },
-        },
-      ]);
-    });
+        ]);
+      },
+    );
 
     return unsubscribe;
   }, [closeCompose, hasUnsavedStoryChanges, navigation]);
