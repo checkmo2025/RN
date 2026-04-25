@@ -594,10 +594,14 @@ export function UserProfileScreen() {
               <Image source={{ uri: story.imageUrl }} style={styles.storyThumbImage} resizeMode="cover" />
             ) : null}
           </View>
-          <Text style={styles.storyTitle}>{story.title}</Text>
-          <Text style={styles.storyExcerpt} numberOfLines={2}>
-            {story.excerpt}
-          </Text>
+          <View style={styles.storyTextWrap}>
+            <Text style={styles.storyTitle} numberOfLines={2}>
+              {story.title}
+            </Text>
+            <Text style={styles.storyExcerpt} numberOfLines={2}>
+              {story.excerpt}
+            </Text>
+          </View>
           <View style={styles.storyActions}>
             <View style={styles.inlineAction}>
               <SvgUri uri={likeIconUri} width={18} height={18} />
@@ -1084,6 +1088,7 @@ const styles = StyleSheet.create({
     borderColor: colors.subbrown4,
     padding: spacing.sm,
     gap: spacing.xs,
+    minHeight: 308,
   },
   storyThumb: {
     backgroundColor: colors.gray1,
@@ -1095,22 +1100,33 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  storyTextWrap: {
+    gap: spacing.xs,
+    minHeight: 84,
+  },
   storyTitle: {
     ...typography.body1_2,
     color: colors.gray6,
+    minHeight: 40,
   },
   storyExcerpt: {
     ...typography.body2_3,
     color: colors.gray5,
+    minHeight: 34,
   },
   storyActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.gray2,
+    paddingTop: spacing.xs,
+    marginTop: 'auto',
   },
   inlineAction: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.xs / 2,
   },
   inlineText: {
@@ -1119,7 +1135,7 @@ const styles = StyleSheet.create({
   },
   actionDivider: {
     width: 1,
-    height: 16,
+    height: 20,
     backgroundColor: colors.gray2,
   },
   bookWrap: {

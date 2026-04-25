@@ -160,7 +160,7 @@ export function AppHeader(props: Props) {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ Header: HeaderRouteParams }, 'Header'>>();
   const { isLoggedIn, requireAuth } = useAuthGate();
-  const { top } = useSafeAreaInsets();
+  const { top, bottom } = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
 
   const [showNoti, setShowNoti] = useState(false);
@@ -513,6 +513,7 @@ export function AppHeader(props: Props) {
 
   const headerTitle = showSearchPage ? '책 검색' : title;
   const searchPageHeight = Math.max(scaleSize(280), windowHeight - top - HEADER_HEIGHT);
+  const searchPageBottomPadding = bottom + scaleSize(100);
   const notiCardWidth = Math.min(scaleSize(280), windowWidth - spacing.md * 2);
 
   const handleHeaderBack = useCallback(() => {
@@ -849,7 +850,10 @@ export function AppHeader(props: Props) {
           >
             <ScrollView
               style={styles.searchPageScroll}
-              contentContainerStyle={styles.searchPageContent}
+              contentContainerStyle={[
+                styles.searchPageContent,
+                { paddingBottom: searchPageBottomPadding },
+              ]}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >

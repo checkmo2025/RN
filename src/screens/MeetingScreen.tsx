@@ -7192,10 +7192,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         }
 
         const memberMap = new Map<number, TeamManageMemberItem>();
-        const meetingMembers =
-          meetingMembersResponse.members.length > 0
-            ? meetingMembersResponse.members
-            : meeting.members;
+        const meetingMembers = meetingMembersResponse.members;
 
         meetingMembers.forEach((member) => {
           memberMap.set(member.clubMemberId, {
@@ -7362,11 +7359,6 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       return;
     }
 
-    if (teamManageUnassignedMembers.length > 0) {
-      showToast('모든 참여자를 조에 배정해주세요.');
-      return;
-    }
-
     if (teamManageTeams.some((team) => team.memberIds.length === 0)) {
       showToast('빈 조를 삭제하거나 참여자를 배정해주세요.');
       return;
@@ -7418,7 +7410,6 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     reloadBookshelfMeetingDetail,
     selectedBookshelfBook,
     teamManageTeams,
-    teamManageUnassignedMembers.length,
   ]);
 
   useEffect(() => {
@@ -8072,10 +8063,6 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const regularMeetingName = bookshelfCreateDraft.regularMeetingName.trim();
     const meetingLocation = bookshelfCreateDraft.meetingLocation.trim();
     const meetingDate = bookshelfCreateDraft.meetingDate.trim();
-    if (!regularMeetingName || !meetingLocation || !meetingDate) {
-      showToast('정기모임 이름, 장소, 날짜를 입력해주세요.');
-      return;
-    }
     if (regularMeetingName.length > BOOKSHELF_MEETING_TITLE_MAX_LENGTH) {
       showToast(`정기모임 이름은 ${BOOKSHELF_MEETING_TITLE_MAX_LENGTH}자 이하로 입력해주세요.`);
       return;
@@ -8103,16 +8090,16 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         setCreatingBookshelf(true);
       }
       try {
-        const meetingTime = toApiDateTime(meetingDate);
-        if (!meetingTime) {
+        const meetingTime = meetingDate ? toApiDateTime(meetingDate) : undefined;
+        if (meetingDate && !meetingTime) {
           showToast('올바른 모임 날짜를 선택해주세요.');
           return;
         }
 
         if (isEditMode && typeof editingMeetingId === 'number') {
           await updateClubBookshelf(clubId, editingMeetingId, {
-            title: regularMeetingName,
-            location: meetingLocation,
+            title: regularMeetingName || undefined,
+            location: meetingLocation || undefined,
             meetingTime,
             generation,
             tag: primaryCategory,
@@ -8120,8 +8107,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         } else {
           await createClubBookshelf(clubId, {
             isbn: sourceBookIsbn,
-            title: regularMeetingName,
-            location: meetingLocation,
+            title: regularMeetingName || undefined,
+            location: meetingLocation || undefined,
             meetingTime,
             generation,
             tag: primaryCategory,
@@ -9945,7 +9932,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   style={styles.teamManageCard}
                 >
                   <View style={styles.teamManageCardHeader}>
-                    <Text style={styles.teamManageCardTitle}>전체 독서 클럽 참여자</Text>
+                    <Text style={styles.teamManageCardTitle}>미배정 참여자</Text>
                   </View>
                   <View style={styles.teamManageMemberList}>
                     {teamManageUnassignedMembers.map((member) => {
@@ -9986,7 +9973,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     })}
                     {teamManageUnassignedMembers.length === 0 ? (
                       <View style={styles.teamManageEmptySlot}>
-                        <Text style={styles.teamManageEmptySlotText}>모든 참여자가 조에 배정되었습니다.</Text>
+                        <Text style={styles.teamManageEmptySlotText}>미배정 참여자가 없습니다.</Text>
                       </View>
                     ) : null}
                   </View>
@@ -10000,29 +9987,23 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 ]}
               >
                 <Text style={styles.teamManageFooterHint}>
-                  {teamManageUnassignedMembers.length > 0
-                    ? '모든 참여자를 조에 배정하면 저장할 수 있습니다.'
-                    : '조 편성을 저장하면 정기모임 화면으로 돌아갑니다.'}
+                  조 편성을 저장하면 정기모임 화면으로 돌아갑니다.
                 </Text>
                 <Pressable
                   style={({ pressed }) => [
                     styles.teamManageSaveButton,
-                    (teamManageSaving || teamManageUnassignedMembers.length > 0)
+                    teamManageSaving
                       ? styles.teamManageSaveButtonDisabled
                       : styles.teamManageSaveButtonActive,
-                    pressed &&
-                      !teamManageSaving &&
-                      teamManageUnassignedMembers.length === 0 &&
-                      styles.pressed,
+                    pressed && !teamManageSaving && styles.pressed,
                   ]}
                   onPress={handleSaveTeamManage}
-                  disabled={teamManageSaving || teamManageUnassignedMembers.length > 0}
+                  disabled={teamManageSaving}
                 >
                   <Text
                     style={[
                       styles.teamManageSaveButtonText,
-                      (teamManageSaving || teamManageUnassignedMembers.length > 0) &&
-                        styles.teamManageSaveButtonTextDisabled,
+                      teamManageSaving && styles.teamManageSaveButtonTextDisabled,
                     ]}
                   >
                     {teamManageSaving ? '저장중...' : '조 편성 저장하기'}
@@ -10750,7 +10731,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   <Text style={styles.helperText}>태그는 1개만 선택해 등록할 수 있습니다.</Text>
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                    정기모임 이름
+                    정기모임 이름 (선택)
                   </Text>
                   <TextInput
                     value={bookshelfCreateDraft.regularMeetingName}
@@ -10764,7 +10745,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   />
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                    모임 장소
+                    모임 장소 (선택)
                   </Text>
                   <TextInput
                     value={bookshelfCreateDraft.meetingLocation}
@@ -10778,7 +10759,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   />
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                    모임 날짜
+                    모임 날짜 (선택)
                   </Text>
                   <Pressable
                     style={({ pressed }) => [

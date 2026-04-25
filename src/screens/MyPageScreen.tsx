@@ -28,6 +28,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
+import { termsDocumentOrder, termsDocuments } from '../constants/termsDocuments';
 import { colors, radius, spacing, typography } from '../theme';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
@@ -1326,10 +1327,14 @@ export function MyPageScreen() {
               <Image source={{ uri: item.imageUrl }} style={styles.storyThumbImage} resizeMode="cover" />
             ) : null}
           </View>
-          <Text style={styles.storyTitle}>{item.title}</Text>
-          <Text style={styles.storyExcerpt} numberOfLines={2}>
-            {item.excerpt}
-          </Text>
+          <View style={styles.storyTextWrap}>
+            <Text style={styles.storyTitle} numberOfLines={2}>
+              {item.title}
+            </Text>
+            <Text style={styles.storyExcerpt} numberOfLines={2}>
+              {item.excerpt}
+            </Text>
+          </View>
           <View style={styles.storyActions}>
             <View style={styles.inlineAction}>
               <SvgUri uri={likeIconUri} width={18} height={18} />
@@ -2058,12 +2063,15 @@ export function MyPageScreen() {
           {back}
           <Text style={styles.detailTitle}>이용약관</Text>
           <Text style={styles.detailDivider} />
-          <Text style={styles.detailBody}>
-            제 1조 (목적){'\n'}본 약관은 책모(이하 “서비스”)가 제공하는 독서 커뮤니티 플랫폼 및 관련 제반 서비스의 이용과
-            관련하여 서비스와 회원 간의 권리, 의무 및 책임을 규정할 목적으로 합니다.{'\n\n'}제 2조 (정의){'\n'}본 약관에서
-            사용하는 용어의 정의는 다음과 같습니다.{'\n'}1. “서비스”란 책모가 제공하는 웹 및 애플리케이션 기반의 독서 커뮤니티,
-            모임, 콘텐츠 공유 등 일체의 서비스를 의미합니다.
-          </Text>
+          {termsDocumentOrder.map((key) => {
+            const termsDoc = termsDocuments[key];
+            return (
+              <View key={key} style={styles.termsDocumentSection}>
+                <Text style={styles.detailLabel}>{termsDoc.title}</Text>
+                <Text style={styles.detailBody}>{termsDoc.content}</Text>
+              </View>
+            );
+          })}
         </ScrollView>
       );
     }
@@ -2475,6 +2483,9 @@ const styles = StyleSheet.create({
     ...typography.body1_3,
     color: colors.gray6,
     lineHeight: 22,
+  },
+  termsDocumentSection: {
+    gap: spacing.xs,
   },
   formBlock: {
     gap: spacing.xs,
@@ -3043,6 +3054,7 @@ const styles = StyleSheet.create({
     borderColor: colors.subbrown4,
     padding: spacing.sm,
     gap: spacing.xs,
+    minHeight: 308,
   },
   storyThumb: {
     backgroundColor: colors.gray1,
@@ -3054,22 +3066,33 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  storyTextWrap: {
+    gap: spacing.xs,
+    minHeight: 84,
+  },
   storyTitle: {
     ...typography.body1_2,
     color: colors.gray6,
+    minHeight: 40,
   },
   storyExcerpt: {
     ...typography.body2_3,
     color: colors.gray5,
+    minHeight: 34,
   },
   storyActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.gray2,
+    paddingTop: spacing.xs,
+    marginTop: 'auto',
   },
   inlineAction: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.xs / 2,
   },
   inlineText: {
@@ -3078,7 +3101,7 @@ const styles = StyleSheet.create({
   },
   actionDivider: {
     width: 1,
-    height: 16,
+    height: 20,
     backgroundColor: colors.gray2,
   },
   bookWrap: {
