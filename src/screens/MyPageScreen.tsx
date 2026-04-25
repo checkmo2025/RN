@@ -378,6 +378,13 @@ export function MyPageScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ My: MyPageRouteParams }, 'My'>>();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const bookshelfCardWidth = useMemo(() => {
+    const columns = 3;
+    const horizontalPadding = spacing.md * 2;
+    const totalGaps = spacing.sm * (columns - 1);
+    const width = Math.floor((screenWidth - horizontalPadding - totalGaps) / columns);
+    return width > 0 ? width : 0;
+  }, [screenWidth]);
   const [activeTab, setActiveTab] = useState<TabKey>('내 책 이야기');
   const [refreshing, setRefreshing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -1291,10 +1298,15 @@ export function MyPageScreen() {
         return;
       }
 
+      const isInShelf = books.some((item) => item.id === book.id);
       try {
         await toggleBookLikeByIsbn(book.isbn);
+        if (isInShelf) {
+          showToast('좋아요가 취소되었습니다. 새로고침 시 반영됩니다.');
+          return;
+        }
         await loadLikedBooks();
-        showToast('내 서재가 업데이트되었습니다.');
+        showToast('내 서재에 담았습니다.');
       } catch (error) {
         if (!(error instanceof ApiError)) {
           showToast('내 서재 업데이트에 실패했습니다.');
@@ -1302,7 +1314,7 @@ export function MyPageScreen() {
       }
     };
     void submit();
-  }, [loadLikedBooks]);
+  }, [books, loadLikedBooks]);
 
   const renderStories = () => (
     <View style={[styles.gridContent, styles.cardWrap]}>
@@ -1358,7 +1370,7 @@ export function MyPageScreen() {
         <Text style={styles.emptyText}>내 서재에 표시할 책이 없습니다.</Text>
       ) : null}
       {books.map((item) => (
-        <View key={item.id} style={styles.bookCard}>
+        <View key={item.id} style={[styles.bookCard, { width: bookshelfCardWidth }]}>
           <View style={styles.bookThumb}>
             {item.imageUrl ? (
               <Image source={{ uri: item.imageUrl }} style={styles.bookThumbImage} resizeMode="cover" />
@@ -3110,7 +3122,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   bookCard: {
-    width: '30%',
     backgroundColor: colors.white,
     borderRadius: radius.md,
     borderWidth: 1,

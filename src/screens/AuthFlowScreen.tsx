@@ -1348,24 +1348,26 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         <View style={styles.formGroup}>
           <TextInput value={foundEmail || '-'} style={styles.input} editable={false} />
         </View>
-        <Pressable
-          style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-          onPress={goToLogin}
-        >
-          <Text style={styles.primaryText}>로그인하러가기</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-          onPress={() => setStep('resetPw')}
-        >
-          <Text style={styles.secondaryText}>비밀번호 찾기</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-          onPress={() => setStep('findId')}
-        >
-          <Text style={styles.secondaryText}>아이디 다시 찾기</Text>
-        </Pressable>
+        <View style={styles.findIdResultActions}>
+          <Pressable
+            style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+            onPress={goToLogin}
+          >
+            <Text style={styles.primaryText}>로그인하러가기</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+            onPress={() => setStep('resetPw')}
+          >
+            <Text style={styles.secondaryText}>비밀번호 찾기</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+            onPress={() => setStep('findId')}
+          >
+            <Text style={styles.secondaryText}>아이디 다시 찾기</Text>
+          </Pressable>
+        </View>
       </>,
       { showTopBackButton: true },
     );
@@ -1840,6 +1842,9 @@ const styles = StyleSheet.create({
   },
   buttonFlex: {
     flex: 1,
+  },
+  findIdResultActions: {
+    gap: spacing.xs,
   },
   primaryButton: {
     backgroundColor: colors.primary1,

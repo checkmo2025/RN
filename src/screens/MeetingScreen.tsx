@@ -2609,6 +2609,7 @@ const styles = StyleSheet.create({
   noticeItemContent: {
     flex: 1,
     gap: spacing.xs / 2,
+    alignItems: 'center',
   },
   noticeTagRow: {
     flexDirection: 'row',
@@ -2640,9 +2641,11 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   noticeItemTitle: {
-    ...typography.body2_2,
+    ...typography.body1_2,
     color: colors.gray6,
     flex: 1,
+    width: '100%',
+    textAlign: 'center',
   },
   noticeItemMetaRow: {
     flexDirection: 'row',
@@ -3573,7 +3576,7 @@ const styles = StyleSheet.create({
   bookshelfSessionChip: {
     borderWidth: 1,
     borderColor: colors.gray2,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     backgroundColor: colors.white,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
@@ -3885,16 +3888,26 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.subbrown4,
     padding: spacing.md,
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   bookshelfRegularSummaryTitleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.xs,
+    paddingRight: spacing.xs,
+  },
+  bookshelfRegularSummaryTitleIconWrap: {
+    width: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
   },
   bookshelfRegularSummaryTitle: {
-    ...typography.subhead3,
+    ...typography.subhead4_1,
     color: colors.gray6,
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
   },
   bookshelfRegularSummaryMetaRow: {
     flexDirection: 'row',
@@ -4917,26 +4930,26 @@ function ensureRegularMeetingInfo(
   book: BookshelfItem,
   detail?: ClubBookshelfDetail | null,
 ): RegularMeetingInfo {
-  const fallbackName =
-    detail?.title?.trim() || book.regularMeetingName?.trim() || `${book.title} 정기모임`;
-  const fallbackDate = formatDotDate(detail?.meetingTime) || book.meetingDate || '날짜 미정';
-  const fallbackLocation = detail?.location?.trim() || book.meetingLocation?.trim() || '장소 미정';
+  const preferredName = book.regularMeetingName?.trim() || detail?.title?.trim();
+  const preferredDate = book.meetingDate?.trim() || formatDotDate(detail?.meetingTime);
+  const preferredLocation = book.meetingLocation?.trim() || detail?.location?.trim();
 
   if (!info) {
     return {
       id: `${book.id}-regular`,
-      name: fallbackName,
-      date: fallbackDate,
-      location: fallbackLocation,
+      name: preferredName || `${book.title} 정기모임`,
+      date: preferredDate || '날짜 미정',
+      location: preferredLocation || '장소 미정',
       groups: [],
     };
   }
 
   return {
     ...info,
-    name: info.name?.trim() ? info.name : fallbackName,
-    date: info.date?.trim() ? info.date : fallbackDate,
-    location: info.location?.trim() ? info.location : fallbackLocation,
+    // Bookshelf edit values should win over meeting fallback values.
+    name: preferredName || info.name?.trim() || `${book.title} 정기모임`,
+    date: preferredDate || info.date?.trim() || '날짜 미정',
+    location: preferredLocation || info.location?.trim() || '장소 미정',
   };
 }
 
@@ -5707,7 +5720,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     category: detail.tag?.trim() || item.category,
                     regularMeetingName: detail.title ?? item.regularMeetingName,
                     meetingLocation: detail.location ?? item.meetingLocation,
-                    meetingDate: formatDotDate(detail.meetingTime) || item.meetingDate,
+                    meetingDate:
+                      typeof detail.meetingTime === 'string'
+                        ? formatDotDate(detail.meetingTime)
+                        : item.meetingDate,
                   }
                 : item,
             ),
@@ -8117,12 +8133,25 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
         const bookshelfList = await fetchClubBookshelves(clubId);
         const nextItems = bookshelfList.items.map(mapApiBookshelfToItem);
-        setBookshelfItems(nextItems);
+        const nextItemsWithMeetingDraft =
+          isEditMode && typeof editingMeetingId === 'number'
+            ? nextItems.map((item) =>
+                item.remoteMeetingId === editingMeetingId
+                  ? {
+                      ...item,
+                      regularMeetingName: regularMeetingName || undefined,
+                      meetingLocation: meetingLocation || undefined,
+                      meetingDate: meetingDate || undefined,
+                    }
+                  : item,
+              )
+            : nextItems;
+        setBookshelfItems(nextItemsWithMeetingDraft);
         setActiveTab('bookshelf');
 
         if (isEditMode && typeof editingMeetingId === 'number') {
           const updatedItem =
-            nextItems.find((item) => item.remoteMeetingId === editingMeetingId) ?? null;
+            nextItemsWithMeetingDraft.find((item) => item.remoteMeetingId === editingMeetingId) ?? null;
 
           if (updatedItem) {
             setSelectedBookshelfBookId(updatedItem.id);
@@ -9523,8 +9552,18 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     <>
                       <View style={styles.bookshelfRegularSummaryCard}>
                         <View style={styles.bookshelfRegularSummaryTitleRow}>
-                          <MaterialIcons name="groups" size={24} color={colors.gray6} />
-                          <Text style={styles.bookshelfRegularSummaryTitle}>{regularMeetingInfo.name}</Text>
+                          <View style={styles.bookshelfRegularSummaryTitleIconWrap}>
+                            <MaterialIcons name="groups" size={24} color={colors.gray6} />
+                          </View>
+                          <Text
+                            style={styles.bookshelfRegularSummaryTitle}
+                            numberOfLines={2}
+                            ellipsizeMode="tail"
+                            lineBreakStrategyIOS="hangul-word"
+                            textBreakStrategy="balanced"
+                          >
+                            {regularMeetingInfo.name}
+                          </Text>
                         </View>
                         <View style={styles.bookshelfRegularSummaryMetaRow}>
                           <MaterialIcons name="event" size={18} color={colors.gray4} />
@@ -9608,7 +9647,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                             ))}
                           </View>
                           <Text style={styles.bookshelfRegularGroupHint}>
-                            조 페이지로 이동해 발제와 정렬 현황을 확인하세요.
+                            조 페이지로 이동해 발제를 선택하고 모임을 진행하세요.
                           </Text>
                         </Pressable>
                       ) : null}

@@ -1,13 +1,19 @@
 import type { NotificationItem, NotificationType } from '../services/api/notificationApi';
 
 type NotificationTarget = {
-  screen: 'Story' | 'Meeting' | 'My';
+  screen: 'Story' | 'Meeting' | 'My' | 'UserProfile';
   params?: Record<string, unknown>;
 };
 
 function withSuffix(name: string) {
   const trimmed = name.trim();
   return trimmed ? `${trimmed}님` : '누군가';
+}
+
+function toMemberNickname(name: string): string | null {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  return trimmed;
 }
 
 export function formatNotificationText(type: NotificationType, displayName: string): string {
@@ -42,19 +48,31 @@ export function resolveNotificationTarget(notification: NotificationItem): Notif
             ? { openStoryId: notification.domainId }
             : undefined,
       };
-    case 'FOLLOW':
+    case 'FOLLOW': {
+      const memberNickname = toMemberNickname(notification.displayName);
+      if (memberNickname) {
+        return {
+          screen: 'UserProfile',
+          params: { memberNickname, fromScreen: 'My' },
+        };
+      }
       return {
         screen: 'My',
         params: { openFollowTab: 'FOLLOWER' },
       };
+    }
     case 'JOIN_CLUB':
     case 'CLUB_MEETING_CREATED':
-    case 'CLUB_NOTICE_CREATED':
-      const clubId = notification.domainId ?? notification.sourceId;
+    case 'CLUB_NOTICE_CREATED': {
+      const clubId = notification.domainId;
       return {
-        screen: 'Meeting',
-        params: typeof clubId === 'number' ? { openClubId: clubId } : undefined,
+        screen: typeof clubId === 'number' ? 'Meeting' : 'My',
+        params:
+          typeof clubId === 'number'
+            ? { openClubId: clubId }
+            : { openMyTab: 'ALARM' },
       };
+    }
     default:
       return { screen: 'My', params: { openMyTab: 'ALARM' } };
   }
