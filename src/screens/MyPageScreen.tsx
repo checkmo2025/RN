@@ -95,6 +95,7 @@ type BookCard = {
   title: string;
   author: string;
   imageUrl?: string;
+  liked: boolean;
 };
 
 type GroupItem = {
@@ -484,6 +485,7 @@ export function MyPageScreen() {
         title,
         author,
         imageUrl: normalizeImageUrl(book.imgUrl),
+        liked: true,
       };
     });
 
@@ -1298,23 +1300,40 @@ export function MyPageScreen() {
         return;
       }
 
-      const isInShelf = books.some((item) => item.id === book.id);
-      try {
-        await toggleBookLikeByIsbn(book.isbn);
-        if (isInShelf) {
-          showToast('좋아요가 취소되었습니다. 새로고침 시 반영됩니다.');
-          return;
+      const current = books.find((item) => item.id === book.id);
+
+      if (current) {
+        const nextLiked = !current.liked;
+        setBooks((prev) =>
+          prev.map((item) => (item.id === book.id ? { ...item, liked: nextLiked } : item)),
+        );
+        try {
+          await toggleBookLikeByIsbn(book.isbn);
+          showToast(nextLiked ? '내 서재에 담았습니다.' : '좋아요가 취소되었습니다.');
+        } catch (error) {
+          setBooks((prev) =>
+            prev.map((item) => (item.id === book.id ? { ...item, liked: !nextLiked } : item)),
+          );
+          if (!(error instanceof ApiError)) {
+            showToast('내 서재 업데이트에 실패했습니다.');
+          }
         }
-        await loadLikedBooks();
-        showToast('내 서재에 담았습니다.');
-      } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast('내 서재 업데이트에 실패했습니다.');
+      } else {
+        const newBook: BookCard = { ...book, liked: true };
+        setBooks((prev) => [newBook, ...prev]);
+        try {
+          await toggleBookLikeByIsbn(book.isbn);
+          showToast('내 서재에 담았습니다.');
+        } catch (error) {
+          setBooks((prev) => prev.filter((item) => item.id !== book.id));
+          if (!(error instanceof ApiError)) {
+            showToast('내 서재 업데이트에 실패했습니다.');
+          }
         }
       }
     };
     void submit();
-  }, [books, loadLikedBooks]);
+  }, [books]);
 
   const renderStories = () => (
     <View style={[styles.gridContent, styles.cardWrap]}>
@@ -1379,7 +1398,11 @@ export function MyPageScreen() {
               style={({ pressed }) => [styles.bookLikeBadge, pressed && styles.pressed]}
               onPress={() => handleToggleBookLike(item)}
             >
-              <MaterialIcons name="favorite" size={18} color={colors.secondary1} />
+              <MaterialIcons
+                name={item.liked ? 'favorite' : 'favorite-border'}
+                size={18}
+                color={item.liked ? colors.secondary1 : colors.gray3}
+              />
             </Pressable>
           </View>
           <Text style={styles.bookTitle} numberOfLines={1}>
