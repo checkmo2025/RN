@@ -511,11 +511,16 @@ export async function fetchMemberBookStories(
 }
 
 export async function fetchBookStoriesByBook(
-  bookId: number,
+  bookId: number | string,
   cursorId?: number,
   options?: ViewerContextOptions,
 ): Promise<StoryFeed> {
-  return fetchStoryFeedByPath(`/book-stories/search/${bookId}`, cursorId, options);
+  const normalizedBookId = String(bookId).trim();
+  return fetchStoryFeedByPath(
+    `/book-stories/search/${encodeURIComponent(normalizedBookId)}`,
+    cursorId,
+    options,
+  );
 }
 
 export async function fetchClubBookStories(clubId: number, cursorId?: number): Promise<StoryFeed> {

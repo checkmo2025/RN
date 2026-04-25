@@ -43,7 +43,7 @@ import {
   type RemoteNewsDetail,
   type RemoteNewsSummary,
 } from '../services/api/newsApi';
-import { fetchRecommendedBooks } from '../services/api/bookApi';
+import { fetchRecommendedBooks, type BookItem } from '../services/api/bookApi';
 import { ApiError } from '../services/api/http';
 import { formatKstDateLabel } from '../utils/date';
 import { showToast } from '../utils/toast';
@@ -59,11 +59,8 @@ type NewsItem = {
   originalLink?: string;
 };
 
-type RecommendedBook = {
+type RecommendedBook = BookItem & {
   id: string;
-  title: string;
-  author: string;
-  imageUri?: string;
 };
 
 type NewsRouteParams = {
@@ -224,12 +221,19 @@ export function NewsScreen() {
   const loadRecommendedBookCards = useCallback(async () => {
     try {
       const books = await fetchRecommendedBooks();
-      const cards = shuffleItems(books).slice(0, 4).map((book, index) => ({
-        id: book.isbn || `recommended-${index}`,
-        title: book.title || '책 제목',
-        author: book.author || '작가 미상',
-        imageUri: book.imgUrl,
-      }));
+      const cards = shuffleItems(books).slice(0, 4).map((book, index) => {
+        const fallbackId =
+          (typeof book.bookId === 'number' && Number.isInteger(book.bookId)
+            ? String(book.bookId)
+            : '') || `recommended-${index}`;
+        return {
+          ...book,
+          id: `${book.isbn || fallbackId}-${index}`,
+          title: book.title || '책 제목',
+          author: book.author || '작가 미상',
+          description: book.description || '책 설명이 없습니다.',
+        };
+      });
       setRecommendedBooks(cards);
     } catch (error) {
       setRecommendedBooks([]);
@@ -319,6 +323,47 @@ export function NewsScreen() {
       void loadDetailById();
     },
     [animateTransition, detailTranslateX],
+  );
+
+  const openBookSearchDetail = useCallback(
+    (book: RecommendedBook) => {
+      const params = {
+        openSearchBook: {
+          isbn: book.isbn,
+          bookId: book.bookId,
+          title: book.title,
+          author: book.author,
+          description: book.description,
+          imgUrl: book.imgUrl,
+          publisher: book.publisher,
+        },
+      };
+
+      const chain: Array<NavigationProp<ParamListBase>> = [];
+      const visited = new Set<NavigationProp<ParamListBase>>();
+      let current: NavigationProp<ParamListBase> | undefined = navigation;
+
+      while (current && !visited.has(current)) {
+        chain.push(current);
+        visited.add(current);
+        current = current.getParent();
+      }
+
+      for (const nav of chain) {
+        const routeNames: string[] = nav?.getState?.()?.routeNames ?? [];
+        if (routeNames.includes('Home')) {
+          nav.navigate('Home', params);
+          return;
+        }
+        if (routeNames.includes('Tabs')) {
+          nav.navigate('Tabs', { screen: 'Home', params });
+          return;
+        }
+      }
+
+      navigation.navigate('Home', params);
+    },
+    [navigation],
   );
 
   useEffect(() => {
@@ -517,9 +562,13 @@ export function NewsScreen() {
                   contentContainerStyle={styles.recommendedRow}
                 >
                   {recommendedBooks.map((book) => (
-                    <Pressable key={book.id} style={styles.recommendedCard}>
+                    <Pressable
+                      key={book.id}
+                      style={styles.recommendedCard}
+                      onPress={() => openBookSearchDetail(book)}
+                    >
                       <ImageBackground
-                        source={book.imageUri ? { uri: book.imageUri } : undefined}
+                        source={book.imgUrl ? { uri: book.imgUrl } : undefined}
                         style={styles.recommendedThumb}
                         imageStyle={styles.recommendedThumbImage}
                       >

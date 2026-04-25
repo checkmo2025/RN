@@ -96,17 +96,16 @@ type HeaderRouteParams = {
 
 const HEADER_HEIGHT = scaleSize(56);
 
-function resolveBookId(book: BookItem | null): number | null {
+function resolveBookStorySearchId(book: BookItem | null): string | null {
   if (!book) return null;
+
   if (typeof book.bookId === 'number' && Number.isInteger(book.bookId) && book.bookId > 0) {
-    return book.bookId;
+    return String(book.bookId);
   }
 
-  if (/^\d+$/.test(book.isbn) && book.isbn.length <= 10) {
-    const parsed = Number(book.isbn);
-    if (Number.isInteger(parsed) && parsed > 0) {
-      return parsed;
-    }
+  const normalizedIsbn = book.isbn.replace(/-/g, '').trim();
+  if (/^\d+$/.test(normalizedIsbn)) {
+    return normalizedIsbn;
   }
 
   return null;
@@ -401,8 +400,8 @@ export function AppHeader(props: Props) {
       setBookDetailLoading(false);
     }
 
-    const bookId = resolveBookId(enrichedBook);
-    if (!bookId) {
+    const bookStorySearchId = resolveBookStorySearchId(enrichedBook);
+    if (!bookStorySearchId) {
       if (activeBookRequestId.current === requestId) {
         setBookStories([]);
         setBookStoriesLoading(false);
@@ -411,7 +410,7 @@ export function AppHeader(props: Props) {
     }
 
     try {
-      const feed = await fetchBookStoriesByBook(bookId, undefined, {
+      const feed = await fetchBookStoriesByBook(bookStorySearchId, undefined, {
         viewerAuthenticated: isLoggedIn,
       });
       if (activeBookRequestId.current === requestId) {
