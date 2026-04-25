@@ -35,6 +35,7 @@ import {
   fetchBookDetail,
   fetchRecommendedBooks,
   searchBooks,
+  toggleBookLikeByIsbn,
   type BookItem,
 } from '../../services/api/bookApi';
 import {
@@ -222,7 +223,17 @@ export function AppHeader(props: Props) {
       triggerSelectionHaptic();
       const submit = async () => {
         const liked = await toggleBookLike(book);
-        showToast(liked ? '내 서재에 담았습니다.' : '내 서재에서 제거했습니다.');
+        try {
+          if (book.isbn.trim()) {
+            await toggleBookLikeByIsbn(book.isbn);
+          }
+          showToast(liked ? '내 서재에 담았습니다.' : '내 서재에서 제거했습니다.');
+        } catch (error) {
+          await toggleBookLike(book);
+          if (!(error instanceof ApiError)) {
+            showToast('내 서재 업데이트에 실패했습니다.');
+          }
+        }
       };
       void submit();
     },
