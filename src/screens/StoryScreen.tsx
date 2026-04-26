@@ -9,7 +9,6 @@ import {
   PanResponder,
   PanResponderGestureState,
   Modal,
-  Pressable,
   ScrollView,
   RefreshControl,
   StyleSheet,
@@ -40,6 +39,7 @@ import { PUBLIC_ENV } from '../constants/publicEnv';
 import { colors, radius, spacing, typography } from '../theme';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
+import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import { ScreenLayout } from '../components/common/ScreenLayout';
@@ -1858,6 +1858,7 @@ export function StoryScreen() {
           <Pressable
             style={styles.commentMenuModalBackdrop}
             onPress={() => setCommentMenu(null)}
+            disableFeedback
           >
             {commentMenu && (
               <Pressable
@@ -1871,6 +1872,7 @@ export function StoryScreen() {
                   ),
                 ]}
                 onPress={(event) => event.stopPropagation()}
+                disableFeedback
               >
                 {isLoggedIn && commentMenu.comment.mine ? (
                   <>
@@ -1927,6 +1929,7 @@ export function StoryScreen() {
           <Pressable
             style={styles.commentMenuModalBackdrop}
             onPress={() => setStoryMenu(null)}
+            disableFeedback
           >
             {storyMenu && (
               <Pressable
@@ -1940,6 +1943,7 @@ export function StoryScreen() {
                   ),
                 ]}
                 onPress={(event) => event.stopPropagation()}
+                disableFeedback
               >
                 {isLoggedIn && selectedStory.mine ? (
                   <>
@@ -2099,10 +2103,15 @@ export function StoryScreen() {
             style={styles.bookPickerModalRoot}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           >
-            <Pressable style={styles.bookPickerBackdrop} onPress={closeBookPicker}>
+            <Pressable
+              style={styles.bookPickerBackdrop}
+              onPress={closeBookPicker}
+              disableFeedback
+            >
               <Pressable
                 style={styles.bookPickerSheet}
                 onPress={(event) => event.stopPropagation()}
+                disableFeedback
               >
                 <View style={styles.bookPickerHeaderRow}>
                   <Text style={styles.bookPickerHeaderText}>책 검색</Text>

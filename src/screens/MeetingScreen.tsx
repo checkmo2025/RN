@@ -6,7 +6,6 @@ import {
   Image,
   Linking,
   Modal,
-  Pressable,
   ScrollView,
   RefreshControl,
   StyleSheet,
@@ -14,6 +13,7 @@ import {
   TextInput,
   View,
   KeyboardAvoidingView,
+  PanResponder,
   Platform,
   useWindowDimensions,
 } from 'react-native';
@@ -36,8 +36,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { SvgUri } from 'react-native-svg';
 
 import { colors, radius, spacing, typography } from '../theme';
+import { useMeetingChatStomp } from '../hooks/useMeetingChatStomp';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
+import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
@@ -86,7 +88,6 @@ import {
   joinClub,
   manageClubMeetingTeams,
   searchClubs,
-  sendClubMeetingTeamChatMessage,
   submitClubNoticeVote,
   updateClub,
   updateClubBookshelf,
@@ -4109,13 +4110,19 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.sm,
   },
+  regularChatScreen: {
+    flex: 1,
+    backgroundColor: colors.white,
+  },
   regularChatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray2,
+    backgroundColor: colors.white,
   },
   regularChatHeaderLeft: {
     flexDirection: 'row',
@@ -4125,6 +4132,17 @@ const styles = StyleSheet.create({
   regularChatTitle: {
     ...typography.subhead3,
     color: colors.gray6,
+  },
+  regularChatConnDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  regularChatConnDotOn: {
+    backgroundColor: '#4CAF50',
+  },
+  regularChatConnDotOff: {
+    backgroundColor: colors.gray3,
   },
   regularChatGroupList: {
     gap: spacing.sm,
@@ -4144,10 +4162,11 @@ const styles = StyleSheet.create({
   },
   regularChatMessages: {
     flex: 1,
+    paddingHorizontal: spacing.md,
   },
   regularChatMessagesContent: {
     gap: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
   },
   regularChatMessageRow: {
     alignSelf: 'flex-start',
@@ -4193,7 +4212,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingTop: spacing.xs,
+    paddingTop: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.gray2,
   },
@@ -5011,6 +5031,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [activeRegularChatGroupId, setActiveRegularChatGroupId] = useState<string | null>(null);
   const [regularChatInput, setRegularChatInput] = useState('');
   const [submittingRegularChat, setSubmittingRegularChat] = useState(false);
+  const chatScrollRef = useRef<ScrollView>(null);
   const [managementMenuVisible, setManagementMenuVisible] = useState(false);
   const [activeManagementScreen, setActiveManagementScreen] = useState<GroupManagementScreen | null>(null);
   const [joinRequests, setJoinRequests] = useState<GroupJoinRequestItem[]>([]);
@@ -6147,6 +6168,40 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       regularMeetingInfo.groups.find((groupItem) => groupItem.id === activeRegularChatGroupId) ?? null
     );
   }, [activeRegularChatGroupId, regularMeetingInfo]);
+
+  const activeRegularChatGroupIdRef = useRef(activeRegularChatGroupId);
+  useEffect(() => {
+    activeRegularChatGroupIdRef.current = activeRegularChatGroupId;
+  });
+  const currentMemberNicknameRef = useRef(currentMemberNickname);
+  useEffect(() => {
+    currentMemberNicknameRef.current = currentMemberNickname;
+  });
+
+  const { isConnected: isChatConnected, publish: publishChatToStomp } = useMeetingChatStomp({
+    clubId: group.clubId,
+    meetingId: selectedBookshelfBook?.remoteMeetingId,
+    teamId: activeRegularChatGroup?.teamId,
+    enabled: Boolean(activeRegularChatGroup),
+    onMessage: (event) => {
+      const groupId = activeRegularChatGroupIdRef.current;
+      if (!groupId) return;
+      const message = mapMeetingChatMessageToUi(
+        {
+          messageId: event.messageId,
+          content: event.content,
+          sendAt: event.sendAt,
+          senderNickname: event.senderNickname,
+          senderProfileImageUrl: event.senderProfileImageUrl ?? undefined,
+        },
+        currentMemberNicknameRef.current,
+      );
+      setRegularGroupChatMessagesById((prev) => ({
+        ...prev,
+        [groupId]: [...(prev[groupId] ?? []), message],
+      }));
+    },
+  });
 
   const selectedNotice = useMemo(
     () => noticeItems.find((item) => item.id === selectedNoticeId) ?? null,
@@ -7725,46 +7780,51 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     setRegularChatInput('');
   }, []);
 
+  const handleCloseRegularChatRef = useRef(handleCloseRegularChat);
+  useEffect(() => { handleCloseRegularChatRef.current = handleCloseRegularChat; });
+
+  const chatSwipePanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return evt.nativeEvent.pageX < 30 && gestureState.dx > 8 && Math.abs(gestureState.dy) < Math.abs(gestureState.dx);
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dx > 60 || gestureState.vx > 0.5) {
+          handleCloseRegularChatRef.current();
+        }
+      },
+    }),
+  ).current;
+
+  useEffect(() => {
+    if (activeRegularChatGroupId) {
+      setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: false }), 50);
+    }
+  }, [activeRegularChatGroupId, activeRegularChatGroup?.chatMessages]);
+
   const handleSubmitRegularChat = useCallback(() => {
     const content = regularChatInput.trim();
     if (!activeRegularChatGroup || !content || submittingRegularChat) return;
 
-    const clubId = group.clubId;
-    const meetingId = selectedBookshelfBook?.remoteMeetingId;
-    const teamId = activeRegularChatGroup.teamId;
-
-    if (
-      typeof clubId !== 'number' ||
-      typeof meetingId !== 'number' ||
-      typeof teamId !== 'number'
-    ) {
-      showToast('채팅 전송 대상을 찾을 수 없습니다.');
+    if (!isChatConnected) {
+      showToast('채팅 서버에 연결 중입니다. 잠시 후 다시 시도해주세요.');
       return;
     }
 
-    const submit = async () => {
-      setSubmittingRegularChat(true);
-      try {
-        await sendClubMeetingTeamChatMessage(clubId, meetingId, teamId, content);
-        setRegularChatInput('');
-        await refreshRegularChatGroupMessages(activeRegularChatGroup, {
-          suppressErrorToast: true,
-        });
-      } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast('채팅 전송에 실패했습니다.');
-        }
-      } finally {
-        setSubmittingRegularChat(false);
-      }
-    };
-    void submit();
+    setSubmittingRegularChat(true);
+    try {
+      publishChatToStomp(content);
+      setRegularChatInput('');
+    } catch {
+      showToast('채팅 전송에 실패했습니다.');
+    } finally {
+      setSubmittingRegularChat(false);
+    }
   }, [
     activeRegularChatGroup,
-    group.clubId,
-    refreshRegularChatGroupMessages,
+    isChatConnected,
+    publishChatToStomp,
     regularChatInput,
-    selectedBookshelfBook?.remoteMeetingId,
     submittingRegularChat,
   ]);
 
@@ -10226,10 +10286,15 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           style={styles.bookshelfComposerKeyboard}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <Pressable style={styles.bookshelfComposerOverlay} onPress={closeBookshelfComposer}>
+          <Pressable
+            style={styles.bookshelfComposerOverlay}
+            onPress={closeBookshelfComposer}
+            disableFeedback
+          >
             <Pressable
               style={styles.bookshelfComposerCard}
               onPress={(event) => event.stopPropagation()}
+              disableFeedback
             >
 	              <View style={styles.bookshelfComposerHeader}>
 	                <Text style={styles.bookshelfComposerTitle}>
@@ -10494,6 +10559,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               style={styles.managementScreenScroll}
               contentContainerStyle={styles.managementScreenContent}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
             {activeManagementScreen === 'JOIN_REQUESTS' ? (
               <>
@@ -10983,7 +11049,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
             </ScrollView>
 
             {activeManagementScreen === 'EDIT' || activeManagementScreen === 'BOOKSHELF_CREATE' ? (
-              <View style={styles.managementFooter}>
+              <View style={[styles.managementFooter, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
                 {activeManagementScreen === 'BOOKSHELF_CREATE' &&
                 typeof editingBookshelfMeetingId === 'number' ? (
                   <View style={styles.managementFooterButtonRow}>
@@ -11051,10 +11117,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               <Pressable
                 style={styles.managementInlineOverlay}
                 onPress={() => setSelectedJoinRequestMessage(null)}
+                disableFeedback
               >
                 <Pressable
                   style={styles.managementMessageCard}
                   onPress={(event) => event.stopPropagation()}
+                  disableFeedback
                 >
                   <Text style={styles.managementMessageTitle}>가입 메시지</Text>
                   <ScrollView
@@ -11075,10 +11143,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   if (submittingJoinRequestAction) return;
                   setSelectedJoinRequestActionId(null);
                 }}
+                disableFeedback
               >
                 <Pressable
                   style={styles.managementJoinActionCard}
                   onPress={(event) => event.stopPropagation()}
+                  disableFeedback
                 >
                   <Text style={styles.managementJoinActionTitle}>가입 처리</Text>
                   <Pressable
@@ -11131,6 +11201,114 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 </Pressable>
               </Pressable>
             ) : null}
+            {bookshelfCalendarVisible ? (
+              <Pressable
+                style={styles.managementInlineOverlay}
+                onPress={closeBookshelfCalendar}
+                disableFeedback
+              >
+                <Pressable
+                  style={styles.bookshelfCalendarCard}
+                  onPress={(event) => event.stopPropagation()}
+                  disableFeedback
+                >
+                  <View style={styles.managementModalHeader}>
+                    <Text style={styles.managementModalTitle}>모임 날짜 선택</Text>
+                    <Pressable onPress={closeBookshelfCalendar} hitSlop={8}>
+                      <MaterialIcons name="close" size={20} color={colors.gray6} />
+                    </Pressable>
+                  </View>
+                  <View style={styles.bookshelfCalendarMonthRow}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.bookshelfCalendarMonthButton,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() =>
+                        setBookshelfCalendarMonth(
+                          (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
+                        )
+                      }
+                    >
+                      <MaterialIcons name="chevron-left" size={20} color={colors.gray6} />
+                    </Pressable>
+                    <Text style={styles.bookshelfCalendarMonthText}>
+                      {formatCalendarMonthLabel(bookshelfCalendarMonth)}
+                    </Text>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.bookshelfCalendarMonthButton,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() =>
+                        setBookshelfCalendarMonth(
+                          (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
+                        )
+                      }
+                    >
+                      <MaterialIcons name="chevron-right" size={20} color={colors.gray6} />
+                    </Pressable>
+                  </View>
+                  <View style={styles.bookshelfCalendarWeekRow}>
+                    {calendarWeekdayLabels.map((label) => (
+                      <Text key={`bookshelf-calendar-weekday-${label}`} style={styles.bookshelfCalendarWeekLabel}>
+                        {label}
+                      </Text>
+                    ))}
+                  </View>
+                  <View style={styles.bookshelfCalendarGrid}>
+                    {bookshelfCalendarDays.map((day) => {
+                      const selected = bookshelfCreateDraft.meetingDate === day.value;
+                      return (
+                        <Pressable
+                          key={day.key}
+                          style={({ pressed }) => [
+                            styles.bookshelfCalendarDay,
+                            pressed && styles.pressed,
+                          ]}
+                          onPress={() => handleSelectBookshelfMeetingDate(day.value)}
+                        >
+                          <View
+                            style={[
+                              styles.bookshelfCalendarDayInner,
+                              day.inCurrentMonth
+                                ? styles.bookshelfCalendarDayCurrentMonth
+                                : styles.bookshelfCalendarDayOutside,
+                              day.isToday && styles.bookshelfCalendarDayToday,
+                              selected && styles.bookshelfCalendarDaySelected,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.bookshelfCalendarDayLabel,
+                                !day.inCurrentMonth && styles.bookshelfCalendarDayLabelOutside,
+                                selected && styles.bookshelfCalendarDayLabelSelected,
+                              ]}
+                            >
+                              {day.label}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <View style={styles.bookshelfCalendarFooter}>
+                    <Text style={styles.bookshelfCalendarFooterHint}>
+                      선택한 날짜가 바로 적용됩니다.
+                    </Text>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.bookshelfCalendarTodayButton,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={handlePickTodayBookshelfMeetingDate}
+                    >
+                      <Text style={styles.bookshelfCalendarTodayButtonText}>오늘</Text>
+                    </Pressable>
+                  </View>
+                </Pressable>
+              </Pressable>
+            ) : null}
             {selectedMemberAction ? (
               <Pressable
                 style={styles.managementInlineOverlay}
@@ -11138,10 +11316,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   if (submittingMemberAction) return;
                   setSelectedMemberActionId(null);
                 }}
+                disableFeedback
               >
                 <Pressable
                   style={styles.managementRoleMenuCard}
                   onPress={(event) => event.stopPropagation()}
+                  disableFeedback
                 >
                   <Text style={styles.managementRoleMenuTitle}>역할 수정</Text>
                   {[
@@ -11240,10 +11420,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           <Pressable
             style={styles.managementOverlay}
             onPress={closeManagementMenu}
+            disableFeedback
           >
             <Pressable
               style={styles.managementMenuSheet}
               onPress={(event) => event.stopPropagation()}
+              disableFeedback
             >
               <View style={styles.managementHandle} />
               <Text style={styles.managementMenuTitle}>모임 관리하기</Text>
@@ -11689,10 +11871,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         <Pressable
           style={styles.managementOverlay}
           onPress={() => setNoticeBookSelectorVisible(false)}
+          disableFeedback
         >
           <Pressable
             style={styles.noticeBookSelectorCard}
             onPress={(event) => event.stopPropagation()}
+            disableFeedback
           >
             <View style={styles.managementModalHeader}>
               <Text style={styles.managementModalTitle}>책장 선택</Text>
@@ -11742,11 +11926,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         <Pressable
           style={styles.managementOverlayBottom}
           onPress={() => setNoticeMenuVisible(false)}
+          disableFeedback
         >
           {selectedNotice ? (
             <Pressable
               style={styles.managementBottomSheet}
               onPress={(event) => event.stopPropagation()}
+              disableFeedback
             >
               <Text style={styles.managementBottomSheetTitle}>공지 메뉴</Text>
               {canManageClub ? (
@@ -11788,117 +11974,6 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           ) : null}
         </Pressable>
       </Modal>
-      <Modal
-        visible={bookshelfCalendarVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeBookshelfCalendar}
-      >
-        <Pressable
-          style={styles.managementCenteredOverlay}
-          onPress={closeBookshelfCalendar}
-        >
-          <Pressable
-            style={styles.bookshelfCalendarCard}
-            onPress={(event) => event.stopPropagation()}
-          >
-            <View style={styles.managementModalHeader}>
-              <Text style={styles.managementModalTitle}>모임 날짜 선택</Text>
-              <Pressable onPress={closeBookshelfCalendar} hitSlop={8}>
-                <MaterialIcons name="close" size={20} color={colors.gray6} />
-              </Pressable>
-            </View>
-            <View style={styles.bookshelfCalendarMonthRow}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.bookshelfCalendarMonthButton,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() =>
-                  setBookshelfCalendarMonth(
-                    (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
-                  )
-                }
-              >
-                <MaterialIcons name="chevron-left" size={20} color={colors.gray6} />
-              </Pressable>
-              <Text style={styles.bookshelfCalendarMonthText}>
-                {formatCalendarMonthLabel(bookshelfCalendarMonth)}
-              </Text>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.bookshelfCalendarMonthButton,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() =>
-                  setBookshelfCalendarMonth(
-                    (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
-                  )
-                }
-              >
-                <MaterialIcons name="chevron-right" size={20} color={colors.gray6} />
-              </Pressable>
-            </View>
-            <View style={styles.bookshelfCalendarWeekRow}>
-              {calendarWeekdayLabels.map((label) => (
-                <Text key={`bookshelf-calendar-weekday-${label}`} style={styles.bookshelfCalendarWeekLabel}>
-                  {label}
-                </Text>
-              ))}
-            </View>
-            <View style={styles.bookshelfCalendarGrid}>
-              {bookshelfCalendarDays.map((day) => {
-                const selected = bookshelfCreateDraft.meetingDate === day.value;
-                return (
-                  <Pressable
-                    key={day.key}
-                    style={({ pressed }) => [
-                      styles.bookshelfCalendarDay,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => handleSelectBookshelfMeetingDate(day.value)}
-                  >
-                    <View
-                      style={[
-                        styles.bookshelfCalendarDayInner,
-                        day.inCurrentMonth
-                          ? styles.bookshelfCalendarDayCurrentMonth
-                          : styles.bookshelfCalendarDayOutside,
-                        day.isToday && styles.bookshelfCalendarDayToday,
-                        selected && styles.bookshelfCalendarDaySelected,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.bookshelfCalendarDayLabel,
-                          !day.inCurrentMonth && styles.bookshelfCalendarDayLabelOutside,
-                          selected && styles.bookshelfCalendarDayLabelSelected,
-                        ]}
-                      >
-                        {day.label}
-                      </Text>
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <View style={styles.bookshelfCalendarFooter}>
-              <Text style={styles.bookshelfCalendarFooterHint}>
-                선택한 날짜가 바로 적용됩니다.
-              </Text>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.bookshelfCalendarTodayButton,
-                  pressed && styles.pressed,
-                ]}
-                onPress={handlePickTodayBookshelfMeetingDate}
-              >
-                <Text style={styles.bookshelfCalendarTodayButtonText}>오늘</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
       {activeTab === 'bookshelf' &&
       bookshelfViewMode === 'REGULAR_GROUP' &&
       selectedRegularGroup ? (
@@ -11912,10 +11987,15 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         animationType="fade"
         onRequestClose={closeContactModal}
       >
-        <Pressable style={styles.contactModalOverlay} onPress={closeContactModal}>
+        <Pressable
+          style={styles.contactModalOverlay}
+          onPress={closeContactModal}
+          disableFeedback
+        >
           <Pressable
             style={styles.contactModalCard}
             onPress={(event) => event.stopPropagation()}
+            disableFeedback
           >
             <View style={styles.contactModalHeader}>
               <Text style={styles.contactModalTitle}>Contact Us</Text>
@@ -11962,10 +12042,15 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         animationType="fade"
         onRequestClose={handleCloseRegularChat}
       >
-        <Pressable style={styles.regularChatModalOverlay} onPress={handleCloseRegularChat}>
+        <Pressable
+          style={styles.regularChatModalOverlay}
+          onPress={handleCloseRegularChat}
+          disableFeedback
+        >
           <Pressable
             style={styles.regularChatPickerCard}
             onPress={(event) => event.stopPropagation()}
+            disableFeedback
           >
             <View style={styles.regularChatHeader}>
               <Text style={styles.regularChatTitle}>채팅 조 선택</Text>
@@ -11993,31 +12078,34 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       </Modal>
       <Modal
         visible={Boolean(activeRegularChatGroup)}
-        transparent
         animationType="slide"
         onRequestClose={handleCloseRegularChat}
       >
-        <Pressable style={styles.regularChatModalOverlay} onPress={handleCloseRegularChat}>
+        <KeyboardAvoidingView
+          style={styles.regularChatScreen}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          {...chatSwipePanResponder.panHandlers}
+        >
           {activeRegularChatGroup ? (
-            <Pressable
-              style={styles.regularChatRoomCard}
-              onPress={(event) => event.stopPropagation()}
-            >
-              <View style={styles.regularChatHeader}>
+            <>
+              <View style={[styles.regularChatHeader, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
                 <View style={styles.regularChatHeaderLeft}>
                   <Pressable onPress={handleBackToRegularChatPicker} hitSlop={8}>
                     <MaterialIcons name="chevron-left" size={20} color={colors.gray6} />
                   </Pressable>
                   <Text style={styles.regularChatTitle}>{activeRegularChatGroup.label}</Text>
+                  <View style={[styles.regularChatConnDot, isChatConnected ? styles.regularChatConnDotOn : styles.regularChatConnDotOff]} />
                 </View>
                 <Pressable onPress={handleCloseRegularChat} hitSlop={8}>
                   <MaterialIcons name="close" size={20} color={colors.gray6} />
                 </Pressable>
               </View>
               <ScrollView
+                ref={chatScrollRef}
                 style={styles.regularChatMessages}
                 contentContainerStyle={styles.regularChatMessagesContent}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
               >
                 {activeRegularChatGroup.chatMessages.map((message) => (
                   <View
@@ -12052,7 +12140,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   </View>
                 ) : null}
               </ScrollView>
-              <View style={styles.regularChatInputRow}>
+              <View style={[styles.regularChatInputRow, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
                 <TextInput
                   style={styles.regularChatInput}
                   placeholder="채팅 입력"
@@ -12061,6 +12149,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   onChangeText={setRegularChatInput}
                   editable={!submittingRegularChat}
                   onSubmitEditing={handleSubmitRegularChat}
+                  returnKeyType="send"
                 />
                 <Pressable
                   style={({ pressed }) => [
@@ -12085,9 +12174,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   />
                 </Pressable>
               </View>
-            </Pressable>
+            </>
           ) : null}
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
       <Modal
         visible={Boolean(voteVotersModal)}
@@ -12098,11 +12187,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         <Pressable
           style={styles.voteVotersModalOverlay}
           onPress={() => setVoteVotersModal(null)}
+          disableFeedback
         >
           {voteVotersModal ? (
             <Pressable
               style={styles.voteVotersModalCard}
               onPress={(event) => event.stopPropagation()}
+              disableFeedback
             >
               <Text style={styles.voteVotersModalTitle}>{voteVotersModal.optionLabel}</Text>
               <View style={styles.voteVotersList}>

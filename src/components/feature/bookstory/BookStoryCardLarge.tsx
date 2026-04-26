@@ -1,8 +1,9 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../../theme';
+import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../../common/DefaultProfileAvatar';
 
 type Props = {

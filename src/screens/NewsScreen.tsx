@@ -8,7 +8,6 @@ import {
   PanResponder,
   PanResponderGestureState,
   Platform,
-  Pressable,
   ScrollView,
   RefreshControl,
   StyleSheet,
@@ -18,7 +17,6 @@ import {
   useWindowDimensions,
   Linking,
 } from 'react-native';
-import type { ImageStyle, StyleProp } from 'react-native';
 import {
   useFocusEffect,
   useNavigation,
@@ -31,6 +29,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import { colors, radius, spacing, typography } from '../theme';
+import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
+import { LeftFocalCoverImage } from '../components/common/LeftFocalCoverImage';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import {
@@ -72,10 +72,6 @@ const DETAIL_BACK_ACTIVATE_DISTANCE = 14;
 const DETAIL_BACK_TRIGGER_DISTANCE = 72;
 const DETAIL_BACK_ACTIVATE_MAX_DY = 16;
 const DETAIL_BACK_TRIGGER_MAX_DY = 60;
-const leftFocalImageStyle: StyleProp<ImageStyle> =
-  Platform.OS === 'web'
-    ? ({ objectPosition: 'left center' } as unknown as ImageStyle)
-    : undefined;
 const fallbackPromotionImages = [
   Image.resolveAssetSource(require('../../assets/images/background.png')).uri,
   Image.resolveAssetSource(require('../../assets/images/news_sample2.png')).uri,
@@ -499,13 +495,10 @@ export function NewsScreen() {
 
         <View style={styles.hero}>
           {item.cover ? (
-            <Image source={{ uri: item.cover }} style={[styles.heroImage, leftFocalImageStyle]} />
+            <LeftFocalCoverImage uri={item.cover} style={styles.heroImage} />
           ) : (
             <View style={styles.heroImage} />
           )}
-          <View style={styles.heroOverlay}>
-            <Text style={styles.heroTitle}>{item.title}</Text>
-          </View>
           <Text style={styles.heroDate}>{item.date}</Text>
         </View>
 
@@ -594,7 +587,7 @@ export function NewsScreen() {
           renderItem={({ item }) => (
             <Pressable style={styles.card} onPress={() => onSelect(item)}>
               {item.cover ? (
-                <Image source={{ uri: item.cover }} style={[styles.cardThumb, leftFocalImageStyle]} />
+                <LeftFocalCoverImage uri={item.cover} style={styles.cardThumb} />
               ) : (
                 <View style={styles.cardThumb} />
               )}
@@ -834,16 +827,6 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 16 / 9,
     backgroundColor: colors.gray2,
-  },
-  heroOverlay: {
-    position: 'absolute',
-    top: spacing.lg,
-    left: spacing.lg,
-    right: spacing.lg,
-  },
-  heroTitle: {
-    ...typography.headline2,
-    color: colors.gray7,
   },
   heroDate: {
     position: 'absolute',

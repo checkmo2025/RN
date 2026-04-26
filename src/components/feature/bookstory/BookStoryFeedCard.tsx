@@ -2,7 +2,6 @@ import React from 'react';
 import {
   Image,
   ImageBackground,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -10,6 +9,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../../theme';
+import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../../common/DefaultProfileAvatar';
 
 type Props = {

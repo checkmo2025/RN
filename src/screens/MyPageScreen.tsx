@@ -4,7 +4,6 @@ import {
   Animated,
   Easing,
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,6 +29,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import { termsDocumentOrder, termsDocuments } from '../constants/termsDocuments';
 import { colors, radius, spacing, typography, scaleSize } from '../theme';
+import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { useAuthGate } from '../contexts/AuthGateContext';
@@ -402,7 +402,7 @@ export function MyPageScreen() {
   const [alarms, setAlarms] = useState<AlarmItem[]>([]);
   const [myNews, setMyNews] = useState<MyNewsItem[]>([]);
   const [groups, setGroups] = useState<GroupItem[]>([]);
-  const [profileName, setProfileName] = useState('_hy_0716');
+  const [profileName, setProfileName] = useState('user_id');
   const [profileDesc, setProfileDesc] = useState(
     '이제 다양한 책을 함께 읽고 서로의 생각을 나누는 특별한 시간을 시작해보세요. 한 권의 책이 주는 작은 울림이 ......',
   );
@@ -569,7 +569,7 @@ export function MyPageScreen() {
       setAlarms([]);
       setMyNews([]);
       setGroups(fallbackGroups);
-      setProfileName('_hy_0716');
+      setProfileName('user_id');
       setProfileDesc(
         '이제 다양한 책을 함께 읽고 서로의 생각을 나누는 특별한 시간을 시작해보세요. 한 권의 책이 주는 작은 울림이 ......',
       );
@@ -2070,10 +2070,12 @@ export function MyPageScreen() {
             <Pressable
               style={styles.defaultAvatarModalOverlay}
               onPress={() => setShowDefaultAvatarPicker(false)}
+              disableFeedback
             >
               <Pressable
                 style={styles.defaultAvatarModalCard}
                 onPress={(event) => event.stopPropagation()}
+                disableFeedback
               >
                 <Text style={styles.defaultAvatarModalTitle}>원하시는 색상을 선택해주세요.</Text>
                 <View style={styles.defaultAvatarGrid}>
@@ -2684,7 +2686,11 @@ export function MyPageScreen() {
           animationType="fade"
           onRequestClose={() => setGroupMenu(null)}
         >
-          <Pressable style={styles.groupMenuBackdrop} onPress={() => setGroupMenu(null)}>
+          <Pressable
+            style={styles.groupMenuBackdrop}
+            onPress={() => setGroupMenu(null)}
+            disableFeedback
+          >
             {groupMenu ? (
               <Pressable
                 style={[
@@ -2692,6 +2698,7 @@ export function MyPageScreen() {
                   getMenuPosition(groupMenu.pageX, groupMenu.pageY, screenWidth, screenHeight),
                 ]}
                 onPress={(event) => event.stopPropagation()}
+                disableFeedback
               >
                 <Pressable
                   style={styles.groupMenuItem}

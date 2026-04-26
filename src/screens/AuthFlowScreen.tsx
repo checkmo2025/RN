@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { termsDocuments, type TermsAgreementKey } from '../constants/termsDocuments';
 import { colors, radius, spacing, typography } from '../theme';
+import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import {
   checkNicknameDuplicate,
   confirmEmailVerification,
@@ -767,10 +767,15 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           animationType="fade"
           onRequestClose={closeTermsModal}
         >
-          <Pressable style={styles.termsModalOverlay} onPress={closeTermsModal}>
+          <Pressable
+            style={styles.termsModalOverlay}
+            onPress={closeTermsModal}
+            disableFeedback
+          >
             <Pressable
               style={styles.termsModalCard}
               onPress={(event) => event.stopPropagation()}
+              disableFeedback
             >
               <View style={styles.termsModalHeader}>
                 <Text style={styles.termsModalTitle}>
@@ -1223,10 +1228,12 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           <Pressable
             style={styles.profileColorModalOverlay}
             onPress={() => setShowProfileColorModal(false)}
+            disableFeedback
           >
             <Pressable
               style={styles.profileColorModalCard}
               onPress={(event) => event.stopPropagation()}
+              disableFeedback
             >
               <Text style={styles.profileColorModalTitle}>원하시는 색상을 선택해주세요.</Text>
               <View style={styles.profileColorGrid}>

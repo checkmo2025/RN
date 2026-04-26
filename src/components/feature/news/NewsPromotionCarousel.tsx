@@ -1,17 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ImageBackground,
-  Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from 'react-native';
-import type { ImageStyle, StyleProp } from 'react-native';
 
 import { colors, radius, scaleSize, spacing, typography } from '../../../theme';
+import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
+import { LeftFocalCoverImage } from '../../common/LeftFocalCoverImage';
 
 export type NewsPromotionCarouselItem = {
   id: string;
@@ -26,11 +24,6 @@ type Props = {
   onPressItem?: (index: number) => void;
   autoPlayIntervalMs?: number;
 };
-
-const leftFocalImageStyle: StyleProp<ImageStyle> =
-  Platform.OS === 'web'
-    ? ({ objectPosition: 'left center' } as unknown as ImageStyle)
-    : undefined;
 
 export function NewsPromotionCarousel({
   items,
@@ -108,11 +101,10 @@ export function NewsPromotionCarousel({
             onPress={() => onPressItem?.(index)}
             disabled={!onPressItem}
           >
-            <ImageBackground
-              source={item.imageUri ? { uri: item.imageUri } : undefined}
+            <LeftFocalCoverImage
+              uri={item.imageUri}
               style={styles.promoCard}
-              imageStyle={[styles.promoImage, leftFocalImageStyle]}
-              accessible
+              imageStyle={styles.promoImage}
               accessibilityLabel={`${item.title} 프로모션`}
             >
               <View style={styles.promoGradient} />
@@ -120,7 +112,7 @@ export function NewsPromotionCarousel({
                 <Text style={styles.promoTitle}>{item.title}</Text>
                 <Text style={styles.promoDesc}>{item.description}</Text>
               </View>
-            </ImageBackground>
+            </LeftFocalCoverImage>
           </Pressable>
         ))}
       </ScrollView>

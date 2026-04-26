@@ -4,7 +4,6 @@ import {
   Image,
   PanResponder,
   type PanResponderGestureState,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -24,6 +23,7 @@ import { SvgUri } from 'react-native-svg';
 
 import { colors, radius, spacing, typography } from '../theme';
 import { navigateToHome } from '../navigation/navigateToHome';
+import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';

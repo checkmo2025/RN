@@ -1,8 +1,9 @@
 import React from 'react';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing, typography } from '../../../theme';
+import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 import { MyGroupsDropdownCard } from '../groups/MyGroupsDropdownCard';
 import SubscribeUserItem from '../member/SubscribeUserItem';
 

@@ -13,7 +13,6 @@ import {
   Image,
   Linking,
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,6 +25,7 @@ import { SvgUri } from 'react-native-svg';
 
 import { PUBLIC_ENV } from '../../constants/publicEnv';
 import { colors, radius, scaleSize, spacing, typography } from '../../theme';
+import { FeedbackPressable as Pressable } from './FeedbackPressable';
 import { IconButton, IconName } from './IconButton';
 import { useAuthGate } from '../../contexts/AuthGateContext';
 import { navigateToHome, navigateToMyAlarms } from '../../navigation/navigateToHome';
@@ -698,11 +698,13 @@ export function AppHeader(props: Props) {
         <Pressable
           style={styles.notiBackdrop}
           onPress={() => setShowNoti(false)}
+          disableFeedback
         >
           <View style={[styles.notiPositioner, { paddingTop: top + HEADER_HEIGHT }]}>
             <Pressable
               style={[styles.notiCard, { width: notiCardWidth }]}
               onPress={(event) => event.stopPropagation()}
+              disableFeedback
             >
               {notificationPreviewLoading ? (
                 <Text style={styles.notiEmptyText}>알림을 불러오는 중...</Text>
@@ -761,10 +763,12 @@ export function AppHeader(props: Props) {
             }
             closeSearchDropdown();
           }}
+          disableFeedback
         >
           <Pressable
             style={{ marginTop: top + HEADER_HEIGHT }}
             onPress={(event) => event.stopPropagation()}
+            disableFeedback
           >
             <Animated.View
               style={[

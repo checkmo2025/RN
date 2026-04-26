@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   Image,
   Modal,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -11,6 +10,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../theme';
+import { FeedbackPressable as Pressable } from './FeedbackPressable';
 import type { MemberReportType } from '../../services/api/memberApi';
 
 export type ReportMemberModalState = {
@@ -78,9 +78,13 @@ export function ReportMemberModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose} disableFeedback>
         {target ? (
-          <Pressable style={styles.card} onPress={(event) => event.stopPropagation()}>
+          <Pressable
+            style={styles.card}
+            onPress={(event) => event.stopPropagation()}
+            disableFeedback
+          >
             <View style={styles.header}>
               <Text style={styles.title}>신고하기</Text>
               <Pressable style={styles.closeButton} onPress={onClose}>

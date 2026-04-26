@@ -8,6 +8,10 @@ export const PUBLIC_ENV = {
     process.env.EXPO_PUBLIC_API_BASE_URL,
     'https://api.checkmo.co.kr/api',
   ),
+  WS_BASE_URL: readPublicEnv(
+    process.env.EXPO_PUBLIC_WS_BASE_URL,
+    'wss://api.checkmo.co.kr/ws-stomp',
+  ),
   WEB_BASE_URL: readPublicEnv(
     process.env.EXPO_PUBLIC_WEB_BASE_URL,
     'https://checkmo.co.kr',
