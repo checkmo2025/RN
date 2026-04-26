@@ -917,6 +917,16 @@ export function StoryScreen() {
     setReportModal(null);
   }, [submittingReport]);
 
+  const handlePressReportTarget = useCallback(
+    (nickname: string) => {
+      const targetNickname = nickname.trim();
+      if (!targetNickname || submittingReport) return;
+      setReportModal(null);
+      openUserProfile(targetNickname);
+    },
+    [openUserProfile, submittingReport],
+  );
+
   const submitReport = useCallback((payload: { reportType: MemberReportType; content?: string }) => {
     if (!reportModal?.nickname) return;
     const content = payload.content?.trim() ?? '';
@@ -1612,14 +1622,6 @@ export function StoryScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.detailMetaRow}>
-            <Text style={styles.detailMetaText}>{selectedStory.timeAgo}</Text>
-            <Text style={styles.detailMetaDot}>·</Text>
-            <Text style={styles.detailMetaText}>
-              조회수 {selectedStory.views}
-            </Text>
-          </View>
-
           <View style={styles.detailHeader}>
             <Pressable
               style={({ pressed }) => [styles.detailAuthorPressable, pressed && styles.pressed]}
@@ -1670,6 +1672,14 @@ export function StoryScreen() {
                 />
               </Pressable>
             </View>
+          </View>
+
+          <View style={styles.detailMetaRow}>
+            <Text style={styles.detailMetaText}>{selectedStory.timeAgo}</Text>
+            <Text style={styles.detailMetaDot}>·</Text>
+            <Text style={styles.detailMetaText}>
+              조회수 {selectedStory.views}
+            </Text>
           </View>
 
           {book && (
@@ -1974,6 +1984,7 @@ export function StoryScreen() {
           visible={Boolean(reportModal)}
           target={reportModal}
           submitting={submittingReport}
+          onPressTarget={handlePressReportTarget}
           onClose={closeReportModal}
           onSubmit={submitReport}
         />
@@ -2750,6 +2761,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+    marginTop: 2,
   },
   detailMetaText: {
     ...typography.body2_3,

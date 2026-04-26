@@ -1,0 +1,368 @@
+# checkmo_rn 기능명세서 (코드 기준)
+
+- 작성일: 2026-04-25
+- 기준 코드: `src/screens/*`, `src/components/common/AppHeader.tsx`, `src/services/api/*`
+- 목적: 현재 앱에 구현된 기능의 동작/권한/API 연동 범위를 정리
+
+## 1) 공통 정책
+
+### 1.1 로그인 게이트
+
+- 공통 인증 게이트: `AuthGateContext.requireAuth()`
+- 비로그인 시 동작: 인증 플로우(`AuthFlowScreen`)를 오버레이로 표시
+- 로그인 완료 시: 로그인 전 요청한 콜백 액션 재실행(pending action)
+
+### 1.2 홈 권한 정책 (`homeAccessPolicy`)
+
+| 접근자 | 소식 조회 | 추천 사용자 | 구독/좋아요 액션 | 책이야기 조회 | 앱 내 소식 관리 |
+|---|---|---|---|---|---|
+| `GUEST` | 가능 | 비활성 | 로그인 유도 | 가능 | 불가 |
+| `MEMBER` | 가능 | 가능 | 가능 | 가능 | 불가 |
+| `ADMIN_WEB` | 가능 | 가능 | 가능 | 가능 | 불가(앱) |
+
+### 1.3 공통 UX
+
+- 주요 액션 후 Toast 피드백 제공
+- 일부 토글 액션은 낙관적 업데이트 후 실패 시 롤백
+- 스크롤 화면 대부분 Pull-to-refresh 지원
+- 여러 상세 화면에서 스와이프 백 제스처 제공(Story/News/UserProfile)
+
+## 2) 인증/계정
+
+### 2.1 로그인 (`AUTH-01`)
+
+- 입력: 아이디(이메일/닉네임), 비밀번호
+- 검증: 공백 체크
+- 처리: `loginByIdentifier`
+- 결과: 성공 시 인증 완료 처리(`completeAuthFlow`), 실패 시 오류 토스트
+
+### 2.2 회원가입 (`AUTH-02`)
+
+- 단계:
+  - 약관 동의
+  - 이메일 인증번호 발송/검증
+  - 비밀번호 설정(6~12자, 영문/특수문자 조건)
+  - 기본 정보(닉네임 중복 확인, 이름, 전화번호, 소개)
+  - 추가 정보(프로필 이미지/기본 색상, 관심 카테고리)
+  - 완료
+- 주요 API:
+  - `requestEmailVerification`, `confirmEmailVerification`
+  - `checkNicknameDuplicate`
+  - `signUpByEmail` -> `loginByIdentifier` -> `submitAdditionalInfo`
+  - 이미지 업로드 시 `issueProfileImageUploadUrl` + presigned `PUT`
+
+### 2.3 아이디/비밀번호 찾기 (`AUTH-03`)
+
+- 아이디 찾기: `findEmailByNamePhone`
+- 임시 비밀번호 발급: `sendTemporaryPassword`
+
+### 2.4 세션 동기화/로그아웃 (`AUTH-04`)
+
+- 앱 부팅 후 로그인 상태 확인: `fetchLoginStatusSilently`
+- 로그아웃: `logoutSession` + 로컬 인증 상태 초기화
+
+## 3) Home (책모 홈)
+
+### 3.1 소식 캐러셀 (`HOME-01`)
+
+- 로드: `fetchNewsCarousel(5)`, 실패 시 폴백 카드
+- 클릭: `News` 탭으로 이동(`openNewsId` 파라미터 가능)
+
+### 3.2 사용자 추천 (`HOME-02`)
+
+- 로그인 사용자만 노출
+- 로드: `fetchRecommendedMembers` (+ 각 사용자 `fetchMemberProfile`로 구독 상태 보강)
+- 구독 토글: `setFollowingMember`
+
+### 3.3 책이야기 피드 (`HOME-03`)
+
+- 로드:
+  - 비로그인 첫 로드: `fetchGuestAllBookStories`
+  - 그 외: `fetchBookStories('ALL', cursor)`
+- 무한 스크롤: 커서 기반 `hasNext/nextCursor`
+- 카드 액션:
+  - 좋아요: `toggleBookStoryLike`
+  - 작성자 구독: `setFollowingMember`
+  - 상세 이동: `Story` (`openStoryId`)
+  - 댓글 이동: `Story` (`openStoryId`, `openStoryFocus: 'comments'`)
+
+## 4) Meeting (모임)
+
+### 4.1 모임 탐색/검색 (`MTG-01`)
+
+- 내 모임: 로그인 시 `fetchMyClubs`
+- 추천/검색:
+  - 기본: `fetchRecommendedClubs`
+  - 검색/필터 적용 시: `searchClubs`
+- 필터:
+  - 입력 필터: `NAME`/`REGION`
+  - 출력 필터: `ALL`, `STUDENT`, `WORKER`, `ONLINE`, `CLUB`, `MEETING`, `OFFLINE`
+
+### 4.2 모임 가입 신청 (`MTG-02`)
+
+- 조건: 로그인 필요
+- 입력: 신청 사유
+- 처리: `joinClub(clubId, joinMessage)`
+
+### 4.3 모임 생성 플로우 (`MTG-03`)
+
+- 4단계 입력:
+  - 이름/소개(이름 중복 확인 `checkClubNameDuplicate`)
+  - 프로필 이미지/공개여부
+  - 카테고리/지역/대상
+  - 외부 링크(선택)
+- 생성: `createClub`
+- 이미지 업로드: `pickAndUploadImage('CLUB')` -> `issueImageUploadUrl`
+
+### 4.4 모임 홈 탭 (`MTG-04`)
+
+- 로드: `fetchClubHome`
+- 표시: 기본 정보, 공지 요약, 이번 모임 바로가기, 문의하기
+- 이번 모임 바로가기:
+  - `fetchClubNextMeetingRedirect`
+  - 대응 책장 열기(`fetchClubBookshelfDetail` 포함)
+
+### 4.5 공지사항 조회/상세 (`MTG-05`)
+
+- 목록: `fetchClubNotices` (+ pinned/normal 병합)
+- 최신 공지: `fetchClubLatestNotice`
+- 상세: `fetchClubNoticeDetail`
+- 댓글:
+  - 조회/페이지네이션: `fetchClubNoticeComments`
+  - 등록: `createClubNoticeComment`
+  - 수정: `updateClubNoticeComment`
+  - 삭제: `deleteClubNoticeComment`
+- 신고: 댓글/작성자 신고는 `reportMember` (공지 자체 신고는 "준비 중" 토스트)
+
+### 4.6 공지 투표 (`MTG-06`)
+
+- 옵션 선택: 단일/중복 규칙 반영
+- 익명 투표일 때 투표자 목록 비공개
+- 제출: `submitClubNoticeVote`
+- 제출 후 상세 재조회로 결과 동기화
+
+### 4.7 공지 작성/수정/삭제 (운영진) (`MTG-07`)
+
+- 작성/수정: `createClubNotice`, `updateClubNotice`
+- 삭제: `deleteClubNotice`
+- 첨부:
+  - 책장 연결
+  - 투표(옵션, 익명/실명, 중복 허용, 시작/종료 시간)
+  - 사진(최대 10개)
+
+### 4.8 책장 조회 (`MTG-08`)
+
+- 목록: `fetchClubBookshelves`
+- 상세: `fetchClubBookshelfDetail`
+- 기수(session) 필터로 GRID 표시
+- 상세 탭:
+  - 발제(TOPIC)
+  - 한줄평(REVIEW)
+  - 정기모임(REGULAR)
+
+### 4.9 발제/한줄평 CRUD (`MTG-09`)
+
+- 발제:
+  - 조회: `fetchClubBookshelfTopics` (cursor 기반 추가 로드)
+  - 생성/수정/삭제: `create/update/deleteClubBookshelfTopic`
+- 한줄평:
+  - 조회: `fetchClubBookshelfReviews`
+  - 생성/수정/삭제: `create/update/deleteClubBookshelfReview`
+- 작성 모달에서 발제/한줄평 공용 입력, 한줄평은 별점 입력 포함
+
+### 4.10 정기모임/조 기능 (`MTG-10`)
+
+- 정기모임 정보: `fetchClubMeeting`
+- 조별 참여자: `fetchClubMeetingMembers`
+- 조별 발제: `fetchClubMeetingTeamTopics`
+- 조별 채팅:
+  - 조회: `fetchClubMeetingTeamChatMessages`
+  - 전송: `sendClubMeetingTeamChatMessage`
+- UI 기능:
+  - 조 진입/참여자 펼침
+  - 조 발제 완료 토글/정렬
+  - 채팅 조 선택 -> 채팅방
+
+### 4.11 조 편성 관리 (운영진) (`MTG-11`)
+
+- 진입: REGULAR 탭의 "조 관리하기"
+- 기능:
+  - 멤버 드래그&드롭 배정
+  - 조 추가/삭제(최대 10조, 최소 1조)
+  - 미배정 그룹 이동
+- 저장: `manageClubMeetingTeams`
+
+### 4.12 운영진 관리 메뉴 (`MTG-12`)
+
+- 가입 신청 관리:
+  - 승인/거절: `updateClubMemberStatus(APPROVE/REJECT)`
+- 회원 관리:
+  - 역할 변경: `CHANGE_ROLE`, `TRANSFER_OWNER`
+  - 회원 제외: `KICK`
+- 모임 수정:
+  - `updateClub` (+ 필요 시 `fetchClubDetail` 재조회)
+- 책장 생성/수정/삭제:
+  - `createClubBookshelf`, `updateClubBookshelf`, `deleteClubBookshelf`
+- 모임 삭제:
+  - `deleteClub`
+
+## 5) Story (책 이야기)
+
+### 5.1 피드 조회 (`STORY-01`)
+
+- 탭:
+  - `ALL`
+  - `FOLLOWING` (로그인)
+  - `CLUB-*` (내 모임별, 로그인)
+- API:
+  - 기본: `fetchBookStories`
+  - 비로그인 최초 전체: `fetchGuestAllBookStories`
+  - 모임별: `fetchClubBookStories`
+- 추천 사용자 카드 삽입: 로그인 시 일정 간격으로 표시
+
+### 5.2 글 작성/수정 (`STORY-02`)
+
+- 작성:
+  - 책 선택(검색 `searchBooks`)
+  - 제목/본문 입력
+  - 등록 `createBookStory`
+- 수정:
+  - 기존 글 불러와 편집
+  - 수정 `updateBookStory`
+- 삭제: `deleteBookStory`
+
+### 5.3 상세/상호작용 (`STORY-03`)
+
+- 상세 조회: `fetchBookStoryDetail`
+- 좋아요: `toggleBookStoryLike` (낙관적 업데이트)
+- 작성자 구독: `setFollowingMember`
+- 공유: 웹 URL 클립보드 복사
+- 신고: `reportMember`
+
+### 5.4 댓글/대댓글 (`STORY-04`)
+
+- 댓글 작성: `createBookStoryComment`
+- 댓글 수정: `updateBookStoryComment`
+- 댓글 삭제: `deleteBookStoryComment`
+- 대댓글: 부모 댓글 ID 지정해서 작성
+- 실패 시 낙관적 렌더 롤백
+
+### 5.5 라우트 연동 (`STORY-05`)
+
+- `openCompose` + `composeBook`: 작성 화면 즉시 오픈
+- `openStoryId`: 특정 글 상세 오픈
+- `openStoryFocus='comments'`: 상세 진입 후 댓글 섹션 포커스
+
+## 6) News (소식)
+
+### 6.1 목록/캐러셀 (`NEWS-01`)
+
+- 캐러셀: `fetchNewsCarousel`
+- 목록: `fetchNewsList`
+- 추천 책 카드: `fetchRecommendedBooks`
+
+### 6.2 상세 (`NEWS-02`)
+
+- 진입:
+  - 목록/캐러셀 클릭
+  - 라우트 파라미터 `openNewsId`
+- 상세 API: `fetchNewsDetail`
+- 원문 링크 열기 지원
+
+### 6.3 문의 (`NEWS-03`)
+
+- FAB 클릭 시 `SUPPORT_FORM_URL` 오픈
+
+## 7) MyPage (마이페이지)
+
+### 7.1 메인 데이터 로드 (`MY-01`)
+
+- 로그인:
+  - 프로필 `fetchMyProfile`
+  - 팔로우 `fetchMyFollowCount`, `fetchMyFollowers`, `fetchMyFollowing`
+  - 내 책이야기 `fetchMyBookStories`
+  - 내 서재 `fetchAllMyLikedBooks`
+  - 내 모임 `fetchMyClubs`
+- 비로그인:
+  - 폴백 프로필/목록 데이터 표시
+
+### 7.2 탭 기능 (`MY-02`)
+
+- 내 책 이야기: 목록 -> `Story openStoryId`
+- 내 서재: 좋아요 토글 `toggleBookLikeByIsbn`
+- 내 모임: 그룹 진입 `Meeting openClubId`, 탈퇴 `leaveClub`
+- 내 알림:
+  - 목록 `fetchNotifications`
+  - 읽음 처리 `markNotificationAsRead`
+  - 대상 화면 이동 `resolveNotificationTarget`
+
+### 7.3 팔로우 페이지 (`MY-03`)
+
+- 구독자/구독중 목록 조회
+- 구독중 토글 `setFollowingMember`
+- 구독자 삭제 `deleteFollowerMember`
+
+### 7.4 설정 > 계정 (`MY-04`)
+
+- 프로필 편집:
+  - 소개/카테고리/프로필 이미지
+  - `updateMyProfile`
+  - 이미지 업로드 `issueProfileImageUploadUrl` + presigned `PUT`
+- 이메일 변경: `updateMyEmail`
+- 비밀번호 변경: `updateMyPassword`
+- 탈퇴: `withdrawMember`
+- 로그아웃: `logoutSession` + 로컬 게이트 로그아웃
+
+### 7.5 설정 > 서비스/기타 (`MY-05`)
+
+- 내 소식 관리: `fetchMyNewsList`
+- 신고 관리: `fetchMyReports`
+- 알림 관리:
+  - 조회 `fetchNotificationSettings`
+  - 토글 `toggleNotificationSetting`
+- 고객센터/문의하기: `SUPPORT_FORM_URL`
+- 이용약관/버전정보: 앱 내 정적 표시
+
+## 8) UserProfile (다른사람 프로필)
+
+### 8.1 프로필 조회 (`UP-01`)
+
+- 기본 프로필: `fetchMemberProfile`
+- 작성 책이야기: `fetchMemberBookStories`
+- 공개 서재: `fetchAllMemberLikedBooks`
+- 공개 모임: `fetchMemberClubs`
+
+### 8.2 팔로우/신고 (`UP-02`)
+
+- 구독 토글: `setFollowingMember`
+- 신고: `reportMember`
+
+### 8.3 팔로우 페이지 (`UP-03`)
+
+- 구독자/구독중 목록: `fetchMemberFollowers`, `fetchMemberFollowings`
+- 리스트 내 구독 토글: `setFollowingMember`
+
+## 9) 공통 헤더 기능
+
+### 9.1 알림 프리뷰 (`HDR-01`)
+
+- 조회: `fetchNotificationPreview(5)`
+- 클릭:
+  - 읽음 처리 `markNotificationAsRead`
+  - 라우팅 `resolveNotificationTarget` (`Story`/`Meeting`/`My`)
+
+### 9.2 책 검색 (`HDR-02`)
+
+- 검색: `searchBooks`
+- 도서 상세 보강: `fetchBookDetail`
+- 해당 도서 책이야기: `fetchBookStoriesByBook`
+- 도서 좋아요: `toggleBookLike` (`bookLikeApi`)
+- 도서 기반 글쓰기 이동: `Story openCompose + composeBook`
+
+## 10) 구현 제약/주의사항
+
+- `My` 탭은 비로그인 사용자가 직접 진입할 수 없음(탭 클릭 시 로그인 유도).
+- 공지 자체 신고는 현재 미구현(“준비 중” 토스트).
+- 마이페이지 버전 정보 텍스트는 하드코딩(`2026.01.01`).
+- 일부 비로그인 상태 화면은 실제 API 대신 폴백 데이터 표시(마이페이지).
+

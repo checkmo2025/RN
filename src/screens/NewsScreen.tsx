@@ -37,7 +37,6 @@ import {
   type NewsPromotionCarouselItem,
 } from '../components/feature/news/NewsPromotionCarousel';
 import {
-  fetchNewsCarousel,
   fetchNewsDetail,
   fetchNewsList,
   type RemoteNewsDetail,
@@ -196,19 +195,14 @@ export function NewsScreen() {
   const loadNews = useCallback(async () => {
     setLoadingNews(true);
     try {
-      const [carouselResponse, listResponse] = await Promise.all([
-        fetchNewsCarousel(5),
-        fetchNewsList(),
-      ]);
+      const listResponse = await fetchNewsList();
 
+      const promotions = listResponse.filter((item) => item.carousel === 'PROMOTION');
+      const mappedPromotions = promotions.map((item, index) => toNewsItem(item, index, 'promo'));
       const mappedList = listResponse.map((item, index) => toNewsItem(item, index, 'news'));
-      const carouselSource = carouselResponse.length > 0
-        ? carouselResponse
-        : listResponse.slice(0, 5);
-      const mappedPromotions = carouselSource.map((item, index) => toNewsItem(item, index, 'promo'));
 
       setItems(mappedList);
-      setPromotions(mappedPromotions);
+      setPromotions(mappedPromotions.length > 0 ? mappedPromotions : fallbackPromotions);
     } catch (error) {
       setPromotions(fallbackPromotions);
       if (error instanceof ApiError) return;

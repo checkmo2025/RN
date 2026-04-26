@@ -30,6 +30,7 @@ type Props = {
   visible: boolean;
   target: ReportMemberModalState | null;
   submitting?: boolean;
+  onPressTarget?: (nickname: string) => void;
   onClose: () => void;
   onSubmit: (payload: { reportType: MemberReportType; content?: string }) => void;
 };
@@ -38,6 +39,7 @@ export function ReportMemberModal({
   visible,
   target,
   submitting = false,
+  onPressTarget,
   onClose,
   onSubmit,
 }: Props) {
@@ -58,6 +60,22 @@ export function ReportMemberModal({
     });
   };
 
+  const targetCardContent = target ? (
+    <>
+      <View style={styles.avatar}>
+        {target.profileImageUrl ? (
+          <Image source={{ uri: target.profileImageUrl }} style={styles.avatarImage} />
+        ) : (
+          <MaterialIcons name="person-outline" size={22} color={colors.gray4} />
+        )}
+      </View>
+      <View style={styles.targetMeta}>
+        <Text style={styles.targetName}>{target.nickname}</Text>
+        <Text style={styles.targetSub}>신고 대상 사용자</Text>
+      </View>
+    </>
+  ) : null;
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
@@ -70,19 +88,17 @@ export function ReportMemberModal({
               </Pressable>
             </View>
 
-            <View style={styles.targetCard}>
-              <View style={styles.avatar}>
-                {target.profileImageUrl ? (
-                  <Image source={{ uri: target.profileImageUrl }} style={styles.avatarImage} />
-                ) : (
-                  <MaterialIcons name="person-outline" size={22} color={colors.gray4} />
-                )}
-              </View>
-              <View style={styles.targetMeta}>
-                <Text style={styles.targetName}>{target.nickname}</Text>
-                <Text style={styles.targetSub}>신고 대상 사용자</Text>
-              </View>
-            </View>
+            {onPressTarget ? (
+              <Pressable
+                style={({ pressed }) => [styles.targetCard, pressed ? styles.targetCardPressed : null]}
+                onPress={() => onPressTarget(target.nickname)}
+                disabled={submitting}
+              >
+                {targetCardContent}
+              </Pressable>
+            ) : (
+              <View style={styles.targetCard}>{targetCardContent}</View>
+            )}
 
             <Text style={styles.label}>종류</Text>
             <View style={styles.typeRow}>
@@ -167,6 +183,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.xs,
+  },
+  targetCardPressed: {
+    opacity: 0.72,
   },
   avatar: {
     width: 40,

@@ -31,7 +31,7 @@ import {
   fetchRecommendedMembers,
   setFollowingMember,
 } from '../services/api/memberApi';
-import { fetchNewsCarousel } from '../services/api/newsApi';
+import { fetchNewsList } from '../services/api/newsApi';
 import { ApiError } from '../services/api/http';
 import { toKstTimeAgoLabel } from '../utils/date';
 import { triggerSelectionHaptic } from '../utils/haptics';
@@ -195,13 +195,14 @@ export function HomeScreen() {
 
   const loadPromotions = useCallback(async () => {
     try {
-      const news = await fetchNewsCarousel(5);
-      if (news.length === 0) {
+      const news = await fetchNewsList();
+      const promotions = news.filter((item) => item.carousel === 'PROMOTION');
+      if (promotions.length === 0) {
         setPromotions(defaultPromotions);
         return;
       }
       setPromotions(
-        news.map((item, index) => ({
+        promotions.map((item, index) => ({
           id: `news-promo-${item.id}`,
           newsId: item.id,
           title: item.title,

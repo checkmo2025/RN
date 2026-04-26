@@ -21,6 +21,8 @@ type NewsListResult = {
 type NewsListResponse = ApiEnvelope<NewsListResult | unknown[]>;
 type NewsDetailResponse = ApiEnvelope<unknown>;
 
+export type NewsCarouselType = 'PROMOTION' | 'GENERAL';
+
 export type RemoteNewsSummary = {
   id: number;
   title: string;
@@ -28,6 +30,7 @@ export type RemoteNewsSummary = {
   thumbnailUrl?: string;
   date?: string;
   originalLink?: string;
+  carousel?: NewsCarouselType;
 };
 
 export type RemoteNewsDetail = RemoteNewsSummary & {
@@ -166,6 +169,10 @@ function normalizeNewsSummary(raw: unknown): RemoteNewsSummary | null {
     toStringValue(firstDefined(record.summary, record.excerpt, record.description, record.content)) ??
     '';
 
+  const carouselRaw = toStringValue(record.carousel);
+  const carousel: NewsCarouselType | undefined =
+    carouselRaw === 'PROMOTION' || carouselRaw === 'GENERAL' ? carouselRaw : undefined;
+
   return {
     id,
     title,
@@ -173,6 +180,7 @@ function normalizeNewsSummary(raw: unknown): RemoteNewsSummary | null {
     thumbnailUrl: toStringValue(firstDefined(record.thumbnailUrl, record.thumbUrl, record.imageUrl)),
     date: toStringValue(firstDefined(record.publishStartAt, record.createdAt, record.date)),
     originalLink: toStringValue(firstDefined(record.originalLink, record.link)),
+    carousel,
   };
 }
 
@@ -252,7 +260,7 @@ export async function fetchNewsDetail(newsId: number): Promise<RemoteNewsDetail 
   return normalizeNewsDetail(result);
 }
 
-export async function fetchNewsCarousel(limit = 5): Promise<RemoteNewsSummary[]> {
+export async function fetchNewsCarousel(): Promise<RemoteNewsSummary[]> {
   const list = await fetchNewsList();
-  return list.slice(0, limit);
+  return list.filter((item) => item.carousel === 'PROMOTION');
 }

@@ -5706,8 +5706,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         bookshelfMeetingDetailRequestIdRef.current[meetingId] !== requestId;
 
       try {
-        // Phase 1: 모든 기본 데이터 + fetchClubMeeting 동시 요청
-        const [topicPage, reviews, detail, editDetail, meetingPhase1] = await Promise.all([
+        // Phase 1: topics/reviews/detail을 병렬로 먼저 요청
+        const [topicPage, reviews, detail, editDetail] = await Promise.all([
           fetchClubBookshelfTopics(clubId, meetingId, undefined, {
             suppressErrorToast: options?.suppressErrorToast,
           }),
@@ -5722,11 +5722,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 () => null,
               )
             : Promise.resolve(null),
-          fetchClubMeeting(clubId, meetingId, { suppressErrorToast: true }).catch(() => null),
         ]);
 
         // editDetail (staff-only endpoint) has title/meetingTime/location; regular detail does not.
         const richDetail = editDetail ?? detail;
+        // detail.meetingId = 정기모임 ID (meeting API에서 사용), meetingId = 책장 ID
         const regularMeetingId = detail?.meetingId ?? meetingId;
 
         if (isStale()) return;
@@ -5768,28 +5768,14 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           );
         }
 
-        // Phase 1 완료: 제목/날짜/장소만 즉시 렌더링 (groups는 빈 배열)
-        const summaryCandidateMeeting =
-          meetingPhase1 ??
-          (richDetail
-            ? ({
-                meetingId: regularMeetingId,
-                title: richDetail.title,
-                meetingTime: richDetail.meetingTime,
-                location: richDetail.location,
-                teams: [],
-                members: [],
-                isStaff: canManageClub,
-              } as ClubMeetingInfo)
-            : null);
-
-        if (summaryCandidateMeeting) {
+        // Phase 1 완료: richDetail로 제목/날짜/장소 즉시 렌더링 (groups는 빈 배열)
+        if (richDetail) {
           const summaryInfo = ensureRegularMeetingInfo(
             {
               id: `${book.id}-regular`,
-              name: summaryCandidateMeeting.title?.trim() || `${book.title} 정기모임`,
-              date: formatDotDate(summaryCandidateMeeting.meetingTime),
-              location: summaryCandidateMeeting.location?.trim() || '장소 미정',
+              name: richDetail.title?.trim() || `${book.title} 정기모임`,
+              date: formatDotDate(richDetail.meetingTime),
+              location: richDetail.location?.trim() || '장소 미정',
               groups: [],
             },
             book,
@@ -5803,24 +5789,19 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
         if (isStale()) return;
 
-        // Phase 2: regularMeetingId가 meetingId와 다르면 올바른 meeting 재요청,
-        //          같으면 Phase 1 결과 재사용
-        let meeting: ClubMeetingInfo | null = meetingPhase1;
-        let meetingFetchSucceeded = meetingPhase1 !== null;
+        // Phase 2: 올바른 정기모임 ID로 meeting 요청
+        let meeting: ClubMeetingInfo | null = null;
+        let meetingFetchSucceeded = false;
 
-        if (regularMeetingId !== meetingId) {
-          meeting = null;
-          meetingFetchSucceeded = false;
-          try {
-            meeting = await fetchClubMeeting(clubId, regularMeetingId, {
-              suppressErrorToast: options?.suppressErrorToast,
-            });
-            meetingFetchSucceeded = true;
-          } catch (error) {
-            if (error instanceof ApiError && error.status === 401) throw error;
-            if (!(error instanceof ApiError) && !options?.suppressErrorToast) {
-              showToast('정기모임 정보를 불러오지 못했습니다.');
-            }
+        try {
+          meeting = await fetchClubMeeting(clubId, regularMeetingId, {
+            suppressErrorToast: options?.suppressErrorToast,
+          });
+          meetingFetchSucceeded = true;
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 401) throw error;
+          if (!(error instanceof ApiError) && !options?.suppressErrorToast) {
+            showToast('정기모임 정보를 불러오지 못했습니다.');
           }
         }
 
@@ -6631,6 +6612,16 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     if (submittingReport) return;
     setReportModal(null);
   }, [submittingReport]);
+
+  const handlePressReportTarget = useCallback(
+    (nickname: string) => {
+      const targetNickname = nickname.trim();
+      if (!targetNickname || submittingReport) return;
+      setReportModal(null);
+      navigation.navigate('UserProfile', { memberNickname: targetNickname, fromScreen: 'Meeting' });
+    },
+    [navigation, submittingReport],
+  );
 
   const handleSubmitReport = useCallback(
     (payload: { reportType: MemberReportType; content?: string }) => {
@@ -11265,6 +11256,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         visible={Boolean(reportModal)}
         target={reportModal}
         submitting={submittingReport}
+        onPressTarget={handlePressReportTarget}
         onClose={handleCloseReportModal}
         onSubmit={handleSubmitReport}
       />

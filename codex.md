@@ -149,6 +149,59 @@
 
 ---
 
+## 업데이트 (2026-04-26)
+
+- 수정 시각: `2026-04-26 KST`
+
+### 모임 화면 (MeetingScreen)
+- 공지사항 새로고침 시 상세보기 유지
+  - `setSelectedNoticeId` functional updater로 변경 → 재조회 후 해당 공지가 목록에 있으면 상세 유지
+- 투표 기한 만료 처리
+  - `NoticePoll` 타입에 `endsAtMillis` 필드 추가
+  - 기한이 지난 투표의 버튼을 `투표종료`로 변경 및 비활성화
+  - 투표 옵션 선택·제출 시 만료 여부 사전 체크
+- 공지사항 사진 전체화면 뷰어
+  - 사진 그리드 셀을 `Pressable`로 변경
+  - `FlatList(horizontal, pagingEnabled)` 기반 포토 뷰어 모달 추가
+  - 상단 `{현재}/{전체}` 카운터 및 X 닫기 버튼 포함
+- 공지사항 댓글 프로필 클릭 → `UserProfile` 화면 이동
+  - 아바타·닉네임 `View`/`Text` → `Pressable`로 교체
+- 정기모임 2-Phase 렌더링으로 로딩 병목 개선
+  - Phase 1: topics/reviews/detail/editDetail/fetchClubMeeting 전부 병렬 → 완료 즉시 제목/날짜/장소 표시 (groups: [])
+  - Phase 2: 팀별 topics+chats 병렬 조회 후 최종 groups 업데이트
+  - 데이터 로딩 중 "불러오는 중..." 인디케이터 표시
+- ⋮ 메뉴 본인/타인 분기
+  - 본인 작성: `수정하기` / `삭제하기`
+  - 타인 작성: `신고하기` (ReportMemberModal 연동)
+  - 이전에 본인 글에만 표시되던 메뉴 버튼을 전체 포스트에 표시
+- 발제/한줄평 카드 간격 축소 (`spacing.sm` → `spacing.xs`)
+- 책장 상세 더미 설명 텍스트 제거 (하드코딩된 문자열 삭제)
+
+### 내비게이션
+- `SimpleStackNavigator`에 좌→우 엣지 스와이프 뒤로가기 제스처 추가
+  - 왼쪽 24px 영역에서 시작한 수평 스와이프만 인식 (`PanResponder` 기반)
+- `navigateToHome` 리팩터링 및 `navigateToMyAlarms` 추가
+  - `findTabsNavigator` 헬퍼로 navigator 탐색 로직 분리
+  - `navigateToMyAlarms`: Tabs > My > ALARM 탭으로 직접 이동
+
+### 알림 (AppHeader)
+- 알림 아이콘에 읽지 않은 알림 빨간 점(unreadDot) 표시
+  - 로그인 시 알림 미리보기로 읽지 않은 항목 여부 확인
+- 알림 드롭다운 하단에 `알림 전체보기` 버튼 추가 → My 탭 알림 화면으로 이동
+
+### 마이페이지 (MyPageScreen)
+- 내 서재 그리드 3-column 레이아웃 수정
+  - `bookshelfCardWidth` 계산에 `scaleSize` 적용하여 스케일링 일관성 확보
+
+## 작업 파일
+- `src/components/common/AppHeader.tsx`
+- `src/navigation/SimpleStackNavigator.tsx`
+- `src/navigation/navigateToHome.ts`
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+
+---
+
 ## 업데이트 (2026-04-25)
 
 - 수정 시각: `2026-04-25 10:47:59 KST`
@@ -156,3 +209,14 @@
 - 책 검색 상세에서 `GET /api/book-stories/search/{bookId}` 호출 시 ISBN(13자리 포함) 기반 식별자를 허용하도록 조회 키 해석 로직 수정
 - 책이야기 조회 API 함수에서 `bookId`를 문자열/숫자 모두 처리하고 경로 인코딩하도록 보강
 - 타입체크 및 Expo Doctor 점검 통과(`npm run check`)
+
+---
+
+## 업데이트 (2026-04-26)
+
+수정 시각: `2026-04-26 16:54:11 KST`
+
+- 신고 모달에서 신고 대상 사용자 클릭 시 프로필 화면 이동 동선 연결 (`src/components/common/ReportMemberModal.tsx`, `src/screens/StoryScreen.tsx`, `src/screens/MeetingScreen.tsx`)
+- 소식 프로모션 캐러셀 로딩을 `carousel=PROMOTION` 기준으로 정리 (`src/screens/HomeScreen.tsx`, `src/screens/NewsScreen.tsx`, `src/services/api/newsApi.ts`)
+- 모임 정기모임 상세 로딩 2-Phase 흐름 보정 및 관련 화면 배치 미세 조정 (`src/screens/MeetingScreen.tsx`, `src/screens/StoryScreen.tsx`)
+- 문서 초안 추가 (`docs/functional-spec.md`, `docs/ia.md`, `docs/immediate-reflection-matrix.md`, `docs/push-notification-implementation.md`)
