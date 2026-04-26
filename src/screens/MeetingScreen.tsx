@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import {
   Alert,
+  FlatList,
   Image,
   Linking,
   Modal,
@@ -14,6 +15,7 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import type {
   GestureResponderEvent,
@@ -118,6 +120,7 @@ import {
   getCurrentKstApiDateTime,
   getCurrentKstDateLabel,
   getCurrentKstYearMonth,
+  parseApiDateMillis,
   toKstApiDateTime,
 } from '../utils/date';
 import { normalizeRemoteImageUrl } from '../utils/image';
@@ -963,10 +966,13 @@ export function MeetingScreen() {
       </Pressable>
 
       {isLoggedIn && myGroups.length > 0 ? (
-        <MyGroupsDropdownCard
-          groups={myGroups}
-          onPressGroup={openGroupHome}
-        />
+        <>
+          <Text style={styles.sectionTitle}>내 독서 모임 바로가기</Text>
+          <MyGroupsDropdownCard
+            groups={myGroups}
+            onPressGroup={openGroupHome}
+          />
+        </>
       ) : null}
       {myGroupsLoading ? <Text style={styles.helperText}>내 모임 목록을 불러오는 중...</Text> : null}
       {!myGroupsLoading && isLoggedIn && myGroups.length === 0 ? (
@@ -2603,13 +2609,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.xs,
   },
-  noticeItemContent: {
-    flex: 1,
-    gap: spacing.xs / 2,
+  noticeItemPhotoCount: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 3,
+    flexShrink: 0,
   },
   noticeTagRow: {
     flexDirection: 'row',
@@ -2644,22 +2651,7 @@ const styles = StyleSheet.create({
     ...typography.body1_2,
     color: colors.gray6,
     flex: 1,
-    width: '100%',
-    textAlign: 'center',
-  },
-  noticeItemMetaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  noticeItemMetaBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gray1,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
+    textAlign: 'left',
   },
   noticeItemMetaText: {
     ...typography.body2_3,
@@ -3504,6 +3496,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: spacing.sm,
   },
+  photoViewerOverlay: {
+    flex: 1,
+    backgroundColor: 'black',
+    justifyContent: 'center',
+  },
+  photoViewerHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  photoViewerCounter: {
+    ...typography.body1_2,
+    color: colors.white,
+  },
+  photoViewerClose: {
+    padding: spacing.xs,
+  },
+  photoViewerItem: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   contactModalOverlay: {
     flex: 1,
     backgroundColor: colors.overlay30,
@@ -3829,7 +3849,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   bookshelfPostList: {
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   bookshelfPostCard: {
     borderWidth: 1,
@@ -4436,6 +4456,7 @@ type NoticePollOption = {
 type NoticePoll = {
   startsAt: string;
   endsAt: string;
+  endsAtMillis: number | null;
   allowDuplicate: boolean;
   anonymous: boolean;
   closed?: boolean;
@@ -4797,6 +4818,7 @@ function mergeNoticeDetail(
       ? {
           startsAt: formatDotDateTime(detail.voteDetail.startTime),
           endsAt: formatDotDateTime(detail.voteDetail.deadline),
+          endsAtMillis: parseApiDateMillis(detail.voteDetail.deadline) ?? null,
           allowDuplicate: detail.voteDetail.duplication,
           anonymous: detail.voteDetail.anonymity,
           options: detail.voteDetail.items.map((option) => ({
@@ -4956,6 +4978,7 @@ function ensureRegularMeetingInfo(
 function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { requireAuth, isLoggedIn, logout } = useAuthGate();
   const isManagedClub = typeof group.clubId === 'number';
   const [managedGroup, setManagedGroup] = useState<Group>(group);
@@ -5004,6 +5027,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [editingBookshelfMeetingId, setEditingBookshelfMeetingId] = useState<number | null>(null);
   const [openingNextMeeting, setOpeningNextMeeting] = useState(false);
   const [groupHomeRefreshing, setGroupHomeRefreshing] = useState(false);
+  const [loadingBookshelfDetail, setLoadingBookshelfDetail] = useState(false);
+  const [photoViewer, setPhotoViewer] = useState<{ photos: string[]; index: number } | null>(null);
   const [bookshelfComposerType, setBookshelfComposerType] = useState<'TOPIC' | 'REVIEW' | null>(null);
   const [editingBookshelfPost, setEditingBookshelfPost] = useState<BookshelfPostItem | null>(null);
   const [bookshelfComposerInput, setBookshelfComposerInput] = useState('');
@@ -5339,7 +5364,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           ...noticeList.normalNotices.map(mapNoticePreviewToNoticeItem),
         ];
         setNoticeItems(sortNoticeItems(nextNotices));
-        setSelectedNoticeId(null);
+        setSelectedNoticeId(prev =>
+          prev && nextNotices.some(n => n.id === prev) ? prev : null,
+        );
         setNoticeCommentsById({});
         setNoticePollOptionsById({});
         setSelectedVoteOptionIdsByNotice({});
@@ -5679,7 +5706,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         bookshelfMeetingDetailRequestIdRef.current[meetingId] !== requestId;
 
       try {
-        const [topicPage, reviews, detail] = await Promise.all([
+        // Phase 1: 모든 기본 데이터 + fetchClubMeeting 동시 요청
+        const [topicPage, reviews, detail, editDetail, meetingPhase1] = await Promise.all([
           fetchClubBookshelfTopics(clubId, meetingId, undefined, {
             suppressErrorToast: options?.suppressErrorToast,
           }),
@@ -5689,7 +5717,17 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           fetchClubBookshelfDetail(clubId, meetingId, {
             suppressErrorToast: options?.suppressErrorToast,
           }),
+          canManageClub
+            ? fetchClubBookshelfEditInfo(clubId, meetingId, { suppressErrorToast: true }).catch(
+                () => null,
+              )
+            : Promise.resolve(null),
+          fetchClubMeeting(clubId, meetingId, { suppressErrorToast: true }).catch(() => null),
         ]);
+
+        // editDetail (staff-only endpoint) has title/meetingTime/location; regular detail does not.
+        const richDetail = editDetail ?? detail;
+        const regularMeetingId = detail?.meetingId ?? meetingId;
 
         if (isStale()) return;
         setBookshelfTopicsByMeetingId((prev) => ({
@@ -5718,11 +5756,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     generation: detail.generation ?? item.generation,
                     session: formatGenerationLabel(detail.generation ?? item.generation),
                     category: detail.tag?.trim() || item.category,
-                    regularMeetingName: detail.title ?? item.regularMeetingName,
-                    meetingLocation: detail.location ?? item.meetingLocation,
+                    regularMeetingName: richDetail?.title ?? item.regularMeetingName,
+                    meetingLocation: richDetail?.location ?? item.meetingLocation,
                     meetingDate:
-                      typeof detail.meetingTime === 'string'
-                        ? formatDotDate(detail.meetingTime)
+                      typeof richDetail?.meetingTime === 'string'
+                        ? formatDotDate(richDetail.meetingTime)
                         : item.meetingDate,
                   }
                 : item,
@@ -5730,24 +5768,63 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           );
         }
 
-        const regularMeetingId = detail?.meetingId ?? meetingId;
-        let meeting: ClubMeetingInfo | null = null;
-        let regularInfo: RegularMeetingInfo | null = null;
-        let meetingFetchSucceeded = false;
+        // Phase 1 완료: 제목/날짜/장소만 즉시 렌더링 (groups는 빈 배열)
+        const summaryCandidateMeeting =
+          meetingPhase1 ??
+          (richDetail
+            ? ({
+                meetingId: regularMeetingId,
+                title: richDetail.title,
+                meetingTime: richDetail.meetingTime,
+                location: richDetail.location,
+                teams: [],
+                members: [],
+                isStaff: canManageClub,
+              } as ClubMeetingInfo)
+            : null);
 
-        try {
-          meeting = await fetchClubMeeting(clubId, regularMeetingId, {
-            suppressErrorToast: options?.suppressErrorToast,
-          });
-          meetingFetchSucceeded = true;
-        } catch (error) {
-          if (error instanceof ApiError && error.status === 401) {
-            throw error;
-          }
-          if (!(error instanceof ApiError) && !options?.suppressErrorToast) {
-            showToast('정기모임 정보를 불러오지 못했습니다.');
+        if (summaryCandidateMeeting) {
+          const summaryInfo = ensureRegularMeetingInfo(
+            {
+              id: `${book.id}-regular`,
+              name: summaryCandidateMeeting.title?.trim() || `${book.title} 정기모임`,
+              date: formatDotDate(summaryCandidateMeeting.meetingTime),
+              location: summaryCandidateMeeting.location?.trim() || '장소 미정',
+              groups: [],
+            },
+            book,
+            richDetail,
+          );
+          setRegularMeetingInfoByMeetingId((prev) => ({
+            ...prev,
+            [meetingId]: summaryInfo,
+          }));
+        }
+
+        if (isStale()) return;
+
+        // Phase 2: regularMeetingId가 meetingId와 다르면 올바른 meeting 재요청,
+        //          같으면 Phase 1 결과 재사용
+        let meeting: ClubMeetingInfo | null = meetingPhase1;
+        let meetingFetchSucceeded = meetingPhase1 !== null;
+
+        if (regularMeetingId !== meetingId) {
+          meeting = null;
+          meetingFetchSucceeded = false;
+          try {
+            meeting = await fetchClubMeeting(clubId, regularMeetingId, {
+              suppressErrorToast: options?.suppressErrorToast,
+            });
+            meetingFetchSucceeded = true;
+          } catch (error) {
+            if (error instanceof ApiError && error.status === 401) throw error;
+            if (!(error instanceof ApiError) && !options?.suppressErrorToast) {
+              showToast('정기모임 정보를 불러오지 못했습니다.');
+            }
           }
         }
+
+        let regularInfo: RegularMeetingInfo | null = null;
 
         if (meeting) {
           const [topicSettled, chatSettled] = await Promise.all([
@@ -5776,11 +5853,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               if (settled?.status === 'fulfilled') {
                 return settled.value as [number, ClubMeetingTeamTopics];
               }
-
               return [
                 team.teamId,
                 {
-                  existingTeams: meeting.teams,
+                  existingTeams: meeting!.teams,
                   requestedTeam: team,
                   topics: [],
                   hasNext: false,
@@ -5796,14 +5872,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               if (settled?.status === 'fulfilled') {
                 return settled.value as [number, ClubMeetingChatHistory];
               }
-
               return [
                 team.teamId,
-                {
-                  chats: [],
-                  hasNext: false,
-                  nextCursor: null,
-                },
+                { chats: [], hasNext: false, nextCursor: null },
               ];
             },
           );
@@ -5826,9 +5897,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
             });
             const fallbackMeeting: ClubMeetingInfo = {
               meetingId: regularMeetingId,
-              title: detail?.title ?? book.regularMeetingName ?? `${book.title} 정기모임`,
-              meetingTime: detail?.meetingTime,
-              location: detail?.location,
+              title: richDetail?.title ?? book.regularMeetingName ?? `${book.title} 정기모임`,
+              meetingTime: richDetail?.meetingTime,
+              location: richDetail?.location,
               teams: meetingMembersResponse.teams,
               members: meetingMembersResponse.members,
               isStaff: canManageClub,
@@ -5847,7 +5918,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           }
         }
 
-        const nextRegularInfo = ensureRegularMeetingInfo(regularInfo, book, detail);
+        const nextRegularInfo = ensureRegularMeetingInfo(regularInfo, book, richDetail);
         setRegularMeetingInfoByMeetingId((prev) => ({
           ...prev,
           [meetingId]: nextRegularInfo,
@@ -5891,10 +5962,14 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     let cancelled = false;
 
     const loadBookshelfDetailData = async () => {
-      await reloadBookshelfMeetingDetail(selectedBook, {
-        suppressErrorToast: true,
-      });
-      if (cancelled) return;
+      setLoadingBookshelfDetail(true);
+      try {
+        await reloadBookshelfMeetingDetail(selectedBook, {
+          suppressErrorToast: true,
+        });
+      } finally {
+        if (!cancelled) setLoadingBookshelfDetail(false);
+      }
     };
 
     void loadBookshelfDetailData();
@@ -6595,6 +6670,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const handleToggleVoteOption = useCallback(
     (optionId: string) => {
       if (!selectedNotice?.poll || selectedNotice.poll.closed) return;
+      if (
+        selectedNotice.poll.endsAtMillis != null &&
+        Date.now() > selectedNotice.poll.endsAtMillis
+      ) return;
       if (hasSubmittedVoteInNotice && !voteEditEnabled) return;
       const noticeId = selectedNotice.id;
 
@@ -6633,7 +6712,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
   const handleSubmitVote = useCallback(() => {
     if (!selectedNotice?.poll) return;
-    if (selectedNotice.poll.closed) {
+    if (
+      selectedNotice.poll.closed ||
+      (selectedNotice.poll.endsAtMillis != null && Date.now() > selectedNotice.poll.endsAtMillis)
+    ) {
       showToast('투표가 종료되었습니다.');
       return;
     }
@@ -7018,8 +7100,24 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     (post: BookshelfPostItem) => {
       const clubId = group.clubId;
       const meetingId = selectedBookshelfBook?.remoteMeetingId;
+      const postLabel = post.type === 'TOPIC' ? '발제' : '한줄평';
+
+      if (!post.isAuthor) {
+        Alert.alert(`${postLabel} 메뉴`, '원하는 작업을 선택해주세요.', [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '신고하기',
+            onPress: () =>
+              setReportModal({
+                nickname: post.author,
+                initialType: 'CLUB_MEETING',
+              }),
+          },
+        ]);
+        return;
+      }
+
       if (
-        !post.isAuthor ||
         typeof clubId !== 'number' ||
         typeof meetingId !== 'number' ||
         typeof post.remoteId !== 'number'
@@ -7027,18 +7125,16 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         return;
       }
 
-      const postLabel = post.type === 'TOPIC' ? '발제' : '한줄평';
-
       Alert.alert(`${postLabel} 메뉴`, '원하는 작업을 선택해주세요.', [
         { text: '취소', style: 'cancel' },
         {
-          text: '수정',
+          text: '수정하기',
           onPress: () => {
             handleOpenBookshelfComposer(post.type, post);
           },
         },
         {
-          text: '삭제',
+          text: '삭제하기',
           style: 'destructive',
           onPress: () => {
             Alert.alert(`${postLabel} 삭제`, `이 ${postLabel}를 삭제하시겠습니까?`, [
@@ -8925,8 +9021,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   {currentNoticePollOptions.map((option) => {
                     const selected = currentSelectedVoteOptionIds.includes(option.id);
                     const voteCount = option.voters.length;
+                    const isPollExpired =
+                      !selectedNotice.poll?.closed &&
+                      selectedNotice.poll?.endsAtMillis != null &&
+                      Date.now() > selectedNotice.poll.endsAtMillis;
+                    const pollEnded = Boolean(selectedNotice.poll?.closed) || isPollExpired;
                     const voteOptionLocked =
-                      hasSubmittedVoteInNotice && !voteEditEnabled && !selectedNotice.poll?.closed;
+                      pollEnded || (hasSubmittedVoteInNotice && !voteEditEnabled);
                     return (
                       <Pressable
                         key={option.id}
@@ -8965,35 +9066,35 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   })}
                 </View>
 
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.noticePollSubmitButton,
-                    (selectedNotice.poll?.closed ||
-                      (!selectedNotice.poll?.closed &&
-                        !(
-                          hasSubmittedVoteInNotice && !voteEditEnabled
-                        ) &&
-                        currentSelectedVoteOptionIds.length === 0)) &&
-                      styles.noticePollSubmitButtonDisabled,
-                    pressed && styles.pressed,
-                  ]}
-                  disabled={
-                    Boolean(selectedNotice.poll?.closed) ||
-                    (
-                      !(hasSubmittedVoteInNotice && !voteEditEnabled) &&
-                      currentSelectedVoteOptionIds.length === 0
-                    )
-                  }
-                  onPress={handleSubmitVote}
-                >
-                  <Text style={styles.noticePollSubmitText}>
-                    {selectedNotice.poll?.closed
-                      ? '투표 종료'
-                      : hasSubmittedVoteInNotice && !voteEditEnabled
-                        ? '다시 투표'
-                        : '투표하기'}
-                  </Text>
-                </Pressable>
+                {(() => {
+                  const isPollExpired =
+                    !selectedNotice.poll?.closed &&
+                    selectedNotice.poll?.endsAtMillis != null &&
+                    Date.now() > selectedNotice.poll.endsAtMillis;
+                  const pollEnded = Boolean(selectedNotice.poll?.closed) || isPollExpired;
+                  const noOptionSelected =
+                    !(hasSubmittedVoteInNotice && !voteEditEnabled) &&
+                    currentSelectedVoteOptionIds.length === 0;
+                  return (
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.noticePollSubmitButton,
+                        (pollEnded || noOptionSelected) && styles.noticePollSubmitButtonDisabled,
+                        pressed && styles.pressed,
+                      ]}
+                      disabled={pollEnded || noOptionSelected}
+                      onPress={handleSubmitVote}
+                    >
+                      <Text style={styles.noticePollSubmitText}>
+                        {pollEnded
+                          ? '투표종료'
+                          : hasSubmittedVoteInNotice && !voteEditEnabled
+                            ? '다시 투표'
+                            : '투표하기'}
+                      </Text>
+                    </Pressable>
+                  );
+                })()}
               </View>
             ) : null}
             {selectedNotice.photos && selectedNotice.photos.length > 0 ? (
@@ -9001,13 +9102,17 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 <Text style={styles.noticeAttachmentTitle}>사진</Text>
                 <View style={styles.noticePhotoGrid}>
                   {selectedNotice.photos.map((photo, index) => (
-                    <View key={`${selectedNotice.id}-photo-${photo}-${index}`} style={styles.noticePhotoItem}>
+                    <Pressable
+                      key={`${selectedNotice.id}-photo-${photo}-${index}`}
+                      style={({ pressed }) => [styles.noticePhotoItem, pressed && styles.pressed]}
+                      onPress={() => setPhotoViewer({ photos: selectedNotice.photos!, index })}
+                    >
                       <Image
                         source={{ uri: photo }}
                         style={styles.noticePhotoImage}
                         resizeMode="cover"
                       />
-                    </View>
+                    </Pressable>
                   ))}
                 </View>
               </View>
@@ -9056,7 +9161,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               <View style={styles.noticeCommentList}>
                 {currentNoticeComments.map((comment) => (
                   <View key={comment.id} style={styles.noticeCommentItem}>
-                    <View style={styles.noticeCommentAvatar}>
+                    <Pressable
+                      style={({ pressed }) => [styles.noticeCommentAvatar, pressed && styles.pressed]}
+                      onPress={() => navigation.navigate('UserProfile', { memberNickname: comment.author, fromScreen: 'Meeting' })}
+                    >
                       {comment.authorProfileImageUrl ? (
                         <Image
                           source={{ uri: comment.authorProfileImageUrl }}
@@ -9066,11 +9174,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                       ) : (
                         <MaterialIcons name="person-outline" size={20} color={colors.gray4} />
                       )}
-                    </View>
+                    </Pressable>
                     <View style={styles.noticeCommentBody}>
                       <View style={styles.noticeCommentMetaRow}>
                         <View style={styles.noticeCommentAuthorRow}>
-                          <Text style={styles.noticeCommentAuthor}>{comment.author}</Text>
+                          <Pressable onPress={() => navigation.navigate('UserProfile', { memberNickname: comment.author, fromScreen: 'Meeting' })}>
+                            <Text style={styles.noticeCommentAuthor}>{comment.author}</Text>
+                          </Pressable>
                           {comment.isAuthor ? (
                             <View style={styles.noticeCommentAuthorBadge}>
                               <Text style={styles.noticeCommentAuthorBadgeText}>작성자</Text>
@@ -9125,31 +9235,15 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                       renderNoticeTag(tag, `${notice.id}-${tag}-${index}`),
                     )}
                   </View>
-                  <View style={styles.noticeItemContent}>
-                    <Text style={styles.noticeItemTitle} numberOfLines={1}>
-                      {notice.title}
-                    </Text>
-                    <View style={styles.noticeItemMetaRow}>
-                      {notice.bookshelf ? (
-                        <View style={styles.noticeItemMetaBadge}>
-                          <MaterialIcons name="collections-bookmark" size={14} color={colors.gray4} />
-                          <Text style={styles.noticeItemMetaText}>책장</Text>
-                        </View>
-                      ) : null}
-                      {notice.poll ? (
-                        <View style={styles.noticeItemMetaBadge}>
-                          <MaterialIcons name="poll" size={14} color={colors.gray4} />
-                          <Text style={styles.noticeItemMetaText}>투표</Text>
-                        </View>
-                      ) : null}
-                      {notice.photos && notice.photos.length > 0 ? (
-                        <View style={styles.noticeItemMetaBadge}>
-                          <MaterialIcons name="image" size={14} color={colors.gray4} />
-                          <Text style={styles.noticeItemMetaText}>사진 {notice.photos.length}</Text>
-                        </View>
-                      ) : null}
+                  <Text style={styles.noticeItemTitle} numberOfLines={1}>
+                    {notice.title}
+                  </Text>
+                  {notice.photos && notice.photos.length > 0 ? (
+                    <View style={styles.noticeItemPhotoCount}>
+                      <MaterialIcons name="image" size={15} color={colors.gray4} />
+                      <Text style={styles.noticeItemMetaText}>{notice.photos.length}</Text>
                     </View>
-                  </View>
+                  ) : null}
                 </Pressable>
               ))}
               {visibleNotices.length === 0 ? (
@@ -9379,9 +9473,6 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                       {formatAverageRating(selectedBookshelfBook.rating)}
                     </Text>
                   </View>
-                  <Text style={styles.bookshelfDetailBookDescription} numberOfLines={4}>
-                    책을 좋아하는 사람들이 모여 각자의 속도로 읽고, 각자의 언어로 생각을 나누는 모임입니다.
-                  </Text>
                 </View>
               </View>
 
@@ -9448,17 +9539,15 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                             </View>
                             <Text style={styles.bookshelfPostAuthor}>{item.author}</Text>
                           </View>
-                          {item.isAuthor ? (
-                            <Pressable
-                              style={({ pressed }) => [
-                                styles.bookshelfPostMenuButton,
-                                pressed && styles.pressed,
-                              ]}
-                              onPress={() => handlePressBookshelfPostMenu(item)}
-                            >
-                              <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
-                            </Pressable>
-                          ) : null}
+                          <Pressable
+                            style={({ pressed }) => [
+                              styles.bookshelfPostMenuButton,
+                              pressed && styles.pressed,
+                            ]}
+                            onPress={() => handlePressBookshelfPostMenu(item)}
+                          >
+                            <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
+                          </Pressable>
                         </View>
                         <Text style={styles.bookshelfPostContent}>{item.content}</Text>
                       </View>
@@ -9508,17 +9597,15 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 	                            </View>
 	                            <Text style={styles.bookshelfPostAuthor}>{item.author}</Text>
 	                          </View>
-	                          {item.isAuthor ? (
-	                            <Pressable
-	                              style={({ pressed }) => [
-	                                styles.bookshelfPostMenuButton,
-	                                pressed && styles.pressed,
-	                              ]}
-	                              onPress={() => handlePressBookshelfPostMenu(item)}
-	                            >
-	                              <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
-	                            </Pressable>
-	                          ) : null}
+	                          <Pressable
+	                            style={({ pressed }) => [
+	                              styles.bookshelfPostMenuButton,
+	                              pressed && styles.pressed,
+	                            ]}
+	                            onPress={() => handlePressBookshelfPostMenu(item)}
+	                          >
+	                            <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
+	                          </Pressable>
 	                        </View>
 	                        <View style={styles.bookshelfPostRatingRow}>
 	                          {Array.from({ length: 5 }).map((_, idx) => (
@@ -9548,7 +9635,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
               {bookshelfDetailTab === 'REGULAR' ? (
                 <View style={styles.bookshelfPanel}>
-                  {regularMeetingInfo ? (
+                  {loadingBookshelfDetail && !regularMeetingInfo ? (
+                    <View style={styles.managementEmptyCard}>
+                      <Text style={styles.managementEmptyText}>정기모임 정보를 불러오는 중...</Text>
+                    </View>
+                  ) : regularMeetingInfo ? (
                     <>
                       <View style={styles.bookshelfRegularSummaryCard}>
                         <View style={styles.bookshelfRegularSummaryTitleRow}>
@@ -11974,6 +12065,56 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
             </Pressable>
           ) : null}
         </Pressable>
+      </Modal>
+      <Modal
+        visible={Boolean(photoViewer)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhotoViewer(null)}
+      >
+        {photoViewer ? (
+          <View style={styles.photoViewerOverlay}>
+            <View style={[styles.photoViewerHeader, { paddingTop: insets.top + spacing.sm }]}>
+              <Text style={styles.photoViewerCounter}>
+                {photoViewer.index + 1} / {photoViewer.photos.length}
+              </Text>
+              <Pressable
+                style={({ pressed }) => [styles.photoViewerClose, pressed && styles.pressed]}
+                onPress={() => setPhotoViewer(null)}
+              >
+                <MaterialIcons name="close" size={26} color={colors.white} />
+              </Pressable>
+            </View>
+            <FlatList
+              data={photoViewer.photos}
+              horizontal
+              pagingEnabled
+              initialScrollIndex={photoViewer.index}
+              getItemLayout={(_, index) => ({
+                length: screenWidth,
+                offset: screenWidth * index,
+                index,
+              })}
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(event) => {
+                const newIndex = Math.round(
+                  event.nativeEvent.contentOffset.x / screenWidth,
+                );
+                setPhotoViewer((prev) => (prev ? { ...prev, index: newIndex } : null));
+              }}
+              renderItem={({ item }) => (
+                <View style={[styles.photoViewerItem, { width: screenWidth, height: screenHeight }]}>
+                  <Image
+                    source={{ uri: item }}
+                    style={{ width: screenWidth, height: screenHeight * 0.8 }}
+                    resizeMode="contain"
+                  />
+                </View>
+              )}
+              keyExtractor={(item, i) => `photo-viewer-${i}-${item}`}
+            />
+          </View>
+        ) : null}
       </Modal>
     </View>
   );

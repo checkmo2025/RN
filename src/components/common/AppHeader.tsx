@@ -28,7 +28,7 @@ import { PUBLIC_ENV } from '../../constants/publicEnv';
 import { colors, radius, scaleSize, spacing, typography } from '../../theme';
 import { IconButton, IconName } from './IconButton';
 import { useAuthGate } from '../../contexts/AuthGateContext';
-import { navigateToHome } from '../../navigation/navigateToHome';
+import { navigateToHome, navigateToMyAlarms } from '../../navigation/navigateToHome';
 import { ApiError } from '../../services/api/http';
 import { triggerSelectionHaptic } from '../../utils/haptics';
 import {
@@ -167,6 +167,7 @@ export function AppHeader(props: Props) {
   const [showNoti, setShowNoti] = useState(false);
   const [notificationPreview, setNotificationPreview] = useState<NotificationItem[]>([]);
   const [notificationPreviewLoading, setNotificationPreviewLoading] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [showSearchPage, setShowSearchPage] = useState(false);
   const [searchStage, setSearchStage] = useState<SearchStage>('results');
@@ -298,6 +299,20 @@ export function AppHeader(props: Props) {
     } finally {
       setNotificationPreviewLoading(false);
     }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    setHasUnread(notificationPreview.some((n) => !n.read));
+  }, [notificationPreview]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setHasUnread(false);
+      return;
+    }
+    fetchNotificationPreview(1)
+      .then((items) => setHasUnread(items.length > 0))
+      .catch(() => {});
   }, [isLoggedIn]);
 
   const navigateByNotification = useCallback(
@@ -663,7 +678,10 @@ export function AppHeader(props: Props) {
                 action.icon === 'search' ? (
                   <SvgUri uri={searchUri} width={24} height={24} />
                 ) : action.icon === 'notifications-none' ? (
-                  <SvgUri uri={alarmUri} width={24} height={24} />
+                  <View>
+                    <SvgUri uri={alarmUri} width={24} height={24} />
+                    {hasUnread ? <View style={styles.unreadDot} /> : null}
+                  </View>
                 ) : undefined
               }
             />
@@ -715,6 +733,15 @@ export function AppHeader(props: Props) {
                     </Pressable>
                   ))
                 : null}
+              <Pressable
+                style={({ pressed }) => [styles.notiAllButton, pressed && styles.notiRowPressed]}
+                onPress={() => {
+                  setShowNoti(false);
+                  navigateToMyAlarms(navigation);
+                }}
+              >
+                <Text style={styles.notiAllButtonText}>알림 전체보기</Text>
+              </Pressable>
             </Pressable>
           </View>
         </Pressable>
@@ -1138,6 +1165,15 @@ const styles = StyleSheet.create({
   activeAction: {
     opacity: 0.88,
   },
+  unreadDot: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.likeRed,
+  },
   notiBackdrop: {
     flex: 1,
   },
@@ -1187,6 +1223,18 @@ const styles = StyleSheet.create({
     color: colors.gray4,
     textAlign: 'center',
     paddingVertical: spacing.sm,
+  },
+  notiAllButton: {
+    borderTopWidth: 1,
+    borderTopColor: colors.gray2,
+    paddingVertical: spacing.xs,
+    borderRadius: spacing.xs,
+    alignItems: 'center',
+    marginTop: spacing.xs / 2,
+  },
+  notiAllButtonText: {
+    ...typography.body2_2,
+    color: colors.primary1,
   },
   dropdownBackdrop: {
     flex: 1,

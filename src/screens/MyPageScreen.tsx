@@ -29,7 +29,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import { termsDocumentOrder, termsDocuments } from '../constants/termsDocuments';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, spacing, typography, scaleSize } from '../theme';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { useAuthGate } from '../contexts/AuthGateContext';
@@ -381,8 +381,8 @@ export function MyPageScreen() {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const bookshelfCardWidth = useMemo(() => {
     const columns = 3;
-    const horizontalPadding = spacing.md * 2;
-    const totalGaps = spacing.sm * (columns - 1);
+    const horizontalPadding = scaleSize(spacing.md) * 2;
+    const totalGaps = scaleSize(spacing.sm) * (columns - 1);
     const width = Math.floor((screenWidth - horizontalPadding - totalGaps) / columns);
     return width > 0 ? width : 0;
   }, [screenWidth]);
@@ -3181,8 +3181,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   listContainer: {
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
   },
   loadingText: {
     ...typography.body2_3,
