@@ -218,6 +218,15 @@
 
 - 신고 모달에서 신고 대상 사용자 클릭 시 프로필 화면 이동 동선 연결 (`src/components/common/ReportMemberModal.tsx`, `src/screens/StoryScreen.tsx`, `src/screens/MeetingScreen.tsx`)
 - 소식 프로모션 캐러셀 로딩을 `carousel=PROMOTION` 기준으로 정리 (`src/screens/HomeScreen.tsx`, `src/screens/NewsScreen.tsx`, `src/services/api/newsApi.ts`)
+
+---
+
+## 업데이트 (2026-04-27)
+
+- 수정 시각: `2026-04-27 01:00:48 KST`
+- `hamburger.md` 파일 신규 작성: 햄버거/3점 메뉴를 팝오버, 폰 기본 Alert, 앱 커스텀 바텀시트로 분류
+- `StoryScreen`, `MyPageScreen`, `MeetingScreen`, `UserProfileScreen` 기준으로 메뉴 동작 위치를 파일/라인 단위로 정리
+- `다른사람 프로필` 3점 아이콘(`UserProfileScreen`) 미연결 상태(`onPress` 없음) 참고 항목으로 기록
 - 모임 정기모임 상세 로딩 2-Phase 흐름 보정 및 관련 화면 배치 미세 조정 (`src/screens/MeetingScreen.tsx`, `src/screens/StoryScreen.tsx`)
 - 문서 초안 추가 (`docs/functional-spec.md`, `docs/ia.md`, `docs/immediate-reflection-matrix.md`, `docs/push-notification-implementation.md`)
 
