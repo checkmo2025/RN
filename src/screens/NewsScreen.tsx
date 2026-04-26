@@ -18,6 +18,7 @@ import {
   useWindowDimensions,
   Linking,
 } from 'react-native';
+import type { ImageStyle, StyleProp } from 'react-native';
 import {
   useFocusEffect,
   useNavigation,
@@ -71,6 +72,10 @@ const DETAIL_BACK_ACTIVATE_DISTANCE = 14;
 const DETAIL_BACK_TRIGGER_DISTANCE = 72;
 const DETAIL_BACK_ACTIVATE_MAX_DY = 16;
 const DETAIL_BACK_TRIGGER_MAX_DY = 60;
+const leftFocalImageStyle: StyleProp<ImageStyle> =
+  Platform.OS === 'web'
+    ? ({ objectPosition: 'left center' } as unknown as ImageStyle)
+    : undefined;
 const fallbackPromotionImages = [
   Image.resolveAssetSource(require('../../assets/images/background.png')).uri,
   Image.resolveAssetSource(require('../../assets/images/news_sample2.png')).uri,
@@ -494,7 +499,7 @@ export function NewsScreen() {
 
         <View style={styles.hero}>
           {item.cover ? (
-            <Image source={{ uri: item.cover }} style={styles.heroImage} />
+            <Image source={{ uri: item.cover }} style={[styles.heroImage, leftFocalImageStyle]} />
           ) : (
             <View style={styles.heroImage} />
           )}
@@ -589,7 +594,7 @@ export function NewsScreen() {
           renderItem={({ item }) => (
             <Pressable style={styles.card} onPress={() => onSelect(item)}>
               {item.cover ? (
-                <Image source={{ uri: item.cover }} style={styles.cardThumb} />
+                <Image source={{ uri: item.cover }} style={[styles.cardThumb, leftFocalImageStyle]} />
               ) : (
                 <View style={styles.cardThumb} />
               )}

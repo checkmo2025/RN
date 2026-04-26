@@ -33,7 +33,12 @@ import { colors, radius, spacing, typography, scaleSize } from '../theme';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { useAuthGate } from '../contexts/AuthGateContext';
-import { issueProfileImageUploadUrl, logoutSession } from '../services/api/authApi';
+import {
+  confirmEmailVerification,
+  issueProfileImageUploadUrl,
+  logoutSession,
+  requestEmailVerification,
+} from '../services/api/authApi';
 import { ApiError } from '../services/api/http';
 import {
   fetchAllMyLikedBooks,
@@ -220,6 +225,8 @@ const fallbackGroups: GroupItem[] = Array.from({ length: 5 }).map((_, idx) => ({
 }));
 
 const fallbackBooks: BookCard[] = [];
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_VERIFICATION_COUNTDOWN_SECONDS = 10 * 60;
 
 const defaultNotificationSettings: NotificationSettingInfo = {
   bookStoryLiked: true,
@@ -436,10 +443,19 @@ export function MyPageScreen() {
   const [emailCurrent, setEmailCurrent] = useState('');
   const [emailNext, setEmailNext] = useState('');
   const [emailVerificationCode, setEmailVerificationCode] = useState('');
+  const [emailVerificationSent, setEmailVerificationSent] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [sendingEmailVerificationCode, setSendingEmailVerificationCode] = useState(false);
+  const [confirmingEmailVerificationCode, setConfirmingEmailVerificationCode] = useState(false);
+  const [emailVerificationDeadline, setEmailVerificationDeadline] = useState<number | null>(null);
+  const [remainingEmailVerificationSeconds, setRemainingEmailVerificationSeconds] = useState(0);
   const [submittingEmailUpdate, setSubmittingEmailUpdate] = useState(false);
   const [passwordCurrent, setPasswordCurrent] = useState('');
   const [passwordNext, setPasswordNext] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [showPasswordCurrent, setShowPasswordCurrent] = useState(false);
+  const [showPasswordNext, setShowPasswordNext] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [submittingPasswordUpdate, setSubmittingPasswordUpdate] = useState(false);
   const [reportHistory, setReportHistory] = useState<ReportHistoryItem[]>([]);
   const [loadingReportHistory, setLoadingReportHistory] = useState(false);
@@ -470,6 +486,11 @@ export function MyPageScreen() {
     () => Image.resolveAssetSource(require('../../assets/book-story/bookstory-comment.svg')).uri,
     [],
   );
+  const emailVerificationRemainingText = useMemo(() => {
+    const minutes = Math.floor(remainingEmailVerificationSeconds / 60);
+    const seconds = remainingEmailVerificationSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }, [remainingEmailVerificationSeconds]);
 
   const mapLikedBooksToCards = useCallback((items: MemberLikedBookItem[]): BookCard[] => {
     const mapped = items.map((book, index) => {
@@ -1030,6 +1051,91 @@ export function MyPageScreen() {
     profilePhoneNumber,
   ]);
 
+  const handleSendEmailVerificationCode = useCallback(() => {
+    if (emailVerified) return;
+
+    const currentEmail = emailCurrent.trim();
+    const newEmail = emailNext.trim();
+
+    if (!currentEmail || !newEmail) {
+      showToast('기존 이메일과 변경 이메일을 입력해주세요.');
+      return;
+    }
+    if (!emailRegex.test(currentEmail) || !emailRegex.test(newEmail)) {
+      showToast('올바른 이메일 형식을 입력해주세요.');
+      return;
+    }
+    if (currentEmail.localeCompare(newEmail, 'ko', { sensitivity: 'accent' }) === 0) {
+      showToast('기존 이메일과 다른 이메일을 입력해주세요.');
+      return;
+    }
+
+    setSendingEmailVerificationCode(true);
+    const submit = async () => {
+      try {
+        await requestEmailVerification(newEmail, 'UPDATE_EMAIL');
+        setEmailVerificationSent(true);
+        setEmailVerified(false);
+        setRemainingEmailVerificationSeconds(EMAIL_VERIFICATION_COUNTDOWN_SECONDS);
+        setEmailVerificationDeadline(Date.now() + EMAIL_VERIFICATION_COUNTDOWN_SECONDS * 1000);
+        showToast('인증번호를 발송했습니다.');
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('인증번호 발송에 실패했습니다.');
+        }
+      } finally {
+        setSendingEmailVerificationCode(false);
+      }
+    };
+    void submit();
+  }, [emailCurrent, emailNext, emailVerified]);
+
+  const handleConfirmEmailVerificationCode = useCallback(() => {
+    const newEmail = emailNext.trim();
+    const verificationCode = emailVerificationCode.trim();
+
+    if (!emailVerificationSent) {
+      showToast('먼저 인증번호를 발송해주세요.');
+      return;
+    }
+    if (remainingEmailVerificationSeconds <= 0) {
+      showToast('인증번호가 만료되었습니다. 인증번호를 다시 발송해주세요.');
+      return;
+    }
+    if (!verificationCode) {
+      showToast('인증번호를 입력해주세요.');
+      return;
+    }
+    if (!emailRegex.test(newEmail)) {
+      showToast('변경 이메일 형식을 확인해주세요.');
+      return;
+    }
+
+    setConfirmingEmailVerificationCode(true);
+    const submit = async () => {
+      try {
+        await confirmEmailVerification(newEmail, verificationCode);
+        setEmailVerified(true);
+        setEmailVerificationDeadline(null);
+        setRemainingEmailVerificationSeconds(0);
+        showToast('인증이 완료되었습니다.');
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast('이메일 인증에 실패했습니다.');
+        }
+        setEmailVerified(false);
+      } finally {
+        setConfirmingEmailVerificationCode(false);
+      }
+    };
+    void submit();
+  }, [
+    emailNext,
+    emailVerificationCode,
+    emailVerificationSent,
+    remainingEmailVerificationSeconds,
+  ]);
+
   const handleSubmitEmailUpdate = useCallback(() => {
     const currentEmail = emailCurrent.trim();
     const newEmail = emailNext.trim();
@@ -1037,6 +1143,14 @@ export function MyPageScreen() {
 
     if (!currentEmail || !newEmail || !verificationCode) {
       showToast('이메일 변경 정보를 모두 입력해주세요.');
+      return;
+    }
+    if (!emailRegex.test(currentEmail) || !emailRegex.test(newEmail)) {
+      showToast('올바른 이메일 형식을 입력해주세요.');
+      return;
+    }
+    if (!emailVerified) {
+      showToast('변경 이메일 인증을 완료해주세요.');
       return;
     }
 
@@ -1052,6 +1166,10 @@ export function MyPageScreen() {
         setEmailCurrent('');
         setEmailNext('');
         setEmailVerificationCode('');
+        setEmailVerificationSent(false);
+        setEmailVerified(false);
+        setEmailVerificationDeadline(null);
+        setRemainingEmailVerificationSeconds(0);
       } catch (error) {
         if (!(error instanceof ApiError)) {
           showToast('이메일 변경에 실패했습니다.');
@@ -1061,7 +1179,7 @@ export function MyPageScreen() {
       }
     };
     void submit();
-  }, [emailCurrent, emailNext, emailVerificationCode]);
+  }, [emailCurrent, emailNext, emailVerificationCode, emailVerified]);
 
   const handleSubmitPasswordUpdate = useCallback(() => {
     const currentPassword = passwordCurrent.trim();
@@ -1693,6 +1811,33 @@ export function MyPageScreen() {
   }, [profileCategoryCodes, profileDefaultColor, profileDesc, profileImageUrl, selectedSetting]);
 
   useEffect(() => {
+    if (!emailVerificationDeadline || emailVerified) return;
+
+    const updateRemaining = () => {
+      const remain = Math.max(0, Math.ceil((emailVerificationDeadline - Date.now()) / 1000));
+      setRemainingEmailVerificationSeconds(remain);
+      if (remain <= 0) {
+        setEmailVerificationDeadline(null);
+      }
+    };
+
+    updateRemaining();
+    const interval = setInterval(updateRemaining, 1000);
+    return () => clearInterval(interval);
+  }, [emailVerificationDeadline, emailVerified]);
+
+  useEffect(() => {
+    if (selectedSetting === '이메일 변경') return;
+    setEmailCurrent('');
+    setEmailNext('');
+    setEmailVerificationCode('');
+    setEmailVerificationSent(false);
+    setEmailVerified(false);
+    setEmailVerificationDeadline(null);
+    setRemainingEmailVerificationSeconds(0);
+  }, [selectedSetting]);
+
+  useEffect(() => {
     const nextMyTab = route.params?.openMyTab;
     if (nextMyTab !== 'ALARM') return;
 
@@ -1831,7 +1976,7 @@ export function MyPageScreen() {
                 onChangeText={setProfileEditDescription}
                 placeholder="소개를 입력해주세요 (최대 20자)"
                 placeholderTextColor={colors.gray3}
-                style={styles.inputField}
+                style={[styles.inputField, styles.inputFieldDescenderSafe]}
                 maxLength={20}
               />
             </View>
@@ -1964,37 +2109,85 @@ export function MyPageScreen() {
           <View style={styles.formBlock}>
             <Text style={styles.detailLabel}>기존 비밀번호</Text>
             <View style={styles.inputPlaceholder}>
-              <TextInput
-                value={passwordCurrent}
-                onChangeText={setPasswordCurrent}
-                placeholder="기존 비밀번호를 입력해주세요"
-                placeholderTextColor={colors.gray3}
-                style={styles.inputField}
-                secureTextEntry
-              />
+              <View style={styles.passwordInputRow}>
+                <TextInput
+                  value={passwordCurrent}
+                  onChangeText={setPasswordCurrent}
+                  placeholder="기존 비밀번호를 입력해주세요"
+                  placeholderTextColor={colors.gray3}
+                  style={[styles.inputField, styles.inputFieldDescenderSafe, styles.passwordInputField]}
+                  secureTextEntry={!showPasswordCurrent}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  spellCheck={false}
+                />
+                <Pressable
+                  style={({ pressed }) => [styles.passwordToggleButton, pressed && styles.pressed]}
+                  hitSlop={8}
+                  onPress={() => setShowPasswordCurrent((prev) => !prev)}
+                >
+                  <MaterialIcons
+                    name={showPasswordCurrent ? 'visibility-off' : 'visibility'}
+                    size={20}
+                    color={colors.gray4}
+                  />
+                </Pressable>
+              </View>
             </View>
           </View>
           <View style={styles.formBlock}>
             <Text style={styles.detailLabel}>새 비밀번호</Text>
             <View style={styles.inputPlaceholder}>
-              <TextInput
-                value={passwordNext}
-                onChangeText={setPasswordNext}
-                placeholder="새 비밀번호를 입력해주세요"
-                placeholderTextColor={colors.gray3}
-                style={styles.inputField}
-                secureTextEntry
-              />
+              <View style={styles.passwordInputRow}>
+                <TextInput
+                  value={passwordNext}
+                  onChangeText={setPasswordNext}
+                  placeholder="새 비밀번호를 입력해주세요"
+                  placeholderTextColor={colors.gray3}
+                  style={[styles.inputField, styles.inputFieldDescenderSafe, styles.passwordInputField]}
+                  secureTextEntry={!showPasswordNext}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  spellCheck={false}
+                />
+                <Pressable
+                  style={({ pressed }) => [styles.passwordToggleButton, pressed && styles.pressed]}
+                  hitSlop={8}
+                  onPress={() => setShowPasswordNext((prev) => !prev)}
+                >
+                  <MaterialIcons
+                    name={showPasswordNext ? 'visibility-off' : 'visibility'}
+                    size={20}
+                    color={colors.gray4}
+                  />
+                </Pressable>
+              </View>
             </View>
             <View style={styles.inputPlaceholder}>
-              <TextInput
-                value={passwordConfirm}
-                onChangeText={setPasswordConfirm}
-                placeholder="비밀번호 확인"
-                placeholderTextColor={colors.gray3}
-                style={styles.inputField}
-                secureTextEntry
-              />
+              <View style={styles.passwordInputRow}>
+                <TextInput
+                  value={passwordConfirm}
+                  onChangeText={setPasswordConfirm}
+                  placeholder="비밀번호 확인"
+                  placeholderTextColor={colors.gray3}
+                  style={[styles.inputField, styles.inputFieldDescenderSafe, styles.passwordInputField]}
+                  secureTextEntry={!showPasswordConfirm}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  spellCheck={false}
+                />
+                <Pressable
+                  style={({ pressed }) => [styles.passwordToggleButton, pressed && styles.pressed]}
+                  hitSlop={8}
+                  onPress={() => setShowPasswordConfirm((prev) => !prev)}
+                >
+                  <MaterialIcons
+                    name={showPasswordConfirm ? 'visibility-off' : 'visibility'}
+                    size={20}
+                    color={colors.gray4}
+                  />
+                </Pressable>
+              </View>
             </View>
           </View>
           <Pressable
@@ -2155,9 +2348,13 @@ export function MyPageScreen() {
                 onChangeText={setEmailCurrent}
                 placeholder="기존 이메일을 입력해주세요"
                 placeholderTextColor={colors.gray3}
-                style={styles.inputField}
+                style={[styles.inputField, styles.inputFieldEmail]}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                autoCorrect={false}
+                spellCheck={false}
+                textContentType="emailAddress"
+                autoComplete="email"
               />
             </View>
           </View>
@@ -2166,14 +2363,42 @@ export function MyPageScreen() {
             <View style={styles.inputPlaceholder}>
               <TextInput
                 value={emailNext}
-                onChangeText={setEmailNext}
+                onChangeText={(value) => {
+                  setEmailNext(value);
+                  setEmailVerificationCode('');
+                  setEmailVerificationSent(false);
+                  setEmailVerified(false);
+                  setEmailVerificationDeadline(null);
+                  setRemainingEmailVerificationSeconds(0);
+                }}
                 placeholder="변경할 이메일을 입력해주세요"
                 placeholderTextColor={colors.gray3}
-                style={styles.inputField}
+                style={[styles.inputField, styles.inputFieldEmail]}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                autoCorrect={false}
+                spellCheck={false}
+                textContentType="emailAddress"
+                autoComplete="email"
               />
             </View>
+            <Pressable
+              style={({ pressed }) => [
+                styles.emailVerificationButton,
+                pressed && !emailVerified ? styles.pressed : null,
+                emailVerified ? styles.submitButtonDisabled : null,
+              ]}
+              onPress={handleSendEmailVerificationCode}
+              disabled={sendingEmailVerificationCode || emailVerified}
+            >
+              <Text style={styles.emailVerificationButtonText}>
+                {sendingEmailVerificationCode
+                  ? '발송 중...'
+                  : emailVerificationSent
+                    ? '인증번호 재발송'
+                    : '인증번호 발송'}
+              </Text>
+            </Pressable>
           </View>
           <View style={styles.formBlock}>
             <Text style={styles.detailLabel}>인증번호</Text>
@@ -2183,14 +2408,54 @@ export function MyPageScreen() {
                 onChangeText={setEmailVerificationCode}
                 placeholder="인증번호 입력"
                 placeholderTextColor={colors.gray3}
-                style={styles.inputField}
+                style={[styles.inputField, styles.inputFieldEmail]}
+                keyboardType="number-pad"
+                autoCorrect={false}
+                spellCheck={false}
+                textContentType="oneTimeCode"
+                autoComplete="one-time-code"
               />
             </View>
+            {emailVerificationSent && !emailVerified ? (
+              <Text
+                style={[
+                  styles.emailVerificationTimerText,
+                  remainingEmailVerificationSeconds <= 0 ? styles.emailVerificationTimerExpiredText : null,
+                ]}
+              >
+                남은 시간 {emailVerificationRemainingText}
+              </Text>
+            ) : null}
+            <Pressable
+              style={({ pressed }) => [
+                styles.emailVerificationButton,
+                emailVerified ? styles.emailVerificationButtonActive : null,
+                pressed ? styles.pressed : null,
+              ]}
+              onPress={handleConfirmEmailVerificationCode}
+              disabled={confirmingEmailVerificationCode}
+            >
+              <Text
+                style={[
+                  styles.emailVerificationButtonText,
+                  emailVerified ? styles.emailVerificationButtonTextActive : null,
+                ]}
+              >
+                {confirmingEmailVerificationCode
+                  ? '확인 중...'
+                  : emailVerified
+                    ? '인증 완료됨'
+                    : '인증 완료'}
+              </Text>
+            </Pressable>
           </View>
           <Pressable
-            style={[styles.submitButton, submittingEmailUpdate ? styles.submitButtonDisabled : null]}
+            style={[
+              styles.submitButton,
+              submittingEmailUpdate || !emailVerified ? styles.submitButtonDisabled : null,
+            ]}
             onPress={handleSubmitEmailUpdate}
-            disabled={submittingEmailUpdate}
+            disabled={submittingEmailUpdate || !emailVerified}
           >
             <Text style={styles.submitButtonText}>
               {submittingEmailUpdate ? '변경 중...' : '변경하기'}
@@ -2661,6 +2926,51 @@ const styles = StyleSheet.create({
     ...typography.body1_3,
     color: colors.gray6,
     paddingVertical: 0,
+  },
+  inputFieldDescenderSafe: {
+    paddingVertical: 4,
+  },
+  inputFieldEmail: {
+    paddingVertical: 4,
+  },
+  passwordInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passwordInputField: {
+    flex: 1,
+  },
+  passwordToggleButton: {
+    marginLeft: spacing.xs,
+    padding: spacing.xs / 2,
+  },
+  emailVerificationButton: {
+    borderWidth: 1,
+    borderColor: colors.primary1,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  emailVerificationButtonActive: {
+    backgroundColor: colors.primary1,
+  },
+  emailVerificationButtonText: {
+    ...typography.body1_2,
+    color: colors.primary1,
+  },
+  emailVerificationButtonTextActive: {
+    color: colors.white,
+  },
+  emailVerificationTimerText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    marginTop: -spacing.xs / 2,
+  },
+  emailVerificationTimerExpiredText: {
+    color: colors.likeRed,
   },
   inputFieldMultiline: {
     minHeight: 88,

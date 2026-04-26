@@ -102,6 +102,7 @@ import {
   type ClubMeetingChatHistory,
   type ClubMeetingChatMessage,
   type ClubMeetingInfo,
+  type ClubMeetingMemberList,
   type ClubMeetingTeamTopics,
   type ClubMembershipStatus,
   type ClubNoticeComment,
@@ -3252,6 +3253,9 @@ const styles = StyleSheet.create({
     color: colors.gray6,
     paddingVertical: 0,
   },
+  bookshelfBookSearchInputDescenderSafe: {
+    paddingVertical: 4,
+  },
   bookshelfBookSearchGuide: {
     ...typography.body2_3,
     color: colors.gray4,
@@ -5749,22 +5753,40 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
         if (detail) {
           setBookshelfItems((prev) =>
-            prev.map((item) =>
-              item.remoteMeetingId === meetingId
-                ? {
-                    ...item,
-                    generation: detail.generation ?? item.generation,
-                    session: formatGenerationLabel(detail.generation ?? item.generation),
-                    category: detail.tag?.trim() || item.category,
-                    regularMeetingName: richDetail?.title ?? item.regularMeetingName,
-                    meetingLocation: richDetail?.location ?? item.meetingLocation,
-                    meetingDate:
-                      typeof richDetail?.meetingTime === 'string'
-                        ? formatDotDate(richDetail.meetingTime)
-                        : item.meetingDate,
-                  }
-                : item,
-            ),
+            prev.map((item) => {
+              if (item.remoteMeetingId !== meetingId) return item;
+
+              const nextGeneration = detail.generation ?? item.generation;
+              const nextSession = formatGenerationLabel(nextGeneration);
+              const nextCategory = detail.tag?.trim() || item.category;
+              const nextRegularMeetingName = richDetail?.title ?? item.regularMeetingName;
+              const nextMeetingLocation = richDetail?.location ?? item.meetingLocation;
+              const nextMeetingDate =
+                typeof richDetail?.meetingTime === 'string'
+                  ? formatDotDate(richDetail.meetingTime)
+                  : item.meetingDate;
+
+              if (
+                item.generation === nextGeneration &&
+                item.session === nextSession &&
+                item.category === nextCategory &&
+                item.regularMeetingName === nextRegularMeetingName &&
+                item.meetingLocation === nextMeetingLocation &&
+                item.meetingDate === nextMeetingDate
+              ) {
+                return item;
+              }
+
+              return {
+                ...item,
+                generation: nextGeneration,
+                session: nextSession,
+                category: nextCategory,
+                regularMeetingName: nextRegularMeetingName,
+                meetingLocation: nextMeetingLocation,
+                meetingDate: nextMeetingDate,
+              };
+            }),
           );
         }
 
@@ -5806,11 +5828,35 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         }
 
         let regularInfo: RegularMeetingInfo | null = null;
+        let meetingMembersFallback: ClubMeetingMemberList | null = null;
 
         if (meeting) {
+          if (meeting.teams.length === 0 || meeting.members.length === 0) {
+            try {
+              meetingMembersFallback = await fetchClubMeetingMembers(clubId, regularMeetingId, {
+                suppressErrorToast: true,
+              });
+            } catch (fallbackError) {
+              if (fallbackError instanceof ApiError && fallbackError.status === 401) {
+                throw fallbackError;
+              }
+            }
+          }
+
+          const effectiveMeeting: ClubMeetingInfo =
+            meetingMembersFallback &&
+            (meeting.teams.length === 0 || meeting.members.length === 0)
+              ? {
+                  ...meeting,
+                  teams: meeting.teams.length > 0 ? meeting.teams : meetingMembersFallback.teams,
+                  members:
+                    meeting.members.length > 0 ? meeting.members : meetingMembersFallback.members,
+                }
+              : meeting;
+
           const [topicSettled, chatSettled] = await Promise.all([
             Promise.allSettled(
-              meeting.teams.map(async (team) => [
+              effectiveMeeting.teams.map(async (team) => [
                 team.teamId,
                 await fetchAllMeetingTeamTopics(clubId, regularMeetingId, team.teamId, {
                   suppressErrorToast: options?.suppressErrorToast,
@@ -5818,7 +5864,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               ] as const),
             ),
             Promise.allSettled(
-              meeting.teams.map(async (team) => [
+              effectiveMeeting.teams.map(async (team) => [
                 team.teamId,
                 await fetchAllMeetingTeamChats(clubId, regularMeetingId, team.teamId, {
                   suppressErrorToast: options?.suppressErrorToast,
@@ -5828,7 +5874,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           ]);
 
           if (isStale()) return;
-          const topicEntries: Array<[number, ClubMeetingTeamTopics]> = meeting.teams.map(
+          const topicEntries: Array<[number, ClubMeetingTeamTopics]> = effectiveMeeting.teams.map(
             (team, index) => {
               const settled = topicSettled[index];
               if (settled?.status === 'fulfilled') {
@@ -5837,7 +5883,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               return [
                 team.teamId,
                 {
-                  existingTeams: meeting!.teams,
+                  existingTeams: effectiveMeeting.teams,
                   requestedTeam: team,
                   topics: [],
                   hasNext: false,
@@ -5847,7 +5893,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
             },
           );
 
-          const chatEntries: Array<[number, ClubMeetingChatHistory]> = meeting.teams.map(
+          const chatEntries: Array<[number, ClubMeetingChatHistory]> = effectiveMeeting.teams.map(
             (team, index) => {
               const settled = chatSettled[index];
               if (settled?.status === 'fulfilled') {
@@ -5864,34 +5910,46 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           const chatsByTeamId = Object.fromEntries(chatEntries);
           regularInfo = mapMeetingToRegularMeetingInfo(
             book,
-            meeting,
+            effectiveMeeting,
             topicsByTeamId,
             chatsByTeamId,
             currentMemberNickname,
           );
         }
 
-        if (!regularInfo) {
+        if (!regularInfo || regularInfo.groups.length === 0) {
           try {
-            const meetingMembersResponse = await fetchClubMeetingMembers(clubId, regularMeetingId, {
-              suppressErrorToast: true,
-            });
+            const meetingMembersResponse =
+              meetingMembersFallback ??
+              (await fetchClubMeetingMembers(clubId, regularMeetingId, {
+                suppressErrorToast: true,
+              }));
             const fallbackMeeting: ClubMeetingInfo = {
               meetingId: regularMeetingId,
-              title: richDetail?.title ?? book.regularMeetingName ?? `${book.title} 정기모임`,
-              meetingTime: richDetail?.meetingTime,
-              location: richDetail?.location,
-              teams: meetingMembersResponse.teams,
-              members: meetingMembersResponse.members,
-              isStaff: canManageClub,
+              title:
+                meeting?.title ?? richDetail?.title ?? book.regularMeetingName ?? `${book.title} 정기모임`,
+              meetingTime: meeting?.meetingTime ?? richDetail?.meetingTime,
+              location: meeting?.location ?? richDetail?.location,
+              teams:
+                meetingMembersResponse.teams.length > 0
+                  ? meetingMembersResponse.teams
+                  : meeting?.teams ?? [],
+              members:
+                meetingMembersResponse.members.length > 0
+                  ? meetingMembersResponse.members
+                  : meeting?.members ?? [],
+              isStaff: meeting?.isStaff ?? canManageClub,
             };
-            regularInfo = mapMeetingToRegularMeetingInfo(
+            const fallbackRegularInfo = mapMeetingToRegularMeetingInfo(
               book,
               fallbackMeeting,
               {},
               {},
               currentMemberNickname,
             );
+            if (fallbackRegularInfo?.groups.length) {
+              regularInfo = fallbackRegularInfo;
+            }
           } catch (fallbackError) {
             if (fallbackError instanceof ApiError && fallbackError.status === 401) {
               throw fallbackError;
@@ -5958,7 +6016,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     return () => {
       cancelled = true;
     };
-  }, [activeTab, bookshelfViewMode, reloadBookshelfMeetingDetail, selectedBookshelfBook]);
+  }, [
+    activeTab,
+    bookshelfViewMode,
+    reloadBookshelfMeetingDetail,
+    selectedBookshelfBook?.id,
+    selectedBookshelfBook?.remoteMeetingId,
+  ]);
 
   const bookshelfTopicItems = useMemo<BookshelfPostItem[]>(
     () => {
@@ -10321,7 +10385,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   onChangeText={setBookshelfBookSearchQuery}
                   placeholder="책 제목, 작가 이름을 검색해보세요"
                   placeholderTextColor={colors.gray3}
-                  style={styles.bookshelfBookSearchInput}
+                  style={[styles.bookshelfBookSearchInput, styles.bookshelfBookSearchInputDescenderSafe]}
                   onSubmitEditing={handleSubmitBookshelfBookSearch}
                   returnKeyType="search"
                   autoFocus

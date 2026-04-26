@@ -863,7 +863,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               setEmailVerified(false);
             }}
             placeholder="이메일"
-            style={styles.input}
+            style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
             autoCapitalize="none"
             autoCorrect={false}
@@ -891,7 +891,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             value={verificationCode}
             onChangeText={setVerificationCode}
             placeholder="인증번호 입력"
-            style={styles.input}
+            style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
             keyboardType="number-pad"
           />
@@ -968,7 +968,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               value={signUpPassword}
               onChangeText={setSignUpPassword}
               placeholder="비밀번호"
-              style={[styles.input, styles.passwordInput]}
+              style={[styles.input, styles.inputDescenderSafe, styles.passwordInput]}
               placeholderTextColor={colors.gray3}
               secureTextEntry={!showSignUpPassword}
             />
@@ -989,7 +989,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               value={signUpPasswordConfirm}
               onChangeText={setSignUpPasswordConfirm}
               placeholder="비밀번호 확인"
-              style={[styles.input, styles.passwordInput]}
+              style={[styles.input, styles.inputDescenderSafe, styles.passwordInput]}
               placeholderTextColor={colors.gray3}
               secureTextEntry={!showSignUpPasswordConfirm}
             />
@@ -1047,7 +1047,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
                 }
               }}
               placeholder="닉네임 입력해주세요"
-              style={[styles.input, styles.inlineInput]}
+              style={[styles.input, styles.inputDescenderSafe, styles.inlineInput]}
               placeholderTextColor={colors.gray3}
               maxLength={20}
               autoCapitalize="none"
@@ -1079,7 +1079,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             value={description}
             onChangeText={setDescription}
             placeholder="40자 이내로 작성해주세요"
-            style={styles.input}
+            style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
             maxLength={40}
           />
@@ -1089,7 +1089,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             value={name}
             onChangeText={setName}
             placeholder="이름을 입력해주세요"
-            style={styles.input}
+            style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
           />
 
@@ -1098,7 +1098,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             value={phoneNumber}
             onChangeText={(value) => setPhoneNumber(formatPhoneNumberInput(value))}
             placeholder="010-0000-0000"
-            style={styles.input}
+            style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
             keyboardType="phone-pad"
           />
@@ -1312,14 +1312,14 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             value={findName}
             onChangeText={setFindName}
             placeholder="이름"
-            style={styles.input}
+            style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
           />
           <TextInput
             value={findPhoneNumber}
             onChangeText={(value) => setFindPhoneNumber(formatPhoneNumberInput(value))}
             placeholder="전화번호"
-            style={styles.input}
+            style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
             keyboardType="phone-pad"
           />
@@ -1346,7 +1346,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         <Text style={styles.title}>아이디{'\n'}(이메일 찾기)</Text>
         <Text style={styles.subLabel}>해당 정보의 이메일은 다음과 같습니다.</Text>
         <View style={styles.formGroup}>
-          <TextInput value={foundEmail || '-'} style={styles.input} editable={false} />
+          <TextInput value={foundEmail || '-'} style={[styles.input, styles.inputDescenderSafe]} editable={false} />
         </View>
         <View style={styles.findIdResultActions}>
           <Pressable
@@ -1383,7 +1383,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             value={resetPasswordEmail}
             onChangeText={setResetPasswordEmail}
             placeholder="이메일"
-            style={styles.input}
+            style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -1414,7 +1414,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           value={loginIdentifier}
           onChangeText={setLoginIdentifier}
           placeholder="아이디(이메일/닉네임)"
-          style={styles.input}
+          style={[styles.input, styles.inputDescenderSafe]}
           placeholderTextColor={colors.gray3}
           autoCapitalize="none"
           autoCorrect={false}
@@ -1424,7 +1424,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             value={loginPassword}
             onChangeText={setLoginPassword}
             placeholder="비밀번호"
-            style={[styles.input, styles.passwordInput]}
+            style={[styles.input, styles.inputDescenderSafe, styles.passwordInput]}
             placeholderTextColor={colors.gray3}
             secureTextEntry={!showLoginPassword}
             returnKeyType="done"
@@ -1651,6 +1651,9 @@ const styles = StyleSheet.create({
     ...typography.body1_3,
     color: colors.gray6,
     backgroundColor: colors.white,
+  },
+  inputDescenderSafe: {
+    paddingVertical: 4,
   },
   passwordInputRow: {
     position: 'relative',

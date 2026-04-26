@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ImageBackground,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,6 +9,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import type { ImageStyle, StyleProp } from 'react-native';
 
 import { colors, radius, scaleSize, spacing, typography } from '../../../theme';
 
@@ -24,6 +26,11 @@ type Props = {
   onPressItem?: (index: number) => void;
   autoPlayIntervalMs?: number;
 };
+
+const leftFocalImageStyle: StyleProp<ImageStyle> =
+  Platform.OS === 'web'
+    ? ({ objectPosition: 'left center' } as unknown as ImageStyle)
+    : undefined;
 
 export function NewsPromotionCarousel({
   items,
@@ -104,7 +111,7 @@ export function NewsPromotionCarousel({
             <ImageBackground
               source={item.imageUri ? { uri: item.imageUri } : undefined}
               style={styles.promoCard}
-              imageStyle={styles.promoImage}
+              imageStyle={[styles.promoImage, leftFocalImageStyle]}
               accessible
               accessibilityLabel={`${item.title} 프로모션`}
             >

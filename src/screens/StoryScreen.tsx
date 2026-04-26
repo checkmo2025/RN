@@ -2001,6 +2001,7 @@ export function StoryScreen() {
           <ScrollView
             contentContainerStyle={styles.composeContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
           <View style={styles.composeHeader}>
             <Pressable

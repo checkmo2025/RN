@@ -220,3 +220,13 @@
 - 소식 프로모션 캐러셀 로딩을 `carousel=PROMOTION` 기준으로 정리 (`src/screens/HomeScreen.tsx`, `src/screens/NewsScreen.tsx`, `src/services/api/newsApi.ts`)
 - 모임 정기모임 상세 로딩 2-Phase 흐름 보정 및 관련 화면 배치 미세 조정 (`src/screens/MeetingScreen.tsx`, `src/screens/StoryScreen.tsx`)
 - 문서 초안 추가 (`docs/functional-spec.md`, `docs/ia.md`, `docs/immediate-reflection-matrix.md`, `docs/push-notification-implementation.md`)
+
+---
+
+## 업데이트 (2026-04-26)
+
+- 수정 시각: `2026-04-26 17:52:10 KST`
+- 이메일 변경 화면에 회원가입과 유사한 이메일 인증(코드 전송/재전송/확인/타이머) 단계와 상태 흐름을 반영하고, 실제 변경 API 연동 전 검증 가드를 정리함
+- 비밀번호 변경 화면에 각 입력 필드 비밀번호 표시/숨김(눈 아이콘) 토글을 추가하고 단일 라인 입력창의 descender 잘림 완화를 위한 패딩 오버라이드 적용 범위를 확장함
+- 소식 이미지 노출을 웹/반응형에서 의도한 방향으로 맞추기 위해 프로모션/상세/목록 썸네일의 커버 크롭 기준(좌측 포커스)과 캐러셀 렌더링 스타일을 보정함
+- 정기모임 상세의 조 정보 로딩 실패 케이스를 보완하도록 그룹/멤버 조회 fallback 및 관련 상태 동기화 로직을 보강함
