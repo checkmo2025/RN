@@ -201,10 +201,11 @@
 
 ## 모임 내부 - 모임 홈화면 영역
 
-- `[MEET-HOME-01] 비로그인 홈 진입 시 멤버십 API 강제 호출`
+- `(완료) [MEET-HOME-01] 비로그인 홈 진입 시 멤버십 API 강제 호출`
 - 판정: `RN`
 - 내용: 홈화면 워크스페이스 로더가 비로그인에서도 `/clubs/{clubId}/me`를 포함한 요청을 수행하고, 401 발생 시 `handleAuthExpired -> requireAuth`로 즉시 로그인 유도됨.
 - 방향: 비로그인일 때는 공개 API(`/clubs/{clubId}/home`, `/clubs/{clubId}/notices/latest`)만 호출하고 멤버십/운영진 API는 로그인 후 조건부 실행.
+- 현황: 2026-04-27 RN 반영 완료 (`fetchClubMyMembership` 호출을 `isLoggedIn` 조건부로 변경)
 
 - `[MEET-HOME-02] 내 클럽 상태 조회 API 권한 문서 누락`
 - 판정: `BE 문서`
@@ -228,20 +229,23 @@
 - 내용: `/clubs/{clubId}/notices*` Swagger는 200/403/404 중심인데, 실서버 비로그인 호출은 401(`UNAUTHORIZED`) 응답.
 - 방향: 공지 목록/상세/댓글/투표 API에 401 응답을 문서에 명시해 실제 권한 정책과 일치.
 
-- `[MEET-NOTICE-02] 공지 목록 서버 페이징 미반영`
+- `(완료) [MEET-NOTICE-02] 공지 목록 서버 페이징 미반영`
 - 판정: `RN`
 - 내용: 앱은 `fetchClubNotices(clubId, 1)`만 호출한 뒤 로컬 `noticePage`로만 나눠 보여주며, 서버 `page/hasNext/totalPages`를 사용하지 않음.
 - 방향: 서버 페이지네이션 기준으로 다음 페이지를 추가 로딩하고, 로컬 페이지 분할은 제거하거나 보조로만 사용.
+- 현황: 2026-04-27 RN 반영 완료 (워크스페이스 로드 시 `hasNext` 루프로 모든 공지 서버 페이지 수집)
 
-- `[MEET-NOTICE-03] 공지 API 실패 무음 처리 구간 존재`
+- `(완료) [MEET-NOTICE-03] 공지 API 실패 무음 처리 구간 존재`
 - 판정: `RN`
 - 내용: 공지 상세/댓글/투표/생성·수정·삭제 처리에서 `ApiError`를 다수 구간에서 토스트 없이 무시해 실패 원인을 사용자에게 전달하지 못함.
 - 방향: 상태코드별 최소 피드백 정책 적용(401 로그인 유도, 403 권한 안내, 5xx 재시도 안내).
+- 현황: 2026-04-27 RN 반영 완료 (워크스페이스/공지상세/댓글 로드 실패 시 403·기타 ApiError 토스트 노출)
 
-- `[MEET-NOTICE-04] 비멤버(403) 안내 UX 부재`
+- `(완료) [MEET-NOTICE-04] 비멤버(403) 안내 UX 부재`
 - 판정: `RN` (추론)
 - 내용: 공지 API 스펙상 비멤버는 403 가능하지만, 현재 로직은 공지 탭에서 권한 오류를 별도 안내하지 않아 빈 화면처럼 보일 가능성이 있음.
 - 방향: 403 전용 빈상태 메시지/가입 유도 CTA를 추가하고, 공지 접근 조건(멤버 전용 여부)을 화면에 명시.
+- 현황: 2026-04-27 RN 반영 완료 (MEET-NOTICE-03 동일 대응 — 403 시 "모임 멤버만 열람할 수 있습니다." / "공지 열람 권한이 없습니다." 토스트 표시)
 
 ## 모임 내부 - 책장 영역 (운영진/멤버 기능 포함)
 
@@ -285,10 +289,11 @@
 - 내용: Swagger `/members/me/login-status`는 200만 정의되어 있으나, 실서버 비로그인 호출은 401(`UNAUTHORIZED`)를 반환.
 - 방향: Swagger에 401 응답을 추가하고 인증 필요 엔드포인트로 명시.
 
-- `[AUTH-03] 추가정보 입력 스키마 대비 클라이언트 선검증 일부 누락`
+- `(완료) [AUTH-03] 추가정보 입력 스키마 대비 클라이언트 선검증 일부 누락`
 - 판정: `RN`
 - 내용: Swagger `AdditionalInfo`는 `name.maxLength=10`, `nickname.pattern` 제약이 있으나, 앱은 `name` 길이/닉네임 패턴을 선검증하지 않아 서버 검증 오류를 사용자가 늦게 확인함.
 - 방향: 회원가입 추가정보 단계에서 서버 스키마 기반 사전검증을 동일하게 적용.
+- 현황: 2026-04-27 RN 반영 완료 (`name.trim().length > 10` 선검증 추가, `nickname.pattern`은 기존 `nicknameRegex`로 이미 적용 중)
 
 ## 회원 액션 영역 (프로필/팔로우/설정)
 
@@ -316,20 +321,23 @@
 
 ## 모임 운영 액션 영역 (생성/수정/운영관리)
 
-- `[MEET-MGMT-01] 모임 생성/수정 입력 제한 선검증 부재`
+- `(완료) [MEET-MGMT-01] 모임 생성/수정 입력 제한 선검증 부재`
 - 판정: `RN`
 - 내용: Swagger `ClubDetail` 제약(`name<=40`, `description<=500`, `region<=40`, `contact.label<=20`, `contact.link<=100`)이 UI에서 대부분 강제되지 않고 placeholder 안내에만 의존함.
 - 방향: 입력 컴포넌트 `maxLength`와 제출 전 검증을 스키마와 동일하게 적용.
+- 현황: 2026-04-27 RN 반영 완료 (생성/수정 폼 name·description·region·link label·link url에 `maxLength` 적용)
 
-- `[MEET-MGMT-02] 생성 화면 링크 개수 초과 입력이 무음 절단됨`
+- `(완료) [MEET-MGMT-02] 생성 화면 링크 개수 초과 입력이 무음 절단됨`
 - 판정: `RN`
 - 내용: 생성 화면은 링크 입력을 4개 초과해 추가할 수 있지만, 제출 시 `.slice(0,4)`로 뒤 항목을 조용히 제외해 데이터 유실 UX가 발생함.
 - 방향: UI 단계에서 4개 상한을 명시적으로 제한하거나, 초과 시 사용자 안내 후 정리.
+- 현황: 2026-04-27 RN 반영 완료 (4개 초과 시 추가 버튼 → "링크는 최대 4개까지 추가할 수 있습니다." 안내 텍스트로 대체)
 
-- `[MEET-MGMT-03] 모임 수정 화면 카테고리 최대 6개 제한 미적용`
+- `(완료) [MEET-MGMT-03] 모임 수정 화면 카테고리 최대 6개 제한 미적용`
 - 판정: `RN`
 - 내용: 생성 화면은 최대 6개 제한이 있으나, 수정 화면 카테고리 토글은 상한 없이 선택 가능해 서버 검증 오류를 유발할 수 있음.
 - 방향: 수정 화면에도 생성과 동일한 선택 상한 로직을 적용.
+- 현황: 2026-04-27 RN 반영 완료 (수정 화면 카테고리 토글에 `>= 6` 상한 추가)
 
 - `[MEET-MGMT-04] 모임 수정 요청에서 링크 필드 미전송`
 - 판정: `공동`
@@ -370,16 +378,47 @@
 - 내용: 신고 모달이 모든 화면에서 동일 타입 목록(`GENERAL/BOOK_STORY/COMMENT/CLUB_MEETING`)을 노출해 문맥과 맞지 않는 유형 선택이 가능함.
 - 방향: 진입 컨텍스트(책이야기, 공지댓글, 모임발제)에 맞는 타입만 노출하거나 기본 타입 고정 + 보조 사유만 입력받도록 단순화.
 
-- `[REPORT-03] 신고 본문 최대 길이 클라이언트-서버 불일치`
+- `(완료) [REPORT-03] 신고 본문 최대 길이 클라이언트-서버 불일치`
 - 판정: `RN`
 - 내용: 서버 스키마는 `content <= 500`인데 앱 모달 입력은 `maxLength=400`으로 제한해 사용 가능한 입력 범위를 축소함.
 - 방향: 모달 최대 길이를 서버 스펙(500)과 일치시키고 카운터 문구도 함께 정리.
+- 현황: 2026-04-27 RN 반영 완료 (`maxLength` 400 → 500, placeholder 문구 일치)
 
-## 우선순위 제안
+## 진행 현황 (2026-04-27 기준)
 
-- `P1`: `MEM-01`, `MEM-02`, `MEM-06`, `MEM-08`, `BOOK-01`, `BOOK-02`, `BOOKS-01`, `BOOKS-02`, `NEWS-01`, `NEWS-02`, `MEET-SEARCH-01`, `MEET-SEARCH-03`, `MYPAGE-02`, `MEET-HOME-01`, `MEET-NOTICE-02`, `MEET-BOOKSHELF-02`, `AUTH-01`, `MEET-MGMT-01`, `MEET-MGMT-03`, `CHAT-01`, `REPORT-01`
-- `P2`: `MEM-03`, `BOOK-03`, `BOOKS-06`, `NEWS-03`, `MEET-SEARCH-04`, `MEET-SEARCH-05`, `MYPAGE-03`, `MEET-HOME-03`, `MEET-NOTICE-03`, `MEET-BOOKSHELF-03`, `MEET-BOOKSHELF-05`, `AUTH-03`, `MEET-MGMT-02`, `MEET-MGMT-04`, `CHAT-02`, `REPORT-02`
-- `P3`: `MEM-04`, `MEM-05`, `MEM-07`, `MEM-09`, `BOOK-04`, `BOOK-05`, `BOOKS-03`, `BOOKS-04`, `BOOKS-05`, `NEWS-04`, `NEWS-05`, `MEET-SEARCH-02`, `MEET-SEARCH-06`, `MYPAGE-01`, `MYPAGE-04`, `MEET-HOME-02`, `MEET-HOME-04`, `MEET-NOTICE-01`, `MEET-NOTICE-04`, `MEET-BOOKSHELF-01`, `MEET-BOOKSHELF-04`, `AUTH-02`, `MEET-MGMT-05`, `CHAT-03`, `REPORT-03`
+### RN 완료 (22건)
+`MEM-01`, `MEM-02`, `MEM-03`, `MEM-05`, `MEM-06`, `MEM-08`,
+`BOOK-01`, `BOOK-02`, `BOOK-03`,
+`NEWS-01`, `NEWS-02`, `NEWS-03`, `NEWS-05`,
+`BOOKS-01`, `BOOKS-02`, `BOOKS-06`,
+`MEET-SEARCH-01`, `MEET-SEARCH-03`, `MEET-SEARCH-04`, `MEET-SEARCH-06`,
+`MYPAGE-02`, `MYPAGE-03`, `MYPAGE-04`,
+`MEET-HOME-01`,
+`MEET-NOTICE-02`, `MEET-NOTICE-03`, `MEET-NOTICE-04`,
+`MEET-BOOKSHELF-02`, `MEET-BOOKSHELF-03`, `MEET-BOOKSHELF-05`,
+`AUTH-03`,
+`MEET-MGMT-01`, `MEET-MGMT-02`, `MEET-MGMT-03`,
+`REPORT-03`
+
+### RN 미완료 (7건)
+| 항목 | 내용 | 비고 |
+|------|------|------|
+| `MEET-HOME-04` | 홈 진입 시 중복 fetchClubHome | 최적화 성격, 기능 영향 낮음 |
+| `MEET-BOOKSHELF-04` | 책장 ID / 정기모임 ID 혼용 | 구조적 리팩토링 필요, 리스크 높음 |
+| `CHAT-01` | STOMP 수신 메시지 중복 방지 | 채팅 백엔드 연동 선행 필요 |
+| `REPORT-02` | 신고 타입 문맥 비의존 | 진입점별 타입 필터링 추가 필요 |
+| `MEM-04` | find-email GET fallback | 공동(BE 정책 확정 후 정리) |
+| `MEM-09` | 차단 기능 플레이스홀더 | 공동(BE API 계약 미확정) |
+| `AUTH-01` | 회원가입 플로우 비원자성 | 공동(BE 트랜잭션/상태모델 필요) |
+
+### BE/BE문서 미완료 (미처리)
+`BOOK-04`, `BOOK-05`, `BOOKS-03`, `BOOKS-04`, `BOOKS-05`,
+`NEWS-04`, `MEET-SEARCH-02`, `MEET-SEARCH-05`,
+`MYPAGE-01`, `MEET-HOME-02`, `MEET-HOME-03`,
+`MEET-NOTICE-01`, `MEET-BOOKSHELF-01`,
+`AUTH-02`, `MEET-MGMT-04`, `MEET-MGMT-05`,
+`CHAT-02`, `CHAT-03`, `REPORT-01`,
+`MEM-07`
 
 ## 정리 메모
 

@@ -127,11 +127,11 @@ export function ReportMemberModal({
               <TextInput
                 value={content}
                 onChangeText={setContent}
-                placeholder="신고 내용 작성 (최대 400자)"
+                placeholder="신고 내용 작성 (최대 500자)"
                 placeholderTextColor={colors.gray3}
                 style={styles.contentInput}
                 multiline
-                maxLength={400}
+                maxLength={500}
                 textAlignVertical="top"
               />
             </View>

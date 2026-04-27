@@ -493,6 +493,10 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       showToast('이름을 입력해주세요.');
       return;
     }
+    if (name.trim().length > 10) {
+      showToast('이름은 최대 10자까지 가능합니다.');
+      return;
+    }
     if (!phoneRegex.test(phoneNumber.trim())) {
       showToast('전화번호 형식을 확인해주세요. 예: 010-1234-5678');
       return;

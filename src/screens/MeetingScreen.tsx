@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import {
   Alert,
+  Animated,
   FlatList,
   Image,
   Linking,
@@ -219,6 +220,9 @@ const participantLabelByCode: Record<string, string> = {
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
 const clubDefaultImageUri = Image.resolveAssetSource(
   require('../../assets/icons/logo_primary.svg'),
+).uri;
+const chatIconUri = Image.resolveAssetSource(
+  require('../../assets/icons/Chat.svg'),
 ).uri;
 const clubDefaultProfileLogoUri = Image.resolveAssetSource(
   require('../../assets/mobile-header-logo.svg'),
@@ -2030,13 +2034,18 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     gap: spacing.sm,
   },
+  managementHandleArea: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginTop: -10,
+    marginBottom: spacing.xs - 10,
+  },
   managementHandle: {
     width: 44,
     height: 4,
     borderRadius: 999,
     backgroundColor: colors.gray2,
-    alignSelf: 'center',
-    marginBottom: spacing.xs,
   },
   managementMenuTitle: {
     ...typography.subhead3,
@@ -5144,6 +5153,31 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [submittingRegularChat, setSubmittingRegularChat] = useState(false);
   const chatScrollRef = useRef<ScrollView>(null);
   const [managementMenuVisible, setManagementMenuVisible] = useState(false);
+  const managementSheetY = useRef(new Animated.Value(0)).current;
+  const managementHandlePanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt, gestureState) =>
+        gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
+      onPanResponderMove: (_evt, gestureState) => {
+        if (gestureState.dy > 0) managementSheetY.setValue(gestureState.dy);
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dy > 100 || gestureState.vy > 0.5) {
+          Animated.timing(managementSheetY, {
+            toValue: 600,
+            duration: 220,
+            useNativeDriver: true,
+          }).start(() => setManagementMenuVisible(false));
+        } else {
+          Animated.spring(managementSheetY, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 6,
+          }).start();
+        }
+      },
+    }),
+  ).current;
   const [activeManagementScreen, setActiveManagementScreen] = useState<GroupManagementScreen | null>(null);
   const [joinRequests, setJoinRequests] = useState<GroupJoinRequestItem[]>([]);
   const [members, setMembers] = useState<GroupMemberItem[]>([]);
@@ -5224,6 +5258,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     pageY: number;
     moved: boolean;
   } | null>(null);
+  const teamManageScrollRef = useRef<ScrollView>(null);
+  const teamManageScrollViewRef = useRef<View>(null);
+  const teamManageScrollOffsetRef = useRef(0);
+  const teamManageScrollBoundsRef = useRef<{ top: number; bottom: number } | null>(null);
+  const dragAutoScrollFrameRef = useRef<number | null>(null);
+  const dragCurrentPageYRef = useRef(0);
   const contactLinks = useMemo(
     () => normalizeClubContacts(managedGroup.links),
     [managedGroup.links],
@@ -5259,6 +5299,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const closeManagementMenu = useCallback(() => {
     setManagementMenuVisible(false);
   }, []);
+  useEffect(() => {
+    if (managementMenuVisible) managementSheetY.setValue(0);
+  }, [managementMenuVisible, managementSheetY]);
   const closeContactModal = useCallback(() => {
     setContactModalVisible(false);
   }, []);
@@ -5464,9 +5507,22 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         const [homeDetail, bookshelfList, noticeList, latestNotice, myMembership] = await Promise.all([
           fetchClubHome(group.clubId),
           fetchAllClubBookshelvesWithCursor(group.clubId),
-          fetchClubNotices(group.clubId, 1),
+          (async () => {
+            const clubIdNum = group.clubId as number;
+            const first = await fetchClubNotices(clubIdNum, 1);
+            if (!first.hasNext) return first;
+            const allNormal = [...first.normalNotices];
+            for (let p = 2; p <= Math.min(first.totalPages, 20); p++) {
+              const more = await fetchClubNotices(clubIdNum, p);
+              allNormal.push(...more.normalNotices);
+              if (!more.hasNext) break;
+            }
+            return { ...first, normalNotices: allNormal };
+          })(),
           fetchClubLatestNotice(group.clubId, { suppressErrorToast: true }),
-          fetchClubMyMembership(group.clubId, { suppressErrorToast: true }),
+          isLoggedIn
+            ? fetchClubMyMembership(group.clubId, { suppressErrorToast: true })
+            : Promise.resolve(null),
         ]);
 
         if (isStale()) return;
@@ -5543,6 +5599,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         if (error instanceof ApiError) {
           if (error.status === 401) {
             handleAuthExpired({ suppressToast: options?.suppressErrorToast });
+          } else if (error.status === 403 && !options?.suppressErrorToast) {
+            showToast('모임 멤버만 열람할 수 있습니다.');
+          } else if (error.status !== 401 && !options?.suppressErrorToast) {
+            showToast(error.message || '모임 데이터를 불러오지 못했습니다.');
           }
           return;
         }
@@ -5551,7 +5611,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         }
       }
     },
-    [group, group.clubId, handleAuthExpired, isManagedClub],
+    [group, group.clubId, handleAuthExpired, isManagedClub, isLoggedIn],
   );
 
   useEffect(() => {
@@ -5647,7 +5707,15 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           }));
         }
       } catch (error) {
-        if (error instanceof ApiError) return;
+        if (cancelled) return;
+        if (error instanceof ApiError) {
+          if (error.status === 403) {
+            showToast('공지 열람 권한이 없습니다.');
+          } else if (error.status !== 401) {
+            showToast(error.message || '공지 상세를 불러오지 못했습니다.');
+          }
+          return;
+        }
         showToast('공지 상세를 불러오지 못했습니다.');
       }
     };
@@ -6493,7 +6561,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
             loadingMore: false,
           },
         }));
-        if (!(error instanceof ApiError)) {
+        if (error instanceof ApiError) {
+          if (error.status === 403) {
+            showToast('댓글 열람 권한이 없습니다.');
+          } else if (error.status !== 401) {
+            showToast(error.message || '댓글을 추가로 불러오지 못했습니다.');
+          }
+        } else {
           showToast('댓글을 추가로 불러오지 못했습니다.');
         }
       }
@@ -7508,6 +7582,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     setDraggingTeamMemberPosition(null);
     setTeamManageDropLayouts({});
     dragStartRef.current = null;
+    if (dragAutoScrollFrameRef.current !== null) {
+      cancelAnimationFrame(dragAutoScrollFrameRef.current);
+      dragAutoScrollFrameRef.current = null;
+    }
+    teamManageScrollBoundsRef.current = null;
+    teamManageScrollOffsetRef.current = 0;
   }, [teamManageSaving]);
 
   const refreshTeamManageDropLayouts = useCallback(() => {
@@ -7703,6 +7783,42 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     [moveTeamManageMemberToTarget, teamManageSelectedMemberId],
   );
 
+  const stopDragAutoScroll = useCallback(() => {
+    if (dragAutoScrollFrameRef.current !== null) {
+      cancelAnimationFrame(dragAutoScrollFrameRef.current);
+      dragAutoScrollFrameRef.current = null;
+    }
+  }, []);
+
+  const startDragAutoScroll = useCallback(() => {
+    if (dragAutoScrollFrameRef.current !== null) return;
+    const ZONE = 80;
+    const MAX_SPEED = 10;
+    const tick = () => {
+      const bounds = teamManageScrollBoundsRef.current;
+      const scrollRef = teamManageScrollRef.current;
+      if (!bounds || !scrollRef) {
+        dragAutoScrollFrameRef.current = null;
+        return;
+      }
+      const pageY = dragCurrentPageYRef.current;
+      if (pageY < bounds.top + ZONE) {
+        const ratio = Math.max(0, 1 - (pageY - bounds.top) / ZONE);
+        teamManageScrollOffsetRef.current = Math.max(0, teamManageScrollOffsetRef.current - MAX_SPEED * ratio);
+        scrollRef.scrollTo({ y: teamManageScrollOffsetRef.current, animated: false });
+        dragAutoScrollFrameRef.current = requestAnimationFrame(tick);
+      } else if (pageY > bounds.bottom - ZONE) {
+        const ratio = Math.max(0, (pageY - (bounds.bottom - ZONE)) / ZONE);
+        teamManageScrollOffsetRef.current += MAX_SPEED * ratio;
+        scrollRef.scrollTo({ y: teamManageScrollOffsetRef.current, animated: false });
+        dragAutoScrollFrameRef.current = requestAnimationFrame(tick);
+      } else {
+        dragAutoScrollFrameRef.current = null;
+      }
+    };
+    dragAutoScrollFrameRef.current = requestAnimationFrame(tick);
+  }, []);
+
   const finishTeamManageDrag = useCallback(
     (pageX: number, pageY: number) => {
       const dragState = dragStartRef.current;
@@ -7719,11 +7835,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         );
       }
 
+      stopDragAutoScroll();
       dragStartRef.current = null;
       setDraggingTeamMemberId(null);
       setDraggingTeamMemberPosition(null);
     },
-    [findTeamManageDropTarget, moveTeamManageMemberToTarget],
+    [findTeamManageDropTarget, moveTeamManageMemberToTarget, stopDragAutoScroll],
   );
 
   const handleTeamManageMemberGrant = useCallback(
@@ -7743,21 +7860,32 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     [],
   );
 
-  const handleTeamManageMemberMove = useCallback((event: GestureResponderEvent) => {
-    const dragState = dragStartRef.current;
-    if (!dragState) return;
+  const handleTeamManageMemberMove = useCallback(
+    (event: GestureResponderEvent) => {
+      const dragState = dragStartRef.current;
+      if (!dragState) return;
 
-    const dx = Math.abs(event.nativeEvent.pageX - dragState.pageX);
-    const dy = Math.abs(event.nativeEvent.pageY - dragState.pageY);
-    if (dx > 6 || dy > 6) {
-      dragState.moved = true;
-    }
+      const dx = Math.abs(event.nativeEvent.pageX - dragState.pageX);
+      const dy = Math.abs(event.nativeEvent.pageY - dragState.pageY);
+      if (dx > 6 || dy > 6) {
+        dragState.moved = true;
+      }
 
-    setDraggingTeamMemberPosition({
-      x: event.nativeEvent.pageX,
-      y: event.nativeEvent.pageY,
-    });
-  }, []);
+      const { pageX, pageY } = event.nativeEvent;
+      dragCurrentPageYRef.current = pageY;
+      setDraggingTeamMemberPosition({ x: pageX, y: pageY });
+
+      if (dragState.moved) {
+        const bounds = teamManageScrollBoundsRef.current;
+        if (bounds && (pageY < bounds.top + 80 || pageY > bounds.bottom - 80)) {
+          startDragAutoScroll();
+        } else {
+          stopDragAutoScroll();
+        }
+      }
+    },
+    [startDragAutoScroll, stopDragAutoScroll],
+  );
 
   const handleTeamManageMemberRelease = useCallback(
     (event: GestureResponderEvent) => {
@@ -10285,11 +10413,25 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 </Pressable>
               </View>
 
+              <View
+                ref={teamManageScrollViewRef}
+                style={styles.managementScreenScroll}
+                onLayout={() => {
+                  teamManageScrollViewRef.current?.measureInWindow((_x, y, _w, height) => {
+                    teamManageScrollBoundsRef.current = { top: y, bottom: y + height };
+                  });
+                }}
+              >
               <ScrollView
+                ref={teamManageScrollRef}
                 style={styles.managementScreenScroll}
                 contentContainerStyle={styles.teamManageContent}
                 scrollEnabled={draggingTeamMemberId === null}
                 showsVerticalScrollIndicator={false}
+                scrollEventThrottle={16}
+                onScroll={(e) => {
+                  teamManageScrollOffsetRef.current = e.nativeEvent.contentOffset.y;
+                }}
               >
                 {teamManageTeams.map((team) => (
                   <View
@@ -10418,6 +10560,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   </View>
                 </View>
               </ScrollView>
+              </View>
 
               <View
                 style={[
@@ -10918,6 +11061,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     placeholder="독서 모임 이름을 입력해주세요"
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
+                    maxLength={40}
                   />
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
@@ -10930,6 +11074,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     placeholderTextColor={colors.gray3}
                     style={[styles.input, styles.textArea]}
                     multiline
+                    maxLength={500}
                   />
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
@@ -11021,7 +11166,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                               ...prev,
                               categories: prev.categories.includes(category)
                                 ? prev.categories.filter((item) => item !== category)
-                                : [...prev.categories, category],
+                                : prev.categories.length >= 6
+                                  ? prev.categories
+                                  : [...prev.categories, category],
                             }))
                           }
                           style={({ pressed }) => [
@@ -11047,6 +11194,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     placeholder="활동 지역을 입력해주세요 (40자 제한)"
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
+                    maxLength={40}
                   />
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
@@ -11616,12 +11764,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
             onPress={closeManagementMenu}
             disableFeedback
           >
-            <Pressable
-              style={styles.managementMenuSheet}
-              onPress={(event) => event.stopPropagation()}
-              disableFeedback
+            <Animated.View
+              style={[styles.managementMenuSheet, { transform: [{ translateY: managementSheetY }] }]}
+              onStartShouldSetResponder={() => true}
             >
-              <View style={styles.managementHandle} />
+              <View style={styles.managementHandleArea} {...managementHandlePanResponder.panHandlers}>
+                <View style={styles.managementHandle} />
+              </View>
               <Text style={styles.managementMenuTitle}>모임 관리하기</Text>
               <Text style={styles.managementMenuCaption}>
                 운영진용 관리 기능을 선택해주세요.
@@ -11688,7 +11837,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   <MaterialIcons name="chevron-right" size={20} color={colors.gray4} />
                 </Pressable>
               ))}
-            </Pressable>
+            </Animated.View>
           </Pressable>
         )}
       </Modal>
@@ -12204,7 +12353,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       bookshelfViewMode === 'REGULAR_GROUP' &&
       selectedRegularGroup ? (
         <FloatingActionButton onPress={handleOpenRegularChatPicker}>
-          <MaterialIcons name="chat-bubble-outline" size={20} color={colors.white} />
+          <SvgUri uri={chatIconUri} width={24} height={24} />
         </FloatingActionButton>
       ) : null}
       <Modal
@@ -12735,6 +12884,7 @@ function MeetingCreateFlow({
                   placeholder="독서 모임 이름을 입력해주세요"
                   placeholderTextColor={colors.gray3}
                   style={[styles.input, styles.inlineInput]}
+                  maxLength={40}
                 />
                 <Pressable
                   style={({ pressed }) => [
@@ -12778,6 +12928,7 @@ function MeetingCreateFlow({
                 placeholderTextColor={colors.gray3}
                 style={[styles.input, styles.textArea]}
                 multiline
+                maxLength={500}
               />
             </View>
           )}
@@ -12990,6 +13141,7 @@ function MeetingCreateFlow({
                 placeholder="활동 지역을 입력해주세요 (40자 제한)"
                 placeholderTextColor={colors.gray3}
                 style={styles.input}
+                maxLength={40}
               />
 
               <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
@@ -13033,6 +13185,7 @@ function MeetingCreateFlow({
                     placeholder="링크 대체 텍스트 입력(최대 20자)"
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
+                    maxLength={20}
                   />
                   <TextInput
                     value={link.url}
@@ -13046,15 +13199,20 @@ function MeetingCreateFlow({
                     placeholder="링크 입력(최대 100자)"
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
+                    maxLength={100}
                   />
                 </View>
               ))}
-              <Pressable
-                style={({ pressed }) => [styles.addLinkButton, pressed && styles.pressed]}
-                onPress={() => setLinks((prev: LinkItem[]) => [...prev, { text: '', url: '' }])}
-              >
-                <Text style={styles.addLinkText}>+</Text>
-              </Pressable>
+              {links.length < 4 ? (
+                <Pressable
+                  style={({ pressed }) => [styles.addLinkButton, pressed && styles.pressed]}
+                  onPress={() => setLinks((prev: LinkItem[]) => [...prev, { text: '', url: '' }])}
+                >
+                  <Text style={styles.addLinkText}>+</Text>
+                </Pressable>
+              ) : (
+                <Text style={styles.helperText}>링크는 최대 4개까지 추가할 수 있습니다.</Text>
+              )}
             </View>
           )}
 

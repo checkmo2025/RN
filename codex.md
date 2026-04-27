@@ -282,3 +282,39 @@
 - Swagger(OpenAPI)와 실서버 응답 샘플을 기준으로 책 검색 API(`/books/*`)를 추가 점검함
 - `docs/issue-fetch.md`에 `책 검색 영역` 섹션을 신설하고 페이징/좋아요 동기화/문서 불일치 이슈를 `RN/BE 문서`로 분류함
 - `README.md`를 기존 팀원 실행 중심 구조(프로젝트 소개/스펙/실행/문서 링크)로 정리함
+
+---
+
+## 업데이트 (2026-04-27)
+
+수정 시각: 2026-04-27 KST
+
+### 모임 관리 메뉴 핸들 드래그 닫기 애니메이션
+- `MeetingScreen` 관리 메뉴 바텀시트 상단 핸들에 PanResponder + Animated 기반 드래그-투-디스미스 추가
+- 핸들을 아래로 100px 이상 드래그하거나 빠르게 스와이프(`vy > 0.5`)하면 시트가 220ms 슬라이드 다운 후 모달 닫힘
+- 짧게 건드리면 spring 애니메이션으로 원위치 복귀 (bounciness 6)
+- 핸들 터치 영역 래퍼 뷰(`managementHandleArea`) 추가: 상하 10px 확장으로 잡기 편하게 보강
+- 시트 컨테이너를 `Animated.View`로 교체, `onStartShouldSetResponder`로 배경 탭 이벤트와 분리
+
+### 조 관리 드래그 중 자동 스크롤
+- 조 편성 화면 ScrollView에 `ref` / `onScroll` / `onLayout→measureInWindow` 연결
+- 드래그 중 손가락 위치가 스크롤 뷰 상단 또는 하단 80px 존에 진입하면 `requestAnimationFrame` 루프 기반 자동 스크롤 시작
+- 존에서 벗어나거나 드래그 종료(release/terminate) 시 `cancelAnimationFrame`으로 즉시 중지
+- 스크롤 속도는 존 내 깊이 비례(최대 10px/frame), `teamManageScrollOffsetRef`로 현재 오프셋 추적
+- 모달 닫힘(`closeTeamManage`) 시 rAF 프레임 정리 및 bounds/offset ref 초기화
+
+### issue-fetch.md 이슈 반영 (RN 항목 1차 처리)
+- `MEET-HOME-01`: 비로그인 시 `fetchClubMyMembership` 호출 억제 (`isLoggedIn` 가드 추가)
+- `MEET-NOTICE-02`: 공지 페이징 루프로 전체 수집 (최대 20페이지)
+- `MEET-NOTICE-03/04`: 403 → 멤버 전용 토스트, 공지 상세/댓글 403 에러 처리 추가
+- `MEET-MGMT-01`: 모임 수정/생성 폼 입력 필드에 `maxLength` 적용
+- `MEET-MGMT-02`: 링크 최대 4개 제한 UI 추가
+- `MEET-MGMT-03`: 카테고리 편집 시 최대 6개 초과 선택 방지
+- `AUTH-03`: 이름 입력 10자 초과 시 토스트 경고
+- `REPORT-03`: 신고 내용 최대 500자 (`maxLength` 및 placeholder 보정)
+
+## 작업 파일
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/AuthFlowScreen.tsx`
+- `src/components/common/ReportMemberModal.tsx`
+- `docs/issue-fetch.md`
