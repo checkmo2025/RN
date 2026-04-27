@@ -328,3 +328,35 @@
 - 정기모임 채팅 플로팅 버튼 아이콘 에셋 `assets/icons/Chat.svg`를 프로젝트에 추가하고 RN 화면에서 사용하도록 반영
 - `svg-usage.md` 신규 생성: `checkmo_rn` 기준 전체 SVG 사용/미사용 및 다중 참조 파일 정리
 - `icon-usage.md` 신규 생성: favicon/icon(assets, iOS AppIcon, Android launcher) 전체 사용 현황 정리
+
+---
+
+## 업데이트 (2026-04-27)
+
+### 탭 재탭 시 화면 상단 스크롤 (`useScrollToTop`)
+- `@react-navigation/native`의 `useScrollToTop` 훅을 5개 탭 화면에 적용
+- 이미 활성화된 탭 아이콘을 다시 누르면 각 화면 메인 리스트/스크롤이 상단으로 이동
+- 홈(FlatList) / 모임(ScrollView) / 책이야기(FlatList, 기존 listRef 재사용) / 소식(FlatList) / 마이페이지(ScrollView) 각각 ref 연결
+
+### 모임 화면 UX 개선 및 버그 수정
+- 모임 검색 필터 행(`전체 / 모임별 / 지역별`) 간격 축소: `gap` md(16) → 4px
+- 임시 비밀번호 버튼 워딩 변경: `발송` → `전송`
+- 모임 상세 메타 정보(`모임 대상` / `활동 지역` / `모임 취지`) 텍스트 크기 14 → 15px
+- 비회원이 클럽 방문 시 `/clubs/{id}/me` 404를 `null`로 흡수 → "해당 클럽 회원을 찾을 수 없습니다" 오류 토스트 제거
+- 비회원이 공지사항/책장 탭 진입 시 회원 전용 안내 메시지 표시
+  - 공지사항: "공지사항은 독서 모임의 회원이 되신 후 조회 가능합니다."
+  - 책장: "책장은 독서 모임의 회원이 되신 후 조회 가능합니다."
+- `isMember` 파생 변수 추가: `managedGroup.applicationStatus === '가입 완료' || canManageClub`
+
+### 기본 프로필 이미지 통일
+- `ReportMemberModal`의 fallback 아바타를 `MaterialIcons person-outline`에서 `DefaultProfileAvatar`(image_profile1.svg)로 교체
+- 앱 전체에서 사용자 아바타 기본 이미지를 `DefaultProfileAvatar`로 통일
+
+## 작업 파일
+- `src/screens/HomeScreen.tsx`
+- `src/screens/StoryScreen.tsx`
+- `src/screens/NewsScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/AuthFlowScreen.tsx`
+- `src/components/common/ReportMemberModal.tsx`

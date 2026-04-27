@@ -1420,7 +1420,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           disabled={sendingTempPassword}
         >
           <Text style={styles.primaryText}>
-            {sendingTempPassword ? '발송 중...' : '임시 비밀번호 발송'}
+            {sendingTempPassword ? '전송 중...' : '임시 비밀번호 전송'}
           </Text>
         </Pressable>
       </>,

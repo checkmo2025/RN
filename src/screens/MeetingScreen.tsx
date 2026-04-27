@@ -1280,7 +1280,7 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: 4,
     zIndex: 30,
   },
   outputFilterWrap: {
@@ -1986,6 +1986,7 @@ const styles = StyleSheet.create({
   },
   metaValue: {
     ...typography.body1_3,
+    fontSize: 15,
     color: colors.gray6,
   },
   detailBody: {
@@ -5131,6 +5132,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const isManagedClub = typeof group.clubId === 'number';
   const [managedGroup, setManagedGroup] = useState<Group>(group);
   const [canManageClub, setCanManageClub] = useState(false);
+  const isMember = managedGroup.applicationStatus === '가입 완료' || canManageClub;
   const [activeTab, setActiveTab] = useState<'home' | 'notice' | 'bookshelf'>('home');
   const [noticePage, setNoticePage] = useState(1);
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
@@ -5525,7 +5527,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           })(),
           fetchClubLatestNotice(group.clubId, { suppressErrorToast: true }),
           isLoggedIn
-            ? fetchClubMyMembership(group.clubId, { suppressErrorToast: true })
+            ? fetchClubMyMembership(group.clubId, { suppressErrorToast: true }).catch((e: unknown) => {
+                if (e instanceof ApiError && (e.status === 404 || e.status === 403)) return null;
+                throw e;
+              })
             : Promise.resolve(null),
         ]);
 
@@ -9350,7 +9355,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       ) : null}
 
       {activeTab === 'notice' ? (
-        selectedNotice ? (
+        !isMember ? (
+          <View style={styles.managementEmptyCard}>
+            <Text style={styles.managementEmptyText}>
+              공지사항은 독서 모임의 회원이 되신 후 조회 가능합니다.
+            </Text>
+          </View>
+        ) : selectedNotice ? (
           <View style={styles.noticeDetailCard}>
             <Pressable
               style={({ pressed }) => [styles.breadcrumbPress, pressed && styles.pressed]}
@@ -9744,6 +9755,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       ) : null}
 
       {activeTab === 'bookshelf' ? (
+        !isMember ? (
+          <View style={styles.managementEmptyCard}>
+            <Text style={styles.managementEmptyText}>
+              책장은 독서 모임의 회원이 되신 후 조회 가능합니다.
+            </Text>
+          </View>
+        ) : (
         <View style={styles.bookshelfSection}>
           {bookshelfViewMode === 'GRID' ? (
             <>
@@ -10325,6 +10343,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
             </View>
           ) : null}
         </View>
+        )
       ) : null}
       </ScrollView>
       <Modal

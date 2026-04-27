@@ -11,6 +11,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../theme';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
+import { DefaultProfileAvatar } from './DefaultProfileAvatar';
 import type { MemberReportType } from '../../services/api/memberApi';
 
 export type ReportMemberModalState = {
@@ -66,7 +67,7 @@ export function ReportMemberModal({
         {target.profileImageUrl ? (
           <Image source={{ uri: target.profileImageUrl }} style={styles.avatarImage} />
         ) : (
-          <MaterialIcons name="person-outline" size={22} color={colors.gray4} />
+          <DefaultProfileAvatar size={40} />
         )}
       </View>
       <View style={styles.targetMeta}>
