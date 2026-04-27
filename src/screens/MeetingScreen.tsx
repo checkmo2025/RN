@@ -1280,7 +1280,7 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.xs,
     zIndex: 30,
   },
   outputFilterWrap: {
