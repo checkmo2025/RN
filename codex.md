@@ -318,3 +318,13 @@
 - `src/screens/AuthFlowScreen.tsx`
 - `src/components/common/ReportMemberModal.tsx`
 - `docs/issue-fetch.md`
+
+---
+
+## 업데이트 (2026-04-27)
+
+수정 시각: 2026-04-27 20:20:57 KST
+
+- 정기모임 채팅 플로팅 버튼 아이콘 에셋 `assets/icons/Chat.svg`를 프로젝트에 추가하고 RN 화면에서 사용하도록 반영
+- `svg-usage.md` 신규 생성: `checkmo_rn` 기준 전체 SVG 사용/미사용 및 다중 참조 파일 정리
+- `icon-usage.md` 신규 생성: favicon/icon(assets, iOS AppIcon, Android launcher) 전체 사용 현황 정리

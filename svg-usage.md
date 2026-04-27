@@ -1,0 +1,201 @@
+# SVG Usage Report
+
+- 생성 시각: `2026-04-27 20:08:28 KST`
+- 스캔 범위: `checkmo_rn` (제외: `checkmo_fe2/**`, `checkmo_be 2/**`, `node_modules/**`)
+- 참조 검색 대상: `src/**`, `App.tsx`, `index.ts`, `app.json`, `eas.json`, `package.json`, `tsconfig.json`
+- 매칭 기준: 코드 내 `/<파일명>.svg` 문자열
+
+## Summary
+
+- 전체 SVG: **146**
+- 사용 중 SVG: **24**
+- 미사용 SVG: **122**
+- 1개 파일에서만 사용: **19**
+- 여러 파일(2+)에서 사용: **5**
+
+## 1) 여러 곳에서 사용 중 (2개 파일 이상)
+
+- `assets/book-story/bookstory-comment.svg` (`bookstory-comment.svg`) - 3개 파일, 3회 참조
+  - `src/components/feature/bookstory/BookStoryCard.tsx:36`
+  - `src/screens/MyPageScreen.tsx:490`
+  - `src/screens/UserProfileScreen.tsx:93`
+- `assets/book-story/bookstory-like.svg` (`bookstory-like.svg`) - 2개 파일, 2회 참조
+  - `src/screens/MyPageScreen.tsx:486`
+  - `src/screens/UserProfileScreen.tsx:90`
+- `assets/icons/logo_primary.svg` (`logo_primary.svg`) - 3개 파일, 3회 참조
+  - `src/components/common/BookFlipLoadingScreen.tsx:10`
+  - `src/screens/AuthFlowScreen.tsx:78`
+  - `src/screens/MeetingScreen.tsx:221`
+- `assets/icons/pencil_icon.svg` (`pencil_icon.svg`) - 2개 파일, 2회 참조
+  - `src/components/common/AppHeader.tsx:69`
+  - `src/screens/StoryScreen.tsx:306`
+- `assets/mobile-header-logo.svg` (`mobile-header-logo.svg`) - 3개 파일, 3회 참조
+  - `src/components/common/AppHeader.tsx:57`
+  - `src/screens/AuthFlowScreen.tsx:81`
+  - `src/screens/MeetingScreen.tsx:227`
+
+## 2) 한 곳에서만 사용 중 (1개 파일)
+
+- `assets/header/header-alarm.svg` (`header-alarm.svg`) - 1회 참조
+  - `src/components/common/AppHeader.tsx:66`
+- `assets/header/header-search.svg` (`header-search.svg`) - 1회 참조
+  - `src/components/common/AppHeader.tsx:60`
+- `assets/icons/Chat.svg` (`Chat.svg`) - 1회 참조
+  - `src/screens/MeetingScreen.tsx:224`
+- `assets/icons/after_group.svg` (`after_group.svg`) - 1회 참조
+  - `src/navigation/BottomTabs.tsx:27`
+- `assets/icons/after_home.svg` (`after_home.svg`) - 1회 참조
+  - `src/navigation/BottomTabs.tsx:19`
+- `assets/icons/after_my.svg` (`after_my.svg`) - 1회 참조
+  - `src/navigation/BottomTabs.tsx:51`
+- `assets/icons/after_news.svg` (`after_news.svg`) - 1회 참조
+  - `src/navigation/BottomTabs.tsx:43`
+- `assets/icons/after_story.svg` (`after_story.svg`) - 1회 참조
+  - `src/navigation/BottomTabs.tsx:35`
+- `assets/icons/before_group.svg` (`before_group.svg`) - 1회 참조
+  - `src/navigation/BottomTabs.tsx:30`
+- `assets/icons/before_home.svg` (`before_home.svg`) - 1회 참조
+  - `src/navigation/BottomTabs.tsx:22`
+- `assets/icons/before_my.svg` (`before_my.svg`) - 1회 참조
+  - `src/navigation/BottomTabs.tsx:54`
+- `assets/icons/before_news.svg` (`before_news.svg`) - 1회 참조
+  - `src/navigation/BottomTabs.tsx:46`
+- `assets/icons/before_story.svg` (`before_story.svg`) - 1회 참조
+  - `src/navigation/BottomTabs.tsx:38`
+- `assets/icons/search.svg` (`search.svg`) - 1회 참조
+  - `src/components/common/AppHeader.tsx:63`
+- `assets/mypage/image_profile1.svg` (`image_profile1.svg`) - 1회 참조
+  - `src/components/common/DefaultProfileAvatar.tsx:5`
+- `assets/mypage/mypage-setting.svg` (`mypage-setting.svg`) - 1회 참조
+  - `src/screens/MyPageScreen.tsx:470`
+- `assets/mypage/setting-other.svg` (`setting-other.svg`) - 1회 참조
+  - `src/screens/MyPageScreen.tsx:482`
+- `assets/mypage/setting-profile.svg` (`setting-profile.svg`) - 1회 참조
+  - `src/screens/MyPageScreen.tsx:474`
+- `assets/mypage/setting-service.svg` (`setting-service.svg`) - 1회 참조
+  - `src/screens/MyPageScreen.tsx:478`
+
+## 3) 미사용 SVG
+
+- `assets/icons/Arrow-Right2.svg` (`Arrow-Right2.svg`)
+- `assets/icons/ArrowDown.svg` (`ArrowDown.svg`)
+- `assets/icons/ArrowLeft.svg` (`ArrowLeft.svg`)
+- `assets/icons/ArrowLeft2.svg` (`ArrowLeft2.svg`)
+- `assets/icons/ArrowRight.svg` (`ArrowRight.svg`)
+- `assets/icons/ArrowRight2.svg` (`ArrowRight2.svg`)
+- `assets/icons/ArrowThickLeft.svg` (`ArrowThickLeft.svg`)
+- `assets/icons/ArrowThickRight.svg` (`ArrowThickRight.svg`)
+- `assets/icons/ArrowTop.svg` (`ArrowTop.svg`)
+- `assets/icons/BookImgSample.svg` (`BookImgSample.svg`)
+- `assets/icons/BrownCheck.svg` (`BrownCheck.svg`)
+- `assets/icons/Calendar.svg` (`Calendar.svg`)
+- `assets/icons/Category.svg` (`Category.svg`)
+- `assets/icons/CheckBox_No.svg` (`CheckBox_No.svg`)
+- `assets/icons/CheckBox_Yes.svg` (`CheckBox_Yes.svg`)
+- `assets/icons/CheckOff.svg` (`CheckOff.svg`)
+- `assets/icons/CheckOn.svg` (`CheckOn.svg`)
+- `assets/icons/ClubDefaultImg.svg` (`ClubDefaultImg.svg`)
+- `assets/icons/Document.svg` (`Document.svg`)
+- `assets/icons/Edit_icon.svg` (`Edit_icon.svg`)
+- `assets/icons/GreenCheck.svg` (`GreenCheck.svg`)
+- `assets/icons/Hide.svg` (`Hide.svg`)
+- `assets/icons/Location2.svg` (`Location2.svg`)
+- `assets/icons/Lock.svg` (`Lock.svg`)
+- `assets/icons/Logout.svg` (`Logout.svg`)
+- `assets/icons/Notification2.svg` (`Notification2.svg`)
+- `assets/icons/Notification3.svg` (`Notification3.svg`)
+- `assets/icons/Polygon.svg` (`Polygon.svg`)
+- `assets/icons/Polygon6.svg` (`Polygon6.svg`)
+- `assets/icons/RadioOff.svg` (`RadioOff.svg`)
+- `assets/icons/RadioOn.svg` (`RadioOn.svg`)
+- `assets/icons/Send.svg` (`Send.svg`)
+- `assets/icons/Setting.svg` (`Setting.svg`)
+- `assets/icons/Setting_Profile.svg` (`Setting_Profile.svg`)
+- `assets/icons/Setting_Smile_emoji.svg` (`Setting_Smile_emoji.svg`)
+- `assets/icons/Setting_icon.svg` (`Setting_icon.svg`)
+- `assets/icons/Star.svg` (`Star.svg`)
+- `assets/icons/Swap.svg` (`Swap.svg`)
+- `assets/icons/Unlock.svg` (`Unlock.svg`)
+- `assets/icons/Vector.svg` (`Vector.svg`)
+- `assets/icons/accept.svg` (`accept.svg`)
+- `assets/icons/add_story.svg` (`add_story.svg`)
+- `assets/icons/admin.svg` (`admin.svg`)
+- `assets/icons/after_category.svg` (`after_category.svg`)
+- `assets/icons/ant-design_more-outlined.svg` (`ant-design_more-outlined.svg`)
+- `assets/icons/back.svg` (`back.svg`)
+- `assets/icons/before_category.svg` (`before_category.svg`)
+- `assets/icons/bookcase_arrow.svg` (`bookcase_arrow.svg`)
+- `assets/icons/booksample.svg` (`booksample.svg`)
+- `assets/icons/bookshelf.svg` (`bookshelf.svg`)
+- `assets/icons/bookstorycard.svg` (`bookstorycard.svg`)
+- `assets/icons/cancle_button.svg` (`cancle_button.svg`)
+- `assets/icons/comment.svg` (`comment.svg`)
+- `assets/icons/dark_close.svg` (`dark_close.svg`)
+- `assets/icons/dark_search.svg` (`dark_search.svg`)
+- `assets/icons/default_profile_1.svg` (`default_profile_1.svg`)
+- `assets/icons/default_profile_2.svg` (`default_profile_2.svg`)
+- `assets/icons/delete.svg` (`delete.svg`)
+- `assets/icons/duplicate.svg` (`duplicate.svg`)
+- `assets/icons/edit2.svg` (`edit2.svg`)
+- `assets/icons/empty_star.svg` (`empty_star.svg`)
+- `assets/icons/file.svg` (`file.svg`)
+- `assets/icons/full_star.svg` (`full_star.svg`)
+- `assets/icons/globe.svg` (`globe.svg`)
+- `assets/icons/googleLogo.svg` (`googleLogo.svg`)
+- `assets/icons/gray_heart.svg` (`gray_heart.svg`)
+- `assets/icons/gray_share.svg` (`gray_share.svg`)
+- `assets/icons/group_home.svg` (`group_home.svg`)
+- `assets/icons/groups_3User.svg` (`groups_3User.svg`)
+- `assets/icons/icon_alert.svg` (`icon_alert.svg`)
+- `assets/icons/icon_minus_1.svg` (`icon_minus_1.svg`)
+- `assets/icons/icon_plus.svg` (`icon_plus.svg`)
+- `assets/icons/icon_plus_1.svg` (`icon_plus_1.svg`)
+- `assets/icons/image.svg` (`image.svg`)
+- `assets/icons/inquiry.svg` (`inquiry.svg`)
+- `assets/icons/kakaoImage.svg` (`kakaoImage.svg`)
+- `assets/icons/kakaoLogo.svg` (`kakaoLogo.svg`)
+- `assets/icons/leader.svg` (`leader.svg`)
+- `assets/icons/light_close.svg` (`light_close.svg`)
+- `assets/icons/link.svg` (`link.svg`)
+- `assets/icons/logo.svg` (`logo.svg`)
+- `assets/icons/logo2.svg` (`logo2.svg`)
+- `assets/icons/member.svg` (`member.svg`)
+- `assets/icons/menu_dots.svg` (`menu_dots.svg`)
+- `assets/icons/mypage_button.svg` (`mypage_button.svg`)
+- `assets/icons/naverLogo.svg` (`naverLogo.svg`)
+- `assets/icons/news_sample.svg` (`news_sample.svg`)
+- `assets/icons/news_sample4.svg` (`news_sample4.svg`)
+- `assets/icons/next.svg` (`next.svg`)
+- `assets/icons/notification.svg` (`notification.svg`)
+- `assets/icons/plus.svg` (`plus.svg`)
+- `assets/icons/profile.svg` (`profile.svg`)
+- `assets/icons/profile10.svg` (`profile10.svg`)
+- `assets/icons/profile2.svg` (`profile2.svg`)
+- `assets/icons/profile3.svg` (`profile3.svg`)
+- `assets/icons/profile4.svg` (`profile4.svg`)
+- `assets/icons/profile5.svg` (`profile5.svg`)
+- `assets/icons/public.svg` (`public.svg`)
+- `assets/icons/quill_pin.svg` (`quill_pin.svg`)
+- `assets/icons/red_heart.svg` (`red_heart.svg`)
+- `assets/icons/reply.svg` (`reply.svg`)
+- `assets/icons/reply2.svg` (`reply2.svg`)
+- `assets/icons/report.svg` (`report.svg`)
+- `assets/icons/search_light.svg` (`search_light.svg`)
+- `assets/icons/share.svg` (`share.svg`)
+- `assets/icons/thick_search.svg` (`thick_search.svg`)
+- `assets/icons/to_aladin.svg` (`to_aladin.svg`)
+- `assets/icons/triangle.svg` (`triangle.svg`)
+- `assets/icons/vercel.svg` (`vercel.svg`)
+- `assets/icons/vote.svg` (`vote.svg`)
+- `assets/icons/window.svg` (`window.svg`)
+- `assets/navigation/navi-bookstory-focus.svg` (`navi-bookstory-focus.svg`)
+- `assets/navigation/navi-bookstory-unfocus.svg` (`navi-bookstory-unfocus.svg`)
+- `assets/navigation/navi-home-focus.svg` (`navi-home-focus.svg`)
+- `assets/navigation/navi-home-unfocus.svg` (`navi-home-unfocus.svg`)
+- `assets/navigation/navi-moim-focus.svg` (`navi-moim-focus.svg`)
+- `assets/navigation/navi-moim-unfocus.svg` (`navi-moim-unfocus.svg`)
+- `assets/navigation/navi-mypage-focus.svg` (`navi-mypage-focus.svg`)
+- `assets/navigation/navi-mypage-unfocus.svg` (`navi-mypage-unfocus.svg`)
+- `assets/navigation/navi-news-focus.svg` (`navi-news-focus.svg`)
+- `assets/navigation/navi-news-unfocus.svg` (`navi-news-unfocus.svg`)
+- `assets/write-floating.svg` (`write-floating.svg`)
