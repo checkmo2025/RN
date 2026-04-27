@@ -163,6 +163,8 @@ export type ClubNoticePreview = {
   isPinned: boolean;
   tagCode?: ClubNoticeTagCode;
   tagDescription?: string;
+  authorNickname?: string;
+  authorProfileImageUrl?: string;
 };
 
 export type ClubNoticeList = {
@@ -231,6 +233,8 @@ export type ClubNoticeDetail = {
   imageUrls: string[];
   meetingDetail?: ClubNoticeMeetingDetail;
   voteDetail?: ClubNoticeVoteDetail;
+  authorNickname?: string;
+  authorProfileImageUrl?: string;
 };
 
 export type ClubNoticeComment = {
@@ -610,6 +614,39 @@ function normalizeBasicMemberInfo(raw: unknown): {
   };
 }
 
+function normalizeOptionalMemberInfo(raw: unknown): {
+  nickname?: string;
+  profileImageUrl?: string;
+} {
+  if (typeof raw === 'string') {
+    const nickname = raw.trim();
+    return {
+      nickname: nickname.length > 0 ? nickname : undefined,
+    };
+  }
+
+  const record = asRecord(raw);
+  if (!record) return {};
+
+  const nickname = toStringValue(
+    firstDefined(record.nickname, record.memberNickname, record.name),
+  )?.trim();
+
+  return {
+    nickname: nickname && nickname.length > 0 ? nickname : undefined,
+    profileImageUrl: normalizeRemoteImageUrl(
+      toStringValue(
+        firstDefined(
+          record.profileImageUrl,
+          record.imgUrl,
+          record.imageUrl,
+          record.profileImgUrl,
+        ),
+      ),
+    ),
+  };
+}
+
 function normalizeDetailedMemberInfo(raw: unknown): {
   nickname: string;
   profileImageUrl?: string;
@@ -666,6 +703,27 @@ function normalizeClubNoticePreview(raw: unknown): ClubNoticePreview | null {
   if (!id) return null;
 
   const tag = normalizeClubNoticeTag(firstDefined(record.tagItem, record.tag));
+  const authorInfo = normalizeOptionalMemberInfo(
+    firstDefined(
+      record.authorInfo,
+      record.memberInfo,
+      record.author,
+      record.createdBy,
+      record.writer,
+    ),
+  );
+  const authorNickname =
+    authorInfo.nickname ??
+    toStringValue(
+      firstDefined(
+        record.authorNickname,
+        record.memberNickname,
+        record.nickname,
+        record.createdByNickname,
+        record.writerNickname,
+      ),
+    )?.trim();
+
   return {
     id,
     title: toStringValue(record.title) ?? '공지사항',
@@ -673,6 +731,9 @@ function normalizeClubNoticePreview(raw: unknown): ClubNoticePreview | null {
     isPinned: toBooleanValue(record.isPinned) ?? false,
     tagCode: tag.code,
     tagDescription: tag.description,
+    authorNickname:
+      authorNickname && authorNickname.length > 0 ? authorNickname : undefined,
+    authorProfileImageUrl: authorInfo.profileImageUrl,
   };
 }
 
@@ -772,6 +833,26 @@ function normalizeClubNoticeDetail(raw: unknown): ClubNoticeDetail | null {
   if (!id) return null;
 
   const tag = normalizeClubNoticeTag(firstDefined(record.tag, record.tagItem));
+  const authorInfo = normalizeOptionalMemberInfo(
+    firstDefined(
+      record.authorInfo,
+      record.memberInfo,
+      record.author,
+      record.createdBy,
+      record.writer,
+    ),
+  );
+  const authorNickname =
+    authorInfo.nickname ??
+    toStringValue(
+      firstDefined(
+        record.authorNickname,
+        record.memberNickname,
+        record.nickname,
+        record.createdByNickname,
+        record.writerNickname,
+      ),
+    )?.trim();
   const imageUrls = Array.isArray(record.imageUrls)
     ? record.imageUrls
         .map((value) => normalizeRemoteImageUrl(toStringValue(value)))
@@ -789,6 +870,9 @@ function normalizeClubNoticeDetail(raw: unknown): ClubNoticeDetail | null {
     imageUrls,
     meetingDetail: normalizeNoticeMeetingDetail(record.meetingDetail),
     voteDetail: normalizeClubNoticeVoteDetail(record.voteDetail),
+    authorNickname:
+      authorNickname && authorNickname.length > 0 ? authorNickname : undefined,
+    authorProfileImageUrl: authorInfo.profileImageUrl,
   };
 }
 

@@ -4300,6 +4300,8 @@ type NoticeItem = {
   tags: NoticeTag[];
   category: '일반' | '모임' | '투표';
   content: string;
+  authorNickname?: string;
+  authorProfileImageUrl?: string;
   bookshelf?: NoticeBookshelfAttachment;
   poll?: NoticePoll;
   photos?: string[];
@@ -4816,6 +4818,8 @@ function mapNoticePreviewToNoticeItem(item: ClubNoticePreview): NoticeItem {
     tags,
     category: item.tagCode === 'VOTE' ? '투표' : item.tagCode === 'MEETING' ? '모임' : '일반',
     content: '',
+    authorNickname: item.authorNickname,
+    authorProfileImageUrl: item.authorProfileImageUrl,
     isPinned: item.isPinned,
   };
 }
@@ -4850,6 +4854,9 @@ function mergeNoticeDetail(
     }),
     category: detail.voteDetail ? '투표' : detail.meetingDetail ? '모임' : '일반',
     content: detail.content,
+    authorNickname: detail.authorNickname ?? baseNotice?.authorNickname,
+    authorProfileImageUrl:
+      detail.authorProfileImageUrl ?? baseNotice?.authorProfileImageUrl,
     bookshelf: bookshelfAttachment,
     poll: detail.voteDetail
       ? {
@@ -6808,9 +6815,51 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const handleReportNotice = useCallback(() => {
     setNoticeMenuVisible(false);
     requireAuth(() => {
-      showToast('공지 신고 기능은 준비 중입니다.');
+      const openReportModal = async () => {
+        if (!selectedNotice) return;
+
+        let targetNickname = selectedNotice.authorNickname?.trim();
+        let targetProfileImageUrl = selectedNotice.authorProfileImageUrl;
+
+        if (
+          !targetNickname &&
+          typeof group.clubId === 'number' &&
+          typeof selectedNotice.remoteId === 'number'
+        ) {
+          try {
+            const detail = await fetchClubNoticeDetail(group.clubId, selectedNotice.remoteId);
+            if (detail) {
+              const merged = mergeNoticeDetail(selectedNotice, detail);
+              setNoticeItems((prev) =>
+                sortNoticeItems(
+                  prev.map((item) => (item.id === selectedNotice.id ? merged : item)),
+                ),
+              );
+              targetNickname = merged.authorNickname?.trim();
+              targetProfileImageUrl = merged.authorProfileImageUrl;
+            }
+          } catch (error) {
+            if (!(error instanceof ApiError)) {
+              showToast('공지 작성자 정보를 확인하지 못했습니다.');
+            }
+          }
+        }
+
+        if (!targetNickname) {
+          showToast('공지 작성자 정보를 찾을 수 없습니다.');
+          return;
+        }
+
+        setReportModal({
+          nickname: targetNickname,
+          profileImageUrl: targetProfileImageUrl,
+          initialType: 'CLUB_MEETING',
+        });
+      };
+
+      void openReportModal();
     });
-  }, [requireAuth]);
+  }, [group.clubId, requireAuth, selectedNotice]);
 
   const handleToggleVoteOption = useCallback(
     (optionId: string) => {
