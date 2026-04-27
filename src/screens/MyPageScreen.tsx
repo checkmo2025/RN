@@ -46,7 +46,7 @@ import {
   toggleBookLikeByIsbn,
   type MemberLikedBookItem,
 } from '../services/api/bookApi';
-import { fetchMyBookStories } from '../services/api/bookStoryApi';
+import { fetchMyBookStories, type RemoteStoryItem } from '../services/api/bookStoryApi';
 import { fetchMyClubs, leaveClub } from '../services/api/clubApi';
 import {
   deleteFollowerMember,
@@ -212,21 +212,9 @@ const defaultProfilePalette = [
   colors.gray7,
 ];
 
-const fallbackStories: StoryCard[] = Array.from({ length: 6 }).map((_, idx) => ({
-  id: `s-${idx}`,
-  title: '나는 나이든 왕자다',
-  excerpt: '나는 나이트 왕자다. 그 누가 숫자가 중요하다가 했던가. 세고 또...',
-  likes: 1 + (idx % 3),
-  comments: 1 + (idx % 2),
-}));
-
-const fallbackGroups: GroupItem[] = Array.from({ length: 5 }).map((_, idx) => ({
-  id: `g-${idx}`,
-  name: '복적복적',
-}));
-
 const fallbackBooks: BookCard[] = [];
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[!@#$%^&*]).{6,12}$/;
 const EMAIL_VERIFICATION_COUNTDOWN_SECONDS = 10 * 60;
 
 const defaultNotificationSettings: NotificationSettingInfo = {
@@ -295,8 +283,9 @@ async function fetchAllFollowUsers(
 ): Promise<FollowUser[]> {
   let cursorId: number | undefined;
   const all: FollowUser[] = [];
+  const visitedCursors = new Set<number>();
 
-  for (let i = 0; i < 20; i += 1) {
+  for (let i = 0; i < 100; i += 1) {
     const result = await loader(cursorId);
     all.push(
       ...result.items
@@ -309,6 +298,9 @@ async function fetchAllFollowUsers(
     );
 
     if (!result.hasNext || typeof result.nextCursor !== 'number') break;
+    if (visitedCursors.has(result.nextCursor)) break;
+
+    visitedCursors.add(result.nextCursor);
     cursorId = result.nextCursor;
   }
 
@@ -318,6 +310,29 @@ async function fetchAllFollowUsers(
   });
 
   return Array.from(uniqueByNickname.values());
+}
+
+function resolveStoryFeedErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiError)) return fallback;
+
+  if (error.status === 401) return '로그인 상태를 확인해주세요.';
+  if (error.status === 403) return '접근 권한이 없습니다.';
+  if (error.status === 404) return '요청한 책이야기를 찾을 수 없습니다.';
+
+  const normalized = error.message?.trim();
+  return normalized || fallback;
+}
+
+function resolveMyPageFetchErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiError)) return fallback;
+
+  if (error.status === 400) return '요청 정보를 다시 확인해주세요.';
+  if (error.status === 401) return '로그인 상태를 확인해주세요.';
+  if (error.status === 403) return '접근 권한이 없습니다.';
+  if (error.status === 404) return '요청한 정보를 찾을 수 없습니다.';
+
+  const normalized = error.message?.trim();
+  return normalized || fallback;
 }
 
 function NotificationToggle({
@@ -371,7 +386,7 @@ function NotificationToggle({
 }
 
 export function MyPageScreen() {
-  const { isLoggedIn, logout } = useAuthGate();
+  const { isLoggedIn, logout, requireAuth } = useAuthGate();
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ My: MyPageRouteParams }, 'My'>>();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -536,7 +551,7 @@ export function MyPageScreen() {
           typeof item.content === 'string' && item.content.trim()
             ? item.content
             : '신고 사유가 입력되지 않았습니다.',
-        createdAtLabel: toDateLabel(item.createdAt),
+        createdAtLabel: toDateLabel(item.reportDate ?? item.createdAt),
       };
     });
   }, []);
@@ -553,15 +568,13 @@ export function MyPageScreen() {
 
   const loadMyPageData = useCallback(async () => {
     if (!isLoggedIn) {
-      setStories(fallbackStories);
+      setStories([]);
       setBooks(fallbackBooks);
       setAlarms([]);
       setMyNews([]);
-      setGroups(fallbackGroups);
-      setProfileName('user_id');
-      setProfileDesc(
-        '이제 다양한 책을 함께 읽고 서로의 생각을 나누는 특별한 시간을 시작해보세요. 한 권의 책이 주는 작은 울림이 ......',
-      );
+      setGroups([]);
+      setProfileName('로그인이 필요해요');
+      setProfileDesc('로그인 후 마이페이지 기능을 이용할 수 있습니다.');
       setProfileImageUrl(undefined);
       setProfilePhoneNumber('');
       setProfileCategoryCodes([]);
@@ -570,8 +583,17 @@ export function MyPageScreen() {
       setFollowingUsers([]);
       setFollowerCount(0);
       setFollowingCount(0);
+      setReportHistory([]);
       setNotificationSettings(defaultNotificationSettings);
+      setLoadingProfile(false);
+      setLoadingStories(false);
       setLoadingBooks(false);
+      setLoadingGroups(false);
+      setLoadingAlarms(false);
+      setLoadingMyNews(false);
+      setLoadingFollowUsers(false);
+      setLoadingNotificationSettings(false);
+      setLoadingReportHistory(false);
       return;
     }
 
@@ -618,8 +640,27 @@ export function MyPageScreen() {
 
     setLoadingStories(true);
     try {
-      const result = await fetchMyBookStories();
-      const mapped: StoryCard[] = result.items.map((item) => ({
+      let cursorId: number | undefined;
+      const visitedCursors = new Set<number>();
+      const seenStoryIds = new Set<number>();
+      const allStories: RemoteStoryItem[] = [];
+
+      for (let page = 0; page < 100; page += 1) {
+        const response = await fetchMyBookStories(cursorId);
+        response.items.forEach((item) => {
+          if (seenStoryIds.has(item.id)) return;
+          seenStoryIds.add(item.id);
+          allStories.push(item);
+        });
+
+        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+        if (visitedCursors.has(response.nextCursor)) break;
+
+        visitedCursors.add(response.nextCursor);
+        cursorId = response.nextCursor;
+      }
+
+      const mapped: StoryCard[] = allStories.map((item) => ({
         id: `s-${item.id}`,
         remoteId: item.id,
         title: item.title || '제목 없음',
@@ -630,9 +671,7 @@ export function MyPageScreen() {
       }));
       setStories(mapped);
     } catch (error) {
-      if (!(error instanceof ApiError)) {
-        showToast('내 책이야기를 불러오지 못했습니다.');
-      }
+      showToast(resolveStoryFeedErrorMessage(error, '내 책이야기를 불러오지 못했습니다.'));
     } finally {
       setLoadingStories(false);
     }
@@ -660,7 +699,7 @@ export function MyPageScreen() {
         showToast('내 모임을 불러오지 못했습니다.');
       }
     } finally {
-    setLoadingGroups(false);
+      setLoadingGroups(false);
     }
   }, [isLoggedIn, loadLikedBooks]);
 
@@ -725,23 +764,27 @@ export function MyPageScreen() {
     try {
       const allItems: NotificationItem[] = [];
       let cursorId: number | undefined;
+      const visitedCursors = new Set<number>();
+      const seenNotificationIds = new Set<number>();
 
-      for (let i = 0; i < 20; i += 1) {
+      for (let i = 0; i < 100; i += 1) {
         const response = await fetchNotifications(cursorId);
-        allItems.push(...response.items);
+        response.items.forEach((item) => {
+          if (seenNotificationIds.has(item.notificationId)) return;
+          seenNotificationIds.add(item.notificationId);
+          allItems.push(item);
+        });
         if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+        if (visitedCursors.has(response.nextCursor)) break;
+
+        visitedCursors.add(response.nextCursor);
         cursorId = response.nextCursor;
       }
 
       setAlarms(allItems.map(mapNotificationToAlarm));
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        setAlarms([]);
-        return;
-      }
-      if (!(error instanceof ApiError)) {
-        showToast('알림 목록을 불러오지 못했습니다.');
-      }
+      setAlarms([]);
+      showToast(resolveMyPageFetchErrorMessage(error, '알림 목록을 불러오지 못했습니다.'));
     } finally {
       setLoadingAlarms(false);
     }
@@ -757,25 +800,27 @@ export function MyPageScreen() {
     try {
       const allItems: RemoteNewsSummary[] = [];
       let cursorId: number | undefined;
+      const visitedCursors = new Set<number>();
+      const seenNewsIds = new Set<number>();
 
-      for (let i = 0; i < 20; i += 1) {
+      for (let i = 0; i < 100; i += 1) {
         const response = await fetchMyNewsList(cursorId);
-        allItems.push(...response.items);
+        response.items.forEach((item) => {
+          if (seenNewsIds.has(item.id)) return;
+          seenNewsIds.add(item.id);
+          allItems.push(item);
+        });
         if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+        if (visitedCursors.has(response.nextCursor)) break;
+
+        visitedCursors.add(response.nextCursor);
         cursorId = response.nextCursor;
       }
 
       setMyNews(mapMyNewsItems(allItems));
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        setMyNews([]);
-        return;
-      }
-      if (error instanceof ApiError) {
-        setMyNews([]);
-        return;
-      }
-      showToast('내 소식을 불러오지 못했습니다.');
+      setMyNews([]);
+      showToast(resolveMyPageFetchErrorMessage(error, '내 소식을 불러오지 못했습니다.'));
     } finally {
       setLoadingMyNews(false);
     }
@@ -1183,6 +1228,10 @@ export function MyPageScreen() {
       showToast('비밀번호와 비밀번호 확인이 일치하지 않습니다.');
       return;
     }
+    if (!passwordRegex.test(newPassword)) {
+      showToast('비밀번호는 6~12자, 영어 1자 이상, 특수문자 1자 이상이어야 합니다.');
+      return;
+    }
 
     setSubmittingPasswordUpdate(true);
     const submit = async () => {
@@ -1271,18 +1320,26 @@ export function MyPageScreen() {
   }, [logout, navigation, submittingLogout]);
 
   const openFollowerList = useCallback(() => {
+    if (!isLoggedIn) {
+      requireAuth();
+      return;
+    }
     setGroupMenu(null);
     setActiveFollowTab('FOLLOWER');
     setShowFollowPage(true);
     void loadFollowUsers();
-  }, [loadFollowUsers]);
+  }, [isLoggedIn, loadFollowUsers, requireAuth]);
 
   const openFollowingList = useCallback(() => {
+    if (!isLoggedIn) {
+      requireAuth();
+      return;
+    }
     setGroupMenu(null);
     setActiveFollowTab('FOLLOWING');
     setShowFollowPage(true);
     void loadFollowUsers();
-  }, [loadFollowUsers]);
+  }, [isLoggedIn, loadFollowUsers, requireAuth]);
 
   const openMemberProfile = useCallback(
     (nickname: string) => {
@@ -1612,7 +1669,23 @@ export function MyPageScreen() {
     </View>
   );
 
+  const renderGuestPrompt = () => (
+    <View style={styles.guestPromptWrap}>
+      <Text style={styles.emptyText}>로그인 후 마이페이지 기능을 이용할 수 있습니다.</Text>
+      <Pressable
+        style={({ pressed }) => [styles.guestPromptButton, pressed && styles.pressed]}
+        onPress={() => requireAuth()}
+      >
+        <Text style={styles.guestPromptButtonText}>로그인하기</Text>
+      </Pressable>
+    </View>
+  );
+
   const renderTabContent = () => {
+    if (!isLoggedIn) {
+      return renderGuestPrompt();
+    }
+
     switch (activeTab) {
       case '내 책 이야기':
         return renderStories();
@@ -1910,8 +1983,10 @@ export function MyPageScreen() {
   }, [navigation]);
 
   const handleWriteStory = useCallback(() => {
-    navigation.navigate('Story', { openCompose: true });
-  }, [navigation]);
+    requireAuth(() => {
+      navigation.navigate('Story', { openCompose: true });
+    });
+  }, [navigation, requireAuth]);
 
   const handleContact = useCallback(() => {
     Linking.openURL(PUBLIC_ENV.SUPPORT_FORM_URL).catch(() => null);
@@ -2636,7 +2711,13 @@ export function MyPageScreen() {
             {loadingProfile ? <Text style={styles.loadingText}>프로필을 불러오는 중...</Text> : null}
           </View>
           <Pressable
-            onPress={() => setShowSettings(true)}
+            onPress={() => {
+              if (!isLoggedIn) {
+                requireAuth();
+                return;
+              }
+              setShowSettings(true);
+            }}
             style={({ pressed }) => (pressed ? styles.pressed : undefined)}
           >
             <SvgUri uri={settingIconUri} width={22} height={22} />
@@ -3122,6 +3203,28 @@ const styles = StyleSheet.create({
     ...typography.body2_3,
     color: colors.gray4,
     alignSelf: 'flex-start',
+  },
+  guestPromptWrap: {
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.subbrown4,
+    padding: spacing.md,
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  guestPromptButton: {
+    minWidth: 112,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primary1,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guestPromptButtonText: {
+    ...typography.body2_2,
+    color: colors.white,
   },
   toggleButton: {
     width: 44,

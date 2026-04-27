@@ -32,18 +32,13 @@ import { navigateToHome, navigateToMyAlarms } from '../../navigation/navigateToH
 import { ApiError } from '../../services/api/http';
 import { triggerSelectionHaptic } from '../../utils/haptics';
 import {
+  fetchAllMyLikedBooks,
   fetchBookDetail,
   fetchRecommendedBooks,
   searchBooks,
   toggleBookLikeByIsbn,
   type BookItem,
 } from '../../services/api/bookApi';
-import {
-  isBookLiked,
-  resolveBookLikeId,
-  subscribeLikedBooks,
-  toggleBookLike,
-} from '../../services/api/bookLikeApi';
 import {
   fetchBookStoriesByBook,
   type RemoteStoryItem,
@@ -156,6 +151,27 @@ function toBookItemFromRouteParam(raw: unknown): BookItem | null {
   };
 }
 
+function resolveBookLikeId(book: Pick<BookItem, 'isbn' | 'bookId' | 'title'>): string | null {
+  const isbn = book.isbn.trim();
+  if (isbn && !isbn.startsWith('placeholder-')) return `isbn:${isbn}`;
+
+  if (typeof book.bookId === 'number' && Number.isInteger(book.bookId) && book.bookId > 0) {
+    return `bookId:${book.bookId}`;
+  }
+
+  const title = book.title.trim();
+  return title ? `title:${title}` : null;
+}
+
+function resolveBookResultKey(book: Pick<BookItem, 'isbn' | 'bookId' | 'title' | 'author'>): string {
+  const likeId = resolveBookLikeId(book);
+  if (likeId) return likeId;
+
+  const title = book.title.trim();
+  const author = book.author.trim();
+  return `title:${title}|author:${author}`;
+}
+
 export function AppHeader(props: Props) {
   const { title, actions, onPressSearch, onPressBell, onPressLogo } = props;
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -177,6 +193,9 @@ export function AppHeader(props: Props) {
   const [searchedKeyword, setSearchedKeyword] = useState('');
   const [searchResults, setSearchResults] = useState<BookItem[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchHasNext, setSearchHasNext] = useState(false);
+  const [searchCurrentPage, setSearchCurrentPage] = useState(1);
+  const [searchLoadingMore, setSearchLoadingMore] = useState(false);
 
   const [recommendedBooks, setRecommendedBooks] = useState<BookItem[]>([]);
   const [recommendLoading, setRecommendLoading] = useState(false);
@@ -200,7 +219,8 @@ export function AppHeader(props: Props) {
   }, []);
 
   const isBookLikeTogglable = useCallback((book: BookItem) => {
-    if (book.isbn.startsWith('placeholder-')) return false;
+    const normalizedIsbn = book.isbn.trim();
+    if (!normalizedIsbn || normalizedIsbn.startsWith('placeholder-')) return false;
     return resolveBookLikeId(book) !== null;
   }, []);
 
@@ -208,7 +228,8 @@ export function AppHeader(props: Props) {
     (book: BookItem) => {
       const likeId = resolveBookLikeId(book);
       if (!likeId) return false;
-      return likedBookIds.has(likeId) || isBookLiked(book);
+      if (likedBookIds.has(likeId)) return true;
+      return Boolean(book.likedByMe);
     },
     [likedBookIds],
   );
@@ -222,23 +243,46 @@ export function AppHeader(props: Props) {
       if (!isBookLikeTogglable(book)) return;
 
       triggerSelectionHaptic();
+      const likeId = resolveBookLikeId(book);
+      const wasLiked = isBookLikedInUi(book);
+      if (!likeId) return;
+
+      setLikedBookIds((prev) => {
+        const next = new Set(prev);
+        if (wasLiked) {
+          next.delete(likeId);
+        } else {
+          next.add(likeId);
+        }
+        return next;
+      });
+
       const submit = async () => {
-        const liked = await toggleBookLike(book);
         try {
           if (book.isbn.trim()) {
             await toggleBookLikeByIsbn(book.isbn);
           }
-          showToast(liked ? '내 서재에 담았습니다.' : '내 서재에서 제거했습니다.');
+          showToast(wasLiked ? '내 서재에서 제거했습니다.' : '내 서재에 담았습니다.');
         } catch (error) {
-          await toggleBookLike(book);
-          if (!(error instanceof ApiError)) {
-            showToast('내 서재 업데이트에 실패했습니다.');
+          setLikedBookIds((prev) => {
+            const rollback = new Set(prev);
+            if (wasLiked) {
+              rollback.add(likeId);
+            } else {
+              rollback.delete(likeId);
+            }
+            return rollback;
+          });
+          if (error instanceof ApiError) {
+            showToast(error.message || '내 서재 업데이트에 실패했습니다.');
+            return;
           }
+          showToast('내 서재 업데이트에 실패했습니다.');
         }
       };
       void submit();
     },
-    [isBookLikeTogglable, isLoggedIn, requireAuth],
+    [isBookLikeTogglable, isBookLikedInUi, isLoggedIn, requireAuth],
   );
 
   const hideDropdownImmediately = useCallback(() => {
@@ -367,11 +411,42 @@ export function AppHeader(props: Props) {
     }
   }, []);
 
+  const loadLikedBookIds = useCallback(async () => {
+    if (!isLoggedIn) {
+      setLikedBookIds(new Set());
+      return;
+    }
+
+    try {
+      const likedBooks = await fetchAllMyLikedBooks();
+      const nextIds = new Set<string>();
+      likedBooks.forEach((book) => {
+        const likeId = resolveBookLikeId(book);
+        if (!likeId) return;
+        nextIds.add(likeId);
+      });
+      setLikedBookIds(nextIds);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        setLikedBookIds(new Set());
+        return;
+      }
+      if (error instanceof ApiError) {
+        showToast(error.message || '내 서재 정보를 불러오지 못했습니다.');
+        return;
+      }
+      showToast('내 서재 정보를 불러오지 못했습니다.');
+    }
+  }, [isLoggedIn]);
+
   const executeSearch = useCallback(async (keyword: string) => {
     if (!keyword) {
       setSearched(false);
       setSearchResults([]);
       setSearchedKeyword('');
+      setSearchHasNext(false);
+      setSearchCurrentPage(1);
+      setSearchLoadingMore(false);
       return;
     }
 
@@ -379,18 +454,63 @@ export function AppHeader(props: Props) {
     setSearchedKeyword(keyword);
     setSearchResults([]);
     setSearchLoading(true);
+    setSearchHasNext(false);
+    setSearchCurrentPage(1);
+    setSearchLoadingMore(false);
     try {
       const result = await searchBooks(keyword, 1);
       setSearchResults(result.items);
+      setSearchHasNext(result.hasNext);
+      setSearchCurrentPage(result.currentPage);
     } catch (error) {
-      if (!(error instanceof ApiError)) {
+      if (error instanceof ApiError) {
+        showToast(error.message || '책 검색에 실패했습니다.');
+      } else {
         showToast('책 검색에 실패했습니다.');
       }
       setSearchResults([]);
+      setSearchHasNext(false);
+      setSearchCurrentPage(1);
     } finally {
       setSearchLoading(false);
     }
   }, []);
+
+  const loadMoreSearchResults = useCallback(async () => {
+    if (searchLoading || searchLoadingMore || !searchHasNext) return;
+    const keyword = searchedKeyword.trim();
+    if (!keyword) return;
+
+    const nextPage = Math.max(1, searchCurrentPage + 1);
+    setSearchLoadingMore(true);
+
+    try {
+      const result = await searchBooks(keyword, nextPage);
+      setSearchResults((prev) => {
+        const seen = new Set(prev.map((item) => resolveBookResultKey(item)));
+        const appended = result.items.filter((item) => {
+          const key = resolveBookResultKey(item);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        return appended.length > 0 ? [...prev, ...appended] : prev;
+      });
+
+      setSearchHasNext(result.hasNext);
+      setSearchCurrentPage(
+        result.currentPage > 0 ? result.currentPage : nextPage,
+      );
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message || '검색 결과를 추가로 불러오지 못했습니다.');
+      } else {
+        showToast('검색 결과를 추가로 불러오지 못했습니다.');
+      }
+    } finally {
+      setSearchLoadingMore(false);
+    }
+  }, [searchCurrentPage, searchHasNext, searchLoading, searchLoadingMore, searchedKeyword]);
 
   const loadSelectedBookData = useCallback(async (book: BookItem) => {
     const requestId = Date.now();
@@ -570,11 +690,15 @@ export function AppHeader(props: Props) {
   }, [loadRecommendedBooks, showSearchDropdown]);
 
   useEffect(() => {
-    const unsubscribe = subscribeLikedBooks((books) => {
-      setLikedBookIds(new Set(books.map((book) => book.id)));
-    });
-    return unsubscribe;
-  }, []);
+    if (!isLoggedIn) {
+      setLikedBookIds(new Set());
+      return;
+    }
+
+    if (showSearchDropdown || showSearchPage) {
+      void loadLikedBookIds();
+    }
+  }, [isLoggedIn, loadLikedBookIds, showSearchDropdown, showSearchPage]);
 
   useEffect(() => {
     if (!showSearchDropdown) {
@@ -924,6 +1048,9 @@ export function AppHeader(props: Props) {
                           setSearched(false);
                           setSearchedKeyword('');
                           setSearchResults([]);
+                          setSearchHasNext(false);
+                          setSearchCurrentPage(1);
+                          setSearchLoadingMore(false);
                         }}
                       />
                     ) : null}
@@ -1004,6 +1131,27 @@ export function AppHeader(props: Props) {
                       </Pressable>
                     ))}
                   </View>
+
+                  {searched && searchResults.length > 0 ? (
+                    searchHasNext ? (
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.searchMoreButton,
+                          pressed && !searchLoadingMore ? styles.searchMoreButtonPressed : null,
+                        ]}
+                        onPress={() => {
+                          void loadMoreSearchResults();
+                        }}
+                        disabled={searchLoadingMore}
+                      >
+                        <Text style={styles.searchMoreButtonText}>
+                          {searchLoadingMore ? '불러오는 중...' : '검색 결과 더보기'}
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <Text style={styles.searchEndText}>마지막 검색 결과입니다.</Text>
+                    )
+                  ) : null}
                 </>
               ) : (
                 <>
@@ -1391,6 +1539,28 @@ const styles = StyleSheet.create({
     color: colors.gray4,
     textAlign: 'center',
     paddingVertical: spacing.md,
+  },
+  searchMoreButton: {
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary1,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.white,
+  },
+  searchMoreButtonPressed: {
+    opacity: 0.82,
+  },
+  searchMoreButtonText: {
+    ...typography.body1_2,
+    color: colors.primary1,
+  },
+  searchEndText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
   },
   resultList: {
     gap: spacing.sm,

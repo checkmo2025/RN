@@ -84,6 +84,7 @@ const topLogoUri = Image.resolveAssetSource(
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[!@#$%^&*]).{6,12}$/;
 const phoneRegex = /^01(?:0|1|[6-9])-(?:\d{3}|\d{4})-\d{4}$/;
+const nicknameRegex = /^[a-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]*$/;
 const VERIFICATION_COUNTDOWN_SECONDS = 10 * 60;
 
 function formatPhoneNumberInput(value: string): string {
@@ -452,6 +453,10 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       showToast('닉네임은 최대 20자까지 가능합니다.');
       return;
     }
+    if (!nicknameRegex.test(normalized)) {
+      showToast('닉네임은 영어 소문자/숫자/특수문자만 사용할 수 있습니다.');
+      return;
+    }
 
     setCheckingNickname(true);
     try {
@@ -470,8 +475,14 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   };
 
   const handleProfileBasicNext = () => {
-    if (!nickname.trim()) {
+    const normalizedNickname = nickname.trim();
+
+    if (!normalizedNickname) {
       showToast('닉네임을 입력해주세요.');
+      return;
+    }
+    if (!nicknameRegex.test(normalizedNickname)) {
+      showToast('닉네임은 영어 소문자/숫자/특수문자만 사용할 수 있습니다.');
       return;
     }
     if (!isNicknameValidCheck) {

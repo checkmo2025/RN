@@ -121,6 +121,17 @@ function toDateLabel(value?: string): string {
   return formatKstDateLabel(value, '-');
 }
 
+function resolveNewsErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiError)) return fallback;
+
+  if (error.status === 401) return '로그인 상태를 확인해주세요.';
+  if (error.status === 403) return '접근 권한이 없습니다.';
+  if (error.status === 404) return '요청한 소식을 찾을 수 없습니다.';
+
+  const normalized = error.message?.trim();
+  return normalized || fallback;
+}
+
 function toNewsItem(
   item: RemoteNewsSummary,
   index: number,
@@ -196,18 +207,36 @@ export function NewsScreen() {
   const loadNews = useCallback(async () => {
     setLoadingNews(true);
     try {
-      const listResponse = await fetchNewsList();
+      const allItems: RemoteNewsSummary[] = [];
+      const seenNewsIds = new Set<number>();
+      const visitedCursors = new Set<number>();
+      let cursorId: number | undefined;
 
-      const promotions = listResponse.filter((item) => item.carousel === 'PROMOTION');
+      for (let page = 0; page < 100; page += 1) {
+        const response = await fetchNewsList(cursorId);
+
+        response.items.forEach((item) => {
+          if (seenNewsIds.has(item.id)) return;
+          seenNewsIds.add(item.id);
+          allItems.push(item);
+        });
+
+        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+        if (visitedCursors.has(response.nextCursor)) break;
+
+        visitedCursors.add(response.nextCursor);
+        cursorId = response.nextCursor;
+      }
+
+      const promotions = allItems.filter((item) => item.carousel === 'PROMOTION');
       const mappedPromotions = promotions.map((item, index) => toNewsItem(item, index, 'promo'));
-      const mappedList = listResponse.map((item, index) => toNewsItem(item, index, 'news'));
+      const mappedList = allItems.map((item, index) => toNewsItem(item, index, 'news'));
 
       setItems(mappedList);
       setPromotions(mappedPromotions.length > 0 ? mappedPromotions : fallbackPromotions);
     } catch (error) {
       setPromotions(fallbackPromotions);
-      if (error instanceof ApiError) return;
-      showToast('소식을 불러오지 못했습니다.');
+      showToast(resolveNewsErrorMessage(error, '소식을 불러오지 못했습니다.'));
     } finally {
       setLoadingNews(false);
     }
@@ -266,9 +295,7 @@ export function NewsScreen() {
             return applyDetail(prev, detail);
           });
         } catch (error) {
-          if (!(error instanceof ApiError)) {
-            showToast('소식 상세를 불러오지 못했습니다.');
-          }
+          showToast(resolveNewsErrorMessage(error, '소식 상세를 불러오지 못했습니다.'));
         } finally {
           setLoadingDetail(false);
         }
@@ -307,9 +334,7 @@ export function NewsScreen() {
           setSelected(toStandaloneNewsItem(detail));
         } catch (error) {
           setSelected(null);
-          if (!(error instanceof ApiError)) {
-            showToast('소식 상세를 불러오지 못했습니다.');
-          }
+          showToast(resolveNewsErrorMessage(error, '소식 상세를 불러오지 못했습니다.'));
         } finally {
           setLoadingDetail(false);
         }

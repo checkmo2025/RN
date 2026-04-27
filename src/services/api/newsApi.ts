@@ -232,14 +232,14 @@ function normalizeNewsListResult(payload: unknown): RemoteNewsSummaryList {
   };
 }
 
-export async function fetchNewsList(cursorId?: number): Promise<RemoteNewsSummary[]> {
+export async function fetchNewsList(cursorId?: number): Promise<RemoteNewsSummaryList> {
   const response = await requestJsonSilent<NewsListResponse>('/news', {
     method: 'GET',
     query: {
       cursorId,
     },
   });
-  return normalizeNewsListResult(response).items;
+  return normalizeNewsListResult(response);
 }
 
 export async function fetchMyNewsList(cursorId?: number): Promise<RemoteNewsSummaryList> {
@@ -258,9 +258,4 @@ export async function fetchNewsDetail(newsId: number): Promise<RemoteNewsDetail 
   });
   const result = unwrapResult(response);
   return normalizeNewsDetail(result);
-}
-
-export async function fetchNewsCarousel(): Promise<RemoteNewsSummary[]> {
-  const list = await fetchNewsList();
-  return list.filter((item) => item.carousel === 'PROMOTION');
 }

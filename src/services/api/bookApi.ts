@@ -30,6 +30,7 @@ export type BookItem = {
   description: string;
   imgUrl?: string;
   publisher?: string;
+  likedByMe?: boolean;
 };
 
 export type BookSearchResult = {
@@ -95,6 +96,7 @@ function normalizeBookItem(raw: unknown): BookItem | null {
     toStringValue(firstDefined(record.imgUrl, record.imageUrl, record.cover, record.thumbnailUrl)),
   );
   const publisher = toStringValue(firstDefined(record.publisher, record.publisherName));
+  const likedByMe = toBoolean(firstDefined(record.likedByMe, record.liked));
 
   if (!isbn && !title) return null;
 
@@ -106,6 +108,7 @@ function normalizeBookItem(raw: unknown): BookItem | null {
     description,
     imgUrl,
     publisher,
+    likedByMe: typeof likedByMe === 'boolean' ? likedByMe : undefined,
   };
 }
 
@@ -258,9 +261,10 @@ export async function fetchMyLikedBooks(cursorId?: number): Promise<MemberLikedB
 export async function fetchAllMemberLikedBooks(memberNickname: string): Promise<MemberLikedBookItem[]> {
   const merged: MemberLikedBookItem[] = [];
   const seen = new Set<string>();
+  const visitedCursors = new Set<number>();
   let cursorId: number | undefined;
 
-  for (let index = 0; index < 20; index += 1) {
+  for (let index = 0; index < 100; index += 1) {
     const response = await fetchMemberLikedBooks(memberNickname, cursorId);
     response.items.forEach((item) => {
       const isbn = item.isbn.trim();
@@ -271,6 +275,9 @@ export async function fetchAllMemberLikedBooks(memberNickname: string): Promise<
     });
 
     if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+    if (visitedCursors.has(response.nextCursor)) break;
+
+    visitedCursors.add(response.nextCursor);
     cursorId = response.nextCursor;
   }
 
@@ -280,9 +287,10 @@ export async function fetchAllMemberLikedBooks(memberNickname: string): Promise<
 export async function fetchAllMyLikedBooks(): Promise<MemberLikedBookItem[]> {
   const merged: MemberLikedBookItem[] = [];
   const seen = new Set<string>();
+  const visitedCursors = new Set<number>();
   let cursorId: number | undefined;
 
-  for (let index = 0; index < 20; index += 1) {
+  for (let index = 0; index < 100; index += 1) {
     const response = await fetchMyLikedBooks(cursorId);
     response.items.forEach((item) => {
       const isbn = item.isbn.trim();
@@ -293,6 +301,9 @@ export async function fetchAllMyLikedBooks(): Promise<MemberLikedBookItem[]> {
     });
 
     if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+    if (visitedCursors.has(response.nextCursor)) break;
+
+    visitedCursors.add(response.nextCursor);
     cursorId = response.nextCursor;
   }
 

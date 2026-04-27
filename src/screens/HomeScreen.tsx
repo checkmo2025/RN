@@ -31,7 +31,7 @@ import {
   fetchRecommendedMembers,
   setFollowingMember,
 } from '../services/api/memberApi';
-import { fetchNewsList } from '../services/api/newsApi';
+import { fetchNewsList, type RemoteNewsSummary } from '../services/api/newsApi';
 import { ApiError } from '../services/api/http';
 import { toKstTimeAgoLabel } from '../utils/date';
 import { triggerSelectionHaptic } from '../utils/haptics';
@@ -92,6 +92,17 @@ const defaultPromotions: HomePromotionItem[] = [
     imageUri: defaultPromotionImages[2],
   },
 ].slice(0, 5);
+
+function resolveNewsErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiError)) return fallback;
+
+  if (error.status === 401) return '로그인 상태를 확인해주세요.';
+  if (error.status === 403) return '접근 권한이 없습니다.';
+  if (error.status === 404) return '요청한 소식을 찾을 수 없습니다.';
+
+  const normalized = error.message?.trim();
+  return normalized || fallback;
+}
 
 export function HomeScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -195,8 +206,27 @@ export function HomeScreen() {
 
   const loadPromotions = useCallback(async () => {
     try {
-      const news = await fetchNewsList();
-      const promotions = news.filter((item) => item.carousel === 'PROMOTION');
+      const allNews: RemoteNewsSummary[] = [];
+      const seenNewsIds = new Set<number>();
+      const visitedCursors = new Set<number>();
+      let cursorId: number | undefined;
+
+      for (let page = 0; page < 100; page += 1) {
+        const response = await fetchNewsList(cursorId);
+        response.items.forEach((item) => {
+          if (seenNewsIds.has(item.id)) return;
+          seenNewsIds.add(item.id);
+          allNews.push(item);
+        });
+
+        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+        if (visitedCursors.has(response.nextCursor)) break;
+
+        visitedCursors.add(response.nextCursor);
+        cursorId = response.nextCursor;
+      }
+
+      const promotions = allNews.filter((item) => item.carousel === 'PROMOTION');
       if (promotions.length === 0) {
         setPromotions(defaultPromotions);
         return;
@@ -214,8 +244,7 @@ export function HomeScreen() {
         })),
       );
     } catch (error) {
-      if (error instanceof ApiError) return;
-      showToast('소식을 불러오지 못했습니다.');
+      showToast(resolveNewsErrorMessage(error, '소식을 불러오지 못했습니다.'));
       setPromotions(defaultPromotions);
     }
   }, []);

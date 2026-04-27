@@ -64,6 +64,7 @@ import {
   deleteClubNoticeComment,
   deleteClubNotice,
   type ClubBookshelfDetail,
+  type ClubBookshelfItem,
   type ClubBookshelfReview,
   type ClubBookshelfTopic,
   fetchClubBookshelfDetail,
@@ -163,8 +164,10 @@ const outputFilterOptions: Array<{ label: string; value: ClubSearchOutputFilter 
   { label: '모임', value: 'MEETING' },
   { label: '대면', value: 'OFFLINE' },
 ];
+const MEETING_SEARCH_KEYWORD_MAX_LENGTH = 40;
 const BOOKSHELF_MEETING_TITLE_MAX_LENGTH = 12;
 const BOOKSHELF_MEETING_LOCATION_MAX_LENGTH = 12;
+const BOOKSHELF_CURSOR_LOOP_LIMIT = 100;
 const ISBN13_REGEX = /^\d{13}$/;
 const MAX_REGULAR_GROUP_COUNT = 10;
 
@@ -576,6 +579,66 @@ function createPendingClubGroup(clubId: number): Group {
   };
 }
 
+function resolveMeetingSearchErrorMessage(
+  error: unknown,
+  options?: { recommendation?: boolean },
+): string {
+  if (!(error instanceof ApiError)) {
+    return options?.recommendation ? '추천 모임을 불러오지 못했습니다.' : '모임 검색에 실패했습니다.';
+  }
+
+  if (error.status === 401) return '로그인 상태를 확인해주세요.';
+  if (error.status === 400) return '검색 조건을 다시 확인해주세요.';
+  if (error.status === 403) return '접근 권한이 없습니다.';
+  if (error.status === 404) return '요청한 모임 정보를 찾을 수 없습니다.';
+
+  const message = error.message?.trim();
+  if (message) return message;
+  return options?.recommendation ? '추천 모임을 불러오지 못했습니다.' : '모임 검색에 실패했습니다.';
+}
+
+function resolveBookshelfActionErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiError)) return fallback;
+
+  if (error.status === 400) return '입력 값을 다시 확인해주세요.';
+  if (error.status === 401) return '로그인 상태를 확인해주세요.';
+  if (error.status === 403) return '권한이 없습니다.';
+  if (error.status === 404) return '요청한 책장 정보를 찾을 수 없습니다.';
+
+  const message = error.message?.trim();
+  return message || fallback;
+}
+
+async function fetchAllClubBookshelvesWithCursor(clubId: number): Promise<{
+  items: ClubBookshelfItem[];
+  isStaff: boolean;
+}> {
+  const mergedItems: ClubBookshelfItem[] = [];
+  const seenMeetingIds = new Set<number>();
+  const visitedCursors = new Set<number>();
+  let cursorId: number | undefined;
+  let isStaff = false;
+
+  for (let page = 0; page < BOOKSHELF_CURSOR_LOOP_LIMIT; page += 1) {
+    const response = await fetchClubBookshelves(clubId, cursorId);
+    if (response.isStaff) isStaff = true;
+
+    response.items.forEach((item) => {
+      if (seenMeetingIds.has(item.meetingId)) return;
+      seenMeetingIds.add(item.meetingId);
+      mergedItems.push(item);
+    });
+
+    if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+    if (visitedCursors.has(response.nextCursor)) break;
+
+    visitedCursors.add(response.nextCursor);
+    cursorId = response.nextCursor;
+  }
+
+  return { items: mergedItems, isStaff };
+}
+
 export function MeetingScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ Meeting: MeetingRouteParams }, 'Meeting'>>();
@@ -678,7 +741,14 @@ export function MeetingScreen() {
 
   const loadDiscoverGroups = useCallback(async () => {
     const keyword = search.trim();
+    if (keyword.length > MEETING_SEARCH_KEYWORD_MAX_LENGTH) {
+      setDiscoverGroups([]);
+      showToast(`검색어는 ${MEETING_SEARCH_KEYWORD_MAX_LENGTH}자 이하로 입력해주세요.`);
+      return;
+    }
+
     const shouldLoadRecommendations =
+      isLoggedIn &&
       keyword.length === 0 &&
       activeInputFilter === null &&
       selectedOutputFilter === 'ALL';
@@ -692,30 +762,50 @@ export function MeetingScreen() {
 
     setDiscoverLoading(true);
     try {
-      const result = shouldLoadRecommendations
-        ? await fetchRecommendedClubs({ suppressErrorToast: true })
-        : await searchClubs({
+      if (shouldLoadRecommendations) {
+        const result = await fetchRecommendedClubs({ suppressErrorToast: true });
+        setDiscoverGroups(result.items.map(mapSearchClubToGroup));
+      } else {
+        const mergedItems: ClubSearchItem[] = [];
+        const seenClubIds = new Set<number>();
+        const visitedCursors = new Set<number>();
+        let cursorId: number | undefined;
+
+        for (let page = 0; page < 100; page += 1) {
+          const response = await searchClubs({
             keyword: keyword.length > 0 ? keyword : undefined,
             inputFilter,
             outputFilter: selectedOutputFilter,
+            cursorId,
           });
-      setDiscoverGroups(result.items.map(mapSearchClubToGroup));
+
+          response.items.forEach((item) => {
+            const clubId = item.club?.clubId;
+            if (typeof clubId === 'number') {
+              if (seenClubIds.has(clubId)) return;
+              seenClubIds.add(clubId);
+            }
+            mergedItems.push(item);
+          });
+
+          if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+          if (visitedCursors.has(response.nextCursor)) break;
+
+          visitedCursors.add(response.nextCursor);
+          cursorId = response.nextCursor;
+        }
+
+        setDiscoverGroups(mergedItems.map(mapSearchClubToGroup));
+      }
     } catch (error) {
       setDiscoverGroups([]);
-      if (error instanceof ApiError) {
-        return;
-      }
-      if (!(error instanceof ApiError)) {
-        showToast(
-          shouldLoadRecommendations
-            ? '추천 모임을 불러오지 못했습니다.'
-            : '모임 검색에 실패했습니다.',
-        );
-      }
+      showToast(
+        resolveMeetingSearchErrorMessage(error, { recommendation: shouldLoadRecommendations }),
+      );
     } finally {
       setDiscoverLoading(false);
     }
-  }, [activeInputFilter, search, selectedOutputFilter]);
+  }, [activeInputFilter, isLoggedIn, search, selectedOutputFilter]);
 
   useEffect(() => {
     void loadMyGroups();
@@ -993,6 +1083,7 @@ export function MeetingScreen() {
           placeholder="검색하기 (모임명, 지역별)"
           placeholderTextColor={colors.gray3}
           style={styles.searchInput}
+          maxLength={MEETING_SEARCH_KEYWORD_MAX_LENGTH}
         />
         <MaterialIcons name="search" size={22} color={colors.gray5} />
       </View>
@@ -5372,7 +5463,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       try {
         const [homeDetail, bookshelfList, noticeList, latestNotice, myMembership] = await Promise.all([
           fetchClubHome(group.clubId),
-          fetchClubBookshelves(group.clubId),
+          fetchAllClubBookshelvesWithCursor(group.clubId),
           fetchClubNotices(group.clubId, 1),
           fetchClubLatestNotice(group.clubId, { suppressErrorToast: true }),
           fetchClubMyMembership(group.clubId, { suppressErrorToast: true }),
@@ -5594,7 +5685,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       const visitedCursors = new Set<number>();
       let cursorId: number | undefined;
 
-      for (let page = 0; page < 20; page += 1) {
+      for (let page = 0; page < BOOKSHELF_CURSOR_LOOP_LIMIT; page += 1) {
         const response = await fetchClubBookshelfReviews(clubId, meetingId, cursorId, {
           suppressErrorToast: options?.suppressErrorToast,
         });
@@ -5634,7 +5725,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       let cursorId: number | undefined;
       let latestMeta: ClubMeetingTeamTopics | null = null;
 
-      for (let page = 0; page < 20; page += 1) {
+      for (let page = 0; page < BOOKSHELF_CURSOR_LOOP_LIMIT; page += 1) {
         const response = await fetchClubMeetingTeamTopics(clubId, meetingId, teamId, cursorId, {
           suppressErrorToast: options?.suppressErrorToast,
         });
@@ -5691,7 +5782,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       let cursorId: number | undefined;
       let latestMeta: ClubMeetingChatHistory | null = null;
 
-      for (let page = 0; page < 20; page += 1) {
+      for (let page = 0; page < BOOKSHELF_CURSOR_LOOP_LIMIT; page += 1) {
         const response = await fetchClubMeetingTeamChatMessages(clubId, meetingId, teamId, cursorId, {
           suppressErrorToast: options?.suppressErrorToast,
         });
@@ -7261,8 +7352,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           mode: editingBookshelfPost ? 'edit' : 'create',
           message: error instanceof Error ? error.message : String(error),
         });
-        if (!(error instanceof ApiError)) {
-          showToast(
+        showToast(
+          resolveBookshelfActionErrorMessage(
+            error,
             bookshelfComposerType === 'TOPIC'
               ? editingBookshelfPost
                 ? '발제 수정에 실패했습니다.'
@@ -7270,8 +7362,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               : editingBookshelfPost
                 ? '한줄평 수정에 실패했습니다.'
                 : '한줄평 등록에 실패했습니다.',
-          );
-        }
+          ),
+        );
       } finally {
         setSubmittingBookshelfComposer(false);
       }
@@ -7360,9 +7452,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
                 showToast(`${postLabel}가 삭제되었습니다.`);
               } catch (error) {
-                if (!(error instanceof ApiError)) {
-                  showToast(`${postLabel} 삭제에 실패했습니다.`);
-                }
+                showToast(resolveBookshelfActionErrorMessage(error, `${postLabel} 삭제에 실패했습니다.`));
               } finally {
                 setSubmittingBookshelfComposer(false);
               }
@@ -7561,9 +7651,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         );
         setTeamManageTeams(nextTeams.length > 0 ? nextTeams : [{ teamNumber: 1, memberIds: [] }]);
       } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast('조 편성 화면을 불러오지 못했습니다.');
-        }
+        showToast(resolveBookshelfActionErrorMessage(error, '조 편성 화면을 불러오지 못했습니다.'));
         setTeamManageVisible(false);
       } finally {
         setTeamManageLoading(false);
@@ -7728,9 +7816,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           teamCount: teamManageTeams.length,
           message: error instanceof Error ? error.message : String(error),
         });
-        if (!(error instanceof ApiError)) {
-          showToast('조 편성 저장에 실패했습니다.');
-        }
+        showToast(resolveBookshelfActionErrorMessage(error, '조 편성 저장에 실패했습니다.'));
       } finally {
         setTeamManageSaving(false);
       }
@@ -8044,9 +8130,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           meetingDate: formatDotDate(detail.meetingTime),
         });
       } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast('책장 수정 정보를 불러오지 못했습니다.');
-        }
+        showToast(resolveBookshelfActionErrorMessage(error, '책장 수정 정보를 불러오지 못했습니다.'));
         setActiveManagementScreen(null);
         setEditingBookshelfMeetingId(null);
       }
@@ -8347,9 +8431,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       const response = await searchBooks(trimmed, 1);
       setBookshelfBookSearchResults(response.items);
     } catch (error) {
-      if (!(error instanceof ApiError)) {
-        showToast('책 검색에 실패했습니다.');
-      }
+      showToast(resolveBookshelfActionErrorMessage(error, '책 검색에 실패했습니다.'));
       setBookshelfBookSearchResults([]);
     } finally {
       setBookshelfBookSearchLoading(false);
@@ -8453,7 +8535,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           });
         }
 
-        const bookshelfList = await fetchClubBookshelves(clubId);
+        const bookshelfList = await fetchAllClubBookshelvesWithCursor(clubId);
         const nextItems = bookshelfList.items.map(mapApiBookshelfToItem);
         const nextItemsWithMeetingDraft =
           isEditMode && typeof editingMeetingId === 'number'
@@ -8497,9 +8579,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           showToast('책장이 생성되었습니다.');
         }
       } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast(isEditMode ? '책장 수정에 실패했습니다.' : '책장 생성에 실패했습니다.');
-        }
+        showToast(
+          resolveBookshelfActionErrorMessage(
+            error,
+            isEditMode ? '책장 수정에 실패했습니다.' : '책장 생성에 실패했습니다.',
+          ),
+        );
       } finally {
         if (isEditMode) {
           setUpdatingBookshelf(false);
@@ -8545,7 +8630,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
             setDeletingBookshelf(true);
             try {
               await deleteClubBookshelf(clubId, meetingId);
-              const bookshelfList = await fetchClubBookshelves(clubId);
+              const bookshelfList = await fetchAllClubBookshelvesWithCursor(clubId);
               const nextItems = bookshelfList.items.map(mapApiBookshelfToItem);
               setBookshelfItems(nextItems);
               setSelectedBookshelfBookId(nextItems[0]?.id ?? null);
@@ -8554,9 +8639,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               setEditingBookshelfMeetingId(null);
               showToast('책장이 삭제되었습니다.');
             } catch (error) {
-              if (!(error instanceof ApiError)) {
-                showToast('책장 삭제에 실패했습니다.');
-              }
+              showToast(resolveBookshelfActionErrorMessage(error, '책장 삭제에 실패했습니다.'));
             } finally {
               setDeletingBookshelf(false);
             }

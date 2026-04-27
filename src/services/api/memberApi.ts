@@ -1,4 +1,4 @@
-import { ApiEnvelope, ApiError, requestJson, unwrapResult } from './http';
+import { ApiEnvelope, requestJson, unwrapResult } from './http';
 import { normalizeRemoteImageUrl } from '../../utils/image';
 
 type FollowInfo = {
@@ -83,14 +83,23 @@ export type ReportItem = {
   reportedMemberProfileImageUrl?: string;
   reportType?: string;
   content?: string;
+  reportDate?: string;
   createdAt?: string;
 };
 
 type ReportListResult = {
   reports?: ReportItem[];
+  hasNext?: boolean;
+  nextCursor?: number | null;
 };
 
 type ReportListPayload = ReportListResult | ReportItem[];
+
+type NormalizedReportListPage = {
+  items: ReportItem[];
+  hasNext: boolean;
+  nextCursor: number | null;
+};
 
 export type FollowList = {
   items: FollowInfo[];
@@ -129,10 +138,28 @@ function normalizeFollowInfo(item: FollowInfo): FollowInfo {
   };
 }
 
-function extractReportItems(payload: ReportListPayload | null | undefined): ReportItem[] {
-  if (Array.isArray(payload)) return payload;
-  if (payload && Array.isArray(payload.reports)) return payload.reports;
-  return [];
+function normalizeReportListPage(payload: ReportListPayload | null | undefined): NormalizedReportListPage {
+  if (Array.isArray(payload)) {
+    return {
+      items: payload,
+      hasNext: false,
+      nextCursor: null,
+    };
+  }
+
+  if (!payload) {
+    return {
+      items: [],
+      hasNext: false,
+      nextCursor: null,
+    };
+  }
+
+  return {
+    items: Array.isArray(payload.reports) ? payload.reports : [],
+    hasNext: Boolean(payload.hasNext),
+    nextCursor: typeof payload.nextCursor === 'number' ? payload.nextCursor : null,
+  };
 }
 
 function pickPhoneNumber(payload: {
@@ -392,41 +419,40 @@ export async function withdrawMember(): Promise<void> {
 }
 
 export async function fetchMyReports(): Promise<ReportItem[]> {
-  const candidatePaths = ['/members/me/reports'];
+  let cursorId: number | undefined;
+  const allReports: ReportItem[] = [];
+  const seenKeys = new Set<string>();
+  const visitedCursors = new Set<number>();
 
-  for (const path of candidatePaths) {
-    try {
-      const response = await requestJson<ApiEnvelope<ReportListPayload>>(path, {
-        method: 'GET',
-      });
-      return extractReportItems(unwrapResult(response));
-    } catch (error) {
-      if (
-        error instanceof ApiError &&
-        (error.status === 403 || error.status === 404 || error.status === 405)
-      ) {
-        continue;
-      }
-      throw error;
-    }
-  }
-
-  const myProfile = await fetchMyProfile();
-  const nickname = myProfile?.nickname?.trim();
-  if (!nickname) return [];
-
-  try {
-    const response = await requestJson<ApiEnvelope<ReportListPayload>>(
-      `/admin/members/${encodeURIComponent(nickname)}/reports`,
-      {
-        method: 'GET',
+  for (let page = 0; page < 100; page += 1) {
+    const response = await requestJson<ApiEnvelope<ReportListPayload>>('/members/me/reports', {
+      method: 'GET',
+      query: {
+        cursorId,
       },
-    );
-    return extractReportItems(unwrapResult(response));
-  } catch (error) {
-    if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
-      return [];
-    }
-    throw error;
+    });
+
+    const result = normalizeReportListPage(unwrapResult(response));
+    result.items.forEach((item, index) => {
+      const key = [
+        typeof item.reportId === 'number' ? `id:${item.reportId}` : `idx:${index}`,
+        item.reportedMemberNickname ?? '',
+        item.reportType ?? '',
+        item.reportDate ?? item.createdAt ?? '',
+        item.content ?? '',
+      ].join('|');
+
+      if (seenKeys.has(key)) return;
+      seenKeys.add(key);
+      allReports.push(item);
+    });
+
+    if (!result.hasNext || typeof result.nextCursor !== 'number') break;
+    if (visitedCursors.has(result.nextCursor)) break;
+
+    visitedCursors.add(result.nextCursor);
+    cursorId = result.nextCursor;
   }
+
+  return allReports;
 }

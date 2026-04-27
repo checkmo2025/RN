@@ -140,8 +140,9 @@ async function fetchAllFollowUsers(
 ): Promise<FollowUser[]> {
   let cursorId: number | undefined;
   const all: FollowUser[] = [];
+  const visitedCursors = new Set<number>();
 
-  for (let i = 0; i < 20; i += 1) {
+  for (let i = 0; i < 100; i += 1) {
     const result = await loader(cursorId);
     all.push(
       ...result.items
@@ -154,6 +155,9 @@ async function fetchAllFollowUsers(
     );
 
     if (!result.hasNext || typeof result.nextCursor !== 'number') break;
+    if (visitedCursors.has(result.nextCursor)) break;
+
+    visitedCursors.add(result.nextCursor);
     cursorId = result.nextCursor;
   }
 
@@ -163,6 +167,17 @@ async function fetchAllFollowUsers(
   });
 
   return Array.from(uniqueByNickname.values());
+}
+
+function resolveStoryFeedErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiError)) return fallback;
+
+  if (error.status === 401) return '로그인 상태를 확인해주세요.';
+  if (error.status === 403) return '접근 권한이 없습니다.';
+  if (error.status === 404) return '요청한 책이야기를 찾을 수 없습니다.';
+
+  const normalized = error.message?.trim();
+  return normalized || fallback;
 }
 
 export function UserProfileScreen() {
@@ -219,13 +234,35 @@ export function UserProfileScreen() {
   }, [navigation, showFollowPage]);
 
   const loadProfile = useCallback(async () => {
-    const [profileResult, storiesResult] = await Promise.all([
-      fetchMemberProfile(memberNickname),
-      fetchMemberBookStories(memberNickname),
-    ]);
-
+    const profileResult = await fetchMemberProfile(memberNickname);
     setProfile(profileResult);
-    setStories(storiesResult.items.map(mapRemoteStoryToCard));
+
+    try {
+      let cursorId: number | undefined;
+      const visitedCursors = new Set<number>();
+      const seenStoryIds = new Set<number>();
+      const allStories: RemoteStoryItem[] = [];
+
+      for (let page = 0; page < 100; page += 1) {
+        const response = await fetchMemberBookStories(memberNickname, cursorId);
+        response.items.forEach((item) => {
+          if (seenStoryIds.has(item.id)) return;
+          seenStoryIds.add(item.id);
+          allStories.push(item);
+        });
+
+        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+        if (visitedCursors.has(response.nextCursor)) break;
+
+        visitedCursors.add(response.nextCursor);
+        cursorId = response.nextCursor;
+      }
+
+      setStories(allStories.map(mapRemoteStoryToCard));
+    } catch (error) {
+      setStories([]);
+      showToast(resolveStoryFeedErrorMessage(error, '책이야기를 불러오지 못했습니다.'));
+    }
   }, [memberNickname]);
 
   const mapMemberLikedBooksToCards = useCallback((items: MemberLikedBookItem[]): BookCard[] => {

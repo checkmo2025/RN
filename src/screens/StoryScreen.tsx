@@ -240,6 +240,17 @@ function mapBookItemToBook(item: BookItem): Book {
   };
 }
 
+function resolveStoryFeedErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiError)) return fallback;
+
+  if (error.status === 401) return '로그인 상태를 확인해주세요.';
+  if (error.status === 403) return '접근 권한이 없습니다.';
+  if (error.status === 404) return '요청한 책이야기를 찾을 수 없습니다.';
+
+  const normalized = error.message?.trim();
+  return normalized || fallback;
+}
+
 export function StoryScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ Story: StoryRouteParams }, 'Story'>>();
@@ -269,6 +280,7 @@ export function StoryScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [editingStoryId, setEditingStoryId] = useState<number | null>(null);
+  const isEditingStory = editingStoryId !== null;
   const [refreshing, setRefreshing] = useState(false);
   const [detailRefreshing, setDetailRefreshing] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
@@ -738,9 +750,7 @@ export function StoryScreen() {
         setHasNext(feed.hasNext);
         setNextCursor(feed.nextCursor);
       } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast('책이야기 목록을 불러오지 못했습니다.');
-        }
+        showToast(resolveStoryFeedErrorMessage(error, '책이야기 목록을 불러오지 못했습니다.'));
       } finally {
         if (!reset) {
           setIsLoadingMore(false);
@@ -1142,8 +1152,12 @@ export function StoryScreen() {
   }, [handleSelectStoryMenuAction, isLoggedIn, selectedStory, storyMenu]);
 
   const openBookPicker = useCallback(() => {
+    if (isEditingStory) {
+      showToast('수정 모드에서는 책을 변경할 수 없습니다.');
+      return;
+    }
     setShowBookPicker(true);
-  }, []);
+  }, [isEditingStory]);
 
   const closeBookPicker = useCallback(() => {
     setShowBookPicker(false);
@@ -1165,11 +1179,18 @@ export function StoryScreen() {
   }, []);
 
   const handleSubmit = () => {
-    if (!selectedBook) {
+    const nextTitle = title.trim();
+    const nextDescription = body.trim();
+
+    if (!isEditingStory && !selectedBook) {
       showToast('책을 선택해주세요.');
       return;
     }
-    if (!title.trim() || !body.trim()) {
+    if (isEditingStory && !nextDescription) {
+      showToast('내용을 입력해주세요.');
+      return;
+    }
+    if (!isEditingStory && (!nextTitle || !nextDescription)) {
       showToast('제목과 내용을 입력해주세요.');
       return;
     }
@@ -1178,13 +1199,14 @@ export function StoryScreen() {
         const loadingStartedAt = Date.now();
         setSubmittingStory(true);
         try {
-          const nextTitle = title.trim();
-          const nextDescription = body.trim();
-
           if (editingStoryId) {
             await updateBookStory(editingStoryId, { description: nextDescription });
             showToast('책이야기를 수정했습니다.');
           } else {
+            if (!selectedBook) {
+              showToast('책을 선택해주세요.');
+              return;
+            }
             const isbn = selectedBook.id.trim();
             if (!ISBN13_REGEX.test(isbn)) {
               showToast('책 ISBN 형식을 확인해주세요.');
@@ -1968,12 +1990,20 @@ export function StoryScreen() {
 
           <View style={styles.card}>
             {!selectedBook ? (
-              <Pressable
-                style={styles.bookSelectButton}
-                onPress={openBookPicker}
-              >
-                <Text style={styles.bookSelectText}>책 선택하기</Text>
-              </Pressable>
+              isEditingStory ? (
+                <View style={styles.bookReadOnlyNotice}>
+                  <Text style={styles.bookReadOnlyNoticeText}>
+                    수정 모드에서는 책 정보를 변경할 수 없습니다.
+                  </Text>
+                </View>
+              ) : (
+                <Pressable
+                  style={styles.bookSelectButton}
+                  onPress={openBookPicker}
+                >
+                  <Text style={styles.bookSelectText}>책 선택하기</Text>
+                </Pressable>
+              )
             ) : (
               <View style={styles.bookSummary}>
                 {selectedBook.image ? (
@@ -1990,7 +2020,7 @@ export function StoryScreen() {
                 </View>
               </View>
             )}
-            {selectedBook && (
+            {selectedBook && !isEditingStory && (
               <Pressable
                 style={styles.secondaryButton}
                 onPress={openBookPicker}
@@ -1998,6 +2028,11 @@ export function StoryScreen() {
                 <Text style={styles.secondaryButtonText}>변경하기</Text>
               </Pressable>
             )}
+            {isEditingStory ? (
+              <Text style={styles.bookReadOnlyGuide}>
+                수정 모드에서는 책과 제목을 변경할 수 없고 본문만 수정됩니다.
+              </Text>
+            ) : null}
           </View>
 
           <View style={styles.formCard}>
@@ -2006,7 +2041,9 @@ export function StoryScreen() {
               onChangeText={setTitle}
               placeholder="제목을 입력해주세요."
               placeholderTextColor={colors.gray3}
-              style={styles.titleInput}
+              style={[styles.titleInput, isEditingStory && styles.titleInputReadOnly]}
+              editable={!isEditingStory}
+              selectTextOnFocus={!isEditingStory}
             />
             <TextInput
               value={body}
@@ -2405,6 +2442,25 @@ const styles = StyleSheet.create({
     ...typography.body1_2,
     color: colors.primary1,
   },
+  bookReadOnlyNotice: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    backgroundColor: colors.gray1,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookReadOnlyNoticeText: {
+    ...typography.body2_3,
+    color: colors.gray5,
+    textAlign: 'center',
+  },
+  bookReadOnlyGuide: {
+    ...typography.body2_3,
+    color: colors.gray5,
+  },
   bookOption: {
     flexDirection: 'row',
     gap: spacing.md,
@@ -2544,6 +2600,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.gray2,
     paddingBottom: spacing.xs,
+  },
+  titleInputReadOnly: {
+    color: colors.gray4,
   },
   bodyInput: {
     ...typography.body1_3,
