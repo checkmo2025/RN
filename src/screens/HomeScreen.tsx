@@ -9,7 +9,7 @@ import {
   useWindowDimensions,
   Image,
 } from 'react-native';
-import { useNavigation, type NavigationProp, type ParamListBase } from '@react-navigation/native';
+import { useNavigation, useScrollToTop, type NavigationProp, type ParamListBase } from '@react-navigation/native';
 
 import { colors, radius, spacing, typography } from '../theme';
 import { ScreenLayout } from '../components/common/ScreenLayout';
@@ -121,6 +121,8 @@ export function HomeScreen() {
   const loadingMorePostsRef = useRef(false);
   const hasNextPostsRef = useRef(true);
   const nextPostsCursorRef = useRef<number | null>(null);
+  const listRef = useRef<FlatList>(null);
+  useScrollToTop(listRef);
 
   const loadRecommendedUsers = useCallback(async () => {
     if (!isLoggedIn) {
@@ -531,6 +533,7 @@ export function HomeScreen() {
     <ScreenLayout title="책모 홈">
       <View style={styles.screenBody}>
         <FlatList
+          ref={listRef}
           data={posts}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}

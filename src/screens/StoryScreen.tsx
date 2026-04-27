@@ -25,6 +25,7 @@ import {
   useFocusEffect,
   useNavigation,
   useRoute,
+  useScrollToTop,
   type EventArg,
   type NavigationAction,
   type NavigationProp,
@@ -298,6 +299,7 @@ export function StoryScreen() {
   const [submittingReport, setSubmittingReport] = useState(false);
   const [submittingStory, setSubmittingStory] = useState(false);
   const listRef = useRef<FlatList<StoryFeedItem>>(null);
+  useScrollToTop(listRef);
   const detailScrollRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
   const inlineReplyInputRef = useRef<TextInput>(null);

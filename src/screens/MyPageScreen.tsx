@@ -20,6 +20,7 @@ import {
   useFocusEffect,
   useNavigation,
   useRoute,
+  useScrollToTop,
   type NavigationProp,
   type ParamListBase,
   type RouteProp,
@@ -387,6 +388,8 @@ function NotificationToggle({
 
 export function MyPageScreen() {
   const { isLoggedIn, logout, requireAuth } = useAuthGate();
+  const myPageScrollRef = useRef<ScrollView>(null);
+  useScrollToTop(myPageScrollRef);
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ My: MyPageRouteParams }, 'My'>>();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -2652,6 +2655,7 @@ export function MyPageScreen() {
     <ScreenLayout title="마이페이지">
       <View style={styles.container}>
         <ScrollView
+          ref={myPageScrollRef}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           refreshControl={

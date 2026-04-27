@@ -27,6 +27,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import {
   useNavigation,
   useRoute,
+  useScrollToTop,
   type EventArg,
   type NavigationAction,
   type NavigationProp,
@@ -644,6 +645,8 @@ async function fetchAllClubBookshelvesWithCursor(clubId: number): Promise<{
 }
 
 export function MeetingScreen() {
+  const meetingScrollRef = useRef<ScrollView>(null);
+  useScrollToTop(meetingScrollRef);
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ Meeting: MeetingRouteParams }, 'Meeting'>>();
   const { requireAuth, isLoggedIn } = useAuthGate();
@@ -1037,6 +1040,7 @@ export function MeetingScreen() {
   return (
     <ScreenLayout title="모임" onPressLogo={handlePressHeaderLogo}>
       <ScrollView
+        ref={meetingScrollRef}
         style={styles.container}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

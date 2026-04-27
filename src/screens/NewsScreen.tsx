@@ -21,6 +21,7 @@ import {
   useFocusEffect,
   useNavigation,
   useRoute,
+  useScrollToTop,
   type NavigationProp,
   type ParamListBase,
   type RouteProp,
@@ -190,6 +191,8 @@ export function NewsScreen() {
   const [promotions, setPromotions] = useState<NewsItem[]>(fallbackPromotions);
   const [items, setItems] = useState<NewsItem[]>([]);
   const [recommendedBooks, setRecommendedBooks] = useState<RecommendedBook[]>([]);
+  const newsListRef = useRef<FlatList>(null);
+  useScrollToTop(newsListRef);
   const detailTranslateX = useRef(new Animated.Value(0)).current;
 
   const animateTransition = useCallback(() => {
@@ -556,6 +559,7 @@ export function NewsScreen() {
     <ScreenLayout title="소식">
       <View style={styles.container}>
         <FlatList
+          ref={newsListRef}
           data={items}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={
