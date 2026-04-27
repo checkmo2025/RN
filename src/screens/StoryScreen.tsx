@@ -44,6 +44,7 @@ import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar'
 import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { IconButton } from '../components/common/IconButton';
+import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import BookStoryFeedCard from '../components/feature/bookstory/BookStoryFeedCard';
 import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
@@ -1101,6 +1102,45 @@ export function StoryScreen() {
     [beginEditComment, commentMenu, deleteComment, openReportModal],
   );
 
+  const commentMenuItems = useMemo<ActionMenuItem[]>(() => {
+    if (!commentMenu) return [];
+    if (isLoggedIn && commentMenu.comment.mine) {
+      return [
+        { key: 'reply', label: '대댓글 쓰기', onPress: () => handleSelectCommentMenuAction('reply') },
+        { key: 'edit', label: '수정하기', onPress: () => handleSelectCommentMenuAction('edit') },
+        {
+          key: 'delete',
+          label: '삭제하기',
+          destructive: true,
+          onPress: () => handleSelectCommentMenuAction('delete'),
+        },
+      ];
+    }
+    return [
+      { key: 'report', label: '신고하기', onPress: () => handleSelectCommentMenuAction('report') },
+      { key: 'reply', label: '대댓글 쓰기', onPress: () => handleSelectCommentMenuAction('reply') },
+    ];
+  }, [commentMenu, handleSelectCommentMenuAction, isLoggedIn]);
+
+  const storyMenuItems = useMemo<ActionMenuItem[]>(() => {
+    if (!storyMenu || !selectedStory) return [];
+    if (isLoggedIn && selectedStory.mine) {
+      return [
+        { key: 'edit', label: '수정하기', onPress: () => handleSelectStoryMenuAction('edit') },
+        {
+          key: 'delete',
+          label: '삭제하기',
+          destructive: true,
+          onPress: () => handleSelectStoryMenuAction('delete'),
+        },
+      ];
+    }
+    return [
+      { key: 'report', label: '신고하기', onPress: () => handleSelectStoryMenuAction('report') },
+      { key: 'share', label: '공유하기', onPress: () => handleSelectStoryMenuAction('share') },
+    ];
+  }, [handleSelectStoryMenuAction, isLoggedIn, selectedStory, storyMenu]);
+
   const openBookPicker = useCallback(() => {
     setShowBookPicker(true);
   }, []);
@@ -1849,141 +1889,40 @@ export function StoryScreen() {
             </View>
           </View>
         </ScrollView>
-        <Modal
+        <ActionMenu
           visible={Boolean(commentMenu)}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setCommentMenu(null)}
-        >
-          <Pressable
-            style={styles.commentMenuModalBackdrop}
-            onPress={() => setCommentMenu(null)}
-            disableFeedback
-          >
-            {commentMenu && (
-              <Pressable
-                style={[
-                  styles.commentMenuPopover,
-                  getPopoverMenuPosition(
-                    commentMenu.pageX,
-                    commentMenu.pageY,
-                    screenWidth,
-                    screenHeight,
-                  ),
-                ]}
-                onPress={(event) => event.stopPropagation()}
-                disableFeedback
-              >
-                {isLoggedIn && commentMenu.comment.mine ? (
-                  <>
-                    <Pressable
-                      style={styles.commentMenuItem}
-                      onPress={() => handleSelectCommentMenuAction('reply')}
-                    >
-                      <Text style={styles.commentMenuText}>대댓글 쓰기</Text>
-                    </Pressable>
-                    <View style={styles.commentMenuDivider} />
-                    <Pressable
-                      style={styles.commentMenuItem}
-                      onPress={() => handleSelectCommentMenuAction('edit')}
-                    >
-                      <Text style={styles.commentMenuText}>수정하기</Text>
-                    </Pressable>
-                    <View style={styles.commentMenuDivider} />
-                    <Pressable
-                      style={styles.commentMenuItem}
-                      onPress={() => handleSelectCommentMenuAction('delete')}
-                    >
-                      <Text style={[styles.commentMenuText, styles.commentMenuTextDanger]}>
-                        삭제하기
-                      </Text>
-                    </Pressable>
-                  </>
-                ) : (
-                  <>
-                    <Pressable
-                      style={styles.commentMenuItem}
-                      onPress={() => handleSelectCommentMenuAction('report')}
-                    >
-                      <Text style={styles.commentMenuText}>신고하기</Text>
-                    </Pressable>
-                    <View style={styles.commentMenuDivider} />
-                    <Pressable
-                      style={styles.commentMenuItem}
-                      onPress={() => handleSelectCommentMenuAction('reply')}
-                    >
-                      <Text style={styles.commentMenuText}>대댓글 쓰기</Text>
-                    </Pressable>
-                  </>
-                )}
-              </Pressable>
-            )}
-          </Pressable>
-        </Modal>
-        <Modal
+          anchor={
+            commentMenu
+              ? {
+                  pageX: commentMenu.pageX,
+                  pageY: commentMenu.pageY,
+                }
+              : null
+          }
+          items={commentMenuItems}
+          onClose={() => setCommentMenu(null)}
+          screenWidth={screenWidth}
+          screenHeight={screenHeight}
+          menuWidth={132}
+          topBoundary={96}
+        />
+        <ActionMenu
           visible={Boolean(storyMenu)}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setStoryMenu(null)}
-        >
-          <Pressable
-            style={styles.commentMenuModalBackdrop}
-            onPress={() => setStoryMenu(null)}
-            disableFeedback
-          >
-            {storyMenu && (
-              <Pressable
-                style={[
-                  styles.commentMenuPopover,
-                  getPopoverMenuPosition(
-                    storyMenu.pageX,
-                    storyMenu.pageY,
-                    screenWidth,
-                    screenHeight,
-                  ),
-                ]}
-                onPress={(event) => event.stopPropagation()}
-                disableFeedback
-              >
-                {isLoggedIn && selectedStory.mine ? (
-                  <>
-                    <Pressable
-                      style={styles.commentMenuItem}
-                      onPress={() => handleSelectStoryMenuAction('edit')}
-                    >
-                      <Text style={styles.commentMenuText}>수정하기</Text>
-                    </Pressable>
-                    <View style={styles.commentMenuDivider} />
-                    <Pressable
-                      style={styles.commentMenuItem}
-                      onPress={() => handleSelectStoryMenuAction('delete')}
-                    >
-                      <Text style={[styles.commentMenuText, styles.commentMenuTextDanger]}>
-                        삭제하기
-                      </Text>
-                    </Pressable>
-                  </>
-                ) : (
-                  <>
-                    <Pressable
-                      style={styles.commentMenuItem}
-                      onPress={() => handleSelectStoryMenuAction('report')}
-                    >
-                      <Text style={styles.commentMenuText}>신고하기</Text>
-                    </Pressable>
-                    <View style={styles.commentMenuDivider} />
-                    <Pressable
-                      style={styles.commentMenuItem}
-                      onPress={() => handleSelectStoryMenuAction('share')}
-                    >
-                      <Text style={styles.commentMenuText}>공유하기</Text>
-                    </Pressable>
-                  </>
-                )}
-              </Pressable>
-            )}
-          </Pressable>
-        </Modal>
+          anchor={
+            storyMenu
+              ? {
+                  pageX: storyMenu.pageX,
+                  pageY: storyMenu.pageY,
+                }
+              : null
+          }
+          items={storyMenuItems}
+          onClose={() => setStoryMenu(null)}
+          screenWidth={screenWidth}
+          screenHeight={screenHeight}
+          menuWidth={132}
+          topBoundary={96}
+        />
         <ReportMemberModal
           visible={Boolean(reportModal)}
           target={reportModal}
@@ -2363,30 +2302,6 @@ function mapRemoteDetailToStory(detail: RemoteStoryDetail, previous?: Story): St
     fullText: detail.description,
     commentList: detail.commentList.map(mapRemoteCommentToComment),
   };
-}
-
-function getPopoverMenuPosition(
-  pageX: number,
-  pageY: number,
-  screenWidth: number,
-  screenHeight: number,
-) {
-  const menuWidth = 132;
-  const menuHeight = 124;
-  const margin = spacing.sm;
-
-  const left = Math.min(
-    screenWidth - menuWidth - margin,
-    Math.max(margin, pageX - menuWidth + 18),
-  );
-  const preferredTop = pageY - menuHeight - 8;
-  const fallbackTop = pageY + 8;
-  const top =
-    preferredTop < 96
-      ? Math.min(screenHeight - menuHeight - margin, fallbackTop)
-      : Math.min(screenHeight - menuHeight - margin, preferredTop);
-
-  return { left, top };
 }
 
 const styles = StyleSheet.create({
@@ -2951,39 +2866,6 @@ const styles = StyleSheet.create({
   },
   commentMenuButton: {
     padding: spacing.xs / 2,
-  },
-  commentMenuModalBackdrop: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  commentMenuPopover: {
-    position: 'absolute',
-    width: 132,
-    backgroundColor: colors.white,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.gray2,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 6,
-  },
-  commentMenuItem: {
-    paddingVertical: 10,
-    paddingHorizontal: spacing.md,
-  },
-  commentMenuDivider: {
-    height: 1,
-    backgroundColor: colors.gray2,
-  },
-  commentMenuText: {
-    ...typography.body2_2,
-    color: colors.gray6,
-  },
-  commentMenuTextDanger: {
-    color: colors.likeRed,
   },
   reportModalBackdrop: {
     flex: 1,

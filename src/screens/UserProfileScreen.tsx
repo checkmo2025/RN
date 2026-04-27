@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import {
+  Alert,
   Animated,
   Image,
   PanResponder,
@@ -26,6 +27,7 @@ import { navigateToHome } from '../navigation/navigateToHome';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
+import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { triggerSelectionHaptic } from '../utils/haptics';
@@ -167,7 +169,7 @@ export function UserProfileScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ UserProfile: UserProfileRouteParams }, 'UserProfile'>>();
   const { requireAuth } = useAuthGate();
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const translateX = useRef(new Animated.Value(0)).current;
   const [activeTab, setActiveTab] = useState<TabKey>('책 이야기');
   const [refreshing, setRefreshing] = useState(false);
@@ -187,6 +189,7 @@ export function UserProfileScreen() {
   const [loadingFollowUsers, setLoadingFollowUsers] = useState(false);
   const [togglingFollowNickname, setTogglingFollowNickname] = useState<string | null>(null);
   const [reportModal, setReportModal] = useState<ReportMemberModalState | null>(null);
+  const [groupMenuAnchor, setGroupMenuAnchor] = useState<{ pageX: number; pageY: number } | null>(null);
   const memberNickname =
     typeof route.params?.memberNickname === 'string' && route.params.memberNickname.trim().length > 0
       ? route.params.memberNickname.trim()
@@ -486,6 +489,44 @@ export function UserProfileScreen() {
     });
   }, [profile?.profileImageUrl, profileName]);
 
+  const handleConfirmBlockMember = useCallback(() => {
+    Alert.alert('차단하기', `${profileName}님을 차단하시겠어요?`, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '확인',
+        style: 'destructive',
+        onPress: () => {
+          showToast('차단했습니다.(백엔드 처리중)');
+        },
+      },
+    ]);
+  }, [profileName]);
+
+  const handleOpenGroupMenu = useCallback((pageX: number, pageY: number) => {
+    setGroupMenuAnchor({ pageX, pageY });
+  }, []);
+
+  const handleCloseGroupMenu = useCallback(() => {
+    setGroupMenuAnchor(null);
+  }, []);
+
+  const groupMenuItems = useMemo<ActionMenuItem[]>(
+    () => [
+      {
+        key: 'report',
+        label: '신고하기',
+        onPress: handleOpenReportModal,
+      },
+      {
+        key: 'block',
+        label: '차단하기',
+        destructive: true,
+        onPress: handleConfirmBlockMember,
+      },
+    ],
+    [handleConfirmBlockMember, handleOpenReportModal],
+  );
+
   const handleCloseReportModal = useCallback(() => {
     if (submittingReport) return;
     setReportModal(null);
@@ -656,7 +697,11 @@ export function UserProfileScreen() {
       {groups.map((group) => (
         <View key={group.id} style={styles.groupRow}>
           <Text style={styles.groupName}>{group.name}</Text>
-          <Pressable style={styles.groupMenuButton} hitSlop={8}>
+          <Pressable
+            style={styles.groupMenuButton}
+            hitSlop={8}
+            onPress={(event) => handleOpenGroupMenu(event.nativeEvent.pageX, event.nativeEvent.pageY)}
+          >
             <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
           </Pressable>
         </View>
@@ -936,6 +981,15 @@ export function UserProfileScreen() {
         submitting={submittingReport}
         onClose={handleCloseReportModal}
         onSubmit={handleSubmitReport}
+      />
+      <ActionMenu
+        visible={Boolean(groupMenuAnchor)}
+        anchor={groupMenuAnchor}
+        items={groupMenuItems}
+        onClose={handleCloseGroupMenu}
+        screenWidth={screenWidth}
+        screenHeight={screenHeight}
+        menuWidth={132}
       />
     </ScreenLayout>
   );

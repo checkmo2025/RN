@@ -42,6 +42,7 @@ import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScree
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import { ScreenLayout } from '../components/common/ScreenLayout';
+import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import { MeetingListCard } from '../components/feature/groups/MeetingListCard';
 import { MyGroupsDropdownCard } from '../components/feature/groups/MyGroupsDropdownCard';
@@ -4353,6 +4354,18 @@ type BookshelfPostItem = {
   isAuthor?: boolean;
 };
 
+type NoticeCommentMenuState = {
+  comment: NoticeComment;
+  pageX: number;
+  pageY: number;
+};
+
+type BookshelfPostMenuState = {
+  post: BookshelfPostItem;
+  pageX: number;
+  pageY: number;
+};
+
 type RegularGroupPostItem = {
   id: string;
   remoteTopicId?: number;
@@ -5098,6 +5111,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [submittedVoteOptionIdsByNotice, setSubmittedVoteOptionIdsByNotice] = useState<Record<string, string[]>>({});
   const [voteEditEnabledByNotice, setVoteEditEnabledByNotice] = useState<Record<string, boolean>>({});
   const [noticePollOptionsById, setNoticePollOptionsById] = useState<Record<string, NoticePollOption[]>>({});
+  const [noticeCommentMenu, setNoticeCommentMenu] = useState<NoticeCommentMenuState | null>(null);
+  const [bookshelfPostMenu, setBookshelfPostMenu] = useState<BookshelfPostMenuState | null>(null);
   const [voteVotersModal, setVoteVotersModal] = useState<{
     optionLabel: string;
     voters: string[];
@@ -6638,83 +6653,76 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     selectedNotice,
   ]);
 
-  const handlePressCommentMenu = useCallback(
-    (comment: NoticeComment) => {
-      if (!selectedNotice) return;
+  const handlePressCommentMenu = useCallback((comment: NoticeComment, event: GestureResponderEvent) => {
+    setNoticeCommentMenu({
+      comment,
+      pageX: event.nativeEvent.pageX,
+      pageY: event.nativeEvent.pageY,
+    });
+  }, []);
 
-      if (comment.mine) {
-        Alert.alert('댓글 메뉴', '원하는 작업을 선택해주세요.', [
-          { text: '취소', style: 'cancel' },
-          {
-            text: '수정',
-            onPress: () => {
-              setNoticeCommentInput(comment.content);
-              setEditingNoticeCommentId(comment.id);
-            },
-          },
-          {
-            text: '삭제',
-            style: 'destructive',
-            onPress: () => {
-              const clubId = group.clubId;
-              const noticeId = selectedNotice.remoteId;
-              const commentId = comment.remoteId;
+  const handleSelectNoticeCommentMenuAction = useCallback(
+    (action: 'edit' | 'delete' | 'report') => {
+      const comment = noticeCommentMenu?.comment;
+      if (!selectedNotice || !comment) return;
+      setNoticeCommentMenu(null);
 
-              if (
-                !isManagedClub ||
-                typeof clubId !== 'number' ||
-                typeof noticeId !== 'number' ||
-                typeof commentId !== 'number'
-              ) {
-                showToast('공지 댓글 API를 사용할 수 없습니다.');
-                return;
-              }
-
-              Alert.alert('댓글 삭제', '이 댓글을 삭제하시겠습니까?', [
-                { text: '취소', style: 'cancel' },
-                {
-                  text: '삭제',
-                  style: 'destructive',
-                  onPress: () => {
-                    const remove = async () => {
-                      setSubmittingNoticeComment(true);
-
-                      try {
-                        await deleteClubNoticeComment(clubId, noticeId, commentId);
-                        await refreshNoticeComments(clubId, noticeId, selectedNotice.id);
-                        if (editingNoticeCommentId === comment.id) {
-                          setNoticeCommentInput('');
-                          setEditingNoticeCommentId(null);
-                        }
-                      } catch (error) {
-                        if (!(error instanceof ApiError)) {
-                          showToast('댓글 삭제에 실패했습니다.');
-                        }
-                      } finally {
-                        setSubmittingNoticeComment(false);
-                      }
-                    };
-
-                    void remove();
-                  },
-                },
-              ]);
-            },
-          },
-        ]);
+      if (action === 'edit') {
+        setNoticeCommentInput(comment.content);
+        setEditingNoticeCommentId(comment.id);
         return;
       }
 
-      Alert.alert('댓글 메뉴', '원하는 작업을 선택해주세요.', [
+      if (action === 'report') {
+        setReportModal({
+          nickname: comment.author,
+          profileImageUrl: comment.authorProfileImageUrl,
+          initialType: 'CLUB_MEETING',
+        });
+        return;
+      }
+
+      const clubId = group.clubId;
+      const noticeId = selectedNotice.remoteId;
+      const commentId = comment.remoteId;
+
+      if (
+        !isManagedClub ||
+        typeof clubId !== 'number' ||
+        typeof noticeId !== 'number' ||
+        typeof commentId !== 'number'
+      ) {
+        showToast('공지 댓글 API를 사용할 수 없습니다.');
+        return;
+      }
+
+      Alert.alert('댓글 삭제', '이 댓글을 삭제하시겠습니까?', [
         { text: '취소', style: 'cancel' },
         {
-          text: '신고하기',
-          onPress: () =>
-            setReportModal({
-              nickname: comment.author,
-              profileImageUrl: comment.authorProfileImageUrl,
-              initialType: 'CLUB_MEETING',
-            }),
+          text: '삭제',
+          style: 'destructive',
+          onPress: () => {
+            const remove = async () => {
+              setSubmittingNoticeComment(true);
+
+              try {
+                await deleteClubNoticeComment(clubId, noticeId, commentId);
+                await refreshNoticeComments(clubId, noticeId, selectedNotice.id);
+                if (editingNoticeCommentId === comment.id) {
+                  setNoticeCommentInput('');
+                  setEditingNoticeCommentId(null);
+                }
+              } catch (error) {
+                if (!(error instanceof ApiError)) {
+                  showToast('댓글 삭제에 실패했습니다.');
+                }
+              } finally {
+                setSubmittingNoticeComment(false);
+              }
+            };
+
+            void remove();
+          },
         },
       ]);
     },
@@ -6722,10 +6730,37 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       editingNoticeCommentId,
       group.clubId,
       isManagedClub,
+      noticeCommentMenu,
       refreshNoticeComments,
       selectedNotice,
     ],
   );
+
+  const noticeCommentMenuItems = useMemo<ActionMenuItem[]>(() => {
+    if (!noticeCommentMenu) return [];
+    if (noticeCommentMenu.comment.mine) {
+      return [
+        {
+          key: 'edit',
+          label: '수정하기',
+          onPress: () => handleSelectNoticeCommentMenuAction('edit'),
+        },
+        {
+          key: 'delete',
+          label: '삭제하기',
+          destructive: true,
+          onPress: () => handleSelectNoticeCommentMenuAction('delete'),
+        },
+      ];
+    }
+    return [
+      {
+        key: 'report',
+        label: '신고하기',
+        onPress: () => handleSelectNoticeCommentMenuAction('report'),
+      },
+    ];
+  }, [handleSelectNoticeCommentMenuAction, noticeCommentMenu]);
 
   const handleCloseReportModal = useCallback(() => {
     if (submittingReport) return;
@@ -7207,27 +7242,36 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   ]);
 
   const handlePressBookshelfPostMenu = useCallback(
-    (post: BookshelfPostItem) => {
+    (post: BookshelfPostItem, event: GestureResponderEvent) => {
+      setBookshelfPostMenu({
+        post,
+        pageX: event.nativeEvent.pageX,
+        pageY: event.nativeEvent.pageY,
+      });
+    },
+    [],
+  );
+
+  const handleSelectBookshelfPostMenuAction = useCallback(
+    (action: 'edit' | 'delete' | 'report') => {
+      const post = bookshelfPostMenu?.post;
+      if (!post) return;
+      setBookshelfPostMenu(null);
+
+      if (action === 'report') {
+        setReportModal({
+          nickname: post.author,
+          initialType: 'CLUB_MEETING',
+        });
+        return;
+      }
+
       const clubId = group.clubId;
       const meetingId = selectedBookshelfBook?.remoteMeetingId;
       const postLabel = post.type === 'TOPIC' ? '발제' : '한줄평';
 
-      if (!post.isAuthor) {
-        Alert.alert(`${postLabel} 메뉴`, '원하는 작업을 선택해주세요.', [
-          { text: '취소', style: 'cancel' },
-          {
-            text: '신고하기',
-            onPress: () =>
-              setReportModal({
-                nickname: post.author,
-                initialType: 'CLUB_MEETING',
-              }),
-          },
-        ]);
-        return;
-      }
-
       if (
+        !post.isAuthor ||
         typeof clubId !== 'number' ||
         typeof meetingId !== 'number' ||
         typeof post.remoteId !== 'number'
@@ -7235,62 +7279,53 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         return;
       }
 
-      Alert.alert(`${postLabel} 메뉴`, '원하는 작업을 선택해주세요.', [
+      if (action === 'edit') {
+        handleOpenBookshelfComposer(post.type, post);
+        return;
+      }
+
+      Alert.alert(`${postLabel} 삭제`, `이 ${postLabel}를 삭제하시겠습니까?`, [
         { text: '취소', style: 'cancel' },
         {
-          text: '수정하기',
-          onPress: () => {
-            handleOpenBookshelfComposer(post.type, post);
-          },
-        },
-        {
-          text: '삭제하기',
+          text: '삭제',
           style: 'destructive',
           onPress: () => {
-            Alert.alert(`${postLabel} 삭제`, `이 ${postLabel}를 삭제하시겠습니까?`, [
-              { text: '취소', style: 'cancel' },
-              {
-                text: '삭제',
-                style: 'destructive',
-                onPress: () => {
-                  const remove = async () => {
-                    setSubmittingBookshelfComposer(true);
+            const remove = async () => {
+              setSubmittingBookshelfComposer(true);
 
-                    try {
-                      if (post.type === 'TOPIC') {
-                        await deleteClubBookshelfTopic(clubId, meetingId, post.remoteId);
-                      } else {
-                        await deleteClubBookshelfReview(clubId, meetingId, post.remoteId);
-                      }
+              try {
+                if (post.type === 'TOPIC') {
+                  await deleteClubBookshelfTopic(clubId, meetingId, post.remoteId);
+                } else {
+                  await deleteClubBookshelfReview(clubId, meetingId, post.remoteId);
+                }
 
-                      await refreshBookshelfPostsByType(clubId, meetingId, post.type);
+                await refreshBookshelfPostsByType(clubId, meetingId, post.type);
 
-                      if (editingBookshelfPost?.id === post.id) {
-                        setEditingBookshelfPost(null);
-                        setBookshelfComposerType(null);
-                        setBookshelfComposerInput('');
-                        setBookshelfComposerRating(0);
-                      }
+                if (editingBookshelfPost?.id === post.id) {
+                  setEditingBookshelfPost(null);
+                  setBookshelfComposerType(null);
+                  setBookshelfComposerInput('');
+                  setBookshelfComposerRating(0);
+                }
 
-                      showToast(`${postLabel}가 삭제되었습니다.`);
-                    } catch (error) {
-                      if (!(error instanceof ApiError)) {
-                        showToast(`${postLabel} 삭제에 실패했습니다.`);
-                      }
-                    } finally {
-                      setSubmittingBookshelfComposer(false);
-                    }
-                  };
+                showToast(`${postLabel}가 삭제되었습니다.`);
+              } catch (error) {
+                if (!(error instanceof ApiError)) {
+                  showToast(`${postLabel} 삭제에 실패했습니다.`);
+                }
+              } finally {
+                setSubmittingBookshelfComposer(false);
+              }
+            };
 
-                  void remove();
-                },
-              },
-            ]);
+            void remove();
           },
         },
       ]);
     },
     [
+      bookshelfPostMenu,
       editingBookshelfPost?.id,
       group.clubId,
       handleOpenBookshelfComposer,
@@ -7298,6 +7333,33 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       selectedBookshelfBook?.remoteMeetingId,
     ],
   );
+
+  const bookshelfPostMenuItems = useMemo<ActionMenuItem[]>(() => {
+    const post = bookshelfPostMenu?.post;
+    if (!post) return [];
+    if (!post.isAuthor) {
+      return [
+        {
+          key: 'report',
+          label: '신고하기',
+          onPress: () => handleSelectBookshelfPostMenuAction('report'),
+        },
+      ];
+    }
+    return [
+      {
+        key: 'edit',
+        label: '수정하기',
+        onPress: () => handleSelectBookshelfPostMenuAction('edit'),
+      },
+      {
+        key: 'delete',
+        label: '삭제하기',
+        destructive: true,
+        onPress: () => handleSelectBookshelfPostMenuAction('delete'),
+      },
+    ];
+  }, [bookshelfPostMenu, handleSelectBookshelfPostMenuAction]);
 
   const closeTeamManage = useCallback(() => {
     if (teamManageSaving) return;
@@ -9308,7 +9370,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                             styles.noticeCommentMenuButton,
                             pressed && styles.pressed,
                           ]}
-                          onPress={() => handlePressCommentMenu(comment)}
+                          onPress={(event) => handlePressCommentMenu(comment, event)}
                         >
                           <MaterialIcons name="more-vert" size={16} color={colors.gray4} />
                         </Pressable>
@@ -9659,7 +9721,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                               styles.bookshelfPostMenuButton,
                               pressed && styles.pressed,
                             ]}
-                            onPress={() => handlePressBookshelfPostMenu(item)}
+                            onPress={(event) => handlePressBookshelfPostMenu(item, event)}
                           >
                             <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
                           </Pressable>
@@ -9717,7 +9779,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 	                              styles.bookshelfPostMenuButton,
 	                              pressed && styles.pressed,
 	                            ]}
-	                            onPress={() => handlePressBookshelfPostMenu(item)}
+	                            onPress={(event) => handlePressBookshelfPostMenu(item, event)}
 	                          >
 	                            <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
 	                          </Pressable>
@@ -11498,6 +11560,38 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           </Pressable>
         )}
       </Modal>
+      <ActionMenu
+        visible={Boolean(noticeCommentMenu)}
+        anchor={
+          noticeCommentMenu
+            ? {
+                pageX: noticeCommentMenu.pageX,
+                pageY: noticeCommentMenu.pageY,
+              }
+            : null
+        }
+        items={noticeCommentMenuItems}
+        onClose={() => setNoticeCommentMenu(null)}
+        screenWidth={screenWidth}
+        screenHeight={screenHeight}
+        menuWidth={132}
+      />
+      <ActionMenu
+        visible={Boolean(bookshelfPostMenu)}
+        anchor={
+          bookshelfPostMenu
+            ? {
+                pageX: bookshelfPostMenu.pageX,
+                pageY: bookshelfPostMenu.pageY,
+              }
+            : null
+        }
+        items={bookshelfPostMenuItems}
+        onClose={() => setBookshelfPostMenu(null)}
+        screenWidth={screenWidth}
+        screenHeight={screenHeight}
+        menuWidth={132}
+      />
       <ReportMemberModal
         visible={Boolean(reportModal)}
         target={reportModal}

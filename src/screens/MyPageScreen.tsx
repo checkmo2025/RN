@@ -32,6 +32,7 @@ import { colors, radius, spacing, typography, scaleSize } from '../theme';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
+import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import {
   confirmEmailVerification,
@@ -279,18 +280,6 @@ function inferMimeType(fileName?: string, fallback?: string): string {
 
 function toDateLabel(value?: string): string {
   return formatKstDateLabel(value);
-}
-
-function getMenuPosition(pageX: number, pageY: number, screenWidth: number, screenHeight: number) {
-  const menuWidth = 112;
-  const menuHeight = 46;
-  const gap = spacing.xs;
-  const left = Math.min(
-    Math.max(pageX - menuWidth + 12, spacing.md),
-    Math.max(spacing.md, screenWidth - menuWidth - spacing.md),
-  );
-  const top = pageY + menuHeight + gap < screenHeight ? pageY + gap : pageY - menuHeight - gap;
-  return { left, top };
 }
 
 async function fetchAllFollowUsers(
@@ -1889,6 +1878,19 @@ export function MyPageScreen() {
     ]);
   }, []);
 
+  const groupMenuItems = useMemo<ActionMenuItem[]>(() => {
+    if (!groupMenu) return [];
+    const target = groupMenu.group;
+    return [
+      {
+        key: 'leave',
+        label: '탈퇴하기',
+        destructive: true,
+        onPress: () => handleLeaveGroup(target),
+      },
+    ];
+  }, [groupMenu, handleLeaveGroup]);
+
   const handleOpenGroupHome = useCallback((group: GroupItem) => {
     if (typeof group.clubId !== 'number' || group.clubId <= 0) {
       showToast('해당 모임 정보를 찾을 수 없습니다.');
@@ -2680,40 +2682,22 @@ export function MyPageScreen() {
         <View style={styles.tabContent}>{renderTabContent()}</View>
         </ScrollView>
 
-        <Modal
+        <ActionMenu
           visible={Boolean(groupMenu)}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setGroupMenu(null)}
-        >
-          <Pressable
-            style={styles.groupMenuBackdrop}
-            onPress={() => setGroupMenu(null)}
-            disableFeedback
-          >
-            {groupMenu ? (
-              <Pressable
-                style={[
-                  styles.groupMenuPopover,
-                  getMenuPosition(groupMenu.pageX, groupMenu.pageY, screenWidth, screenHeight),
-                ]}
-                onPress={(event) => event.stopPropagation()}
-                disableFeedback
-              >
-                <Pressable
-                  style={styles.groupMenuItem}
-                  onPress={() => {
-                    const target = groupMenu.group;
-                    setGroupMenu(null);
-                    handleLeaveGroup(target);
-                  }}
-                >
-                  <Text style={styles.groupMenuText}>탈퇴하기</Text>
-                </Pressable>
-              </Pressable>
-            ) : null}
-          </Pressable>
-        </Modal>
+          anchor={
+            groupMenu
+              ? {
+                  pageX: groupMenu.pageX,
+                  pageY: groupMenu.pageY,
+                }
+              : null
+          }
+          items={groupMenuItems}
+          onClose={() => setGroupMenu(null)}
+          screenWidth={screenWidth}
+          screenHeight={screenHeight}
+          menuWidth={112}
+        />
       </View>
     </ScreenLayout>
   );
@@ -3529,26 +3513,6 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
     paddingVertical: spacing.xs / 2,
     paddingHorizontal: spacing.xs / 2,
-  },
-  groupMenuBackdrop: {
-    flex: 1,
-  },
-  groupMenuPopover: {
-    position: 'absolute',
-    width: 112,
-    backgroundColor: colors.white,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.subbrown4,
-    overflow: 'hidden',
-  },
-  groupMenuItem: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  groupMenuText: {
-    ...typography.body2_2,
-    color: colors.gray6,
   },
   pressed: {
     opacity: 0.7,
