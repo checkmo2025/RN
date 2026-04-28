@@ -772,6 +772,7 @@ export function AppHeader(props: Props) {
                     return;
                   }
 
+                  triggerSelectionHaptic();
                   const nextVisible = !showNoti;
                   setShowNoti(nextVisible);
                   hideDropdownImmediately();
@@ -784,6 +785,7 @@ export function AppHeader(props: Props) {
                 }
 
                 if (action.icon === 'search') {
+                  triggerSelectionHaptic();
                   if (showSearchPage) {
                     closeSearchPage();
                   } else if (showSearchDropdown) {

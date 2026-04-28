@@ -768,7 +768,10 @@ export function UserProfileScreen() {
       <View style={styles.followTabRow}>
         <Pressable
           style={[styles.followTabButton, activeFollowTab === 'FOLLOWER' && styles.followTabActive]}
-          onPress={() => setActiveFollowTab('FOLLOWER')}
+          onPress={() => {
+            triggerSelectionHaptic();
+            setActiveFollowTab('FOLLOWER');
+          }}
         >
           <Text style={[styles.followTabText, activeFollowTab === 'FOLLOWER' && styles.followTabTextActive]}>
             구독자 {followerCount}
@@ -776,7 +779,10 @@ export function UserProfileScreen() {
         </Pressable>
         <Pressable
           style={[styles.followTabButton, activeFollowTab === 'FOLLOWING' && styles.followTabActive]}
-          onPress={() => setActiveFollowTab('FOLLOWING')}
+          onPress={() => {
+            triggerSelectionHaptic();
+            setActiveFollowTab('FOLLOWING');
+          }}
         >
           <Text style={[styles.followTabText, activeFollowTab === 'FOLLOWING' && styles.followTabTextActive]}>
             구독중 {followingCount}
@@ -983,7 +989,10 @@ export function UserProfileScreen() {
                         active ? styles.tabActive : null,
                         pressed && styles.pressed,
                       ]}
-                      onPress={() => setActiveTab(tab)}
+                      onPress={() => {
+                        triggerSelectionHaptic();
+                        setActiveTab(tab);
+                      }}
                     >
                       <Text style={[styles.tabLabel, active ? styles.tabLabelActive : null]}>
                         {tab}

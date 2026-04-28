@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import type {
   GestureResponderEvent,
+  LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from 'react-native';
@@ -129,6 +130,7 @@ import {
   parseApiDateMillis,
   toKstApiDateTime,
 } from '../utils/date';
+import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -1834,6 +1836,7 @@ const styles = StyleSheet.create({
   },
   groupHomeTitle: {
     marginTop: spacing.xs,
+    ...typography.subhead3,
   },
   pillNav: {
     flexDirection: 'row',
@@ -5151,6 +5154,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [regularChatInput, setRegularChatInput] = useState('');
   const [submittingRegularChat, setSubmittingRegularChat] = useState(false);
   const chatScrollRef = useRef<ScrollView>(null);
+  const groupHomeScrollRef = useRef<ScrollView>(null);
+  const groupTitleAnchorYRef = useRef(0);
+  const hasFocusedGroupTitleRef = useRef(false);
   const [managementMenuVisible, setManagementMenuVisible] = useState(false);
   const managementSheetY = useRef(new Animated.Value(0)).current;
   const managementHandlePanResponder = useRef(
@@ -6619,6 +6625,25 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     ],
   );
 
+  useEffect(() => {
+    hasFocusedGroupTitleRef.current = false;
+  }, [group.id]);
+
+  const focusGroupTitle = useCallback((animated: boolean) => {
+    const targetY = Math.max(0, groupTitleAnchorYRef.current - spacing.xs);
+    requestAnimationFrame(() => {
+      groupHomeScrollRef.current?.scrollTo({ y: targetY, animated });
+    });
+  }, []);
+
+  const handleGroupTitleLayout = useCallback((event: LayoutChangeEvent) => {
+    groupTitleAnchorYRef.current = event.nativeEvent.layout.y;
+    if (hasFocusedGroupTitleRef.current) return;
+
+    focusGroupTitle(false);
+    hasFocusedGroupTitleRef.current = true;
+  }, [focusGroupTitle]);
+
   const handleOpenNoticeDetailByRemoteId = useCallback(
     async (remoteNoticeId: number | null) => {
       const existingByRemoteId =
@@ -6742,13 +6767,17 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
   const handlePressGroupTab = useCallback(
     (nextTab: 'home' | 'notice' | 'bookshelf') => {
+      triggerSelectionHaptic();
+
       if (nextTab === 'home') {
         setActiveTab('home');
+        focusGroupTitle(true);
         return;
       }
 
       const open = () => {
         setActiveTab(nextTab);
+        focusGroupTitle(true);
       };
 
       if (!isLoggedIn) {
@@ -6758,7 +6787,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
       open();
     },
-    [isLoggedIn, requireAuth],
+    [focusGroupTitle, isLoggedIn, requireAuth],
   );
 
   const renderNoticeTag = (tag: NoticeTag, key: string) => {
@@ -7997,6 +8026,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
   const handleChangeBookshelfTab = useCallback(
     (tab: BookshelfDetailTab) => {
+      triggerSelectionHaptic();
+
       const change = () => {
         setBookshelfDetailTab(tab);
         if (tab !== 'REGULAR') {
@@ -9221,6 +9252,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   return (
     <View style={styles.screenWrap}>
       <ScrollView
+        ref={groupHomeScrollRef}
         style={styles.container}
         contentContainerStyle={[styles.content, { paddingBottom: spacing.xl * 2 }]}
         showsVerticalScrollIndicator={false}
@@ -9252,7 +9284,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           </Pressable>
         ) : null}
       </View>
-      <Text style={[styles.sectionTitle, styles.detailTitle, styles.groupHomeTitle]}>
+      <Text
+        style={[styles.sectionTitle, styles.detailTitle, styles.groupHomeTitle]}
+        onLayout={handleGroupTitleLayout}
+      >
         {managedGroup.name}
       </Text>
 

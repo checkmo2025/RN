@@ -371,3 +371,14 @@
 - `MeetingScreen`에서 책장 ID/정기모임 ID를 분리(`regularMeetingId`)하고 meetings/STOMP/조관리 경로를 정기모임 ID 기준으로 정규화
 - `ReportMemberModal`에 진입 문맥별 신고 타입 제한(`allowedTypes`)을 추가하고 Story/UserProfile/Meeting 진입점에 적용
 - 회원가입 보상 흐름(409 재진입/단계별 실패 안내) 보강, `find-email` GET fallback 제거, 차단 메뉴를 준비중 안내 UX로 정리
+
+---
+
+## 업데이트 (2026-04-28)
+
+수정 시각: 2026-04-28 10:27:34 KST
+
+- 헤더 검색/알림, 마이페이지 탭(내 책 이야기/내 서재/내 모임/내 알림), 프로필/클럽 탭 전반에 `selection` 햅틱을 동일 강도로 일괄 적용
+- `UserProfile`/`MyPage`의 구독자·구독중 탭 전환에도 동일 `triggerSelectionHaptic()` 패턴 추가
+- 클럽 홈 상단 클럽명 타이포를 소폭 확대하고, 클럽 상세 진입 시 클럽명이 헤더 아래에 오도록 초기 포커스 스크롤 적용
+- 클럽 홈 내부 탭 전환(모임 홈/공지사항/책장) 시에도 클럽명 앵커 기준 포커싱되도록 스크롤 동기화

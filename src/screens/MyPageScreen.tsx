@@ -74,6 +74,7 @@ import {
 } from '../services/api/notificationApi';
 import { fetchMyNewsList, type RemoteNewsSummary } from '../services/api/newsApi';
 import { formatKstDateLabel, toKstTimeAgoLabel } from '../utils/date';
+import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { formatNotificationText, resolveNotificationTarget } from '../utils/notification';
 import { showToast } from '../utils/toast';
@@ -1733,7 +1734,10 @@ export function MyPageScreen() {
       <View style={styles.followTabRow}>
         <Pressable
           style={[styles.followTabButton, activeFollowTab === 'FOLLOWER' && styles.followTabActive]}
-          onPress={() => setActiveFollowTab('FOLLOWER')}
+          onPress={() => {
+            triggerSelectionHaptic();
+            setActiveFollowTab('FOLLOWER');
+          }}
         >
           <Text
             style={[
@@ -1746,7 +1750,10 @@ export function MyPageScreen() {
         </Pressable>
         <Pressable
           style={[styles.followTabButton, activeFollowTab === 'FOLLOWING' && styles.followTabActive]}
-          onPress={() => setActiveFollowTab('FOLLOWING')}
+          onPress={() => {
+            triggerSelectionHaptic();
+            setActiveFollowTab('FOLLOWING');
+          }}
         >
           <Text
             style={[
@@ -2754,7 +2761,10 @@ export function MyPageScreen() {
                   active ? styles.tabActive : null,
                   pressed && styles.pressed,
                 ]}
-                onPress={() => setActiveTab(tab)}
+                onPress={() => {
+                  triggerSelectionHaptic();
+                  setActiveTab(tab);
+                }}
               >
                 <Text style={[styles.tabLabel, active ? styles.tabLabelActive : null]}>
                   {tab}
