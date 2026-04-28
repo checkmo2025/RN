@@ -508,7 +508,7 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 |------|-------------|------|
 | 사용자 기본 프로필 | `assets/mypage/image_profile1.svg` | `DefaultProfileAvatar` 컴포넌트 |
 | 모임 기본 이미지 | `assets/icons/logo_primary.svg` | 임시 재활용 — 전용 에셋 필요 |
-| 책 표지 없음 | (없음) | 빈 영역 — fallback 이미지 필요 |
+| 책 표지 없음 | `assets/images/book-default.png` | `BOOK_DEFAULT_IMAGE` 상수, 내 서재/프로필/책장/발제 공통 |
 | 소식 기본 이미지 | `assets/images/news-default.png` | 목록/상세/캐러셀 공통 |
 
 ## 작업 파일

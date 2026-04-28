@@ -225,6 +225,7 @@ const MIN_BOOK_FLIP_LOADING_MS = 1000;
 const clubDefaultImageUri = Image.resolveAssetSource(
   require('../../assets/icons/logo_primary.svg'),
 ).uri;
+const BOOK_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/book-default.png')).uri;
 const chatIconUri = Image.resolveAssetSource(
   require('../../assets/icons/Chat.svg'),
 ).uri;
@@ -4914,7 +4915,7 @@ function mapApiBookshelfToItem(book: {
     title: book.title ?? '책 제목',
     author: book.author ?? '작가 미상',
     category: book.tag?.trim() || '기본 태그',
-    coverImage: book.imgUrl ?? clubDefaultImageUri,
+    coverImage: book.imgUrl ?? BOOK_DEFAULT_IMAGE,
     rating: normalizeAverageRating(book.averageRate),
   };
 }
@@ -4935,7 +4936,7 @@ function mapBookshelfDetailToItem(
     title: detail.book.title ?? detail.title ?? '책 제목',
     author: detail.book.author ?? '작가 미상',
     category: detail.tag?.trim() || '기본 태그',
-    coverImage: detail.book.imgUrl ?? clubDefaultImageUri,
+    coverImage: detail.book.imgUrl ?? BOOK_DEFAULT_IMAGE,
     rating: normalizeAverageRating(detail.averageRate),
     regularMeetingName: detail.title,
     meetingLocation: detail.location,
@@ -5102,7 +5103,7 @@ function mergeNoticeDetail(
           title: detail.meetingDetail.bookInfo.title ?? detail.meetingDetail.title ?? '책 제목',
           author: detail.meetingDetail.bookInfo.author ?? '작가 미상',
           category: detail.meetingDetail.tag?.trim() || '기본 태그',
-          coverImage: detail.meetingDetail.bookInfo.imgUrl ?? clubDefaultImageUri,
+          coverImage: detail.meetingDetail.bookInfo.imgUrl ?? BOOK_DEFAULT_IMAGE,
           rating: 0,
         }
       : undefined;

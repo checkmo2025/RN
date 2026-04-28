@@ -215,6 +215,7 @@ const defaultProfilePalette = [
 ];
 
 const fallbackBooks: BookCard[] = [];
+const BOOK_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/book-default.png')).uri;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[!@#$%^&*]).{6,12}$/;
 const EMAIL_VERIFICATION_COUNTDOWN_SECONDS = 10 * 60;
@@ -1559,9 +1560,7 @@ export function MyPageScreen() {
       {books.map((item) => (
         <View key={item.id} style={[styles.bookCard, { width: bookshelfCardWidth }]}>
           <View style={styles.bookThumb}>
-            {item.imageUrl ? (
-              <Image source={{ uri: item.imageUrl }} style={styles.bookThumbImage} resizeMode="cover" />
-            ) : null}
+            <Image source={{ uri: item.imageUrl || BOOK_DEFAULT_IMAGE }} style={styles.bookThumbImage} resizeMode="cover" />
             <Pressable
               style={({ pressed }) => [styles.bookLikeBadge, pressed && styles.pressed]}
               onPress={() => handleToggleBookLike(item)}

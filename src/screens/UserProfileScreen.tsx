@@ -86,6 +86,7 @@ type FollowUser = {
 };
 
 const tabs: TabKey[] = ['책 이야기', '서재', '모임'];
+const BOOK_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/book-default.png')).uri;
 const likeIconUri = Image.resolveAssetSource(
   require('../../assets/book-story/bookstory-like.svg'),
 ).uri;
@@ -699,9 +700,7 @@ export function UserProfileScreen() {
           onPress={() => handleOpenBookSearchDetail(book)}
         >
           <View style={styles.bookThumb}>
-            {book.imageUrl ? (
-              <Image source={{ uri: book.imageUrl }} style={styles.bookThumbImage} resizeMode="cover" />
-            ) : null}
+            <Image source={{ uri: book.imageUrl || BOOK_DEFAULT_IMAGE }} style={styles.bookThumbImage} resizeMode="cover" />
             <View style={styles.bookLikeBadge}>
               <MaterialIcons name="favorite" size={18} color={colors.secondary1} />
             </View>
