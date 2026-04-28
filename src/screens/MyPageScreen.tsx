@@ -3601,8 +3601,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   listContainer: {
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   loadingText: {
     ...typography.body2_3,

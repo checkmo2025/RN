@@ -1483,7 +1483,7 @@ const styles = StyleSheet.create({
     color: colors.gray5,
   },
   groupList: {
-    gap: spacing.sm - 2,
+    gap: spacing.sm,
   },
   emptySearchBox: {
     backgroundColor: colors.white,
@@ -4103,7 +4103,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   bookshelfPostList: {
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   bookshelfPostCard: {
     borderWidth: 1,
