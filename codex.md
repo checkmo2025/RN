@@ -516,3 +516,17 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `src/screens/HomeScreen.tsx`
 - `assets/images/news-default.png` (신규)
 - `docs/todo.md`
+
+---
+
+## 업데이트 (2026-04-28)
+
+수정 시각: 2026-04-28 23:24 KST
+
+### 스플래시 이미지 교체
+- Expo 기본 템플릿 플레이스홀더(`격자+동그라미`)를 `icon-checkmo.png`와 동일한 책모 로고 이미지로 교체
+- `assets/splash-icon.png` 덮어쓰기 (1024×1024)
+- `app.json` splash 경로(`./assets/splash-icon.png`) 변경 없음
+
+## 작업 파일
+- `assets/splash-icon.png`
