@@ -222,16 +222,11 @@ const participantLabelByCode: Record<string, string> = {
 };
 
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
-const clubDefaultImageUri = Image.resolveAssetSource(
-  require('../../assets/icons/logo_primary.svg'),
-).uri;
-const BOOK_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/book-default.png')).uri;
 const chatIconUri = Image.resolveAssetSource(
   require('../../assets/icons/Chat.svg'),
 ).uri;
-const clubDefaultProfileLogoUri = Image.resolveAssetSource(
-  require('../../assets/mobile-header-logo.svg'),
-).uri;
+const CLUB_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/club-default.png')).uri;
+const BOOK_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/book-default.png')).uri;
 const calendarWeekdayLabels = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
 function ClubDefaultProfileArtwork({
@@ -239,21 +234,16 @@ function ClubDefaultProfileArtwork({
 }: {
   variant?: 'detail' | 'preview';
 }) {
-  const preview = variant === 'preview';
-
   return (
-    <View
+    <Image
+      source={{ uri: CLUB_DEFAULT_IMAGE }}
       style={[
-        styles.clubDefaultProfileArtwork,
-        preview ? styles.clubDefaultProfileArtworkPreview : styles.clubDefaultProfileArtworkDetail,
+        variant === 'preview'
+          ? styles.clubDefaultProfileArtworkPreview
+          : styles.clubDefaultProfileArtworkDetail,
       ]}
-    >
-      <SvgUri
-        uri={clubDefaultProfileLogoUri}
-        width={preview ? 72 : 96}
-        height={preview ? 44 : 58}
-      />
-    </View>
+      resizeMode="cover"
+    />
   );
 }
 
@@ -2096,18 +2086,6 @@ const styles = StyleSheet.create({
   detailImageLabel: {
     ...typography.body1_3,
     color: colors.gray5,
-  },
-  clubDefaultProfileArtwork: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary1,
-    borderWidth: 1,
-    borderColor: colors.subbrown2,
-    shadowColor: colors.primary1,
-    shadowOpacity: 0.14,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 16,
-    elevation: 4,
   },
   clubDefaultProfileArtworkPreview: {
     width: '100%',

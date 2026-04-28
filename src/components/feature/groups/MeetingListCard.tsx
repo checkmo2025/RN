@@ -4,6 +4,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../../theme';
 
+const CLUB_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../../assets/images/club-default.png')).uri;
+
 type Props = {
   name: string;
   tags: string[];
@@ -99,13 +101,7 @@ export function MeetingListCard({
 
       <View style={styles.infoRow}>
         <View style={styles.thumb}>
-          {profileImageUrl ? (
-            <Image source={{ uri: profileImageUrl }} style={styles.thumbImage} />
-          ) : (
-            <View style={styles.thumbPlaceholder}>
-              <MaterialIcons name="groups" size={24} color={colors.gray3} />
-            </View>
-          )}
+          <Image source={{ uri: profileImageUrl || CLUB_DEFAULT_IMAGE }} style={styles.thumbImage} resizeMode="cover" />
         </View>
         <View style={styles.metaWrap}>
           <Text style={styles.metaText}>{topic}</Text>

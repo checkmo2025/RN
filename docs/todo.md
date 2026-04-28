@@ -1,6 +1,6 @@
 # TODO
 
-> 마지막 업데이트: 2026-04-28 23:02 KST
+> 마지막 업데이트: 2026-04-28 23:07 KST
 
 ---
 
@@ -11,7 +11,7 @@
 | ✅ | **RN** | **소식 기본 이미지 추가** | `assets/images/news-default.png` (800×600) 적용 완료. 목록 썸네일 / 상세 히어로 / 프로모션 캐러셀 세 곳 모두 `NEWS_DEFAULT_IMAGE` 단일 상수로 통일. |
 | ⬜ | **RN** | **앱 아이콘 / 스플래시 교체** | 기본 템플릿 아이콘 제거 후 새 브랜드 에셋으로 교체. 아래 [아이콘 교체 작업](#아이콘-교체-작업) 참고. |
 | ✅ | **RN** | **책 표지 기본 이미지 추가** | `assets/images/book-default.png` (200×280) 적용 완료. `MyPageScreen`, `UserProfileScreen`, `MeetingScreen`(책장/발제) 세 곳에 `BOOK_DEFAULT_IMAGE` 상수로 통일. |
-| ⬜ | **디자인** | **모임 기본 이미지 전용 에셋** | 현재 `logo_primary.svg`(책모 원형 로고)를 임시 재활용 중. 전용 모임 기본 이미지 에셋 필요. 확정 후 `MeetingScreen` `clubDefaultImageUri` 교체 예정. |
+| ✅ | **디자인** | **모임 기본 이미지 전용 에셋** | `assets/images/club-default.png` (512×512) 적용 완료. 모임 카드 썸네일(`MeetingListCard`), 모임 상세 프로필, 모임 생성/수정 미리보기에 `CLUB_DEFAULT_IMAGE` 상수로 통일. |
 
 ---
 
