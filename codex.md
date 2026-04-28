@@ -482,3 +482,37 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 ## 작업 파일
 - `src/screens/StoryScreen.tsx`
 - `docs/todo.md`
+
+---
+
+## 업데이트 (2026-04-28)
+
+수정 시각: 2026-04-28 22:49 KST
+
+### docs/todo.md — issue-fetch 미완료 항목 및 역할 분류 추가
+- `docs/issue-fetch.md` 기준으로 미처리 이슈 전체를 `docs/todo.md`에 이관
+- 각 항목에 `BE` / `BE 문서` / `RN` / `공동` 역할 명시
+- 마지막 업데이트 표기에 KST 시각 포함하도록 포맷 변경
+
+### 소식 기본 이미지 통일 (`assets/images/news-default.png`)
+- 800×600 PNG 1장을 `assets/images/news-default.png`로 추가
+- `NewsScreen`, `HomeScreen`의 fallback 이미지 3종 배열(`fallbackPromotionImages`, `defaultPromotionImages`)을 `NEWS_DEFAULT_IMAGE` 단일 상수로 교체
+- 적용 범위: 목록 썸네일 / 상세 히어로 / 프로모션 캐러셀 세 곳 모두 동일 이미지
+
+### 미사용 에셋 정리
+- 소식 샘플 이미지/SVG 삭제: `assets/images/news_sample2.png`, `news_sample3.png`, `background.png`, `assets/icons/news_sample.svg`, `news_sample4.svg`
+- 미참조 아이콘 삭제: `BookImgSample.svg`, `booksample.svg`, `ClubDefaultImg.svg`, `default_profile_1.svg`, `default_profile_2.svg`, `profile.svg`, `profile2~5.svg`, `profile10.svg`
+
+### 현재 에셋 현황 (정리 후)
+| 용도 | 실사용 파일 | 비고 |
+|------|-------------|------|
+| 사용자 기본 프로필 | `assets/mypage/image_profile1.svg` | `DefaultProfileAvatar` 컴포넌트 |
+| 모임 기본 이미지 | `assets/icons/logo_primary.svg` | 임시 재활용 — 전용 에셋 필요 |
+| 책 표지 없음 | (없음) | 빈 영역 — fallback 이미지 필요 |
+| 소식 기본 이미지 | `assets/images/news-default.png` | 목록/상세/캐러셀 공통 |
+
+## 작업 파일
+- `src/screens/NewsScreen.tsx`
+- `src/screens/HomeScreen.tsx`
+- `assets/images/news-default.png` (신규)
+- `docs/todo.md`
