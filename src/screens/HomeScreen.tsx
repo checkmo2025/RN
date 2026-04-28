@@ -522,10 +522,9 @@ export function HomeScreen() {
         </View>
       ) : null}
 
-      <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
+      <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset, marginTop: spacing.xxs }]}>
         <Text style={styles.sectionTitle}>책이야기</Text>
       </View>
-      <View style={styles.headerToStorySpacer} />
     </View>
   );
 
@@ -606,7 +605,7 @@ const styles = StyleSheet.create({
     height: spacing.sm,
   },
   headerContainer: {
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   userRecommendationCard: {
     backgroundColor: colors.white,
@@ -639,7 +638,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   headerToStorySpacer: {
-    height: spacing.sm,
+    height: 0,
   },
   contentBlock: {
     width: '100%',

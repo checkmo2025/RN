@@ -1073,12 +1073,15 @@ export function MeetingScreen() {
     [appliedById, discoverGroups],
   );
 
-  const openGroupHome = useCallback((group: Group) => {
+  const openGroupHome = useCallback(async (group: Group) => {
     if (typeof group.clubId === 'number' && group.clubId > 0) {
       lastVisitedClubIdRef.current = group.clubId;
     }
-    setOpeningClubLoading(false);
+    const loadingStartedAt = Date.now();
+    setOpeningClubLoading(true);
     setActiveGroup(group);
+    await waitForMinimumLoading(loadingStartedAt);
+    setOpeningClubLoading(false);
   }, []);
 
   useEffect(() => {
@@ -1086,7 +1089,7 @@ export function MeetingScreen() {
     const targetGroup =
       myGroups.find((group) => group.clubId === pendingOpenClubId) ??
       discoverGroups.find((group) => group.clubId === pendingOpenClubId);
-    openGroupHome(targetGroup ?? createPendingClubGroup(pendingOpenClubId));
+    void openGroupHome(targetGroup ?? createPendingClubGroup(pendingOpenClubId));
     setPendingOpenClubId(null);
   }, [discoverGroups, myGroups, openGroupHome, pendingOpenClubId]);
 
@@ -1365,7 +1368,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingBottom: spacing.xl * 2,
   },
   createContainer: {

@@ -404,3 +404,61 @@
 - 모임 검색 UI 간격 미세 조정: 클럽 카드 간격을 `spacing.sm - 2`로 축소하고, 카드 액션 버튼(`가입신청하기`/`방문하기`) 간격을 `6`으로 확대
 - `docs/component-spacing-audit.md` 신규 작성: Home/Story/News/Meeting/MyPage/UserProfile/AppHeader/Auth 기준 컴포넌트 간 간격 인벤토리 정리
 - spacing 인벤토리는 내부 패딩/정렬용 gap을 제외하고, 리스트/섹션/카드/탭 간 외부 간격 중심으로 정리
+
+---
+
+## 업데이트 (2026-04-28)
+
+수정 시각: 2026-04-28 KST
+
+### 리스트 아이템 간격 통일 (`spacing.sm = 12`)
+
+카드/아이템 리스트 간격 기준을 `spacing.sm(12)`으로 통일. 아래 3곳이 이탈해 있어 수정함.
+
+- `MeetingScreen.tsx` `groupList.gap`: `spacing.sm - 2(10)` → `spacing.sm(12)`
+  - 토큰에서 벗어난 하드코딩 오프셋 제거
+- `MeetingScreen.tsx` `bookshelfPostList.gap`: `spacing.xs(8)` → `spacing.sm(12)`
+  - 같은 책장 섹션 내 다른 리스트들(`bookshelfGroupPostList`, `bookshelfBookSearchList`)과 통일
+- `MyPageScreen.tsx` `listContainer.gap + paddingVertical`: `spacing.xs(8)` → `spacing.sm(12)`
+  - `UserProfileScreen`의 동일 역할 `listContainer`(sm 기준)와 통일
+
+AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특성상 `xs(8)` 유지.
+
+## 작업 파일
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+
+---
+
+## 업데이트 (2026-04-28)
+
+수정 시각: 2026-04-28 KST
+
+### 섹션 타이틀 ↔ 리스트 간격 통일 (`spacing.sm = 12`)
+
+홈/소식/모임 각 화면에서 섹션 타이틀과 바로 아래 리스트/컴포넌트 사이 간격을 `sm(12)`으로 통일.
+
+- `HomeScreen.tsx` `headerContainer.gap`: `md(16)` → `sm(12)`
+- `HomeScreen.tsx` `headerToStorySpacer`: JSX에서 제거, 책이야기 View에 `marginTop: xxs(4)` 추가하여 소식 타이틀 위 간격(16px)과 동일하게 보정
+- `MeetingScreen.tsx` `content.gap`: `md(16)` → `sm(12)`
+- 소식(NewsScreen)은 이미 `sm(12)` 기준이라 변경 없음
+
+### 모임 ↔ 모임 검색 전환 로딩 화면 양방향 추가
+
+기존에는 모임 홈 → 검색 방향만 로딩 오버레이가 있었음. 검색 → 모임 홈 방향도 동일하게 추가.
+
+- `MeetingScreen.tsx` `openGroupHome`: 동기 → async 변경
+  - `setOpeningClubLoading(true)` + `setActiveGroup(group)` → `waitForMinimumLoading` → `setOpeningClubLoading(false)` 순서로 처리
+  - group home 위에 `BookFlipLoadingScreen` 오버레이 노출 후 해제
+- `pendingOpenClubId` useEffect: `openGroupHome` 호출부에 `void` 키워드 추가
+- 알림/마이페이지 등 외부 진입(`openClubId` param) 경로도 `pendingOpenClubId` → `openGroupHome` async 경유로 동일하게 로딩 커버됨
+
+### 책이야기 탭바 정렬 및 활성 탭 강조
+
+- `StoryScreen.tsx` `filterRow`: `flexGrow: 1` + `justifyContent: 'center'` 추가 → 탭 3개일 때 중앙 정렬, 모임 탭 늘어나면 스크롤
+- `StoryScreen.tsx` `filterTabTextActive.color`: `gray6(#434343)` → `primary1(#7B6154)` → 하단 언더라인 색과 통일, 비활성 탭과 명확히 구분
+
+## 작업 파일
+- `src/screens/HomeScreen.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/StoryScreen.tsx`

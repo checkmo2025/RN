@@ -2416,8 +2416,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   filterRow: {
+    flexGrow: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
   },
   filterTab: {
@@ -2438,7 +2440,7 @@ const styles = StyleSheet.create({
   },
   filterTabTextActive: {
     ...typography.body1_2,
-    color: colors.gray6,
+    color: colors.primary1,
   },
   recommendedCard: {
     borderWidth: 1,
