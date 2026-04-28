@@ -1,6 +1,6 @@
 # TODO
 
-> 마지막 업데이트: 2026-04-28 22:28 KST
+> 마지막 업데이트: 2026-04-28 22:46 KST
 
 ---
 
@@ -10,6 +10,8 @@
 |------|------|------|------|
 | ✅ | **RN** | **소식 기본 이미지 추가** | `assets/images/news-default.png` (800×600) 적용 완료. 목록 썸네일 / 상세 히어로 / 프로모션 캐러셀 세 곳 모두 `NEWS_DEFAULT_IMAGE` 단일 상수로 통일. |
 | ⬜ | **RN** | **앱 아이콘 / 스플래시 교체** | 기본 템플릿 아이콘 제거 후 새 브랜드 에셋으로 교체. 아래 [아이콘 교체 작업](#아이콘-교체-작업) 참고. |
+| ⬜ | **RN** | **책 표지 기본 이미지 추가** | `book.imageUrl` 없으면 현재 빈 영역. fallback 이미지 필요. `MyPageScreen`, `UserProfileScreen` 두 곳에 적용 예정. |
+| ⬜ | **RN** | **미참조 에셋 정리** | `BookImgSample.svg`, `booksample.svg`, `ClubDefaultImg.svg`, `default_profile_1/2.svg`, `profile.svg`, `profile2~5.svg`, `profile10.svg` — 실사용처 없음. 삭제 확인 후 제거 예정. |
 
 ---
 
