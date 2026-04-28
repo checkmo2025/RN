@@ -1,6 +1,6 @@
 # TODO
 
-> 마지막 업데이트: 2026-04-28 23:24 KST
+> 마지막 업데이트: 2026-04-28 23:48 KST
 
 ---
 
@@ -12,6 +12,7 @@
 | ✅ | **RN** | **앱 아이콘 / 스플래시 교체** | `icon-checkmo.png` (1024×1024) 앱 아이콘 유지. `splash-icon.png` Expo 플레이스홀더 → 책모 로고 이미지로 교체 완료. |
 | ✅ | **RN** | **책 표지 기본 이미지 추가** | `assets/images/book-default.png` (200×280) 적용 완료. `MyPageScreen`, `UserProfileScreen`, `MeetingScreen`(책장/발제) 세 곳에 `BOOK_DEFAULT_IMAGE` 상수로 통일. |
 | ✅ | **디자인** | **모임 기본 이미지 전용 에셋** | `assets/images/club-default.png` (512×512) 적용 완료. 모임 카드 썸네일(`MeetingListCard`), 모임 상세 프로필, 모임 생성/수정 미리보기에 `CLUB_DEFAULT_IMAGE` 상수로 통일. |
+| ⬜ | **RN** | **글씨 크기 통일 확인** | `font.md` 기준으로 `fontSize` 하드코딩 2건(`MeetingListCard`, `MeetingScreen`) 토큰화 여부 확인 및 정리. |
 
 ---
 
