@@ -657,7 +657,9 @@ export function MeetingScreen() {
   const [createDraftDirty, setCreateDraftDirty] = useState(false);
   const [activeGroup, setActiveGroup] = useState<Group | null>(null);
   const meetingTabRetapAtRef = useRef(0);
+  const meetingTabRetapSourceRef = useRef<'outside' | 'focused' | null>(null);
   const meetingTabRetapClosingRef = useRef(false);
+  const lastVisitedClubIdRef = useRef<number | null>(null);
   const [applyOpenId, setApplyOpenId] = useState<string | null>(null);
   const [applyReasonById, setApplyReasonById] = useState<Record<string, string>>({});
   const [appliedById, setAppliedById] = useState<Record<string, string>>({});
@@ -704,6 +706,12 @@ export function MeetingScreen() {
     setActiveGroup(null);
     setOpeningClubLoading(false);
   }, [activeGroup]);
+
+  const scrollMeetingSearchToTop = useCallback((animated = false) => {
+    requestAnimationFrame(() => {
+      meetingScrollRef.current?.scrollTo({ y: 0, animated });
+    });
+  }, []);
 
   const handlePressHeaderLogo = useCallback(() => {
     showLeaveDraftAlert(() => {
@@ -847,66 +855,149 @@ export function MeetingScreen() {
   useEffect(() => {
     if (activeGroup) return;
     meetingTabRetapAtRef.current = 0;
+    meetingTabRetapSourceRef.current = null;
     meetingTabRetapClosingRef.current = false;
   }, [activeGroup]);
 
   useEffect(() => {
-    const parent = navigation.getParent() as
-      | (NavigationProp<ParamListBase> & {
-          addListener: (
-            eventName: 'tabPress',
-            listener: (event: EventArg<'tabPress', true, undefined>) => void,
-          ) => () => void;
-        })
-      | undefined;
-    if (!parent) return undefined;
+    const tabNavigation =
+      (navigation.getState().routeNames.includes('Meeting')
+        ? (navigation as NavigationProp<ParamListBase>)
+        : navigation.getParent()) as
+        | (NavigationProp<ParamListBase> & {
+            addListener: (
+              eventName: 'tabPress',
+              listener: (event: EventArg<'tabPress', true, undefined>) => void,
+            ) => () => void;
+          })
+        | undefined;
+    if (!tabNavigation) return undefined;
 
-    const unsubscribe = parent.addListener(
+    const unsubscribe = tabNavigation.addListener(
       'tabPress',
       (event: EventArg<'tabPress', true, undefined>) => {
-        if (!activeGroup) return;
-
         const targetKey = event.target;
-        const parentState = parent.getState();
-        const targetRoute = parentState.routes.find(
+        const tabState = tabNavigation.getState();
+        const targetRoute = tabState.routes.find(
           (routeItem: { key: string; name: string }) => routeItem.key === targetKey,
         );
-        const focusedRoute = parentState.routes[parentState.index];
-        const isRetapOnMeetingTab =
-          Boolean(targetRoute) &&
-          targetRoute?.name === 'Meeting' &&
-          focusedRoute?.key === targetKey;
+        const focusedRoute = tabState.routes[tabState.index];
+        const isMeetingTabTarget = targetRoute?.name === 'Meeting';
+        const isMeetingTabFocused = focusedRoute?.key === targetKey;
 
-        if (!isRetapOnMeetingTab) {
+        const resetRetap = () => {
           meetingTabRetapAtRef.current = 0;
+          meetingTabRetapSourceRef.current = null;
+        };
+
+        const closeToSearchTop = async () => {
+          if (meetingTabRetapClosingRef.current) return;
+          meetingTabRetapClosingRef.current = true;
+          try {
+            if (activeGroup) {
+              await closeActiveGroupWithLoading();
+            } else {
+              scrollMeetingSearchToTop(false);
+            }
+          } finally {
+            resetRetap();
+            meetingTabRetapClosingRef.current = false;
+          }
+        };
+
+        if (!isMeetingTabTarget) {
+          resetRetap();
           return;
         }
 
         const now = Date.now();
-        const isDoubleTap =
-          now - meetingTabRetapAtRef.current <= MEETING_TAB_DOUBLE_TAP_WINDOW_MS;
-        meetingTabRetapAtRef.current = now;
+        const withinWindow = now - meetingTabRetapAtRef.current <= MEETING_TAB_DOUBLE_TAP_WINDOW_MS;
+        const wasOutsideTap = meetingTabRetapSourceRef.current === 'outside' && withinWindow;
+        const wasFocusedTap = meetingTabRetapSourceRef.current === 'focused' && withinWindow;
 
-        if (!isDoubleTap || meetingTabRetapClosingRef.current) return;
+        if (!isMeetingTabFocused) {
+          meetingTabRetapAtRef.current = now;
+          meetingTabRetapSourceRef.current = 'outside';
+          return;
+        }
 
+        if (showCreate) {
+          meetingTabRetapAtRef.current = now;
+          meetingTabRetapSourceRef.current = 'focused';
+          return;
+        }
+
+        if (wasOutsideTap) {
+          void closeToSearchTop();
+          return;
+        }
+
+        if (!wasFocusedTap) {
+          meetingTabRetapAtRef.current = now;
+          meetingTabRetapSourceRef.current = 'focused';
+          return;
+        }
+
+        if (activeGroup) {
+          void closeToSearchTop();
+          return;
+        }
+
+        if (meetingTabRetapClosingRef.current) return;
         meetingTabRetapClosingRef.current = true;
-        const closeGroupHome = async () => {
+        const openLastVisitedGroup = async () => {
+          const lastVisitedClubId = lastVisitedClubIdRef.current;
+          const lastVisitedClubIdNumber =
+            typeof lastVisitedClubId === 'number' && Number.isInteger(lastVisitedClubId)
+              ? lastVisitedClubId
+              : null;
           try {
-            await closeActiveGroupWithLoading();
-            requestAnimationFrame(() => {
-              meetingScrollRef.current?.scrollTo({ y: 0, animated: false });
-            });
+            if (!lastVisitedClubIdNumber || lastVisitedClubIdNumber <= 0) {
+              scrollMeetingSearchToTop(false);
+              return;
+            }
+
+            try {
+              await fetchClubHome(lastVisitedClubIdNumber);
+            } catch (error) {
+              if (error instanceof ApiError && error.status === 401) {
+                requireAuth();
+                return;
+              }
+              if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
+                lastVisitedClubIdRef.current = null;
+                showToast(
+                  error.status === 404
+                    ? '이전에 방문한 모임을 찾을 수 없습니다.'
+                    : '이전에 방문한 모임에 접근할 수 없습니다.',
+                );
+                scrollMeetingSearchToTop(false);
+                return;
+              }
+              showToast('이전에 방문한 모임을 불러오지 못했습니다.');
+              scrollMeetingSearchToTop(false);
+              return;
+            }
+
+            setPendingOpenClubId(lastVisitedClubIdNumber);
           } finally {
-            meetingTabRetapAtRef.current = 0;
+            resetRetap();
             meetingTabRetapClosingRef.current = false;
           }
         };
-        void closeGroupHome();
+        void openLastVisitedGroup();
       },
     );
 
     return unsubscribe;
-  }, [activeGroup, closeActiveGroupWithLoading, navigation]);
+  }, [
+    activeGroup,
+    closeActiveGroupWithLoading,
+    navigation,
+    requireAuth,
+    scrollMeetingSearchToTop,
+    showCreate,
+  ]);
 
   useEffect(() => {
     const parent = navigation.getParent() as
@@ -983,6 +1074,9 @@ export function MeetingScreen() {
   );
 
   const openGroupHome = useCallback((group: Group) => {
+    if (typeof group.clubId === 'number' && group.clubId > 0) {
+      lastVisitedClubIdRef.current = group.clubId;
+    }
     setOpeningClubLoading(false);
     setActiveGroup(group);
   }, []);
@@ -1389,7 +1483,7 @@ const styles = StyleSheet.create({
     color: colors.gray5,
   },
   groupList: {
-    gap: spacing.sm,
+    gap: spacing.sm - 2,
   },
   emptySearchBox: {
     backgroundColor: colors.white,

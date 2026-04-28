@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
-    gap: 2,
+    gap: 6,
     marginTop: 'auto',
   },
   applyButton: {
