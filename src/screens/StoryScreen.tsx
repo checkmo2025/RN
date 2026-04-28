@@ -2439,8 +2439,8 @@ const styles = StyleSheet.create({
     color: colors.gray5,
   },
   filterTabTextActive: {
-    ...typography.body1_2,
-    color: colors.primary1,
+    ...typography.body1,
+    color: colors.gray7,
   },
   recommendedCard: {
     borderWidth: 1,

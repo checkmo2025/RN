@@ -462,3 +462,23 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `src/screens/HomeScreen.tsx`
 - `src/screens/MeetingScreen.tsx`
 - `src/screens/StoryScreen.tsx`
+
+---
+
+## 업데이트 (2026-04-28)
+
+수정 시각: 2026-04-28 KST
+
+### 책이야기 탭바 활성 탭 볼드 + 색상 수정
+
+- `StoryScreen.tsx` `filterTabTextActive`: `typography.body1_2(500)` → `typography.body1(600)` 볼드 적용
+- 색상: `primary1(#7B6154)` → `gray7(#2C2C2C)` 검정 계열로 변경
+
+### docs/todo.md 신규 생성
+
+- 미완료 작업 추적용 TODO 문서 생성 (`docs/todo.md`)
+- 첫 항목: 소식 기본 이미지 추가 (800×600, 목록 카드/상세 히어로/캐러셀 세 곳 fallback 적용 예정)
+
+## 작업 파일
+- `src/screens/StoryScreen.tsx`
+- `docs/todo.md`
