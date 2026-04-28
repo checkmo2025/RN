@@ -42,6 +42,7 @@ import { colors, radius, spacing, typography } from '../theme';
 import { useMeetingChatStomp } from '../hooks/useMeetingChatStomp';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
+import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import { ScreenLayout } from '../components/common/ScreenLayout';
@@ -9823,7 +9824,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                           resizeMode="cover"
                         />
                       ) : (
-                        <MaterialIcons name="person-outline" size={20} color={colors.gray4} />
+                        <DefaultProfileAvatar size={20} />
                       )}
                     </Pressable>
                     <View style={styles.noticeCommentBody}>
@@ -10202,7 +10203,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                                   resizeMode="cover"
                                 />
                               ) : (
-                                <MaterialIcons name="person" size={16} color={colors.gray3} />
+                                <DefaultProfileAvatar size={16} />
                               )}
                             </View>
                             <Text style={styles.bookshelfPostAuthor}>{item.author}</Text>
@@ -10260,7 +10261,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 	                                  resizeMode="cover"
 	                                />
 	                              ) : (
-	                                <MaterialIcons name="person" size={16} color={colors.gray3} />
+	                                <DefaultProfileAvatar size={16} />
 	                              )}
 	                            </View>
 	                            <Text style={styles.bookshelfPostAuthor}>{item.author}</Text>
@@ -10398,7 +10399,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                                       resizeMode="cover"
                                     />
                                   ) : (
-                                    <MaterialIcons name="person" size={16} color={colors.gray3} />
+                                    <DefaultProfileAvatar size={16} />
                                   )}
                                 </View>
                                 <Text style={styles.bookshelfRegularGroupMemberName}>{member.nickname}</Text>
@@ -10457,11 +10458,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                                                 resizeMode="cover"
                                               />
                                             ) : (
-                                              <MaterialIcons
-                                                name="person"
-                                                size={16}
-                                                color={colors.gray3}
-                                              />
+                                              <DefaultProfileAvatar size={16} />
                                             )}
                                           </View>
                                           <Text style={styles.bookshelfRegularGroupMemberName}>
@@ -10519,7 +10516,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                                           resizeMode="cover"
                                         />
                                       ) : (
-                                        <MaterialIcons name="person" size={16} color={colors.gray3} />
+                                        <DefaultProfileAvatar size={16} />
                                       )}
                                     </View>
                                     <Text style={styles.bookshelfPostAuthor}>{post.author}</Text>
@@ -10721,7 +10718,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                                   resizeMode="cover"
                                 />
                               ) : (
-                                <MaterialIcons name="person-outline" size={18} color={colors.gray4} />
+                                <DefaultProfileAvatar size={18} />
                               )}
                             </View>
                             <Text style={styles.teamManageMemberName}>{member.nickname}</Text>
@@ -10777,7 +10774,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                                 resizeMode="cover"
                               />
                             ) : (
-                              <MaterialIcons name="person-outline" size={18} color={colors.gray4} />
+                              <DefaultProfileAvatar size={18} />
                             )}
                           </View>
                           <Text style={styles.teamManageMemberName}>{member.nickname}</Text>
@@ -11157,7 +11154,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                                 resizeMode="cover"
                               />
                             ) : (
-                              <MaterialIcons name="person" size={18} color={colors.gray3} />
+                              <DefaultProfileAvatar size={18} />
                             )}
                           </View>
                           <View style={styles.managementIdentityText}>
@@ -11233,7 +11230,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                                 resizeMode="cover"
                               />
                             ) : (
-                              <MaterialIcons name="person" size={18} color={colors.gray3} />
+                              <DefaultProfileAvatar size={18} />
                             )}
                           </View>
                           <View style={styles.managementIdentityText}>
@@ -12725,7 +12722,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     {!message.mine ? (
                       <View style={styles.regularChatMessageMeta}>
                         <View style={styles.bookshelfPostAvatar}>
-                          <MaterialIcons name="person" size={16} color={colors.gray3} />
+                          <DefaultProfileAvatar size={16} />
                         </View>
                         <Text style={styles.regularChatAuthor}>{message.author}</Text>
                       </View>
@@ -12807,7 +12804,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 {voteVotersModal.voters.map((nickname, index) => (
                   <View key={`${nickname}-${index}`} style={styles.voteVotersRow}>
                     <View style={styles.voteVotersAvatar}>
-                      <MaterialIcons name="person-outline" size={16} color={colors.gray4} />
+                      <DefaultProfileAvatar size={16} />
                     </View>
                     <Text style={styles.voteVotersName}>{nickname}</Text>
                   </View>
