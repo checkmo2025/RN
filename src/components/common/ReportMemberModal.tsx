@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Image,
   Modal,
@@ -18,6 +18,7 @@ export type ReportMemberModalState = {
   nickname: string;
   profileImageUrl?: string;
   initialType?: MemberReportType;
+  allowedTypes?: MemberReportType[];
 };
 
 const reportTypeOptions: Array<{ type: MemberReportType; label: string }> = [
@@ -46,12 +47,27 @@ export function ReportMemberModal({
 }: Props) {
   const [reportType, setReportType] = useState<MemberReportType>('GENERAL');
   const [content, setContent] = useState('');
+  const availableTypeOptions = useMemo(() => {
+    const allowed = target?.allowedTypes;
+    if (!Array.isArray(allowed) || allowed.length === 0) {
+      return reportTypeOptions;
+    }
+
+    const allowedSet = new Set<MemberReportType>(allowed);
+    const filtered = reportTypeOptions.filter((option) => allowedSet.has(option.type));
+    return filtered.length > 0 ? filtered : reportTypeOptions;
+  }, [target?.allowedTypes]);
 
   useEffect(() => {
     if (!visible || !target) return;
-    setReportType(target.initialType ?? 'GENERAL');
+    const fallbackType = availableTypeOptions[0]?.type ?? 'GENERAL';
+    const preferredType = target.initialType ?? fallbackType;
+    const nextType = availableTypeOptions.some((option) => option.type === preferredType)
+      ? preferredType
+      : fallbackType;
+    setReportType(nextType);
     setContent('');
-  }, [target, visible]);
+  }, [availableTypeOptions, target, visible]);
 
   const handleSubmit = () => {
     const trimmed = content.trim();
@@ -107,7 +123,7 @@ export function ReportMemberModal({
 
             <Text style={styles.label}>종류</Text>
             <View style={styles.typeRow}>
-              {reportTypeOptions.map((option) => {
+              {availableTypeOptions.map((option) => {
                 const active = reportType === option.type;
                 return (
                   <Pressable

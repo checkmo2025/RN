@@ -360,3 +360,14 @@
 - `src/screens/MeetingScreen.tsx`
 - `src/screens/AuthFlowScreen.tsx`
 - `src/components/common/ReportMemberModal.tsx`
+
+---
+
+## 업데이트 (2026-04-28)
+
+수정 시각: 2026-04-28 09:44:02 KST
+
+- RN 미완료 이슈 6건 처리: `MEET-HOME-04`, `MEET-BOOKSHELF-04`, `CHAT-01`, `REPORT-02`, `MEM-04`, `AUTH-01`
+- `MeetingScreen`에서 책장 ID/정기모임 ID를 분리(`regularMeetingId`)하고 meetings/STOMP/조관리 경로를 정기모임 ID 기준으로 정규화
+- `ReportMemberModal`에 진입 문맥별 신고 타입 제한(`allowedTypes`)을 추가하고 Story/UserProfile/Meeting 진입점에 적용
+- 회원가입 보상 흐름(409 재진입/단계별 실패 안내) 보강, `find-email` GET fallback 제거, 차단 메뉴를 준비중 안내 UX로 정리

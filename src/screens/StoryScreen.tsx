@@ -920,6 +920,7 @@ export function StoryScreen() {
         nickname: targetNickname,
         profileImageUrl,
         initialType: defaultType,
+        allowedTypes: [defaultType],
       });
     },
     [],
@@ -943,8 +944,8 @@ export function StoryScreen() {
   const submitReport = useCallback((payload: { reportType: MemberReportType; content?: string }) => {
     if (!reportModal?.nickname) return;
     const content = payload.content?.trim() ?? '';
-    if (content.length > 400) {
-      showToast('신고 내용은 400자 이하로 입력해주세요.');
+    if (content.length > 500) {
+      showToast('신고 내용은 500자 이하로 입력해주세요.');
       return;
     }
 

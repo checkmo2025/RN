@@ -914,31 +914,8 @@ export function MeetingScreen() {
   );
 
   const openGroupHome = useCallback((group: Group) => {
+    setOpeningClubLoading(false);
     setActiveGroup(group);
-    if (typeof group.clubId !== 'number') return;
-    const clubId = group.clubId;
-    const loadingStartedAt = Date.now();
-    setOpeningClubLoading(true);
-
-    const loadHome = async () => {
-      try {
-        const detail = await fetchClubHome(clubId);
-        if (!detail) return;
-        setActiveGroup((prev) => {
-          if (!prev || prev.id !== group.id) return prev;
-          return mapClubHomeDetailToGroup(detail, prev);
-        });
-      } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast('모임 상세를 불러오지 못했습니다.');
-        }
-      } finally {
-        await waitForMinimumLoading(loadingStartedAt);
-        setOpeningClubLoading(false);
-      }
-    };
-
-    void loadHome();
   }, []);
 
   useEffect(() => {
@@ -4433,6 +4410,7 @@ type CursorPageState = {
 type BookshelfItem = {
   id: string;
   remoteMeetingId?: number;
+  regularMeetingId?: number;
   bookId?: string;
   generation?: number;
   session: string;
@@ -4635,6 +4613,15 @@ function toNoticeBookshelfAttachment(book: BookshelfItem): NoticeBookshelfAttach
   };
 }
 
+function resolveRegularMeetingId(
+  book: Pick<BookshelfItem, 'remoteMeetingId' | 'regularMeetingId'> | null | undefined,
+): number | undefined {
+  if (!book) return undefined;
+  if (typeof book.regularMeetingId === 'number') return book.regularMeetingId;
+  if (typeof book.remoteMeetingId === 'number') return book.remoteMeetingId;
+  return undefined;
+}
+
 function buildNoticeDraft(): NoticeDraft {
   return {
     title: '',
@@ -4765,10 +4752,16 @@ function mapApiBookshelfToItem(book: {
   };
 }
 
-function mapBookshelfDetailToItem(detail: ClubBookshelfDetail): BookshelfItem {
+function mapBookshelfDetailToItem(
+  detail: ClubBookshelfDetail,
+  bookshelfMeetingId?: number,
+): BookshelfItem {
+  const normalizedBookshelfMeetingId =
+    typeof bookshelfMeetingId === 'number' ? bookshelfMeetingId : detail.meetingId;
   return {
-    id: `bookshelf-${detail.meetingId}`,
-    remoteMeetingId: detail.meetingId,
+    id: `bookshelf-${normalizedBookshelfMeetingId}`,
+    remoteMeetingId: normalizedBookshelfMeetingId,
+    regularMeetingId: detail.meetingId,
     bookId: detail.book.bookId,
     generation: detail.generation,
     session: formatGenerationLabel(detail.generation),
@@ -5751,6 +5744,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     );
   }, [bookshelfItems, selectedBookshelfBookId, visibleBookshelfItems]);
 
+  const selectedRegularMeetingId = useMemo(
+    () => resolveRegularMeetingId(selectedBookshelfBook),
+    [selectedBookshelfBook],
+  );
+
   const fetchAllBookshelfReviewsForMeeting = useCallback(
     async (
       clubId: number,
@@ -5941,8 +5939,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
         // editDetail (staff-only endpoint) has title/meetingTime/location; regular detail does not.
         const richDetail = editDetail ?? detail;
-        // detail.meetingId = 정기모임 ID (meeting API에서 사용), meetingId = 책장 ID
-        const regularMeetingId = detail?.meetingId ?? meetingId;
+        const regularMeetingId = detail?.meetingId ?? book.regularMeetingId ?? meetingId;
 
         if (isStale()) return;
         setBookshelfTopicsByMeetingId((prev) => ({
@@ -5981,6 +5978,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 item.generation === nextGeneration &&
                 item.session === nextSession &&
                 item.category === nextCategory &&
+                item.regularMeetingId === regularMeetingId &&
                 item.regularMeetingName === nextRegularMeetingName &&
                 item.meetingLocation === nextMeetingLocation &&
                 item.meetingDate === nextMeetingDate
@@ -5993,6 +5991,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 generation: nextGeneration,
                 session: nextSession,
                 category: nextCategory,
+                regularMeetingId,
                 regularMeetingName: nextRegularMeetingName,
                 meetingLocation: nextMeetingLocation,
                 meetingDate: nextMeetingDate,
@@ -6370,7 +6369,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
   const { isConnected: isChatConnected, publish: publishChatToStomp } = useMeetingChatStomp({
     clubId: group.clubId,
-    meetingId: selectedBookshelfBook?.remoteMeetingId,
+    meetingId: selectedRegularMeetingId,
     teamId: activeRegularChatGroup?.teamId,
     enabled: Boolean(activeRegularChatGroup),
     onMessage: (event) => {
@@ -6386,10 +6385,16 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         },
         currentMemberNicknameRef.current,
       );
-      setRegularGroupChatMessagesById((prev) => ({
-        ...prev,
-        [groupId]: [...(prev[groupId] ?? []), message],
-      }));
+      setRegularGroupChatMessagesById((prev) => {
+        const currentMessages = prev[groupId] ?? [];
+        if (currentMessages.some((item) => item.id === message.id)) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [groupId]: [...currentMessages, message],
+        };
+      });
     },
   });
 
@@ -6859,6 +6864,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           nickname: comment.author,
           profileImageUrl: comment.authorProfileImageUrl,
           initialType: 'CLUB_MEETING',
+          allowedTypes: ['CLUB_MEETING'],
         });
         return;
       }
@@ -7028,6 +7034,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           nickname: targetNickname,
           profileImageUrl: targetProfileImageUrl,
           initialType: 'CLUB_MEETING',
+          allowedTypes: ['CLUB_MEETING'],
         });
       };
 
@@ -7206,14 +7213,22 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       }
 
       let targetBook =
-        bookshelfItems.find((item) => item.remoteMeetingId === meetingId) ?? null;
+        bookshelfItems.find(
+          (item) =>
+            item.remoteMeetingId === meetingId || item.regularMeetingId === meetingId,
+        ) ?? null;
 
       if (!targetBook) {
         const detail = await fetchClubBookshelfDetail(clubId, meetingId);
         if (detail) {
-          targetBook = mapBookshelfDetailToItem(detail);
+          targetBook = mapBookshelfDetailToItem(detail, meetingId);
           setBookshelfItems((prev) =>
-            prev.some((item) => item.remoteMeetingId === meetingId)
+            prev.some(
+              (item) =>
+                item.remoteMeetingId === targetBook!.remoteMeetingId ||
+                (typeof targetBook!.regularMeetingId === 'number' &&
+                  item.regularMeetingId === targetBook!.regularMeetingId),
+            )
               ? prev
               : [targetBook!, ...prev],
           );
@@ -7486,6 +7501,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         setReportModal({
           nickname: post.author,
           initialType: 'CLUB_MEETING',
+          allowedTypes: ['CLUB_MEETING'],
         });
         return;
       }
@@ -7677,7 +7693,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
   const handlePressManageRegularGroups = useCallback(() => {
     const clubId = group.clubId;
-    const meetingId = selectedBookshelfBook?.remoteMeetingId;
+    const meetingId = selectedRegularMeetingId;
 
     if (!canManageClub || typeof clubId !== 'number' || typeof meetingId !== 'number') {
       showToast('정기모임 정보를 찾을 수 없습니다.');
@@ -7749,7 +7765,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     };
 
     void open();
-  }, [canManageClub, group.clubId, refreshTeamManageDropLayouts, selectedBookshelfBook?.remoteMeetingId]);
+  }, [canManageClub, group.clubId, refreshTeamManageDropLayouts, selectedRegularMeetingId]);
 
   const handleAddTeamManageTeam = useCallback(() => {
     setTeamManageTeams((prev) => {
@@ -7905,7 +7921,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
   const handleSaveTeamManage = useCallback(() => {
     const clubId = group.clubId;
-    const meetingId = selectedBookshelfBook?.remoteMeetingId;
+    const meetingId = selectedRegularMeetingId;
     const selectedBook = selectedBookshelfBook;
 
     if (
@@ -7965,6 +7981,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     group.clubId,
     reloadBookshelfMeetingDetail,
     selectedBookshelfBook,
+    selectedRegularMeetingId,
     teamManageTeams,
   ]);
 
@@ -8049,7 +8066,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       options?: { suppressErrorToast?: boolean },
     ) => {
       const clubId = group.clubId;
-      const meetingId = selectedBookshelfBook?.remoteMeetingId;
+      const meetingId = selectedRegularMeetingId;
       const teamId = groupItem.teamId;
 
       if (
@@ -8082,7 +8099,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       currentMemberNickname,
       fetchAllMeetingTeamChats,
       group.clubId,
-      selectedBookshelfBook?.remoteMeetingId,
+      selectedRegularMeetingId,
     ],
   );
 

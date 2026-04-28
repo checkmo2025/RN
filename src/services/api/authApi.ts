@@ -40,26 +40,36 @@ function buildUrl(path: string, query?: Record<string, string | undefined>) {
   return url.toString();
 }
 
-export async function loginByIdentifier(identifier: string, password: string): Promise<void> {
+export async function loginByIdentifier(
+  identifier: string,
+  password: string,
+  options?: { suppressErrorToast?: boolean },
+): Promise<void> {
   await requestJson<ApiResponseString>('/auth/login', {
     method: 'POST',
     body: {
       identifier,
       password,
     },
+    suppressErrorToast: options?.suppressErrorToast,
   });
 }
 
 // Backward-compatible alias for existing callers.
 export const loginByEmail = loginByIdentifier;
 
-export async function signUpByEmail(email: string, password: string): Promise<void> {
+export async function signUpByEmail(
+  email: string,
+  password: string,
+  options?: { suppressErrorToast?: boolean },
+): Promise<void> {
   await requestJson<ApiResponseString>('/auth/signup', {
     method: 'POST',
     body: {
       email,
       password,
     },
+    suppressErrorToast: options?.suppressErrorToast,
   });
 }
 
@@ -168,29 +178,6 @@ export async function findEmailByNamePhone(
     const response = await requestJson<ApiEnvelope<FindEmailResult>>('/members/find-email', {
       method: 'POST',
       body: {
-        name,
-        phoneNumber,
-      },
-      credentials: 'omit',
-      suppressErrorToast: true,
-    });
-    const result = unwrapResult(response);
-    return typeof result?.email === 'string' ? result.email : null;
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      return null;
-    }
-
-    if (!(error instanceof ApiError) || (error.status !== 401 && error.status !== 405)) {
-      throw error;
-    }
-  }
-
-  // Backend auth filter issue 대응: POST가 인증/메서드 이슈로 실패하면 GET으로 한 번 더 조회합니다.
-  try {
-    const response = await requestJson<ApiEnvelope<FindEmailResult>>('/members/find-email', {
-      method: 'GET',
-      query: {
         name,
         phoneNumber,
       },

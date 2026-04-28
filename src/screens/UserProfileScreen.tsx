@@ -523,21 +523,13 @@ export function UserProfileScreen() {
       nickname: profileName,
       profileImageUrl: profile?.profileImageUrl,
       initialType: 'GENERAL',
+      allowedTypes: ['GENERAL'],
     });
   }, [profile?.profileImageUrl, profileName]);
 
   const handleConfirmBlockMember = useCallback(() => {
-    Alert.alert('차단하기', `${profileName}님을 차단하시겠어요?`, [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '확인',
-        style: 'destructive',
-        onPress: () => {
-          showToast('차단했습니다.(백엔드 처리중)');
-        },
-      },
-    ]);
-  }, [profileName]);
+    Alert.alert('차단 기능 준비 중', '현재 차단 기능은 준비 중입니다. 신고하기를 이용해주세요.');
+  }, []);
 
   const handleOpenGroupMenu = useCallback((pageX: number, pageY: number) => {
     setGroupMenuAnchor({ pageX, pageY });
@@ -556,7 +548,7 @@ export function UserProfileScreen() {
       },
       {
         key: 'block',
-        label: '차단하기',
+        label: '차단하기 (준비중)',
         destructive: true,
         onPress: handleConfirmBlockMember,
       },
