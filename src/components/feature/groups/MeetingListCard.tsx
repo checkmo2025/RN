@@ -4,7 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../../theme';
 
-const CLUB_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../../assets/images/club-default.png')).uri;
+const CLUB_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../../../assets/images/club-default.png')).uri;
 
 type Props = {
   name: string;
