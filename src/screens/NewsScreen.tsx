@@ -22,6 +22,7 @@ import {
   useNavigation,
   useRoute,
   useScrollToTop,
+  type EventArg,
   type NavigationProp,
   type ParamListBase,
   type RouteProp,
@@ -193,6 +194,7 @@ export function NewsScreen() {
   const [recommendedBooks, setRecommendedBooks] = useState<RecommendedBook[]>([]);
   const newsListRef = useRef<FlatList>(null);
   useScrollToTop(newsListRef);
+  const detailScrollRef = useRef<ScrollView>(null);
   const detailTranslateX = useRef(new Animated.Value(0)).current;
 
   const animateTransition = useCallback(() => {
@@ -403,6 +405,44 @@ export function NewsScreen() {
     openNewsDetailById(newsId);
   }, [navigation, openNewsDetailById, route.params?.openNewsId]);
 
+  useEffect(() => {
+    const parent = navigation.getParent() as
+      | (NavigationProp<ParamListBase> & {
+          addListener: (
+            eventName: 'tabPress',
+            listener: (event: EventArg<'tabPress', true, undefined>) => void,
+          ) => () => void;
+        })
+      | undefined;
+    if (!parent) return undefined;
+
+    const unsubscribe = parent.addListener(
+      'tabPress',
+      (event: EventArg<'tabPress', true, undefined>) => {
+        if (!selected) return;
+
+        const targetKey = event.target;
+        const parentState = parent.getState();
+        const targetRoute = parentState.routes.find(
+          (routeItem: { key: string; name: string }) => routeItem.key === targetKey,
+        );
+        const focusedRoute = parentState.routes[parentState.index];
+        const isRetapOnNewsTab =
+          Boolean(targetRoute) &&
+          targetRoute?.name === 'News' &&
+          focusedRoute?.key === targetKey;
+
+        if (!isRetapOnNewsTab) return;
+
+        requestAnimationFrame(() => {
+          detailScrollRef.current?.scrollTo({ y: 0, animated: true });
+        });
+      },
+    );
+
+    return unsubscribe;
+  }, [navigation, selected]);
+
   const handleRefresh = () => {
     setRefreshing(true);
     const refresh = async () => {
@@ -504,6 +544,7 @@ export function NewsScreen() {
       {...detailBackSwipeResponder.panHandlers}
     >
       <ScrollView
+        ref={detailScrollRef}
         style={styles.container}
         contentContainerStyle={styles.detailContent}
         refreshControl={

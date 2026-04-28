@@ -2033,6 +2033,7 @@ export function MyPageScreen() {
         style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
         onPress={() => setSelectedSetting(null)}
       >
+        <MaterialIcons name="chevron-left" size={18} color={colors.gray4} />
         <Text style={styles.breadcrumbText}>뒤로가기</Text>
       </Pressable>
     );
@@ -2610,6 +2611,7 @@ export function MyPageScreen() {
                   setShowSettings(false);
                 }}
               >
+                <MaterialIcons name="chevron-left" size={18} color={colors.gray4} />
                 <Text style={styles.breadcrumbText}>뒤로가기</Text>
               </Pressable>
             </View>
@@ -2835,7 +2837,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   settingsTitle: {
-    ...typography.body1_2,
+    ...typography.subhead4_1,
     color: colors.gray6,
   },
   settingsItems: {
@@ -2846,7 +2848,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   settingsItemText: {
-    ...typography.body1_3,
+    ...typography.body1_2,
     color: colors.gray5,
   },
   settingsDetailWrap: {

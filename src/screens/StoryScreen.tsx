@@ -336,6 +336,10 @@ export function StoryScreen() {
     return true;
   }, []);
 
+  const scrollDetailToTop = useCallback((animated = true) => {
+    detailScrollRef.current?.scrollTo({ y: 0, animated });
+  }, []);
+
   const handleCommentSectionLayout = useCallback(
     (event: LayoutChangeEvent) => {
       commentSectionYRef.current = event.nativeEvent.layout.y;
@@ -1556,6 +1560,42 @@ export function StoryScreen() {
 
     navigation.setParams({ openStoryId: undefined, openStoryFocus: undefined });
   }, [navigation, openStoryDetailByRemoteId, route.params?.openStoryFocus, route.params?.openStoryId]);
+
+  useEffect(() => {
+    const parent = navigation.getParent() as
+      | (NavigationProp<ParamListBase> & {
+          addListener: (
+            eventName: 'tabPress',
+            listener: (event: EventArg<'tabPress', true, undefined>) => void,
+          ) => () => void;
+        })
+      | undefined;
+    if (!parent) return undefined;
+
+    const unsubscribe = parent.addListener(
+      'tabPress',
+      (event: EventArg<'tabPress', true, undefined>) => {
+        const targetKey = event.target;
+        const parentState = parent.getState();
+        const targetRoute = parentState.routes.find(
+          (routeItem: { key: string; name: string }) => routeItem.key === targetKey,
+        );
+        const focusedRoute = parentState.routes[parentState.index];
+        const isRetapOnStoryTab =
+          Boolean(targetRoute) &&
+          targetRoute?.name === 'Story' &&
+          focusedRoute?.key === targetKey;
+
+        if (!isRetapOnStoryTab || !selectedStory) return;
+
+        requestAnimationFrame(() => {
+          scrollDetailToTop(true);
+        });
+      },
+    );
+
+    return unsubscribe;
+  }, [navigation, scrollDetailToTop, selectedStory]);
 
   useEffect(() => {
     const parent = navigation.getParent() as

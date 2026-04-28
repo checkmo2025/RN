@@ -174,6 +174,7 @@ const BOOKSHELF_MEETING_LOCATION_MAX_LENGTH = 12;
 const BOOKSHELF_CURSOR_LOOP_LIMIT = 100;
 const ISBN13_REGEX = /^\d{13}$/;
 const MAX_REGULAR_GROUP_COUNT = 10;
+const MEETING_TAB_DOUBLE_TAP_WINDOW_MS = 450;
 
 const categoryLabelByCode: Record<string, string> = {
   FICTION_POETRY_DRAMA: '소설/시/희곡',
@@ -655,6 +656,8 @@ export function MeetingScreen() {
   const [showCreate, setShowCreate] = useState(false);
   const [createDraftDirty, setCreateDraftDirty] = useState(false);
   const [activeGroup, setActiveGroup] = useState<Group | null>(null);
+  const meetingTabRetapAtRef = useRef(0);
+  const meetingTabRetapClosingRef = useRef(false);
   const [applyOpenId, setApplyOpenId] = useState<string | null>(null);
   const [applyReasonById, setApplyReasonById] = useState<Record<string, string>>({});
   const [appliedById, setAppliedById] = useState<Record<string, string>>({});
@@ -840,6 +843,70 @@ export function MeetingScreen() {
     setPendingOpenClubId(clubId);
     navigation.setParams({ openClubId: undefined });
   }, [navigation, route.params?.openClubId]);
+
+  useEffect(() => {
+    if (activeGroup) return;
+    meetingTabRetapAtRef.current = 0;
+    meetingTabRetapClosingRef.current = false;
+  }, [activeGroup]);
+
+  useEffect(() => {
+    const parent = navigation.getParent() as
+      | (NavigationProp<ParamListBase> & {
+          addListener: (
+            eventName: 'tabPress',
+            listener: (event: EventArg<'tabPress', true, undefined>) => void,
+          ) => () => void;
+        })
+      | undefined;
+    if (!parent) return undefined;
+
+    const unsubscribe = parent.addListener(
+      'tabPress',
+      (event: EventArg<'tabPress', true, undefined>) => {
+        if (!activeGroup) return;
+
+        const targetKey = event.target;
+        const parentState = parent.getState();
+        const targetRoute = parentState.routes.find(
+          (routeItem: { key: string; name: string }) => routeItem.key === targetKey,
+        );
+        const focusedRoute = parentState.routes[parentState.index];
+        const isRetapOnMeetingTab =
+          Boolean(targetRoute) &&
+          targetRoute?.name === 'Meeting' &&
+          focusedRoute?.key === targetKey;
+
+        if (!isRetapOnMeetingTab) {
+          meetingTabRetapAtRef.current = 0;
+          return;
+        }
+
+        const now = Date.now();
+        const isDoubleTap =
+          now - meetingTabRetapAtRef.current <= MEETING_TAB_DOUBLE_TAP_WINDOW_MS;
+        meetingTabRetapAtRef.current = now;
+
+        if (!isDoubleTap || meetingTabRetapClosingRef.current) return;
+
+        meetingTabRetapClosingRef.current = true;
+        const closeGroupHome = async () => {
+          try {
+            await closeActiveGroupWithLoading();
+            requestAnimationFrame(() => {
+              meetingScrollRef.current?.scrollTo({ y: 0, animated: false });
+            });
+          } finally {
+            meetingTabRetapAtRef.current = 0;
+            meetingTabRetapClosingRef.current = false;
+          }
+        };
+        void closeGroupHome();
+      },
+    );
+
+    return unsubscribe;
+  }, [activeGroup, closeActiveGroupWithLoading, navigation]);
 
   useEffect(() => {
     const parent = navigation.getParent() as
@@ -1858,14 +1925,14 @@ const styles = StyleSheet.create({
   },
   pillNavItemActive: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.primary1,
   },
   pillNavText: {
     ...typography.body1_3,
     color: colors.gray5,
   },
   pillNavTextActive: {
-    color: colors.primary1,
+    color: colors.white,
   },
   detailCard: {
     backgroundColor: colors.white,
@@ -3819,25 +3886,27 @@ const styles = StyleSheet.create({
   },
   bookshelfDetailTabRow: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray2,
+    gap: spacing.xs,
   },
   bookshelfDetailTabButton: {
     flex: 1,
     alignItems: 'center',
     paddingVertical: spacing.sm,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.sm,
+    backgroundColor: colors.white,
   },
   bookshelfDetailTabButtonActive: {
-    borderBottomColor: colors.primary1,
+    borderColor: colors.primary1,
+    backgroundColor: colors.primary1,
   },
   bookshelfDetailTabLabel: {
     ...typography.body1_3,
     color: colors.gray4,
   },
   bookshelfDetailTabLabelActive: {
-    color: colors.primary1,
+    color: colors.white,
   },
   bookshelfPanel: {
     gap: spacing.sm,
@@ -8142,6 +8211,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
   const handleSelectRegularChatGroup = useCallback((groupId: string) => {
     const groupItem = regularMeetingInfo?.groups.find((item) => item.id === groupId);
+    triggerSelectionHaptic();
     setActiveRegularChatGroupId(groupId);
     setRegularChatPickerVisible(false);
     setRegularChatInput('');
@@ -8193,6 +8263,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       return;
     }
 
+    triggerSelectionHaptic();
     setSubmittingRegularChat(true);
     try {
       publishChatToStomp(content);
@@ -9307,7 +9378,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               <MaterialIcons
                 name={tab.icon}
                 size={16}
-                color={active ? colors.primary1 : colors.gray4}
+                color={active ? colors.white : colors.gray4}
               />
               <Text style={[styles.pillNavText, active && styles.pillNavTextActive]}>{tab.label}</Text>
             </Pressable>

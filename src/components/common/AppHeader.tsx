@@ -772,7 +772,6 @@ export function AppHeader(props: Props) {
                     return;
                   }
 
-                  triggerSelectionHaptic();
                   const nextVisible = !showNoti;
                   setShowNoti(nextVisible);
                   hideDropdownImmediately();
@@ -1028,9 +1027,6 @@ export function AppHeader(props: Props) {
               {searchStage === 'results' ? (
                 <>
                   <View style={styles.searchPageInputRow}>
-                    <View>
-                      <SvgUri uri={searchUri} width={24} height={24} />
-                    </View>
                     <TextInput
                       value={query}
                       onChangeText={setQuery}
@@ -1565,7 +1561,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   resultList: {
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   resultCard: {
     flexDirection: 'row',
