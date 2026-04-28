@@ -66,30 +66,26 @@ type HomePromotionItem = NewsPromotionCarouselItem & {
   newsId?: number;
 };
 
-const defaultPromotionImages = [
-  Image.resolveAssetSource(require('../../assets/images/background.png')).uri,
-  Image.resolveAssetSource(require('../../assets/images/news_sample2.png')).uri,
-  Image.resolveAssetSource(require('../../assets/images/news_sample3.png')).uri,
-];
+const NEWS_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/news-default.png')).uri;
 
 const defaultPromotions: HomePromotionItem[] = [
   {
     id: 'p1',
     title: '봄메이트',
     description: '5월 책 추천\n나의 돈키호테\n할인된 가격에\n만나보세요!',
-    imageUri: defaultPromotionImages[0],
+    imageUri: NEWS_DEFAULT_IMAGE,
   },
   {
     id: 'p2',
     title: '신간 소식',
     description: '새로운 이야기와\n서점 큐레이션을\n매주 만나보세요.',
-    imageUri: defaultPromotionImages[1],
+    imageUri: NEWS_DEFAULT_IMAGE,
   },
   {
     id: 'p3',
     title: '이벤트',
     description: '책모 구독자 전용\n굿즈 증정 이벤트',
-    imageUri: defaultPromotionImages[2],
+    imageUri: NEWS_DEFAULT_IMAGE,
   },
 ].slice(0, 5);
 
@@ -234,15 +230,14 @@ export function HomeScreen() {
         return;
       }
       setPromotions(
-        promotions.map((item, index) => ({
+        promotions.map((item) => ({
           id: `news-promo-${item.id}`,
           newsId: item.id,
           title: item.title,
           description:
             item.excerpt.trim() || '새로운 소식을 확인해보세요.',
           imageUri:
-            item.thumbnailUrl ??
-            defaultPromotionImages[index % defaultPromotionImages.length],
+            item.thumbnailUrl ?? NEWS_DEFAULT_IMAGE,
         })),
       );
     } catch (error) {

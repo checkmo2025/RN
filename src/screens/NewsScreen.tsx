@@ -74,11 +74,7 @@ const DETAIL_BACK_ACTIVATE_DISTANCE = 14;
 const DETAIL_BACK_TRIGGER_DISTANCE = 72;
 const DETAIL_BACK_ACTIVATE_MAX_DY = 16;
 const DETAIL_BACK_TRIGGER_MAX_DY = 60;
-const fallbackPromotionImages = [
-  Image.resolveAssetSource(require('../../assets/images/background.png')).uri,
-  Image.resolveAssetSource(require('../../assets/images/news_sample2.png')).uri,
-  Image.resolveAssetSource(require('../../assets/images/news_sample3.png')).uri,
-];
+const NEWS_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/news-default.png')).uri;
 const fallbackPromotions: NewsItem[] = [
   {
     id: 'promo-fallback-1',
@@ -86,7 +82,7 @@ const fallbackPromotions: NewsItem[] = [
     title: '봄메이트',
     excerpt: '5월 책 추천\n나의 돈키호테\n할인된 가격에\n만나보세요!',
     date: '',
-    cover: fallbackPromotionImages[0],
+    cover: NEWS_DEFAULT_IMAGE,
     body: '',
   },
   {
@@ -95,7 +91,7 @@ const fallbackPromotions: NewsItem[] = [
     title: '신간 소식',
     excerpt: '새로운 이야기와 큐레이션을 매주 만나보세요.',
     date: '',
-    cover: fallbackPromotionImages[1],
+    cover: NEWS_DEFAULT_IMAGE,
     body: '',
   },
   {
@@ -104,7 +100,7 @@ const fallbackPromotions: NewsItem[] = [
     title: '이벤트',
     excerpt: '책모 구독자 전용 굿즈 증정 이벤트',
     date: '',
-    cover: fallbackPromotionImages[2],
+    cover: NEWS_DEFAULT_IMAGE,
     body: '',
   },
 ];
@@ -145,7 +141,7 @@ function toNewsItem(
     title: item.title,
     excerpt: item.excerpt?.trim() || '소식 내용을 확인해보세요.',
     date: toDateLabel(item.date),
-    cover: item.thumbnailUrl ?? fallbackPromotionImages[index % fallbackPromotionImages.length],
+    cover: item.thumbnailUrl ?? NEWS_DEFAULT_IMAGE,
     body: '',
     originalLink: item.originalLink,
   };
@@ -170,7 +166,7 @@ function toStandaloneNewsItem(detail: RemoteNewsDetail): NewsItem {
     title: detail.title,
     excerpt: detail.excerpt?.trim() || '소식 내용을 확인해보세요.',
     date: toDateLabel(detail.date),
-    cover: detail.thumbnailUrl ?? fallbackPromotionImages[detail.id % fallbackPromotionImages.length],
+    cover: detail.thumbnailUrl ?? NEWS_DEFAULT_IMAGE,
     body: detail.content,
     originalLink: detail.originalLink,
   };
