@@ -530,3 +530,40 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 ## 작업 파일
 - `assets/splash-icon.png`
+
+---
+
+## 업데이트 (2026-04-28)
+
+수정 시각: 2026-04-28 KST
+
+### docs/access — 화면별 접근 권한 문서 신규 작성
+
+각 화면의 역할별(사용자/멤버/관리자/모임 내부 역할) 기능 권한을 정리한 마크다운 파일을 `docs/access/` 폴더에 추가함.
+
+| 파일 | 대상 화면 | 역할 구성 |
+|------|-----------|-----------|
+| `access-home.md` | HomeScreen | 사용자/멤버/관리자 |
+| `access-meeting.md` | MeetingScreen (검색/목록) | 사용자/멤버/관리자 |
+| `access-club.md` | GroupHomeView (모임 내부) | 사용자/멤버/회원/운영진/개설자/관리자 |
+| `access-story.md` | StoryScreen | 사용자/멤버/관리자 |
+| `access-news.md` | NewsScreen | 사용자/멤버/관리자 |
+| `access-mypage.md` | MyPageScreen | 사용자/멤버/관리자 |
+| `access-userprofile.md` | UserProfileScreen | 사용자/멤버/관리자 |
+| `access-auth.md` | AuthFlowScreen | 사용자/멤버 |
+
+각 문서에는 기능별 권한 표, BE API 경로(permitAll/authenticated/admin), 주의사항을 포함함.
+
+### 파일명 변경
+
+- `codex.md` → `agent-log.md` (에이전트 작업 로그 파일명 통일)
+
+## 작업 파일
+- `docs/access/access-home.md` (신규)
+- `docs/access/access-meeting.md` (신규)
+- `docs/access/access-club.md` (신규)
+- `docs/access/access-story.md` (신규)
+- `docs/access/access-news.md` (신규)
+- `docs/access/access-mypage.md` (신규)
+- `docs/access/access-userprofile.md` (신규)
+- `docs/access/access-auth.md` (신규)
