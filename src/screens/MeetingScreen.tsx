@@ -3989,21 +3989,19 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.gray2,
-    borderRadius: radius.sm,
-    backgroundColor: colors.white,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
   bookshelfDetailTabButtonActive: {
-    borderColor: colors.primary1,
-    backgroundColor: colors.primary1,
+    borderBottomColor: colors.primary1,
   },
   bookshelfDetailTabLabel: {
     ...typography.body1_3,
     color: colors.gray4,
   },
   bookshelfDetailTabLabelActive: {
-    color: colors.white,
+    ...typography.body1,
+    color: colors.primary1,
   },
   bookshelfPanel: {
     gap: spacing.sm,
@@ -5323,6 +5321,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const groupHomeScrollRef = useRef<ScrollView>(null);
   const groupTitleAnchorYRef = useRef(0);
   const hasFocusedGroupTitleRef = useRef(false);
+  const shouldScrollToBookshelfDetailRef = useRef(false);
   const [managementMenuVisible, setManagementMenuVisible] = useState(false);
   const managementSheetY = useRef(new Animated.Value(0)).current;
   const managementHandlePanResponder = useRef(
@@ -7384,6 +7383,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const openBookshelfDetail = useCallback(
     (book: BookshelfItem, tab: BookshelfDetailTab) => {
       const open = () => {
+        shouldScrollToBookshelfDetailRef.current = true;
         setSelectedBookshelfBookId(book.id);
         setBookshelfDetailTab(tab);
         setSelectedRegularGroupId(null);
@@ -10087,7 +10087,17 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               )}
             </>
           ) : selectedBookshelfBook ? (
-            <View style={styles.bookshelfDetailSection}>
+            <View
+              style={styles.bookshelfDetailSection}
+              onLayout={(e) => {
+                if (!shouldScrollToBookshelfDetailRef.current) return;
+                shouldScrollToBookshelfDetailRef.current = false;
+                const y = e.nativeEvent.layout.y;
+                requestAnimationFrame(() => {
+                  groupHomeScrollRef.current?.scrollTo({ y: Math.max(0, y - spacing.sm), animated: true });
+                });
+              }}
+            >
               <View style={styles.detailTitleRow}>
                 <Pressable
                   style={({ pressed }) => [styles.breadcrumbPress, pressed && styles.pressed]}

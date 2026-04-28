@@ -672,6 +672,7 @@ export function AppHeader(props: Props) {
   }, [closeSearchPage, searchStage, showSearchPage]);
 
   const handleLogoPress = useCallback(() => {
+    triggerSelectionHaptic();
     setShowNoti(false);
     hideDropdownImmediately();
     closeSearchPage();
