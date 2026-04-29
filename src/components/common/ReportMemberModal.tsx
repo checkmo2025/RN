@@ -11,6 +11,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../theme';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
+import { withLimitToast } from '../../utils/input';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
 import { DefaultProfileAvatar } from './DefaultProfileAvatar';
 import type { MemberReportType } from '../../services/api/memberApi';
@@ -144,7 +145,7 @@ export function ReportMemberModal({
             <View style={styles.contentBox}>
               <TextInput
                 value={content}
-                onChangeText={setContent}
+                onChangeText={withLimitToast(setContent, INPUT_LIMITS.REPORT_CONTENT)}
                 placeholder="신고 내용 작성 (최대 500자)"
                 placeholderTextColor={colors.gray3}
                 style={styles.contentInput}

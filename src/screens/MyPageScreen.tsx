@@ -79,6 +79,7 @@ import { normalizeRemoteImageUrl } from '../utils/image';
 import { formatNotificationText, resolveNotificationTarget } from '../utils/notification';
 import { showToast } from '../utils/toast';
 import { INPUT_LIMITS } from '../constants/inputLimits';
+import { withLimitToast } from '../utils/input';
 
 const tabs = ['내 책 이야기', '내 서재', '내 모임', '내 알림'] as const;
 type TabKey = (typeof tabs)[number];
@@ -2061,7 +2062,7 @@ export function MyPageScreen() {
             <View style={styles.inputPlaceholder}>
               <TextInput
                 value={profileEditDescription}
-                onChangeText={setProfileEditDescription}
+                onChangeText={withLimitToast(setProfileEditDescription, INPUT_LIMITS.USER_DESCRIPTION)}
                 placeholder={`소개를 입력해주세요 (최대 ${INPUT_LIMITS.USER_DESCRIPTION}자)`}
                 placeholderTextColor={colors.gray3}
                 style={[styles.inputField, styles.inputFieldDescenderSafe]}

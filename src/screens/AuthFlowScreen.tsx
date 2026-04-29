@@ -32,6 +32,7 @@ import {
 } from '../services/api/authApi';
 import { ApiError } from '../services/api/http';
 import { showToast } from '../utils/toast';
+import { withLimitToast } from '../utils/input';
 
 type Step =
   | 'login'
@@ -1066,6 +1067,9 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
                 if (nicknameChecked && nicknameChecked.value !== trimmed) {
                   setNicknameChecked(null);
                 }
+                if (value.length >= INPUT_LIMITS.NICKNAME) {
+                  showToast(`최대 ${INPUT_LIMITS.NICKNAME}자까지 입력할 수 있습니다.`);
+                }
               }}
               placeholder="닉네임 입력해주세요"
               style={[styles.input, styles.inputDescenderSafe, styles.inlineInput]}
@@ -1098,7 +1102,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           <Text style={styles.label}>소개</Text>
           <TextInput
             value={description}
-            onChangeText={setDescription}
+            onChangeText={withLimitToast(setDescription, INPUT_LIMITS.USER_DESCRIPTION)}
             placeholder={`${INPUT_LIMITS.USER_DESCRIPTION}자 이내로 작성해주세요`}
             style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
@@ -1108,7 +1112,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           <Text style={styles.label}>이름</Text>
           <TextInput
             value={name}
-            onChangeText={setName}
+            onChangeText={withLimitToast(setName, INPUT_LIMITS.USER_NAME)}
             placeholder="이름을 입력해주세요"
             style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}

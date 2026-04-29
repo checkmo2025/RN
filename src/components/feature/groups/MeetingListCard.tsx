@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../../theme';
 import { INPUT_LIMITS } from '../../../constants/inputLimits';
+import { showToast } from '../../../utils/toast';
 
 const CLUB_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../../../assets/images/club-default.png')).uri;
 
@@ -114,7 +115,10 @@ export function MeetingListCard({
         <View style={styles.applySection}>
           <TextInput
             value={applyReason}
-            onChangeText={onChangeApplyReason}
+            onChangeText={(text) => {
+              onChangeApplyReason?.(text);
+              if (text.length >= INPUT_LIMITS.APPLY_REASON) showToast(`최대 ${INPUT_LIMITS.APPLY_REASON}자까지 입력할 수 있습니다.`);
+            }}
             placeholder="신청 사유를 입력해보세요(300자 제한)"
             placeholderTextColor={colors.gray3}
             multiline

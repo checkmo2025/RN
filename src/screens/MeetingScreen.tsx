@@ -134,6 +134,7 @@ import {
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
+import { withLimitToast } from '../utils/input';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 
@@ -10913,7 +10914,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 </Text>
                 <TextInput
                   value={bookshelfComposerInput}
-                  onChangeText={setBookshelfComposerInput}
+                  onChangeText={withLimitToast(setBookshelfComposerInput, INPUT_LIMITS.BOOKSHELF_COMPOSER)}
                   placeholder={
                     bookshelfComposerType === 'TOPIC'
                       ? '발제 내용을 입력해주세요'
@@ -11273,7 +11274,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   </Text>
                   <TextInput
                     value={editDraft.name}
-                    onChangeText={(text) => setEditDraft((prev) => ({ ...prev, name: text }))}
+                    onChangeText={(text) => {
+                      setEditDraft((prev) => ({ ...prev, name: text }));
+                      if (text.length >= INPUT_LIMITS.CLUB_NAME) showToast(`최대 ${INPUT_LIMITS.CLUB_NAME}자까지 입력할 수 있습니다.`);
+                    }}
                     placeholder="독서 모임 이름을 입력해주세요"
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
@@ -11285,7 +11289,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   </Text>
                   <TextInput
                     value={editDraft.description}
-                    onChangeText={(text) => setEditDraft((prev) => ({ ...prev, description: text }))}
+                    onChangeText={(text) => {
+                      setEditDraft((prev) => ({ ...prev, description: text }));
+                      if (text.length >= INPUT_LIMITS.CLUB_DESCRIPTION) showToast(`최대 ${INPUT_LIMITS.CLUB_DESCRIPTION}자까지 입력할 수 있습니다.`);
+                    }}
                     placeholder="자유롭게 입력해주세요! (500자 제한)"
                     placeholderTextColor={colors.gray3}
                     style={[styles.input, styles.textArea]}
@@ -11406,7 +11413,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   </Text>
                   <TextInput
                     value={editDraft.region}
-                    onChangeText={(text) => setEditDraft((prev) => ({ ...prev, region: text }))}
+                    onChangeText={(text) => {
+                      setEditDraft((prev) => ({ ...prev, region: text }));
+                      if (text.length >= INPUT_LIMITS.CLUB_REGION) showToast(`최대 ${INPUT_LIMITS.CLUB_REGION}자까지 입력할 수 있습니다.`);
+                    }}
                     placeholder="활동 지역을 입력해주세요 (40자 제한)"
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
@@ -13096,6 +13106,7 @@ function MeetingCreateFlow({
                     if (checkedName && checkedName.value !== normalized) {
                       setCheckedName(null);
                     }
+                    if (value.length >= INPUT_LIMITS.CLUB_NAME) showToast(`최대 ${INPUT_LIMITS.CLUB_NAME}자까지 입력할 수 있습니다.`);
                   }}
                   placeholder="독서 모임 이름을 입력해주세요"
                   placeholderTextColor={colors.gray3}
@@ -13139,7 +13150,7 @@ function MeetingCreateFlow({
               </Text>
               <TextInput
                 value={desc}
-                onChangeText={setDesc}
+                onChangeText={withLimitToast(setDesc, INPUT_LIMITS.CLUB_DESCRIPTION)}
                 placeholder="자유롭게 입력해주세요! (500자 제한)"
                 placeholderTextColor={colors.gray3}
                 style={[styles.input, styles.textArea]}
@@ -13353,7 +13364,7 @@ function MeetingCreateFlow({
               </Text>
               <TextInput
                 value={region}
-                onChangeText={setRegion}
+                onChangeText={withLimitToast(setRegion, INPUT_LIMITS.CLUB_REGION)}
                 placeholder="활동 지역을 입력해주세요 (40자 제한)"
                 placeholderTextColor={colors.gray3}
                 style={styles.input}
@@ -13397,6 +13408,7 @@ function MeetingCreateFlow({
                         copy[idx] = { ...copy[idx], text: v };
                         return copy;
                       });
+                      if (v.length >= INPUT_LIMITS.CLUB_LINK_LABEL) showToast(`최대 ${INPUT_LIMITS.CLUB_LINK_LABEL}자까지 입력할 수 있습니다.`);
                     }}
                     placeholder="링크 대체 텍스트 입력(최대 20자)"
                     placeholderTextColor={colors.gray3}
@@ -13411,6 +13423,7 @@ function MeetingCreateFlow({
                         copy[idx] = { ...copy[idx], url: v };
                         return copy;
                       });
+                      if (v.length >= INPUT_LIMITS.CLUB_LINK_URL) showToast(`최대 ${INPUT_LIMITS.CLUB_LINK_URL}자까지 입력할 수 있습니다.`);
                     }}
                     placeholder="링크 입력(최대 100자)"
                     placeholderTextColor={colors.gray3}
