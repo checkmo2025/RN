@@ -529,7 +529,7 @@ export function UserProfileScreen() {
   }, [profile?.profileImageUrl, profileName]);
 
   const handleConfirmBlockMember = useCallback(() => {
-    Alert.alert('차단 기능 준비 중', '현재 차단 기능은 준비 중입니다. 신고하기를 이용해주세요.');
+    Alert.alert('차단 기능 준비 중', '현재 차단 기능은 준비 중입니다. 신고하기를 이용해 주십시오.');
   }, []);
 
   const handleOpenGroupMenu = useCallback((pageX: number, pageY: number) => {

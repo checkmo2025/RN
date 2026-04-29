@@ -32,7 +32,7 @@
 | ✅ | **RN** | **7번: 모달/바텀시트 패턴 통일** | `docs/ui-modal-bottomsheet-consistency.md` 작성. `DialogOverlay`(`Modal+transparent+fade`) · `BottomSheet`(`Modal+transparent+slide`) 공용 컴포넌트 생성. MeetingScreen 5건·MyPageScreen 1건·AuthFlowScreen 2건·StoryScreen 1건 총 9개 인라인 Modal → 공용 컴포넌트 교체 완료. |
 | ✅ | **RN** | **8번: 모션/햅틱 규칙 통일** | `docs/ui-motion-haptic-consistency.md` 작성. BottomTabs 직접 햅틱 호출(`Haptics.selectionAsync`) → `triggerSelectionHaptic()` 통일. `useNativeDriver: false` 3건 이유 주석 추가. MeetingScreen PanResponder 임계값 7개 named 상수로 추출(감도 값 유지). |
 | ⬜ | **RN** | **화면 움직임 신경쓰기(애니메이션 적용)** | 현재 화면 전환/요소 등장 모션이 부족해 딱딱한 느낌. 주요 화면(홈/모임/스토리/모달)에 공통 `duration/easing` 적용 후 체감 QA 진행. |
-| 🔄 | **RN** | **9번: 피드백 문구 통일** | `docs/ui-feedback-message-consistency.md` 작성. `showToast` 322건, `Alert` 19건 분포 기반 채널/톤/중복 방지 규칙 초안 완료. |
+| ✅ | **RN** | **9번: 피드백 문구 통일** | `docs/ui-feedback-message-consistency.md` 작성. Alert 메시지 본문 요→니다체 3건 수정(탈퇴할까요/삭제할까요/이용해주세요). Alert 버튼 레이블 이미 전부 취소/동사 일관 확인. 토스트 71건 어투 통일은 별도 todo로 분리. |
 | 🔄 | **RN** | **10번: 접근성/이벤트 네이밍 통일** | `docs/ui-accessibility-event-naming-consistency.md` 작성. 접근성 속성 사용 현황(7건), `testID` 공백(0건), 이벤트 네이밍 기준 정리 완료. |
 
 ---
@@ -42,6 +42,7 @@
 | 상태 | 항목 | 배경 |
 |------|------|------|
 | ⬜ | **입력 필드 글자 수 카운터 추가 여부** | 현재는 maxLength 도달 시 토스트만 뜸. 카운터(N/max)를 상시 표시하면 사용자가 남은 글자 수를 미리 알 수 있음. 단, UI 복잡도 증가. 테스트 이후 결정. |
+| ⬜ | **토스트 문구 어투 통일 (~해주세요 → ~합니다 체)** | `showToast` 호출 중 "~해주세요." 끝나는 문구 약 71건. 입력 안내형(`닉네임을 입력해주세요`) → `~해야 합니다` 또는 `~이 필요합니다` 체로 통일. 재시도형(`다시 시도해주세요`) → `다시 시도해 주십시오` 체로 분리 처리. |
 
 ---
 

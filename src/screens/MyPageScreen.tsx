@@ -1939,7 +1939,7 @@ export function MyPageScreen() {
       return;
     }
 
-    Alert.alert('모임 탈퇴', `'${group.name}' 모임에서 탈퇴할까요?`, [
+    Alert.alert('모임 탈퇴', `'${group.name}' 모임에서 탈퇴하시겠습니까?`, [
       { text: '취소', style: 'cancel' },
       {
         text: '탈퇴하기',

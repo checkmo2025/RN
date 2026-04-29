@@ -864,7 +864,7 @@ export function StoryScreen() {
       const storyRemoteId = story.remoteId;
       if (typeof storyRemoteId !== 'number') return;
 
-      Alert.alert('책 이야기 삭제', '이 글을 삭제할까요?', [
+      Alert.alert('책 이야기 삭제', '이 글을 삭제하시겠습니까?', [
         { text: '취소', style: 'cancel' },
         {
           text: '삭제',
