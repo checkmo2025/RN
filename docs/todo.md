@@ -1,6 +1,6 @@
 # TODO
 
-> 마지막 업데이트: 2026-04-29 KST (3번 완료)
+> 마지막 업데이트: 2026-04-29 KST (4번 완료)
 
 ---
 
@@ -26,7 +26,7 @@
 | ✅ | **RN** | **1번: 문구/카피 규칙 통일** | `docs/ui-copy-consistency.md` 작성. `~중` 표기 통일 완료 — 상태 라벨형(`구독중`, `로딩중` 등) 공백 없이, 진행 동작형(`업로드 중...` 등) 공백+말줄임표 적용. `오류 메시지 기술용어 대체` 커밋(f6b7b32) 포함. |
 | ✅ | **RN** | **2번: 로딩 피드백 규칙 통일** | 부팅 로더 1500ms 고정 타이머 → `AuthGate.isReady` 이벤트 기반 전환. 전환 로더 1200ms → `AUTH_TRANSITION_MS=400ms` 상수 단축. `StoryScreen` `isLoadingMore` 리스트 하단 인라인 피드백 추가. `loading-screen.md` 최신화 완료. |
 | ✅ | **RN** | **3번: 버튼 규격 통일** | `AppButton` 컴포넌트 강화 — variant(primary/secondary/outline/danger), size(lg/md), loading+loadingLabel, fullWidth prop 추가. `AuthFlowScreen` 전체 주요 CTA 버튼 AppButton으로 교체 완료. 나머지 336 Pressable은 2차 정리 대상. |
-| 🔄 | **RN** | **4번: 입력 폼 규격 통일** | `docs/ui-input-form-consistency.md` 작성. `TextInput` 전수 현황(53건) 기반으로 필드 타입/시각/동작/검증 규칙 초안 완료. |
+| ✅ | **RN** | **4번: 입력 폼 규격 통일** | `src/constants/inputLimits.ts` (INPUT_LIMITS 상수) + `src/theme/inputStyles.ts` (base/multiline 토큰) 신규 생성. AuthFlowScreen·MyPageScreen·MeetingScreen·ReportMemberModal·MeetingListCard 전체 `maxLength` 하드코딩 → INPUT_LIMITS 교체. MyPageScreen 소개 20자→40자 버그 수정. AppHeader placeholderTextColor gray2→gray3 통일. |
 | 🔄 | **RN** | **5번: spacing 토큰 적용 통일** | `docs/ui-spacing-token-consistency.md` 작성. spacing 토큰 사용(812) vs 하드코딩(54) 현황 및 1차 치환 대상 정의 완료. |
 | 🔄 | **RN** | **6번: radius/border/shadow 통일** | `docs/ui-radius-border-shadow-consistency.md` 작성. `borderRadius` 하드코딩(58), shadow/elevation(70라인), 색상 하드코딩 현황 기반 통일 규칙 초안 완료. |
 | 🔄 | **RN** | **7번: 모달/바텀시트 패턴 통일** | `docs/ui-modal-bottomsheet-consistency.md` 작성. `Modal` 19개 사용처 분포/애니메이션(`fade/slide/none`) 기준으로 타입별 패턴 정의 완료. |

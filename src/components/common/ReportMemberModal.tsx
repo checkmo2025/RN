@@ -10,6 +10,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../theme';
+import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
 import { DefaultProfileAvatar } from './DefaultProfileAvatar';
 import type { MemberReportType } from '../../services/api/memberApi';
@@ -148,7 +149,7 @@ export function ReportMemberModal({
                 placeholderTextColor={colors.gray3}
                 style={styles.contentInput}
                 multiline
-                maxLength={500}
+                maxLength={INPUT_LIMITS.REPORT_CONTENT}
                 textAlignVertical="top"
               />
             </View>

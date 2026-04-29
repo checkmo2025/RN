@@ -78,6 +78,7 @@ import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { formatNotificationText, resolveNotificationTarget } from '../utils/notification';
 import { showToast } from '../utils/toast';
+import { INPUT_LIMITS } from '../constants/inputLimits';
 
 const tabs = ['내 책 이야기', '내 서재', '내 모임', '내 알림'] as const;
 type TabKey = (typeof tabs)[number];
@@ -1030,8 +1031,8 @@ export function MyPageScreen() {
 
   const handleSubmitProfileEdit = useCallback(() => {
     const description = profileEditDescription.trim();
-    if (description.length > 20) {
-      showToast('소개는 20자 이내로 입력해주세요.');
+    if (description.length > INPUT_LIMITS.USER_DESCRIPTION) {
+      showToast(`소개는 ${INPUT_LIMITS.USER_DESCRIPTION}자 이내로 입력해주세요.`);
       return;
     }
 
@@ -2061,10 +2062,10 @@ export function MyPageScreen() {
               <TextInput
                 value={profileEditDescription}
                 onChangeText={setProfileEditDescription}
-                placeholder="소개를 입력해주세요 (최대 20자)"
+                placeholder={`소개를 입력해주세요 (최대 ${INPUT_LIMITS.USER_DESCRIPTION}자)`}
                 placeholderTextColor={colors.gray3}
                 style={[styles.inputField, styles.inputFieldDescenderSafe]}
-                maxLength={20}
+                maxLength={INPUT_LIMITS.USER_DESCRIPTION}
               />
             </View>
           </View>

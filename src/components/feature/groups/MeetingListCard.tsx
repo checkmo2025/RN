@@ -3,6 +3,7 @@ import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../../theme';
+import { INPUT_LIMITS } from '../../../constants/inputLimits';
 
 const CLUB_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../../../assets/images/club-default.png')).uri;
 
@@ -117,7 +118,7 @@ export function MeetingListCard({
             placeholder="신청 사유를 입력해보세요(300자 제한)"
             placeholderTextColor={colors.gray3}
             multiline
-            maxLength={300}
+            maxLength={INPUT_LIMITS.APPLY_REASON}
             textAlignVertical="top"
             style={styles.applyInput}
           />

@@ -15,6 +15,7 @@ import { SvgUri } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 
 import { termsDocuments, type TermsAgreementKey } from '../constants/termsDocuments';
+import { INPUT_LIMITS } from '../constants/inputLimits';
 import { colors, radius, spacing, typography } from '../theme';
 import { AppButton } from '../components/common/PrimaryButton';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
@@ -1069,7 +1070,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               placeholder="닉네임 입력해주세요"
               style={[styles.input, styles.inputDescenderSafe, styles.inlineInput]}
               placeholderTextColor={colors.gray3}
-              maxLength={20}
+              maxLength={INPUT_LIMITS.NICKNAME}
               autoCapitalize="none"
               autoCorrect={false}
             />
@@ -1098,10 +1099,10 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           <TextInput
             value={description}
             onChangeText={setDescription}
-            placeholder="40자 이내로 작성해주세요"
+            placeholder={`${INPUT_LIMITS.USER_DESCRIPTION}자 이내로 작성해주세요`}
             style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
-            maxLength={40}
+            maxLength={INPUT_LIMITS.USER_DESCRIPTION}
           />
 
           <Text style={styles.label}>이름</Text>
@@ -1111,6 +1112,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             placeholder="이름을 입력해주세요"
             style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
+            maxLength={INPUT_LIMITS.USER_NAME}
           />
 
           <Text style={styles.label}>전화번호</Text>

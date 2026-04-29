@@ -917,7 +917,7 @@ export function AppHeader(props: Props) {
                   value={query}
                   onChangeText={setQuery}
                   placeholder="책 제목, 작가 이름을 검색해보세요"
-                  placeholderTextColor={colors.gray2}
+                  placeholderTextColor={colors.gray3}
                   style={styles.dropdownSearchInput}
                   onSubmitEditing={handleSearchSubmitFromDropdown}
                   returnKeyType="search"

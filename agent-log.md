@@ -644,3 +644,38 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `src/screens/UserProfileScreen.tsx`
 - `docs/loading-screen.md`
 - `docs/todo.md`
+
+---
+
+## 업데이트 (2026-04-29)
+
+수정 시각: 2026-04-29 KST
+
+### UI 통일 4번 — 입력 폼 규격 통일 완료
+
+- `src/constants/inputLimits.ts` 신규: `INPUT_LIMITS` 상수 (BE 스펙 기준 전 필드 길이 제한 중앙화)
+  - `NICKNAME(20)`, `USER_NAME(10)`, `USER_DESCRIPTION(40)`, `CLUB_NAME(40)`, `CLUB_DESCRIPTION(500)`, `CLUB_REGION(40)`, `CLUB_LINK_LABEL(20)`, `CLUB_LINK_URL(100)`, `APPLY_REASON(300)`, `BOOKSHELF_COMPOSER(300)`, `REPORT_CONTENT(500)`
+- `src/theme/inputStyles.ts` 신규: 입력 스타일 토큰
+  - `base` (단일 행, height 56, borderColor gray2, paddingHorizontal md)
+  - `multiline` (여러 줄, minHeight 88, textAlignVertical top)
+  - `placeholderColor: colors.gray3`
+- `src/theme/index.ts`: `inputStyles` export 추가
+- `AuthFlowScreen`: 모든 `maxLength` 하드코딩 → INPUT_LIMITS 교체, 이름 필드에 누락된 `maxLength` 추가
+- `MyPageScreen`: 소개 20자 → 40자 버그 수정 (BE 스펙은 40자였음), INPUT_LIMITS 적용
+- `MeetingScreen`: `MEETING_SEARCH_KEYWORD_MAX_LENGTH` + 9개 하드코딩 maxLength → INPUT_LIMITS 교체, bookshelfComposer 카운터 표시 동기화
+- `ReportMemberModal`: `maxLength={500}` → `INPUT_LIMITS.REPORT_CONTENT`
+- `MeetingListCard`: `maxLength={300}` → `INPUT_LIMITS.APPLY_REASON`
+- `AppHeader`: 드롭다운 검색창 `placeholderTextColor` gray2 → gray3 통일
+- `docs/todo.md` 4번 항목 ✅ 완료 처리
+
+## 작업 파일
+- `src/constants/inputLimits.ts` (신규)
+- `src/theme/inputStyles.ts` (신규)
+- `src/theme/index.ts`
+- `src/screens/AuthFlowScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/components/common/ReportMemberModal.tsx`
+- `src/components/feature/groups/MeetingListCard.tsx`
+- `src/components/common/AppHeader.tsx`
+- `docs/todo.md`

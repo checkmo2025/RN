@@ -135,6 +135,7 @@ import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { INPUT_LIMITS } from '../constants/inputLimits';
 
 type Group = {
   id: string;
@@ -169,7 +170,7 @@ const outputFilterOptions: Array<{ label: string; value: ClubSearchOutputFilter 
   { label: '모임', value: 'MEETING' },
   { label: '대면', value: 'OFFLINE' },
 ];
-const MEETING_SEARCH_KEYWORD_MAX_LENGTH = 40;
+const MEETING_SEARCH_KEYWORD_MAX_LENGTH = INPUT_LIMITS.CLUB_NAME;
 const BOOKSHELF_MEETING_TITLE_MAX_LENGTH = 12;
 const BOOKSHELF_MEETING_LOCATION_MAX_LENGTH = 12;
 const BOOKSHELF_CURSOR_LOOP_LIMIT = 100;
@@ -10922,10 +10923,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   style={[styles.input, styles.textArea, styles.bookshelfComposerInput]}
                   multiline
                   textAlignVertical="top"
-                  maxLength={300}
+                  maxLength={INPUT_LIMITS.BOOKSHELF_COMPOSER}
                 />
                 <Text style={styles.bookshelfComposerCounter}>
-                  {bookshelfComposerInput.length}/300
+                  {bookshelfComposerInput.length}/{INPUT_LIMITS.BOOKSHELF_COMPOSER}
                 </Text>
               </View>
 
@@ -11276,7 +11277,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     placeholder="독서 모임 이름을 입력해주세요"
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
-                    maxLength={40}
+                    maxLength={INPUT_LIMITS.CLUB_NAME}
                   />
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
@@ -11289,7 +11290,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     placeholderTextColor={colors.gray3}
                     style={[styles.input, styles.textArea]}
                     multiline
-                    maxLength={500}
+                    maxLength={INPUT_LIMITS.CLUB_DESCRIPTION}
                   />
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
@@ -11409,7 +11410,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     placeholder="활동 지역을 입력해주세요 (40자 제한)"
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
-                    maxLength={40}
+                    maxLength={INPUT_LIMITS.CLUB_REGION}
                   />
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
@@ -13099,7 +13100,7 @@ function MeetingCreateFlow({
                   placeholder="독서 모임 이름을 입력해주세요"
                   placeholderTextColor={colors.gray3}
                   style={[styles.input, styles.inlineInput]}
-                  maxLength={40}
+                  maxLength={INPUT_LIMITS.CLUB_NAME}
                 />
                 <Pressable
                   style={({ pressed }) => [
@@ -13143,7 +13144,7 @@ function MeetingCreateFlow({
                 placeholderTextColor={colors.gray3}
                 style={[styles.input, styles.textArea]}
                 multiline
-                maxLength={500}
+                maxLength={INPUT_LIMITS.CLUB_DESCRIPTION}
               />
             </View>
           )}
@@ -13356,7 +13357,7 @@ function MeetingCreateFlow({
                 placeholder="활동 지역을 입력해주세요 (40자 제한)"
                 placeholderTextColor={colors.gray3}
                 style={styles.input}
-                maxLength={40}
+                maxLength={INPUT_LIMITS.CLUB_REGION}
               />
 
               <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
@@ -13400,7 +13401,7 @@ function MeetingCreateFlow({
                     placeholder="링크 대체 텍스트 입력(최대 20자)"
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
-                    maxLength={20}
+                    maxLength={INPUT_LIMITS.CLUB_LINK_LABEL}
                   />
                   <TextInput
                     value={link.url}
@@ -13414,7 +13415,7 @@ function MeetingCreateFlow({
                     placeholder="링크 입력(최대 100자)"
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
-                    maxLength={100}
+                    maxLength={INPUT_LIMITS.CLUB_LINK_URL}
                   />
                 </View>
               ))}
