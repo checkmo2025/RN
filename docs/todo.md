@@ -1,6 +1,6 @@
 # TODO
 
-> 마지막 업데이트: 2026-04-29 09:35 KST
+> 마지막 업데이트: 2026-04-29 09:43 KST
 
 ---
 
@@ -13,6 +13,8 @@
 | ✅ | **RN** | **책 표지 기본 이미지 추가** | `assets/images/book-default.png` (200×280) 적용 완료. `MyPageScreen`, `UserProfileScreen`, `MeetingScreen`(책장/발제) 세 곳에 `BOOK_DEFAULT_IMAGE` 상수로 통일. |
 | ✅ | **디자인** | **모임 기본 이미지 전용 에셋** | `assets/images/club-default.png` (512×512) 적용 완료. 모임 카드 썸네일(`MeetingListCard`), 모임 상세 프로필, 모임 생성/수정 미리보기에 `CLUB_DEFAULT_IMAGE` 상수로 통일. |
 | ✅ | **RN** | **글씨 크기 통일 확인** | `fontSize`/`lineHeight`/`letterSpacing` 하드코딩 제거 완료(0건). `typography` 토큰 승격(15/16 포함), 재발 방지 스크립트(`npm run check:typography`) 적용 완료. |
+| ✅ | **RN** | **로딩 화면 전수 점검 문서화** | `loading-screen.md` 작성 완료. `BookFlipLoadingScreen` 사용처, 인라인 로딩 문구, 버튼 상태형 로딩, `RefreshControl` 위치를 전수 정리. |
+| ⬜ | **RN** | **로딩 UX 통일/안정화** | `loading-screen.md` 기준 후속 작업: (1) `업로드중/업로드 중` 등 문구 표기 통일, (2) 고정시간 로더(부팅 1500ms/인증전환 1200ms) 정책 재검토, (3) 텍스트-only 로딩 구간에 공통 로딩 피드백 규칙 수립. |
 
 ---
 
