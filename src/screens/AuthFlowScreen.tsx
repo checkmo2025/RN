@@ -16,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { termsDocuments, type TermsAgreementKey } from '../constants/termsDocuments';
 import { colors, radius, spacing, typography } from '../theme';
+import { AppButton } from '../components/common/PrimaryButton';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import {
   checkNicknameDuplicate,
@@ -861,47 +862,19 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               </ScrollView>
 
               <View style={styles.termsModalButtonRow}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.secondaryButton,
-                    styles.buttonFlex,
-                    styles.termsModalActionButton,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={closeTermsModal}
-                >
-                  <Text style={styles.secondaryText}>닫기</Text>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.primaryButton,
-                    styles.buttonFlex,
-                    styles.termsModalActionButton,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={handleConfirmTermsModal}
-                >
-                  <Text style={styles.primaryText}>동의</Text>
-                </Pressable>
+                <AppButton variant="secondary" label="닫기" onPress={closeTermsModal} size="lg" fullWidth />
+                <AppButton label="동의" onPress={handleConfirmTermsModal} size="lg" fullWidth />
               </View>
             </Pressable>
           </Pressable>
         </Modal>
 
         <View style={styles.buttonRow}>
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            onPress={goToLogin}
-          >
-            <Text style={styles.secondaryText}>취소</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              styles.buttonFlex,
-              !canGoNextFromTerms && styles.primaryButtonDisabled,
-              pressed && styles.pressed,
-            ]}
+          <AppButton variant="secondary" label="취소" onPress={goToLogin} />
+          <AppButton
+            label="다음"
+            fullWidth
+            disabled={!canGoNextFromTerms}
             onPress={() => {
               if (!canGoNextFromTerms) {
                 showToast('필수 약관에 동의해주세요.');
@@ -909,9 +882,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               }
               setStep('emailVerification');
             }}
-          >
-            <Text style={styles.primaryText}>다음</Text>
-          </Pressable>
+          />
         </View>
       </>,
     );
@@ -993,19 +964,11 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         </View>
 
         <View style={styles.buttonRow}>
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            onPress={() => setStep('terms')}
-          >
-            <Text style={styles.secondaryText}>이전</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              styles.buttonFlex,
-              !emailVerified && styles.primaryButtonDisabled,
-              pressed && styles.pressed,
-            ]}
+          <AppButton variant="secondary" label="이전" onPress={() => setStep('terms')} />
+          <AppButton
+            label="다음"
+            fullWidth
+            disabled={!emailVerified}
             onPress={() => {
               if (!emailVerified) {
                 showToast('이메일 인증을 완료해주세요.');
@@ -1013,9 +976,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               }
               setStep('passwordSet');
             }}
-          >
-            <Text style={styles.primaryText}>다음</Text>
-          </Pressable>
+          />
         </View>
       </>,
     );
@@ -1077,18 +1038,8 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         </View>
 
         <View style={styles.buttonRow}>
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            onPress={() => setStep('emailVerification')}
-          >
-            <Text style={styles.secondaryText}>이전</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.primaryButton, styles.buttonFlex, pressed && styles.pressed]}
-            onPress={handlePasswordStepNext}
-          >
-            <Text style={styles.primaryText}>다음</Text>
-          </Pressable>
+          <AppButton variant="secondary" label="이전" onPress={() => setStep('emailVerification')} />
+          <AppButton label="다음" fullWidth onPress={handlePasswordStepNext} />
         </View>
       </>,
     );
@@ -1174,18 +1125,8 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         </View>
 
         <View style={styles.buttonRow}>
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            onPress={() => setStep('passwordSet')}
-          >
-            <Text style={styles.secondaryText}>이전</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.primaryButton, styles.buttonFlex, pressed && styles.pressed]}
-            onPress={handleProfileBasicNext}
-          >
-            <Text style={styles.primaryText}>다음</Text>
-          </Pressable>
+          <AppButton variant="secondary" label="이전" onPress={() => setStep('passwordSet')} />
+          <AppButton label="다음" fullWidth onPress={handleProfileBasicNext} />
         </View>
       </>,
     );
@@ -1226,16 +1167,16 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               />
             </Pressable>
           </View>
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, styles.profileDefaultButton, pressed && styles.pressed]}
+          <AppButton
+            variant="secondary"
+            label="기본 프로필 이미지"
+            style={styles.profileDefaultButton}
             onPress={() => {
               setProfileImageUrl('');
               setSelectedProfileImage(null);
               setShowProfileColorModal(true);
             }}
-          >
-            <Text style={styles.secondaryText}>기본 프로필 이미지</Text>
-          </Pressable>
+          />
         </View>
 
         <Text style={styles.label}>관심 카테고리 (최소 1개, 최대 6개 선택)</Text>
@@ -1261,26 +1202,14 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         </View>
 
         <View style={styles.buttonRow}>
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            onPress={() => setStep('profileBasic')}
-          >
-            <Text style={styles.secondaryText}>이전</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              styles.buttonFlex,
-              signUpSubmitting && styles.primaryButtonDisabled,
-              pressed && styles.pressed,
-            ]}
-            onPress={() => {
-              void handleSubmitSignUp();
-            }}
-            disabled={signUpSubmitting}
-          >
-            <Text style={styles.primaryText}>{signUpSubmitting ? '처리 중...' : '다음'}</Text>
-          </Pressable>
+          <AppButton variant="secondary" label="이전" onPress={() => setStep('profileBasic')} />
+          <AppButton
+            label="다음"
+            fullWidth
+            loading={signUpSubmitting}
+            loadingLabel="처리 중..."
+            onPress={() => { void handleSubmitSignUp(); }}
+          />
         </View>
 
         <Modal
@@ -1351,24 +1280,9 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           </Text>
         </View>
 
-        <Pressable
-          style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-          onPress={() => completeAuthFlow('모임 탭에서 모임을 탐색해보세요.')}
-        >
-          <Text style={styles.primaryText}>모임 검색하기</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-          onPress={() => completeAuthFlow('모임 탭에서 모임을 생성할 수 있습니다.')}
-        >
-          <Text style={styles.primaryText}>모임 생성하기</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-          onPress={() => completeAuthFlow()}
-        >
-          <Text style={styles.secondaryText}>모임 없이 이용하기</Text>
-        </Pressable>
+        <AppButton label="모임 검색하기" onPress={() => completeAuthFlow('모임 탭에서 모임을 탐색해보세요.')} />
+        <AppButton label="모임 생성하기" onPress={() => completeAuthFlow('모임 탭에서 모임을 생성할 수 있습니다.')} />
+        <AppButton variant="secondary" label="모임 없이 이용하기" onPress={() => completeAuthFlow()} />
       </>,
     );
   }
@@ -1395,17 +1309,12 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             keyboardType="phone-pad"
           />
         </View>
-        <Pressable
-          style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-          onPress={() => {
-            void handleFindEmail();
-          }}
-          disabled={findEmailSubmitting}
-        >
-          <Text style={styles.primaryText}>
-            {findEmailSubmitting ? '조회 중...' : '아이디 찾기'}
-          </Text>
-        </Pressable>
+        <AppButton
+          label="아이디 찾기"
+          loading={findEmailSubmitting}
+          loadingLabel="조회 중..."
+          onPress={() => { void handleFindEmail(); }}
+        />
       </>,
       { showTopBackButton: true },
     );
@@ -1420,24 +1329,9 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           <TextInput value={foundEmail || '-'} style={[styles.input, styles.inputDescenderSafe]} editable={false} />
         </View>
         <View style={styles.findIdResultActions}>
-          <Pressable
-            style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-            onPress={goToLogin}
-          >
-            <Text style={styles.primaryText}>로그인하러가기</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            onPress={() => setStep('resetPw')}
-          >
-            <Text style={styles.secondaryText}>비밀번호 찾기</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            onPress={() => setStep('findId')}
-          >
-            <Text style={styles.secondaryText}>아이디 다시 찾기</Text>
-          </Pressable>
+          <AppButton label="로그인하러가기" onPress={goToLogin} />
+          <AppButton variant="secondary" label="비밀번호 찾기" onPress={() => setStep('resetPw')} />
+          <AppButton variant="secondary" label="아이디 다시 찾기" onPress={() => setStep('findId')} />
         </View>
       </>,
       { showTopBackButton: true },
@@ -1461,17 +1355,12 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             autoCorrect={false}
           />
         </View>
-        <Pressable
-          style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-          onPress={() => {
-            void handleSendTempPassword();
-          }}
-          disabled={sendingTempPassword}
-        >
-          <Text style={styles.primaryText}>
-            {sendingTempPassword ? '전송 중...' : '임시 비밀번호 전송'}
-          </Text>
-        </Pressable>
+        <AppButton
+          label="임시 비밀번호 전송"
+          loading={sendingTempPassword}
+          loadingLabel="전송 중..."
+          onPress={() => { void handleSendTempPassword(); }}
+        />
       </>,
       { showTopBackButton: true },
     );
@@ -1525,15 +1414,12 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           <Text style={styles.linkText}>비밀번호 찾기</Text>
         </Pressable>
       </View>
-      <Pressable
-        style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-        onPress={() => {
-          void handleLogin();
-        }}
-        disabled={loginSubmitting}
-      >
-        <Text style={styles.primaryText}>{loginSubmitting ? '로그인 중...' : '로그인'}</Text>
-      </Pressable>
+      <AppButton
+        label="로그인"
+        loading={loginSubmitting}
+        loadingLabel="로그인 중..."
+        onPress={() => { void handleLogin(); }}
+      />
       <Pressable onPress={startSignUp}>
         <Text style={styles.linkText}>아직 회원이 아니신가요? 회원가입하러가기</Text>
       </Pressable>
@@ -1680,11 +1566,6 @@ const styles = StyleSheet.create({
   termsModalButtonRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-  },
-  termsModalActionButton: {
-    height: 52,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
   },
   formGroup: {
     gap: spacing.sm,
@@ -1913,39 +1794,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  buttonFlex: {
-    flex: 1,
-  },
   findIdResultActions: {
     gap: spacing.xs,
-  },
-  primaryButton: {
-    backgroundColor: colors.primary1,
-    borderRadius: radius.md,
-    paddingVertical: spacing.sm + 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryButtonDisabled: {
-    backgroundColor: colors.gray2,
-  },
-  primaryText: {
-    ...typography.body1_2,
-    color: colors.white,
-  },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: colors.gray2,
-    borderRadius: radius.md,
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-  },
-  secondaryText: {
-    ...typography.body1_2,
-    color: colors.gray6,
   },
   outlineButton: {
     borderWidth: 1,
