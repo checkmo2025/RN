@@ -1092,14 +1092,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   profileDesc: {
-    ...typography.body1_3,
+    ...typography.body1_3_compact,
     color: colors.gray6,
-    lineHeight: 20,
   },
   profileCategory: {
-    ...typography.body2_3,
+    ...typography.caption1_3_relaxed,
     color: colors.gray5,
-    lineHeight: 20,
     flexShrink: 1,
   },
   actionButtons: {

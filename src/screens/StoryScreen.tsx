@@ -2871,9 +2871,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   detailBody: {
-    ...typography.body1_3,
+    ...typography.body1_3_relaxed,
     color: colors.gray6,
-    lineHeight: 22,
     marginTop: spacing.xs,
   },
   commentSection: {

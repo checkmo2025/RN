@@ -1674,9 +1674,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
   },
   termsModalText: {
-    ...typography.body2_3,
+    ...typography.caption1_3_spacious,
     color: colors.gray6,
-    lineHeight: 22,
   },
   termsModalButtonRow: {
     flexDirection: 'row',

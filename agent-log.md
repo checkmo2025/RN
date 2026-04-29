@@ -567,3 +567,32 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `docs/access/access-mypage.md` (신규)
 - `docs/access/access-userprofile.md` (신규)
 - `docs/access/access-auth.md` (신규)
+
+---
+
+## 업데이트 (2026-04-29)
+
+수정 시각: 2026-04-29 09:35:40 KST
+
+### Typography 토큰 통일 및 재발 방지 적용
+
+- `fontSize`/`lineHeight`/`letterSpacing` 하드코딩을 RN `src/**` 기준 0건으로 정리
+- `typography`에 역할형 토큰을 확장(`subhead5`, `body1_4`, `caption1_3*`, `body1_3_relaxed` 등)해 15/16 및 커스텀 line-height/tracking을 토큰으로 승격
+- 재발 방지 스크립트 `scripts/check-typography-hardcode.sh` 추가 및 `package.json` 스크립트(`check:typography`, `check:typography:staged`) 연결
+- `docs/todo.md`, `font.md` 업데이트 및 `npm run check`(typography + typecheck + doctor) 전체 통과 확인
+
+## 작업 파일
+- `src/theme/typography.ts`
+- `src/components/feature/groups/MeetingListCard.tsx`
+- `src/components/common/BookFlipLoadingScreen.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/UserProfileScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+- `src/screens/StoryScreen.tsx`
+- `src/screens/NewsScreen.tsx`
+- `src/screens/AuthFlowScreen.tsx`
+- `scripts/check-typography-hardcode.sh` (신규)
+- `package.json`
+- `tsconfig.json`
+- `font.md`
+- `docs/todo.md`

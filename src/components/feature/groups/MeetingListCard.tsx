@@ -180,9 +180,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: {
-    ...typography.body1_2,
-    fontSize: 16,
-    lineHeight: 22,
+    ...typography.subhead5,
     color: colors.gray7,
   },
   headerRight: {
@@ -252,9 +250,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   metaText: {
-    ...typography.body2_3,
+    ...typography.caption1_3,
     color: colors.gray4,
-    lineHeight: 18,
   },
   actions: {
     flexDirection: 'row',

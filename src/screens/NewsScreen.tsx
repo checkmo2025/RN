@@ -915,9 +915,8 @@ const styles = StyleSheet.create({
     color: colors.gray5,
   },
   detailBody: {
-    ...typography.body1_3,
+    ...typography.body1_3_relaxed,
     color: colors.gray6,
-    lineHeight: 22,
   },
   detailLinkButton: {
     alignSelf: 'flex-start',

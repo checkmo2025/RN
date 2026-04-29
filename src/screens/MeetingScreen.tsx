@@ -1617,9 +1617,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   helperText: {
-    ...typography.body2_3,
+    ...typography.caption1_3_relaxed,
     color: colors.gray4,
-    lineHeight: 20,
   },
   textArea: {
     height: 124,
@@ -1685,9 +1684,8 @@ const styles = StyleSheet.create({
     color: colors.gray6,
   },
   createProfileEmptyDescription: {
-    ...typography.body2_3,
+    ...typography.caption1_3,
     color: colors.gray4,
-    lineHeight: 18,
     textAlign: 'center',
   },
   createProfileActionColumn: {
@@ -1747,9 +1745,8 @@ const styles = StyleSheet.create({
     color: colors.primary1,
   },
   createProfileActionDescription: {
-    ...typography.body2_3,
+    ...typography.caption1_3,
     color: colors.gray4,
-    lineHeight: 18,
   },
   createProfileActionDescriptionSelected: {
     color: 'rgba(255,255,255,0.86)',
@@ -1758,9 +1755,8 @@ const styles = StyleSheet.create({
     color: colors.gray5,
   },
   createProfileHint: {
-    ...typography.body2_3,
+    ...typography.caption1_3,
     color: colors.gray5,
-    lineHeight: 18,
   },
   checkboxRow: {
     flexDirection: 'row',
@@ -1828,9 +1824,8 @@ const styles = StyleSheet.create({
     color: colors.primary1,
   },
   createVisibilityDescription: {
-    ...typography.body2_3,
+    ...typography.caption1_3,
     color: colors.gray4,
-    lineHeight: 18,
   },
   createVisibilityDescriptionActive: {
     color: colors.gray5,
@@ -2109,14 +2104,12 @@ const styles = StyleSheet.create({
     color: colors.gray5,
   },
   metaValue: {
-    ...typography.body1_3,
-    fontSize: 15,
+    ...typography.body1_4,
     color: colors.gray6,
   },
   detailBody: {
-    ...typography.body1_3,
+    ...typography.body1_3_relaxed,
     color: colors.gray6,
-    lineHeight: 22,
   },
   detailButtons: {
     flexDirection: 'row',
@@ -2259,9 +2252,8 @@ const styles = StyleSheet.create({
     color: colors.gray6,
   },
   managementSummaryDescription: {
-    ...typography.body2_3,
+    ...typography.caption1_3_relaxed,
     color: colors.gray4,
-    lineHeight: 20,
   },
   teamManageLoadingWrap: {
     flex: 1,
@@ -2279,9 +2271,8 @@ const styles = StyleSheet.create({
     color: colors.gray6,
   },
   teamManageHint: {
-    ...typography.body2_3,
+    ...typography.caption1_3_relaxed,
     color: colors.gray4,
-    lineHeight: 20,
   },
   teamManageDropBar: {
     flexDirection: 'row',
@@ -2690,9 +2681,8 @@ const styles = StyleSheet.create({
     color: colors.primary2,
   },
   managementMessageBody: {
-    ...typography.body1_2,
+    ...typography.body1_2_spacious,
     color: colors.gray5,
-    lineHeight: 30,
   },
   managementMessageScroll: {
     maxHeight: 360,
@@ -2959,9 +2949,8 @@ const styles = StyleSheet.create({
     color: colors.gray6,
   },
   noticeDetailBody: {
-    ...typography.body1_3,
+    ...typography.body1_3_relaxed,
     color: colors.gray6,
-    lineHeight: 22,
   },
   noticePollSection: {
     gap: spacing.sm,
@@ -3957,9 +3946,8 @@ const styles = StyleSheet.create({
     color: colors.gray5,
   },
   bookshelfDetailBookDescription: {
-    ...typography.body2_3,
+    ...typography.caption1_3_loose,
     color: colors.gray5,
-    lineHeight: 21,
   },
   bookshelfDetailTabRow: {
     flexDirection: 'row',
@@ -4133,9 +4121,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   bookshelfPostContent: {
-    ...typography.body1_3,
+    ...typography.body1_3_relaxed,
     color: colors.gray5,
-    lineHeight: 22,
   },
   bookshelfRegularSummaryCard: {
     borderWidth: 1,
@@ -4430,9 +4417,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.subbrown4,
   },
   regularChatBubbleText: {
-    ...typography.body2_3,
+    ...typography.caption1_3_relaxed,
     color: colors.gray6,
-    lineHeight: 20,
   },
   regularChatTime: {
     ...typography.body2_3,

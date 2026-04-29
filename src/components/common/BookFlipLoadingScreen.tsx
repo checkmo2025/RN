@@ -146,10 +146,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   loadingText: {
-    ...typography.body2_2,
+    ...typography.caption1_2_trackingWide,
     marginTop: 14,
     color: '#BDBDBD',
-    letterSpacing: 0.2,
   },
   detailTitle: {
     ...typography.body1_2,
