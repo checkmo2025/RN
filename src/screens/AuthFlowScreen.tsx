@@ -987,7 +987,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             disabled={confirmingCode}
           >
             <Text style={[styles.outlineText, emailVerified && styles.outlineTextActive]}>
-              {confirmingCode ? '확인 중...' : emailVerified ? '인증 완료됨' : '인증 완료'}
+              {confirmingCode ? '확인 중...' : emailVerified ? '인증 완료되었습니다' : '인증 완료'}
             </Text>
           </Pressable>
         </View>
@@ -1129,7 +1129,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               }}
               disabled={checkingNickname}
             >
-              <Text style={styles.outlineText}>{checkingNickname ? '확인중' : '중복확인'}</Text>
+              <Text style={styles.outlineText}>{checkingNickname ? '확인 중' : '중복확인'}</Text>
             </Pressable>
           </View>
           {nicknameChecked && nicknameChecked.value === nickname.trim() ? (

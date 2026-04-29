@@ -987,7 +987,7 @@ export function MyPageScreen() {
       try {
         const uploadMeta = await issueProfileImageUploadUrl(fileName, contentType);
         if (!uploadMeta?.presignedUrl || !uploadMeta.imageUrl) {
-          showToast('이미지 업로드 URL 발급에 실패했습니다.');
+          showToast('이미지 업로드 준비에 실패했습니다.');
           return;
         }
 
@@ -1465,7 +1465,7 @@ export function MyPageScreen() {
   const handleToggleBookLike = useCallback((book: BookCard) => {
     const submit = async () => {
       if (!book.isbn.trim()) {
-        showToast('ISBN 정보가 없어 서재 상태를 변경할 수 없습니다.');
+        showToast('책 정보가 없어 서재 상태를 변경할 수 없습니다.');
         return;
       }
 
@@ -1803,7 +1803,7 @@ export function MyPageScreen() {
                 onPress={() => handleDeleteFollower(user.nickname)}
                 disabled={deleting}
               >
-                <Text style={styles.followDeleteButtonText}>{deleting ? '삭제중...' : '삭제'}</Text>
+                <Text style={styles.followDeleteButtonText}>{deleting ? '삭제 중...' : '삭제'}</Text>
               </Pressable>
             ) : (
               <Pressable
@@ -2533,7 +2533,7 @@ export function MyPageScreen() {
                 {confirmingEmailVerificationCode
                   ? '확인 중...'
                   : emailVerified
-                    ? '인증 완료됨'
+                    ? '인증 완료되었습니다'
                     : '인증 완료'}
               </Text>
             </Pressable>

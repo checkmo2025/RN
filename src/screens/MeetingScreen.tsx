@@ -345,7 +345,7 @@ async function pickAndUploadImage(type: 'CLUB' | 'NOTICE'): Promise<string | nul
   const contentType = inferMimeType(fileName, asset.mimeType);
   const uploadMeta = await issueImageUploadUrl(type, fileName, contentType);
   if (!uploadMeta?.presignedUrl || !uploadMeta.imageUrl) {
-    showToast('이미지 업로드 URL 발급에 실패했습니다.');
+    showToast('이미지 업로드 준비에 실패했습니다.');
     return null;
   }
 
@@ -501,18 +501,18 @@ function mapMyClubToGroup(club: { clubId: number; clubName: string }): Group {
     tags: [],
     topic: '모임 대상 · 정보 없음',
     region: '활동 지역 · 정보 없음',
-    applicationStatus: '가입 완료',
+    applicationStatus: '가입 완료되었습니다',
   };
 }
 
 function mapClubStatusToApplication(status?: string): string | undefined {
   switch (status) {
     case 'PENDING':
-      return '신청 완료 됨';
+      return '신청 완료되었습니다';
     case 'MEMBER':
     case 'STAFF':
     case 'OWNER':
-      return '가입 완료';
+      return '가입 완료되었습니다';
     default:
       return undefined;
   }
@@ -675,7 +675,7 @@ export function MeetingScreen() {
       return;
     }
 
-    Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
+    Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
       { text: '취소', style: 'cancel' },
       { text: '닫기', style: 'destructive', onPress: onClose },
     ]);
@@ -1015,7 +1015,7 @@ export function MeetingScreen() {
         if (!targetRoute || targetRoute.name === 'Meeting') return;
 
         event.preventDefault();
-        Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
+        Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
           { text: '취소', style: 'cancel' },
           {
             text: '닫기',
@@ -1039,7 +1039,7 @@ export function MeetingScreen() {
         if (!(showCreate && createDraftDirty)) return;
 
         event.preventDefault();
-        Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
+        Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
           { text: '취소', style: 'cancel' },
           {
             text: '닫기',
@@ -1111,7 +1111,7 @@ export function MeetingScreen() {
       const submit = async () => {
         try {
           await joinClub(clubId, reason);
-          setAppliedById((prev) => ({ ...prev, [group.id]: '신청 완료 됨' }));
+          setAppliedById((prev) => ({ ...prev, [group.id]: '신청 완료되었습니다' }));
           setApplyOpenId(null);
           setApplyReasonById((prev) => ({ ...prev, [group.id]: '' }));
           showToast('가입 신청이 완료되었습니다.');
@@ -5256,7 +5256,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const isManagedClub = typeof group.clubId === 'number';
   const [managedGroup, setManagedGroup] = useState<Group>(group);
   const [canManageClub, setCanManageClub] = useState(false);
-  const isMember = managedGroup.applicationStatus === '가입 완료' || canManageClub;
+  const isMember = managedGroup.applicationStatus === '가입 완료되었습니다' || canManageClub;
   const [activeTab, setActiveTab] = useState<'home' | 'notice' | 'bookshelf'>('home');
   const [noticePage, setNoticePage] = useState(1);
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
@@ -6953,7 +6953,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const clubId = group.clubId;
     const noticeId = selectedNotice.remoteId;
     if (!isManagedClub || typeof clubId !== 'number' || typeof noticeId !== 'number') {
-      showToast('공지 댓글 API를 사용할 수 없습니다.');
+      showToast('공지 댓글 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
 
@@ -7037,7 +7037,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         typeof noticeId !== 'number' ||
         typeof commentId !== 'number'
       ) {
-        showToast('공지 댓글 API를 사용할 수 없습니다.');
+        showToast('공지 댓글 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
         return;
       }
 
@@ -7269,7 +7269,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const clubId = group.clubId;
     const noticeId = selectedNotice.remoteId;
     if (!isManagedClub || typeof clubId !== 'number' || typeof noticeId !== 'number') {
-      showToast('공지 투표 API를 사용할 수 없습니다.');
+      showToast('공지 투표 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
 
@@ -8464,7 +8464,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
   const handleDeleteManagedClub = useCallback(() => {
     if (!canManageClub || typeof group.clubId !== 'number') {
-      showToast('모임 삭제 API를 사용할 수 없습니다.');
+      showToast('모임 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
 
@@ -8501,7 +8501,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const clubMemberId = request.clubMemberId;
     if (submittingJoinRequestAction) return;
     if (!canManageClub || typeof clubId !== 'number' || typeof clubMemberId !== 'number') {
-      showToast('가입 신청 처리 API를 사용할 수 없습니다.');
+      showToast('가입 신청 처리 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
 
@@ -8537,7 +8537,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const clubMemberId = targetMember?.clubMemberId;
     if (submittingMemberAction) return;
     if (!canManageClub || typeof clubId !== 'number' || typeof clubMemberId !== 'number') {
-      showToast('회원 역할 수정 API를 사용할 수 없습니다.');
+      showToast('회원 역할 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
     if (!targetMember || targetMember.role === role) {
@@ -8598,7 +8598,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const clubMemberId = targetMember?.clubMemberId;
     if (submittingMemberAction) return;
     if (!canManageClub || typeof clubId !== 'number' || typeof clubMemberId !== 'number') {
-      showToast('회원 제외 API를 사용할 수 없습니다.');
+      showToast('회원 제외 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
     if (!targetMember || targetMember.role === '개설자') {
@@ -8649,7 +8649,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       return;
     }
     if (!canManageClub) {
-      showToast('모임 수정 API를 사용할 수 없습니다.');
+      showToast('모임 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
 
@@ -8787,7 +8787,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     }
     const clubId = group.clubId;
     if (!canManageClub || typeof clubId !== 'number') {
-      showToast(isEditMode ? '책장 수정 API를 사용할 수 없습니다.' : '책장 생성 API를 사용할 수 없습니다.');
+      showToast(
+        isEditMode
+          ? '책장 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.'
+          : '책장 생성 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.',
+      );
       return;
     }
 
@@ -8816,7 +8820,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     }
     const sourceBookIsbn = sourceBook?.isbn.trim() ?? '';
     if (!isEditMode && !ISBN13_REGEX.test(sourceBookIsbn)) {
-      showToast('책 ISBN 형식을 확인해주세요.');
+      showToast('책 정보 형식을 확인해주세요.');
       return;
     }
     const primaryCategory = bookshelfCreateDraft.categories[0];
@@ -8933,7 +8937,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       typeof clubId !== 'number' ||
       typeof meetingId !== 'number'
     ) {
-      showToast('책장 삭제 API를 사용할 수 없습니다.');
+      showToast('책장 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
 
@@ -9078,7 +9082,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       return;
     }
     if (!canManageClub) {
-      showToast('공지 API를 사용할 수 없습니다.');
+      showToast('공지 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
 
@@ -9187,7 +9191,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const clubId = group.clubId;
     const noticeId = selectedNotice.remoteId;
     if (!canManageClub || typeof clubId !== 'number' || typeof noticeId !== 'number') {
-      showToast('공지 삭제 API를 사용할 수 없습니다.');
+      showToast('공지 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
 
@@ -9776,7 +9780,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   disabled={submittingNoticeComment || noticeCommentInput.trim().length === 0}
                 >
                   <Text style={styles.noticeCommentSubmitText}>
-                    {submittingNoticeComment ? '처리중' : editingNoticeCommentId ? '수정' : '입력'}
+                    {submittingNoticeComment ? '처리 중' : editingNoticeCommentId ? '수정' : '입력'}
                   </Text>
                 </Pressable>
               </View>
@@ -10799,7 +10803,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                       teamManageSaving && styles.teamManageSaveButtonTextDisabled,
                     ]}
                   >
-                    {teamManageSaving ? '저장중...' : '조 편성 저장하기'}
+                    {teamManageSaving ? '저장 중...' : '조 편성 저장하기'}
                   </Text>
                 </Pressable>
               </View>
@@ -10955,8 +10959,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 	                  <Text style={styles.primaryButtonText}>
 	                    {submittingBookshelfComposer
 	                      ? editingBookshelfPost
-	                        ? '수정중...'
-	                        : '등록중...'
+	                        ? '수정 중...'
+	                        : '등록 중...'
 	                      : editingBookshelfPost
 	                        ? '수정하기'
 	                        : '등록하기'}
@@ -11317,7 +11321,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                         onPress={handlePickClubImage}
                       >
                         <Text style={styles.outlineButtonText}>
-                          {uploadingClubImage ? '업로드중...' : '사진 변경하기'}
+                          {uploadingClubImage ? '업로드 중...' : '사진 변경하기'}
                         </Text>
                       </Pressable>
                     </View>
@@ -11618,7 +11622,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                       disabled={updatingBookshelf || deletingBookshelf}
                     >
                       <Text style={styles.managementFooterDangerButtonText}>
-                        {deletingBookshelf ? '삭제중...' : '삭제하기'}
+                        {deletingBookshelf ? '삭제 중...' : '삭제하기'}
                       </Text>
                     </Pressable>
                     <Pressable
@@ -11632,7 +11636,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                       disabled={updatingBookshelf || deletingBookshelf}
                     >
                       <Text style={styles.primaryButtonText}>
-                        {updatingBookshelf ? '저장중...' : '저장하기'}
+                        {updatingBookshelf ? '저장 중...' : '저장하기'}
                       </Text>
                     </Pressable>
                   </View>
@@ -11659,7 +11663,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                       {activeManagementScreen === 'EDIT'
                         ? '저장하기'
                         : creatingBookshelf
-                          ? '등록중...'
+                          ? '등록 중...'
                           : '등록하기'}
                     </Text>
                   </Pressable>
@@ -11748,7 +11752,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                         submittingJoinRequestAction && styles.managementJoinActionItemTextDisabled,
                       ]}
                     >
-                      {submittingJoinRequestAction ? '처리중...' : '가입처리'}
+                      {submittingJoinRequestAction ? '처리 중...' : '가입처리'}
                     </Text>
                   </Pressable>
                 </Pressable>
@@ -12244,7 +12248,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                       noticeDraft.photos.length > 0 && styles.noticeComposerToggleTextActive,
                     ]}
                   >
-                    {uploadingNoticePhoto ? '업로드중' : '사진'}
+                    {uploadingNoticePhoto ? '업로드 중' : '사진'}
                   </Text>
                 </Pressable>
               </View>
@@ -12921,7 +12925,7 @@ function MeetingCreateFlow({
       return;
     }
 
-    Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
+    Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
       { text: '취소', style: 'cancel' },
       { text: '닫기', style: 'destructive', onPress: onClose },
     ]);
@@ -13109,7 +13113,7 @@ function MeetingCreateFlow({
                   disabled={checkingName}
                 >
                   <Text style={styles.dupCheckText}>
-                    {checkingName ? '확인중...' : '중복확인'}
+                    {checkingName ? '확인 중...' : '중복확인'}
                   </Text>
                 </Pressable>
               </View>
@@ -13235,7 +13239,7 @@ function MeetingCreateFlow({
                       </View>
                       <View style={styles.createProfileActionTextWrap}>
                         <Text style={[styles.createProfileActionTitle, styles.createProfileActionTitlePrimary]}>
-                          {uploadingClubImage ? '업로드중...' : '사진 업로드하기'}
+                          {uploadingClubImage ? '업로드 중...' : '사진 업로드하기'}
                         </Text>
                         <Text
                           style={[

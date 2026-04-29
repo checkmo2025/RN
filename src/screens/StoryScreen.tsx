@@ -494,7 +494,7 @@ export function StoryScreen() {
         return;
       }
 
-      Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
+      Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
         { text: '취소', style: 'cancel' },
         { text: '닫기', style: 'destructive', onPress: onClose },
       ]);
@@ -898,7 +898,7 @@ export function StoryScreen() {
     const webBaseUrl = PUBLIC_ENV.WEB_BASE_URL.replace(/\/+$/, '');
     const url = `${webBaseUrl}/book-stories/${storyId}`;
     void Clipboard.setStringAsync(url);
-    showToast('URL이 클립보드에 복사되었습니다.');
+    showToast('링크가 클립보드에 복사되었습니다.');
   }, [selectedStory]);
 
   const openStoryMenu = useCallback((event: GestureResponderEvent) => {
@@ -1216,7 +1216,7 @@ export function StoryScreen() {
             }
             const isbn = selectedBook.id.trim();
             if (!ISBN13_REGEX.test(isbn)) {
-              showToast('책 ISBN 형식을 확인해주세요.');
+              showToast('책 정보 형식을 확인해주세요.');
               return;
             }
             await createBookStory({
@@ -1621,7 +1621,7 @@ export function StoryScreen() {
         if (!targetRoute || targetRoute.name === 'Story') return;
 
         event.preventDefault();
-        Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
+        Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
           { text: '취소', style: 'cancel' },
           {
             text: '닫기',
@@ -1651,7 +1651,7 @@ export function StoryScreen() {
         if (!hasUnsavedStoryChanges) return;
 
         event.preventDefault();
-        Alert.alert('알림', '현재 페이지는 저장 되지 않습니다.', [
+        Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
           { text: '취소', style: 'cancel' },
           {
             text: '닫기',

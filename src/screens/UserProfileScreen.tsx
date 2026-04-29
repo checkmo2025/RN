@@ -549,7 +549,7 @@ export function UserProfileScreen() {
       },
       {
         key: 'block',
-        label: '차단하기 (준비중)',
+        label: '차단하기 (준비 중)',
         destructive: true,
         onPress: handleConfirmBlockMember,
       },
