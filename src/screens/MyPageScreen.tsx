@@ -3,7 +3,6 @@ import {
   Alert,
   Animated,
   Easing,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -34,6 +33,7 @@ import { FeedbackPressable as Pressable } from '../components/common/FeedbackPre
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
+import { DialogOverlay } from '../components/common/DialogOverlay';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import {
   confirmEmailVerification,
@@ -2150,43 +2150,31 @@ export function MyPageScreen() {
             </Text>
           </Pressable>
 
-          <Modal
+          <DialogOverlay
             visible={showDefaultAvatarPicker}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setShowDefaultAvatarPicker(false)}
+            onClose={() => setShowDefaultAvatarPicker(false)}
+            overlayStyle={styles.defaultAvatarModalOverlay}
+            cardStyle={styles.defaultAvatarModalCard}
           >
-            <Pressable
-              style={styles.defaultAvatarModalOverlay}
-              onPress={() => setShowDefaultAvatarPicker(false)}
-              disableFeedback
-            >
-              <Pressable
-                style={styles.defaultAvatarModalCard}
-                onPress={(event) => event.stopPropagation()}
-                disableFeedback
-              >
-                <Text style={styles.defaultAvatarModalTitle}>원하시는 색상을 선택해주세요.</Text>
-                <View style={styles.defaultAvatarGrid}>
-                  {defaultProfilePalette.map((color) => {
-                    const selected = profileEditDefaultColor === color;
-                    return (
-                      <Pressable
-                        key={color}
-                        style={[
-                          styles.defaultAvatarOption,
-                          selected ? styles.defaultAvatarOptionSelected : null,
-                        ]}
-                        onPress={() => handleSelectDefaultAvatarColor(color)}
-                      >
-                        <MaterialIcons name="person" size={42} color={color} />
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </Pressable>
-            </Pressable>
-          </Modal>
+            <Text style={styles.defaultAvatarModalTitle}>원하시는 색상을 선택해주세요.</Text>
+            <View style={styles.defaultAvatarGrid}>
+              {defaultProfilePalette.map((color) => {
+                const selected = profileEditDefaultColor === color;
+                return (
+                  <Pressable
+                    key={color}
+                    style={[
+                      styles.defaultAvatarOption,
+                      selected ? styles.defaultAvatarOptionSelected : null,
+                    ]}
+                    onPress={() => handleSelectDefaultAvatarColor(color)}
+                  >
+                    <MaterialIcons name="person" size={42} color={color} />
+                  </Pressable>
+                );
+              })}
+            </View>
+          </DialogOverlay>
         </View>
       );
     }

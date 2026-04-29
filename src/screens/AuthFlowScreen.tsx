@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -18,6 +17,7 @@ import { termsDocuments, type TermsAgreementKey } from '../constants/termsDocume
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import { colors, radius, spacing, typography } from '../theme';
 import { AppButton } from '../components/common/PrimaryButton';
+import { DialogOverlay } from '../components/common/DialogOverlay';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import {
   checkNicknameDuplicate,
@@ -828,48 +828,36 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           </Pressable>
         </View>
 
-        <Modal
+        <DialogOverlay
           visible={activeTermsModalDocument !== null}
-          transparent
-          animationType="fade"
-          onRequestClose={closeTermsModal}
+          onClose={closeTermsModal}
+          overlayStyle={styles.termsModalOverlay}
+          cardStyle={styles.termsModalCard}
         >
-          <Pressable
-            style={styles.termsModalOverlay}
-            onPress={closeTermsModal}
-            disableFeedback
-          >
-            <Pressable
-              style={styles.termsModalCard}
-              onPress={(event) => event.stopPropagation()}
-              disableFeedback
-            >
-              <View style={styles.termsModalHeader}>
-                <Text style={styles.termsModalTitle}>
-                  {activeTermsModalDocument?.title ?? ''}
-                </Text>
-                <Pressable onPress={closeTermsModal} hitSlop={8}>
-                  <MaterialIcons name="close" size={22} color={colors.gray5} />
-                </Pressable>
-              </View>
-
-              <ScrollView
-                style={styles.termsModalBody}
-                contentContainerStyle={styles.termsModalBodyContent}
-                showsVerticalScrollIndicator={false}
-              >
-                <Text style={styles.termsModalText}>
-                  {activeTermsModalDocument?.content ?? ''}
-                </Text>
-              </ScrollView>
-
-              <View style={styles.termsModalButtonRow}>
-                <AppButton variant="secondary" label="닫기" onPress={closeTermsModal} size="lg" fullWidth />
-                <AppButton label="동의" onPress={handleConfirmTermsModal} size="lg" fullWidth />
-              </View>
+          <View style={styles.termsModalHeader}>
+            <Text style={styles.termsModalTitle}>
+              {activeTermsModalDocument?.title ?? ''}
+            </Text>
+            <Pressable onPress={closeTermsModal} hitSlop={8}>
+              <MaterialIcons name="close" size={22} color={colors.gray5} />
             </Pressable>
-          </Pressable>
-        </Modal>
+          </View>
+
+          <ScrollView
+            style={styles.termsModalBody}
+            contentContainerStyle={styles.termsModalBodyContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={styles.termsModalText}>
+              {activeTermsModalDocument?.content ?? ''}
+            </Text>
+          </ScrollView>
+
+          <View style={styles.termsModalButtonRow}>
+            <AppButton variant="secondary" label="닫기" onPress={closeTermsModal} size="lg" fullWidth />
+            <AppButton label="동의" onPress={handleConfirmTermsModal} size="lg" fullWidth />
+          </View>
+        </DialogOverlay>
 
         <View style={styles.buttonRow}>
           <AppButton variant="secondary" label="취소" onPress={goToLogin} />
@@ -1218,48 +1206,36 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           />
         </View>
 
-        <Modal
+        <DialogOverlay
           visible={showProfileColorModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowProfileColorModal(false)}
+          onClose={() => setShowProfileColorModal(false)}
+          overlayStyle={styles.profileColorModalOverlay}
+          cardStyle={styles.profileColorModalCard}
         >
-          <Pressable
-            style={styles.profileColorModalOverlay}
-            onPress={() => setShowProfileColorModal(false)}
-            disableFeedback
-          >
-            <Pressable
-              style={styles.profileColorModalCard}
-              onPress={(event) => event.stopPropagation()}
-              disableFeedback
-            >
-              <Text style={styles.profileColorModalTitle}>원하시는 색상을 선택해주세요.</Text>
-              <View style={styles.profileColorGrid}>
-                {defaultProfilePalette.map((color) => {
-                  const selected = selectedProfileColor === color;
-                  return (
-                    <Pressable
-                      key={color}
-                      style={[
-                        styles.profileColorOption,
-                        selected ? styles.profileColorOptionSelected : null,
-                      ]}
-                      onPress={() => {
-                        setSelectedProfileColor(color);
-                        setProfileImageUrl('');
-                        setSelectedProfileImage(null);
-                        setShowProfileColorModal(false);
-                      }}
-                    >
-                      <MaterialIcons name="person" size={40} color={color} />
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </Pressable>
-          </Pressable>
-        </Modal>
+          <Text style={styles.profileColorModalTitle}>원하시는 색상을 선택해주세요.</Text>
+          <View style={styles.profileColorGrid}>
+            {defaultProfilePalette.map((color) => {
+              const selected = selectedProfileColor === color;
+              return (
+                <Pressable
+                  key={color}
+                  style={[
+                    styles.profileColorOption,
+                    selected ? styles.profileColorOptionSelected : null,
+                  ]}
+                  onPress={() => {
+                    setSelectedProfileColor(color);
+                    setProfileImageUrl('');
+                    setSelectedProfileImage(null);
+                    setShowProfileColorModal(false);
+                  }}
+                >
+                  <MaterialIcons name="person" size={40} color={color} />
+                </Pressable>
+              );
+            })}
+          </View>
+        </DialogOverlay>
       </>,
     );
   }

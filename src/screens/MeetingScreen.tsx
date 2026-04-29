@@ -47,6 +47,7 @@ import { FeedbackPressable as Pressable } from '../components/common/FeedbackPre
 import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
+import { DialogOverlay } from '../components/common/DialogOverlay';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import { MeetingListCard } from '../components/feature/groups/MeetingListCard';
 import { MyGroupsDropdownCard } from '../components/feature/groups/MyGroupsDropdownCard';
@@ -10830,26 +10831,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           ) : null}
         </View>
       </Modal>
-      <Modal
+      <DialogOverlay
         visible={Boolean(bookshelfComposerType)}
-        transparent
-        animationType="fade"
-        onRequestClose={closeBookshelfComposer}
+        onClose={closeBookshelfComposer}
+        overlayStyle={styles.bookshelfComposerOverlay}
+        cardStyle={styles.bookshelfComposerCard}
+        withKeyboard
       >
-        <KeyboardAvoidingView
-          style={styles.bookshelfComposerKeyboard}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <Pressable
-            style={styles.bookshelfComposerOverlay}
-            onPress={closeBookshelfComposer}
-            disableFeedback
-          >
-            <Pressable
-              style={styles.bookshelfComposerCard}
-              onPress={(event) => event.stopPropagation()}
-              disableFeedback
-            >
 	              <View style={styles.bookshelfComposerHeader}>
 	                <Text style={styles.bookshelfComposerTitle}>
 	                  {bookshelfComposerType === 'TOPIC'
@@ -10969,10 +10957,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 	                  </Text>
 	                </Pressable>
 	              </View>
-            </Pressable>
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Modal>
+      </DialogOverlay>
       <Modal
         visible={managementMenuVisible || Boolean(activeManagementScreen) || bookshelfBookSelectorVisible}
         transparent
@@ -12463,22 +12448,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           </View>
         </KeyboardAvoidingView>
       </Modal>
-      <Modal
+      <DialogOverlay
         visible={noticeBookSelectorVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setNoticeBookSelectorVisible(false)}
+        onClose={() => setNoticeBookSelectorVisible(false)}
+        overlayStyle={styles.managementOverlay}
+        cardStyle={styles.noticeBookSelectorCard}
       >
-        <Pressable
-          style={styles.managementOverlay}
-          onPress={() => setNoticeBookSelectorVisible(false)}
-          disableFeedback
-        >
-          <Pressable
-            style={styles.noticeBookSelectorCard}
-            onPress={(event) => event.stopPropagation()}
-            disableFeedback
-          >
             <View style={styles.managementModalHeader}>
               <Text style={styles.managementModalTitle}>책장 선택</Text>
               <Pressable onPress={() => setNoticeBookSelectorVisible(false)} hitSlop={8}>
@@ -12515,9 +12490,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 </View>
               ) : null}
             </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      </DialogOverlay>
       <Modal
         visible={noticeMenuVisible}
         transparent
@@ -12582,22 +12555,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           <SvgUri uri={chatIconUri} width={24} height={24} />
         </FloatingActionButton>
       ) : null}
-      <Modal
+      <DialogOverlay
         visible={contactModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeContactModal}
+        onClose={closeContactModal}
+        overlayStyle={styles.contactModalOverlay}
+        cardStyle={styles.contactModalCard}
       >
-        <Pressable
-          style={styles.contactModalOverlay}
-          onPress={closeContactModal}
-          disableFeedback
-        >
-          <Pressable
-            style={styles.contactModalCard}
-            onPress={(event) => event.stopPropagation()}
-            disableFeedback
-          >
             <View style={styles.contactModalHeader}>
               <Text style={styles.contactModalTitle}>Contact Us</Text>
               <Pressable onPress={closeContactModal} hitSlop={8}>
@@ -12634,25 +12597,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 <Text style={styles.contactModalEmptyText}>문의하기 링크가 없습니다.</Text>
               </View>
             )}
-          </Pressable>
-        </Pressable>
-      </Modal>
-      <Modal
+      </DialogOverlay>
+      <DialogOverlay
         visible={regularChatPickerVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={handleCloseRegularChat}
+        onClose={handleCloseRegularChat}
+        overlayStyle={styles.regularChatModalOverlay}
+        cardStyle={styles.regularChatPickerCard}
       >
-        <Pressable
-          style={styles.regularChatModalOverlay}
-          onPress={handleCloseRegularChat}
-          disableFeedback
-        >
-          <Pressable
-            style={styles.regularChatPickerCard}
-            onPress={(event) => event.stopPropagation()}
-            disableFeedback
-          >
             <View style={styles.regularChatHeader}>
               <Text style={styles.regularChatTitle}>채팅 조 선택</Text>
               <Pressable onPress={handleCloseRegularChat} hitSlop={8}>
@@ -12674,9 +12625,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 </Pressable>
               ))}
             </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      </DialogOverlay>
       <Modal
         visible={Boolean(activeRegularChatGroup)}
         animationType="slide"
@@ -12779,41 +12728,31 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           ) : null}
         </KeyboardAvoidingView>
       </Modal>
-      <Modal
+      <DialogOverlay
         visible={Boolean(voteVotersModal)}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setVoteVotersModal(null)}
+        onClose={() => setVoteVotersModal(null)}
+        overlayStyle={styles.voteVotersModalOverlay}
+        cardStyle={styles.voteVotersModalCard}
       >
-        <Pressable
-          style={styles.voteVotersModalOverlay}
-          onPress={() => setVoteVotersModal(null)}
-          disableFeedback
-        >
-          {voteVotersModal ? (
-            <Pressable
-              style={styles.voteVotersModalCard}
-              onPress={(event) => event.stopPropagation()}
-              disableFeedback
-            >
-              <Text style={styles.voteVotersModalTitle}>{voteVotersModal.optionLabel}</Text>
-              <View style={styles.voteVotersList}>
-                {voteVotersModal.voters.map((nickname, index) => (
-                  <View key={`${nickname}-${index}`} style={styles.voteVotersRow}>
-                    <View style={styles.voteVotersAvatar}>
-                      <DefaultProfileAvatar size={16} />
-                    </View>
-                    <Text style={styles.voteVotersName}>{nickname}</Text>
+        {voteVotersModal ? (
+          <>
+            <Text style={styles.voteVotersModalTitle}>{voteVotersModal.optionLabel}</Text>
+            <View style={styles.voteVotersList}>
+              {voteVotersModal.voters.map((nickname, index) => (
+                <View key={`${nickname}-${index}`} style={styles.voteVotersRow}>
+                  <View style={styles.voteVotersAvatar}>
+                    <DefaultProfileAvatar size={16} />
                   </View>
-                ))}
-                {voteVotersModal.voters.length === 0 ? (
-                  <Text style={styles.voteVotersEmptyText}>아직 투표자가 없습니다.</Text>
-                ) : null}
-              </View>
-            </Pressable>
-          ) : null}
-        </Pressable>
-      </Modal>
+                  <Text style={styles.voteVotersName}>{nickname}</Text>
+                </View>
+              ))}
+              {voteVotersModal.voters.length === 0 ? (
+                <Text style={styles.voteVotersEmptyText}>아직 투표자가 없습니다.</Text>
+              ) : null}
+            </View>
+          </>
+        ) : null}
+      </DialogOverlay>
       <Modal
         visible={Boolean(photoViewer)}
         transparent

@@ -8,7 +8,6 @@ import {
   LayoutChangeEvent,
   PanResponder,
   PanResponderGestureState,
-  Modal,
   ScrollView,
   RefreshControl,
   StyleSheet,
@@ -46,6 +45,7 @@ import { FloatingActionButton } from '../components/common/FloatingActionButton'
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { IconButton } from '../components/common/IconButton';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
+import { BottomSheet } from '../components/common/BottomSheet';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import BookStoryFeedCard from '../components/feature/bookstory/BookStoryFeedCard';
 import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
@@ -2110,26 +2110,13 @@ export function StoryScreen() {
             </View>
           </View>
         </ScrollView>
-        <Modal
+        <BottomSheet
           visible={showBookPicker}
-          transparent
-          animationType="slide"
-          onRequestClose={closeBookPicker}
+          onClose={closeBookPicker}
+          backdropStyle={styles.bookPickerBackdrop}
+          sheetStyle={styles.bookPickerSheet}
+          keyboardBehavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <KeyboardAvoidingView
-            style={styles.bookPickerModalRoot}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          >
-            <Pressable
-              style={styles.bookPickerBackdrop}
-              onPress={closeBookPicker}
-              disableFeedback
-            >
-              <Pressable
-                style={styles.bookPickerSheet}
-                onPress={(event) => event.stopPropagation()}
-                disableFeedback
-              >
                 <View style={styles.bookPickerHeaderRow}>
                   <Text style={styles.bookPickerHeaderText}>책 검색</Text>
                   <IconButton
@@ -2212,10 +2199,7 @@ export function StoryScreen() {
                     </Pressable>
                   ))}
                 </ScrollView>
-              </Pressable>
-            </Pressable>
-          </KeyboardAvoidingView>
-        </Modal>
+        </BottomSheet>
         </KeyboardAvoidingView>
       </ScreenLayout>
     );
