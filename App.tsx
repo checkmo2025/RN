@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -13,6 +12,7 @@ import { BookFlipLoadingScreen } from './src/components/common/BookFlipLoadingSc
 
 function AppRoutes() {
   const {
+    isReady,
     authPageVisible,
     authTransitionLoading,
     authTransitionVariant,
@@ -46,27 +46,17 @@ function AppRoutes() {
           />
         </View>
       ) : null}
+
+      {!isReady ? (
+        <View style={styles.bootOverlay}>
+          <BookFlipLoadingScreen />
+        </View>
+      ) : null}
     </View>
   );
 }
 
 export default function App() {
-  const [bootLoading, setBootLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setBootLoading(false), 1500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (bootLoading) {
-    return (
-      <SafeAreaProvider>
-        <BookFlipLoadingScreen />
-        <StatusBar style="dark" backgroundColor={colors.background} />
-      </SafeAreaProvider>
-    );
-  }
-
   return (
     <SafeAreaProvider>
       <NavigationContainer>
@@ -91,5 +81,9 @@ const styles = StyleSheet.create({
   authTransitionOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1000,
+  },
+  bootOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2000,
   },
 });

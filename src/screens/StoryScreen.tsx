@@ -2307,7 +2307,15 @@ export function StoryScreen() {
           }}
           onEndReachedThreshold={0.3}
           showsVerticalScrollIndicator={false}
-          ListFooterComponent={<View style={{ height: spacing.xxl }} />}
+          ListFooterComponent={
+            isLoadingMore ? (
+              <View style={styles.listFooter}>
+                <Text style={styles.listFooterText}>불러오는 중...</Text>
+              </View>
+            ) : (
+              <View style={{ height: spacing.xxl }} />
+            )
+          }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -2398,6 +2406,14 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: spacing.xl,
+  },
+  listFooter: {
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  listFooterText: {
+    ...typography.body2,
+    color: colors.gray4,
   },
   storyItemSeparator: {
     height: spacing.sm,

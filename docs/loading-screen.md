@@ -1,6 +1,6 @@
 # Loading Screen 점검 정리
 
-- 갱신 시각: `2026-04-29 09:43:33 KST`
+- 갱신 시각: `2026-04-29 KST`
 - 스캔 범위: `App.tsx`, `src/**` (RN)
 - 목적: 로딩 UI가 어디서 어떻게 보이는지(문구/효과/조건) 전수 파악
 
@@ -10,7 +10,7 @@
 
 ### `BookFlipLoadingScreen` 구현
 - 파일: `src/components/common/BookFlipLoadingScreen.tsx`
-- 기본 문구: `로딩중`
+- 기본 문구: `로딩중` (상태 라벨형 — 공백 없음)
 - 시각 효과:
   - 로고 채움 애니메이션(0 -> 100 -> 0 반복)
   - 페이지 넘김 느낌의 edge 애니메이션
@@ -21,16 +21,20 @@
 ### 실제 사용 위치(렌더 기준 4곳)
 | 위치 | 조건 | 문구 | 효과 |
 |---|---|---|---|
-| `App.tsx:64` | 앱 부팅 `bootLoading=true` (1500ms) | `로딩중` | 전체 화면 로더 |
-| `App.tsx:35` | `authTransitionLoading=true` | `로딩중` + (`해당 서비스는 로그인이 필요합니다!`, `로그인 화면으로 이동합니다`) | 전체 화면 오버레이 |
+| `App.tsx` (bootOverlay) | `!isReady` (AuthGate 초기화 완료 전) | `로딩중` | zIndex 2000 전체 화면 오버레이 |
+| `App.tsx` (authTransitionOverlay) | `authTransitionLoading=true` | `로딩중` + 보조 안내 문구 | zIndex 1000 전체 화면 오버레이 |
 | `src/screens/StoryScreen.tsx:1680` | `submittingStory=true` | `로딩중` | 화면 대체(full-screen) |
 | `src/screens/MeetingScreen.tsx:1167` | `openingClubLoading=true` | `로딩중` | 그룹 홈 위 오버레이 (`absoluteFill`) |
+
+> **부팅 로더 정책 변경 (2026-04-29):**  
+> `App.tsx` 1500ms 고정 타이머 → `AuthGateContext.isReady` 이벤트 기반으로 전환.  
+> `AuthGateContext` 전환 로더: 1200ms → `AUTH_TRANSITION_MS = 400ms` 상수로 단축.
 
 ---
 
 ## 2) 당겨서 새로고침 스피너 (`RefreshControl`)
 
-- 공통 효과: 네이티브 스피너 표시 (`tintColor/colors = primary1`)
+- 공통 효과: 네이티브 스피너 표시 (시스템 기본 색상)
 - 사용 위치(렌더 기준 10곳):
   - `src/screens/HomeScreen.tsx:559`
   - `src/screens/NewsScreen.tsx:547`
@@ -62,6 +66,12 @@
   - 문구: `불러오는 중...`
   - 조건: `loadingDetail`
   - 효과: 상세 본문 텍스트 대체
+
+### Story
+- `src/screens/StoryScreen.tsx` (ListFooterComponent)
+  - 문구: `불러오는 중...`
+  - 조건: `isLoadingMore`
+  - 효과: 리스트 하단 인라인 텍스트 (2026-04-29 추가)
 
 ### UserProfile
 - `src/screens/UserProfileScreen.tsx:694` `서재를 불러오는 중...` (`loadingBooks`)
@@ -102,6 +112,8 @@
 
 ## 4) 버튼 상태형 로딩 문구/효과
 
+> 진행 동작형 문구는 `동사 + 중...` (공백 + 말줄임표) 형태로 통일 완료. (2026-04-29, 1번 항목 기준)
+
 ### AuthFlow
 - `src/screens/AuthFlowScreen.tsx:954` `발송 중...`
 - `src/screens/AuthFlowScreen.tsx:990` `확인 중...`
@@ -117,7 +129,7 @@
 - `src/screens/UserProfileScreen.tsx:969` `처리 중...` (프로필 상단 구독 버튼)
 
 ### MyPage
-- `src/screens/MyPageScreen.tsx:1806` `삭제중...`
+- `src/screens/MyPageScreen.tsx:1806` `삭제 중...`
 - `src/screens/MyPageScreen.tsx:2093` `업로드 중...`
 - `src/screens/MyPageScreen.tsx:2147` `변경 중...`
 - `src/screens/MyPageScreen.tsx:2288` `변경 중...`
@@ -129,18 +141,18 @@
 
 ### Meeting
 - `src/screens/MeetingScreen.tsx:9530` `불러오는 중...` (다음 모임 바로가기 버튼)
-- `src/screens/MeetingScreen.tsx:10806` `저장중...`
-- `src/screens/MeetingScreen.tsx:10962` `수정중...`
-- `src/screens/MeetingScreen.tsx:10963` `등록중...`
+- `src/screens/MeetingScreen.tsx:10806` `저장 중...`
+- `src/screens/MeetingScreen.tsx:10962` `수정 중...`
+- `src/screens/MeetingScreen.tsx:10963` `등록 중...`
 - `src/screens/MeetingScreen.tsx:11027` `검색 중...`
-- `src/screens/MeetingScreen.tsx:11324` `업로드중...`
-- `src/screens/MeetingScreen.tsx:11625` `삭제중...`
-- `src/screens/MeetingScreen.tsx:11639` `저장중...`
-- `src/screens/MeetingScreen.tsx:11666` `등록중...`
-- `src/screens/MeetingScreen.tsx:11755` `처리중...`
-- `src/screens/MeetingScreen.tsx:12251` `업로드중`
-- `src/screens/MeetingScreen.tsx:13116` `확인중...`
-- `src/screens/MeetingScreen.tsx:13242` `업로드중...`
+- `src/screens/MeetingScreen.tsx:11324` `업로드 중...`
+- `src/screens/MeetingScreen.tsx:11625` `삭제 중...`
+- `src/screens/MeetingScreen.tsx:11639` `저장 중...`
+- `src/screens/MeetingScreen.tsx:11666` `등록 중...`
+- `src/screens/MeetingScreen.tsx:11755` `처리 중...`
+- `src/screens/MeetingScreen.tsx:12251` `업로드 중`
+- `src/screens/MeetingScreen.tsx:13116` `확인 중...`
+- `src/screens/MeetingScreen.tsx:13242` `업로드 중...`
 - `src/screens/MeetingScreen.tsx:13465` `완료 중...`
 
 ### 공통 모달
@@ -148,32 +160,11 @@
 
 ---
 
-## 5) 점검 중 확인된 특이사항(불안정 체감 가능 포인트)
-
-1. 전역/전환 로더가 고정 시간 기반
-- `App.tsx:57` 부팅 로더 1500ms 고정
-- `src/contexts/AuthGateContext.tsx:42` 인증 전환 로더 1200ms 고정
-- 실제 네트워크/준비 시간과 분리되어, 빠른 케이스에서 체감 지연/깜빡임이 생길 수 있음
-
-2. `BookFlipLoadingScreen` 일부 애니메이션은 JS thread 의존
-- `src/components/common/BookFlipLoadingScreen.tsx`에서 fill 애니메이션이 `useNativeDriver: false`
-- 프레임 드롭 상황에서 부드럽지 않게 보일 여지 있음
-
-3. 로딩 표현 방식이 화면마다 혼재
-- 전체화면(북플립), 오버레이, 인라인 텍스트, 버튼 라벨, pull-to-refresh가 섞여 일관감이 낮음
-
-4. 문구 표기 통일성 이슈
-- `업로드 중...` vs `업로드중...`
-- `처리 중...` vs `처리중...`
-- `저장중...` vs `저장 중...`(일부 화면)
-
-5. 일부 로딩 상태는 시각 피드백이 약함
-- 예: `StoryScreen`의 `isLoadingMore`는 페이징 가드로 쓰이지만 별도 로딩 문구/스피너 없음
-
----
-
-## 6) 현재 결론
+## 5) 현재 상태 요약
 
 - `ActivityIndicator` 직접 사용: **0건**
-- 전용 로더는 `BookFlipLoadingScreen` 단일 컴포넌트로 운용
-- 다만 실제 사용자 체감은 화면별로 로딩 표기 방식이 달라 일관성이 떨어질 가능성이 높음
+- 전용 로더: `BookFlipLoadingScreen` 단일 컴포넌트 (L1/L2 용도)
+- 부팅 로더: 실제 준비 이벤트(`AuthGate.isReady`) 기반 — 고정 타이머 제거 완료
+- 전환 로더: `AUTH_TRANSITION_MS = 400ms` 상수 기반 (최소 표시 시간)
+- 인라인 피드백: 텍스트 방식으로 통일 (스피너 없음 — 현 정책 유지)
+- 페이지네이션 피드백: `StoryScreen` `isLoadingMore` 리스트 하단 피드백 추가 완료

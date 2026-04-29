@@ -3,7 +3,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { ApiError } from '../services/api/http';
 import { fetchLoginStatusSilently } from '../services/api/authApi';
 
+const AUTH_TRANSITION_MS = 400;
+
 type AuthGateContextValue = {
+  isReady: boolean;
   isLoggedIn: boolean;
   authPageVisible: boolean;
   authTransitionLoading: boolean;
@@ -21,6 +24,7 @@ type Props = {
 };
 
 export function AuthGateProvider({ children }: Props) {
+  const [isReady, setIsReady] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const isLoggedInRef = useRef(false);
   const [authPageVisible, setAuthPageVisible] = useState(false);
@@ -43,7 +47,7 @@ export function AuthGateProvider({ children }: Props) {
         setAuthTransitionLoading(false);
         setAuthTransitionVariant('default');
         transitionTimerRef.current = null;
-      }, 1200);
+      }, AUTH_TRANSITION_MS);
     },
     [],
   );
@@ -61,14 +65,16 @@ export function AuthGateProvider({ children }: Props) {
         const status = await fetchLoginStatusSilently(true);
         if (!cancelled) {
           setLoginState(status !== null);
+          setIsReady(true);
         }
       } catch (error) {
         if (cancelled) return;
         if (error instanceof ApiError && error.status === 401) {
           setLoginState(false);
-          return;
+        } else {
+          setLoginState(false);
         }
-        setLoginState(false);
+        setIsReady(true);
       }
     };
 
@@ -123,6 +129,7 @@ export function AuthGateProvider({ children }: Props) {
 
   const value = useMemo<AuthGateContextValue>(
     () => ({
+      isReady,
       isLoggedIn,
       authPageVisible,
       authTransitionLoading,
@@ -133,6 +140,7 @@ export function AuthGateProvider({ children }: Props) {
       logout,
     }),
     [
+      isReady,
       authPageVisible,
       authTransitionLoading,
       authTransitionVariant,
