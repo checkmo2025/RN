@@ -1,6 +1,6 @@
 # TODO
 
-> 마지막 업데이트: 2026-04-29 21:36 KST (화면 움직임 TODO 추가)
+> 마지막 업데이트: 2026-04-29 KST (UI 통일 10개 항목 전체 완료)
 
 ---
 
@@ -22,7 +22,7 @@
 
 | 상태 | 역할 | 항목 | 설명 |
 |------|------|------|------|
-| 🔄 | **RN** | **총 10개 항목 정리하기** | `docs/ui-consistency-top10.md` 작성. RN 기준 통일 항목 10개(문구, 로딩, 버튼, 입력, spacing, radius/border/shadow, 모달, 모션/햅틱, 피드백 문구, 접근성/이벤트)를 트랙으로 고정. |
+| ✅ | **RN** | **총 10개 항목 정리하기** | `docs/ui-consistency-top10.md` 작성. RN 기준 통일 항목 10개 전체 완료(1~10번 모두 ✅). |
 | ✅ | **RN** | **1번: 문구/카피 규칙 통일** | `docs/ui-copy-consistency.md` 작성. `~중` 표기 통일 완료 — 상태 라벨형(`구독중`, `로딩중` 등) 공백 없이, 진행 동작형(`업로드 중...` 등) 공백+말줄임표 적용. `오류 메시지 기술용어 대체` 커밋(f6b7b32) 포함. |
 | ✅ | **RN** | **2번: 로딩 피드백 규칙 통일** | 부팅 로더 1500ms 고정 타이머 → `AuthGate.isReady` 이벤트 기반 전환. 전환 로더 1200ms → `AUTH_TRANSITION_MS=400ms` 상수 단축. `StoryScreen` `isLoadingMore` 리스트 하단 인라인 피드백 추가. `loading-screen.md` 최신화 완료. |
 | ✅ | **RN** | **3번: 버튼 규격 통일** | `AppButton` 컴포넌트 강화 — variant(primary/secondary/outline/danger), size(lg/md), loading+loadingLabel, fullWidth prop 추가. `AuthFlowScreen` 전체 주요 CTA 버튼 AppButton으로 교체 완료. 나머지 336 Pressable은 2차 정리 대상. |

@@ -814,3 +814,62 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `src/screens/AuthFlowScreen.tsx`
 - `src/screens/StoryScreen.tsx`
 - `docs/todo.md`
+
+## 업데이트 (2026-04-29)
+
+수정 시각: 2026-04-29 KST
+
+### UI 통일 8번 — 모션/햅틱 규칙 통일 완료
+
+- `BottomTabs`: `Haptics.selectionAsync()` 직접 호출 → `triggerSelectionHaptic()` 경유, `expo-haptics` import 제거
+- `BookFlipLoadingScreen`: `useNativeDriver: false` 2건 이유 주석 추가 (width 애니메이션)
+- `MyPageScreen`: `useNativeDriver: false` 이유 주석 추가 (backgroundColor 애니메이션)
+- `MeetingScreen`: 시트 드래그(`MGMT_SHEET_*`) · 채팅 스와이프백(`CHAT_SWIPE_*`) PanResponder 임계값 상수화 (값 동일 유지)
+- `docs/todo.md` 8번 ✅ 완료 처리
+
+## 작업 파일
+- `src/navigation/BottomTabs.tsx`
+- `src/components/common/BookFlipLoadingScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `docs/todo.md`
+
+---
+
+### UI 통일 9번 — 피드백 문구 통일 완료
+
+- Alert 메시지 본문 요→니다체 3건 수정
+  - `'${group.name}' 모임에서 탈퇴할까요?` → `탈퇴하시겠습니까?`
+  - `이 글을 삭제할까요?` → `삭제하시겠습니까?`
+  - `신고하기를 이용해주세요.` → `이용해 주십시오.`
+- Alert 버튼 레이블: 이미 취소/동사 형태로 일관 확인 (변경 없음)
+- 토스트 71건 어투 통일은 별도 todo(`⬜ 토스트 문구 어투 통일`)로 분리
+- `docs/todo.md` 9번 ✅ 완료 처리
+
+## 작업 파일
+- `src/screens/MyPageScreen.tsx`
+- `src/screens/StoryScreen.tsx`
+- `src/screens/UserProfileScreen.tsx`
+- `docs/todo.md`
+
+---
+
+### UI 통일 10번 — 접근성 기준 보강 완료
+
+- `IconButton`: `accessibilityLabel?: string` prop 추가, `accessibilityRole="button"` 기본 탑재
+- `FloatingActionButton`: 동일하게 prop 추가 + role 기본 탑재
+- `AppHeader`: `HeaderAction` type에 `label` 필드 추가, 검색·알림·뒤로가기·검색어지우기 라벨 연결
+- `StoryScreen`: 책피커 닫기·검색어지우기·글작성 FAB 라벨
+- `MeetingScreen`: 채팅조선택 FAB 라벨
+- `NewsScreen`: 문의하기 FAB 라벨
+- **UI 통일 10개 항목 전체 ✅ 완료**
+- `docs/todo.md` 10번 + 총괄 항목 ✅ 완료 처리
+
+## 작업 파일
+- `src/components/common/IconButton.tsx`
+- `src/components/common/FloatingActionButton.tsx`
+- `src/components/common/AppHeader.tsx`
+- `src/screens/StoryScreen.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/NewsScreen.tsx`
+- `docs/todo.md`
