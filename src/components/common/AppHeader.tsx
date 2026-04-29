@@ -1322,7 +1322,7 @@ const styles = StyleSheet.create({
     right: 0,
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: radius.xs,
     backgroundColor: colors.likeRed,
   },
   notiBackdrop: {
@@ -1334,7 +1334,7 @@ const styles = StyleSheet.create({
   },
   notiCard: {
     backgroundColor: colors.white,
-    borderRadius: spacing.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.gray2,
     padding: spacing.sm,
@@ -1344,7 +1344,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    borderRadius: spacing.xs,
+    borderRadius: radius.sm,
     paddingVertical: spacing.xs / 2,
     paddingHorizontal: spacing.xs / 2,
   },
@@ -1354,7 +1354,7 @@ const styles = StyleSheet.create({
   notiDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: radius.xs,
     backgroundColor: colors.gray3,
   },
   notiDotActive: {
@@ -1379,7 +1379,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.gray2,
     paddingVertical: spacing.xs,
-    borderRadius: spacing.xs,
+    borderRadius: radius.sm,
     alignItems: 'center',
     marginTop: spacing.xs / 2,
   },
@@ -1438,7 +1438,7 @@ const styles = StyleSheet.create({
   dropdownRecoThumbWrap: {
     width: '100%',
     aspectRatio: 5 / 7,
-    borderRadius: 12,
+    borderRadius: radius.md,
     overflow: 'hidden',
     backgroundColor: colors.subbrown4,
   },
@@ -1568,7 +1568,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     backgroundColor: colors.white,
-    borderRadius: spacing.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.subbrown4,
     padding: spacing.md,
@@ -1579,7 +1579,7 @@ const styles = StyleSheet.create({
   resultThumb: {
     width: 96,
     height: 138,
-    borderRadius: spacing.xs,
+    borderRadius: radius.sm,
     backgroundColor: colors.gray1,
   },
   resultBody: {

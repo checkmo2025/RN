@@ -230,8 +230,8 @@ const styles = StyleSheet.create({
   cover: {
     width: '52%',
     height: '92%',
-    borderRadius: spacing.xs,
-    shadowColor: '#000',
+    borderRadius: radius.sm,
+    shadowColor: colors.black,
     shadowOpacity: 0.16,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   coverPlaceholder: {
     width: '52%',
     height: '92%',
-    borderRadius: spacing.xs,
+    borderRadius: radius.sm,
     backgroundColor: colors.gray1,
   },
   title: {

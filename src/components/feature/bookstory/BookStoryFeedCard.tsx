@@ -276,8 +276,8 @@ const styles = StyleSheet.create({
   coverCenterImage: {
     width: '52%',
     height: '92%',
-    borderRadius: spacing.xs,
-    shadowColor: '#000',
+    borderRadius: radius.sm,
+    shadowColor: colors.black,
     shadowOpacity: 0.16,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   coverCenterPlaceholder: {
     width: '52%',
     height: '92%',
-    borderRadius: spacing.xs,
+    borderRadius: radius.sm,
     backgroundColor: colors.gray1,
   },
   body: {

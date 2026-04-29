@@ -2987,7 +2987,7 @@ const styles = StyleSheet.create({
   defaultAvatarOption: {
     width: '19%',
     aspectRatio: 1,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.subbrown3,
     alignItems: 'center',
@@ -3158,7 +3158,7 @@ const styles = StyleSheet.create({
   alarmDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: radius.xs,
     backgroundColor: colors.gray3,
   },
   alarmDotActive: {
@@ -3247,7 +3247,7 @@ const styles = StyleSheet.create({
   toggleTrack: {
     width: '100%',
     height: '100%',
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 1,
     paddingHorizontal: 2,
     justifyContent: 'center',

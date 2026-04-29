@@ -743,3 +743,44 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `scripts/check-spacing-hardcode.sh` (신규)
 - `package.json`
 - `docs/todo.md`
+
+---
+
+## 업데이트 (2026-04-29)
+
+수정 시각: 2026-04-29 KST
+
+### UI 통일 6번 — radius/border/shadow 통일 완료
+
+- `borderRadius` 하드코딩 58건 → 0건(정책 예외 제외)
+  - `4 → radius.xs`: dot/tag/checkbox/thumb 등 (AppHeader, NewsScreen, NewsPromotionCarousel, MeetingListCard, MeetingScreen, MyPageScreen)
+  - `8 → radius.sm`: 인디케이터 활성 pill (NewsScreen, NewsPromotionCarousel)
+  - `12 → radius.md`: 드롭다운 썸네일, 토글 트랙 (AppHeader, MyPageScreen)
+  - `16 → radius.lg`: 카드/알림 패널 (AppHeader × 2)
+  - `999 → radius.pill`: 핸들바, 색상 선택 원형 (MeetingScreen, AuthFlowScreen, MyPageScreen)
+  - `spacing.xs/md` borderRadius 오용 → `radius.sm/lg` 교정 (AppHeader × 5)
+  - `spacing.xs` → `radius.sm`: 책 표지 이미지 shadow 컨테이너 (BookStoryCard, BookStoryFeedCard)
+  - 예외 유지: 원형 아바타 width/2 값(9·16·20·21·44·46·48 등), 컴포넌트 전용 shape(10·11·13·14·18·19·23·32 등)
+- `shadowColor: '#000'` / `'#000000'` 11건 → `colors.black` 교체
+  - ActionMenu, ToastHost, HomeColumns, BottomTabs, HomeScreen, StoryScreen(×2), MeetingScreen(×2), BookStoryCard, BookStoryFeedCard
+- `src/theme/radius.ts` 예외 정책 주석 추가
+- `docs/todo.md` 6번 항목 ✅ 완료 처리
+
+## 작업 파일
+- `src/theme/radius.ts`
+- `src/components/common/AppHeader.tsx`
+- `src/components/common/ActionMenu.tsx`
+- `src/components/common/ToastHost.tsx`
+- `src/components/feature/bookstory/BookStoryCard.tsx`
+- `src/components/feature/bookstory/BookStoryFeedCard.tsx`
+- `src/components/feature/groups/MeetingListCard.tsx`
+- `src/components/feature/news/NewsPromotionCarousel.tsx`
+- `src/components/feature/home/HomeColumns.tsx`
+- `src/navigation/BottomTabs.tsx`
+- `src/screens/HomeScreen.tsx`
+- `src/screens/NewsScreen.tsx`
+- `src/screens/StoryScreen.tsx`
+- `src/screens/AuthFlowScreen.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+- `docs/todo.md`

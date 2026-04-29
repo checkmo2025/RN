@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tag: {
-    borderRadius: 4,
+    borderRadius: radius.xs,
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
     alignItems: 'center',
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   thumb: {
     width: 74,
     height: 74,
-    borderRadius: 4,
+    borderRadius: radius.xs,
     backgroundColor: colors.gray1,
     overflow: 'hidden',
   },

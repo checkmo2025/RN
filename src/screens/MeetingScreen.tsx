@@ -1771,7 +1771,7 @@ const styles = StyleSheet.create({
   checkBoxSquare: {
     width: 20,
     height: 20,
-    borderRadius: 4,
+    borderRadius: radius.xs,
     borderWidth: 1,
     borderColor: colors.gray3,
   },
@@ -2166,7 +2166,7 @@ const styles = StyleSheet.create({
   managementHandle: {
     width: 44,
     height: 4,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     backgroundColor: colors.gray2,
   },
   managementMenuTitle: {
@@ -2447,7 +2447,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOpacity: 0.12,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -4261,7 +4261,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     padding: spacing.sm,
     gap: spacing.xs,
-    shadowColor: '#000000',
+    shadowColor: colors.black,
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -4353,7 +4353,7 @@ const styles = StyleSheet.create({
   regularChatConnDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: radius.xs,
   },
   regularChatConnDotOn: {
     backgroundColor: '#4CAF50',

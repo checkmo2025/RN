@@ -1729,7 +1729,7 @@ const styles = StyleSheet.create({
   profileColorOption: {
     width: '19%',
     aspectRatio: 1,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.subbrown3,
     alignItems: 'center',

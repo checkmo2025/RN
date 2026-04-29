@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   dot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: radius.xs,
     backgroundColor: colors.gray2,
   },
   dotActive: {
@@ -185,6 +185,6 @@ const styles = StyleSheet.create({
   },
   dotActiveSize: {
     width: 16,
-    borderRadius: 8,
+    borderRadius: radius.sm,
   },
 });
