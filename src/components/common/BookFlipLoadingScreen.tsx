@@ -28,14 +28,14 @@ export function BookFlipLoadingScreen({
           toValue: 1,
           duration: 1300,
           easing: Easing.inOut(Easing.cubic),
-          useNativeDriver: false,
+          useNativeDriver: false, // width 애니메이션은 native driver 불가
         }),
         Animated.delay(120),
         Animated.timing(fillProgress, {
           toValue: 0,
           duration: 240,
           easing: Easing.out(Easing.quad),
-          useNativeDriver: false,
+          useNativeDriver: false, // width 애니메이션은 native driver 불가
         }),
       ]),
     );

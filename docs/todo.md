@@ -30,7 +30,7 @@
 | ✅ | **RN** | **5번: spacing 토큰 적용 통일** | 하드코딩 54건 → 0건(정책 예외 제외). 예외 정책(0/음수/2·3·6/디자인값) 주석 명시. `npm run check:spacing` 스크립트 추가, `npm run check`에 통합. |
 | ✅ | **RN** | **6번: radius/border/shadow 통일** | borderRadius 하드코딩 58건 → 0건(정책 예외 제외). shadowColor `'#000'`/`'#000000'` 11건 → `colors.black` 교체. AppHeader의 `spacing.xs/md` borderRadius 오용 → `radius.sm/lg` 교정. 예외 정책(원형 아바타 width/2, 컴포넌트 전용 shape) `radius.ts` 주석에 명시. |
 | ✅ | **RN** | **7번: 모달/바텀시트 패턴 통일** | `docs/ui-modal-bottomsheet-consistency.md` 작성. `DialogOverlay`(`Modal+transparent+fade`) · `BottomSheet`(`Modal+transparent+slide`) 공용 컴포넌트 생성. MeetingScreen 5건·MyPageScreen 1건·AuthFlowScreen 2건·StoryScreen 1건 총 9개 인라인 Modal → 공용 컴포넌트 교체 완료. |
-| 🔄 | **RN** | **8번: 모션/햅틱 규칙 통일** | `docs/ui-motion-haptic-consistency.md` 작성. `Animated`, `PanResponder`, `LayoutAnimation`, 햅틱 호출 현황 기반 공통 규칙 초안 완료. |
+| ✅ | **RN** | **8번: 모션/햅틱 규칙 통일** | `docs/ui-motion-haptic-consistency.md` 작성. BottomTabs 직접 햅틱 호출(`Haptics.selectionAsync`) → `triggerSelectionHaptic()` 통일. `useNativeDriver: false` 3건 이유 주석 추가. MeetingScreen PanResponder 임계값 7개 named 상수로 추출(감도 값 유지). |
 | ⬜ | **RN** | **화면 움직임 신경쓰기(애니메이션 적용)** | 현재 화면 전환/요소 등장 모션이 부족해 딱딱한 느낌. 주요 화면(홈/모임/스토리/모달)에 공통 `duration/easing` 적용 후 체감 QA 진행. |
 | 🔄 | **RN** | **9번: 피드백 문구 통일** | `docs/ui-feedback-message-consistency.md` 작성. `showToast` 322건, `Alert` 19건 분포 기반 채널/톤/중복 방지 규칙 초안 완료. |
 | 🔄 | **RN** | **10번: 접근성/이벤트 네이밍 통일** | `docs/ui-accessibility-event-naming-consistency.md` 작성. 접근성 속성 사용 현황(7건), `testID` 공백(0건), 이벤트 네이밍 기준 정리 완료. |

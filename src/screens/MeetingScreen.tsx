@@ -5291,15 +5291,18 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const shouldScrollToBookshelfDetailRef = useRef(false);
   const [managementMenuVisible, setManagementMenuVisible] = useState(false);
   const managementSheetY = useRef(new Animated.Value(0)).current;
+  const MGMT_SHEET_DRAG_START = 6;
+  const MGMT_SHEET_DISMISS_DISTANCE = 100;
+  const MGMT_SHEET_DISMISS_VELOCITY = 0.5;
   const managementHandlePanResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_evt, gestureState) =>
-        gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
+        gestureState.dy > MGMT_SHEET_DRAG_START && Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
       onPanResponderMove: (_evt, gestureState) => {
         if (gestureState.dy > 0) managementSheetY.setValue(gestureState.dy);
       },
       onPanResponderRelease: (_evt, gestureState) => {
-        if (gestureState.dy > 100 || gestureState.vy > 0.5) {
+        if (gestureState.dy > MGMT_SHEET_DISMISS_DISTANCE || gestureState.vy > MGMT_SHEET_DISMISS_VELOCITY) {
           Animated.timing(managementSheetY, {
             toValue: 600,
             duration: 220,
@@ -8299,13 +8302,17 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const handleCloseRegularChatRef = useRef(handleCloseRegularChat);
   useEffect(() => { handleCloseRegularChatRef.current = handleCloseRegularChat; });
 
+  const CHAT_SWIPE_START_X = 30;
+  const CHAT_SWIPE_START_DX = 8;
+  const CHAT_SWIPE_DISMISS_DISTANCE = 60;
+  const CHAT_SWIPE_DISMISS_VELOCITY = 0.5;
   const chatSwipePanResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        return evt.nativeEvent.pageX < 30 && gestureState.dx > 8 && Math.abs(gestureState.dy) < Math.abs(gestureState.dx);
+        return evt.nativeEvent.pageX < CHAT_SWIPE_START_X && gestureState.dx > CHAT_SWIPE_START_DX && Math.abs(gestureState.dy) < Math.abs(gestureState.dx);
       },
       onPanResponderRelease: (_evt, gestureState) => {
-        if (gestureState.dx > 60 || gestureState.vx > 0.5) {
+        if (gestureState.dx > CHAT_SWIPE_DISMISS_DISTANCE || gestureState.vx > CHAT_SWIPE_DISMISS_VELOCITY) {
           handleCloseRegularChatRef.current();
         }
       },

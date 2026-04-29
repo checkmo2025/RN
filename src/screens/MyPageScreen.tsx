@@ -356,7 +356,7 @@ function NotificationToggle({
       toValue: enabled ? 1 : 0,
       duration: 180,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
+      useNativeDriver: false, // backgroundColor 애니메이션은 native driver 불가
     }).start();
   }, [enabled, progress]);
 
