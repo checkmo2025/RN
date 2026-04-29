@@ -873,3 +873,20 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `src/screens/MeetingScreen.tsx`
 - `src/screens/NewsScreen.tsx`
 - `docs/todo.md`
+
+---
+
+## 업데이트 (2026-04-30)
+
+수정 시각: 2026-04-30 KST
+
+### 로그아웃 후 홈 탭 이동 버그 수정
+
+- `MyPageScreen` 로그아웃 성공 시 `navigation.navigate('Home')` → `navigateToHome(navigation)` 교체
+- `navigate('Home')`은 스택 내에서만 동작해 중첩 탭 구조(`Tabs > Home`)를 제대로 찾지 못했음
+- `navigateToHome` 유틸이 부모 navigator를 순회해 Tabs navigator를 찾아 올바르게 이동
+
+## 작업 파일
+- `src/screens/MyPageScreen.tsx`
+- `docs/todo.md`
+
