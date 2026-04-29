@@ -1,6 +1,6 @@
 # TODO
 
-> 마지막 업데이트: 2026-04-29 10:13 KST
+> 마지막 업데이트: 2026-04-29 10:36 KST
 
 ---
 
@@ -15,6 +15,24 @@
 | ✅ | **RN** | **글씨 크기 통일 확인** | `fontSize`/`lineHeight`/`letterSpacing` 하드코딩 제거 완료(0건). `typography` 토큰 승격(15/16 포함), 재발 방지 스크립트(`npm run check:typography`) 적용 완료. |
 | ✅ | **RN** | **로딩 화면 전수 점검 문서화** | `loading-screen.md` 작성 완료. `BookFlipLoadingScreen` 사용처, 인라인 로딩 문구, 버튼 상태형 로딩, `RefreshControl` 위치를 전수 정리. |
 | 🔄 | **RN** | **로딩 UX 통일/안정화** | 진행중: Pull-to-refresh는 시스템 기본 색상으로 우선 전환 완료. 남은 작업: (1) `업로드중/업로드 중` 등 문구 표기 통일, (2) 고정시간 로더(부팅 1500ms/인증전환 1200ms) 정책 재검토, (3) 텍스트-only 로딩 구간 공통 피드백 규칙, (4) RN `RefreshControl` 커스텀 가능 범위 문서 확인 후 커스텀 적용 여부 결정. |
+
+---
+
+## 🧭 UI 통일 10개 항목
+
+| 상태 | 역할 | 항목 | 설명 |
+|------|------|------|------|
+| 🔄 | **RN** | **총 10개 항목 정리하기** | `docs/ui-consistency-top10.md` 작성. RN 기준 통일 항목 10개(문구, 로딩, 버튼, 입력, spacing, radius/border/shadow, 모달, 모션/햅틱, 피드백 문구, 접근성/이벤트)를 트랙으로 고정. |
+| 🔄 | **RN** | **1번: 문구/카피 규칙 통일** | `docs/ui-copy-consistency.md` 작성. `~중` 표기 혼재 현황 전수 스캔 및 1차/2차 정리 범위 정의 완료. 다음 단계는 코드 치환 적용 및 회귀 점검. |
+| 🔄 | **RN** | **2번: 로딩 피드백 규칙 통일** | `docs/ui-loading-feedback-consistency.md` 작성. 로딩 레벨(L1~L5), 문구/타이밍 정책, 1차/2차 정리 대상 정의 완료. |
+| 🔄 | **RN** | **3번: 버튼 규격 통일** | `docs/ui-button-consistency.md` 작성. 공용 버튼 활용도/Pressable 분산 현황 스캔 및 타입/사이즈/상태 통일 규칙 초안 완료. |
+| 🔄 | **RN** | **4번: 입력 폼 규격 통일** | `docs/ui-input-form-consistency.md` 작성. `TextInput` 전수 현황(53건) 기반으로 필드 타입/시각/동작/검증 규칙 초안 완료. |
+| 🔄 | **RN** | **5번: spacing 토큰 적용 통일** | `docs/ui-spacing-token-consistency.md` 작성. spacing 토큰 사용(812) vs 하드코딩(54) 현황 및 1차 치환 대상 정의 완료. |
+| 🔄 | **RN** | **6번: radius/border/shadow 통일** | `docs/ui-radius-border-shadow-consistency.md` 작성. `borderRadius` 하드코딩(58), shadow/elevation(70라인), 색상 하드코딩 현황 기반 통일 규칙 초안 완료. |
+| 🔄 | **RN** | **7번: 모달/바텀시트 패턴 통일** | `docs/ui-modal-bottomsheet-consistency.md` 작성. `Modal` 19개 사용처 분포/애니메이션(`fade/slide/none`) 기준으로 타입별 패턴 정의 완료. |
+| 🔄 | **RN** | **8번: 모션/햅틱 규칙 통일** | `docs/ui-motion-haptic-consistency.md` 작성. `Animated`, `PanResponder`, `LayoutAnimation`, 햅틱 호출 현황 기반 공통 규칙 초안 완료. |
+| 🔄 | **RN** | **9번: 피드백 문구 통일** | `docs/ui-feedback-message-consistency.md` 작성. `showToast` 322건, `Alert` 19건 분포 기반 채널/톤/중복 방지 규칙 초안 완료. |
+| 🔄 | **RN** | **10번: 접근성/이벤트 네이밍 통일** | `docs/ui-accessibility-event-naming-consistency.md` 작성. 접근성 속성 사용 현황(7건), `testID` 공백(0건), 이벤트 네이밍 기준 정리 완료. |
 
 ---
 
