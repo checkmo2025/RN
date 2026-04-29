@@ -2580,8 +2580,6 @@ export function MyPageScreen() {
                 };
                 void refresh();
               }}
-              tintColor={colors.primary1}
-              colors={[colors.primary1]}
             />
           }
         >
@@ -2683,8 +2681,6 @@ export function MyPageScreen() {
                 };
                 void refresh();
               }}
-              tintColor={colors.primary1}
-              colors={[colors.primary1]}
             />
           }
         >

@@ -547,8 +547,6 @@ export function NewsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={colors.primary1}
-            colors={[colors.primary1]}
           />
         }
       >
@@ -672,8 +670,6 @@ export function NewsScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor={colors.primary1}
-              colors={[colors.primary1]}
             />
           }
         />

@@ -908,8 +908,6 @@ export function UserProfileScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={showFollowPage ? handleFollowPageRefresh : handleRefresh}
-              tintColor={colors.primary1}
-              colors={[colors.primary1]}
             />
           }
         >

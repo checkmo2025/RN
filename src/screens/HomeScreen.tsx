@@ -559,8 +559,6 @@ export function HomeScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor={colors.primary1}
-              colors={[colors.primary1]}
             />
           }
         />

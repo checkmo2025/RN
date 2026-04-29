@@ -1183,8 +1183,6 @@ export function MeetingScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={colors.primary1}
-            colors={[colors.primary1]}
           />
         }
       >
@@ -9396,8 +9394,6 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           <RefreshControl
             refreshing={groupHomeRefreshing}
             onRefresh={handleRefreshGroupHome}
-            tintColor={colors.primary1}
-            colors={[colors.primary1]}
           />
         }
       >

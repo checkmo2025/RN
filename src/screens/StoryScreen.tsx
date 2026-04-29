@@ -1705,8 +1705,6 @@ export function StoryScreen() {
               <RefreshControl
                 refreshing={detailRefreshing}
                 onRefresh={handleRefreshSelectedStory}
-                tintColor={colors.primary1}
-                colors={[colors.primary1]}
               />
             }
           >
@@ -2314,8 +2312,6 @@ export function StoryScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor={colors.primary1}
-              colors={[colors.primary1]}
             />
           }
         />
