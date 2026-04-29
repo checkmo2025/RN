@@ -679,3 +679,30 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `src/components/feature/groups/MeetingListCard.tsx`
 - `src/components/common/AppHeader.tsx`
 - `docs/todo.md`
+
+---
+
+## 업데이트 (2026-04-29) — 입력 한도 토스트
+
+수정 시각: 2026-04-29 KST
+
+### 입력 한도 도달 시 토스트 피드백 추가
+
+- `src/utils/input.ts` 신규: `withLimitToast(onChange, maxLength)` 헬퍼
+  - `onChange`를 감싸고, `text.length >= maxLength`이면 `최대 N자까지 입력할 수 있습니다.` 토스트 노출
+- 적용 필드 (총 12개):
+  - **AuthFlowScreen**: 닉네임(20), 소개(40), 이름(10)
+  - **MyPageScreen**: 소개(40)
+  - **MeetingScreen**: 발제/한줄평(300), 모임이름 수정(40), 소개 수정(500), 지역 수정(40), 모임이름 생성(40), 소개 생성(500), 지역 생성(40), 링크 텍스트(20), 링크 URL(100)
+  - **ReportMemberModal**: 신고 내용(500)
+  - **MeetingListCard**: 신청 사유(300)
+- `docs/todo.md`: 카운터 추가 여부 검토 항목 추가, 테스트 항목 추가
+
+## 작업 파일
+- `src/utils/input.ts` (신규)
+- `src/screens/AuthFlowScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/components/common/ReportMemberModal.tsx`
+- `src/components/feature/groups/MeetingListCard.tsx`
+- `docs/todo.md`
