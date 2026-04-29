@@ -78,6 +78,7 @@ import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { formatNotificationText, resolveNotificationTarget } from '../utils/notification';
 import { showToast } from '../utils/toast';
+import { navigateToHome } from '../navigation/navigateToHome';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import { withLimitToast } from '../utils/input';
 
@@ -1310,7 +1311,7 @@ export function MyPageScreen() {
               logout();
               setShowSettings(false);
               setSelectedSetting(null);
-              navigation.navigate('Home');
+              navigateToHome(navigation);
               showToast('로그아웃되었습니다.');
             } catch (error) {
               if (!(error instanceof ApiError)) {
