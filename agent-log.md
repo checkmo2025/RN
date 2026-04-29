@@ -784,3 +784,33 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `src/screens/MeetingScreen.tsx`
 - `src/screens/MyPageScreen.tsx`
 - `docs/todo.md`
+
+## 업데이트 (2026-04-28)
+
+수정 시각: 2026-04-28 KST
+
+### UI 통일 7번 — 모달/바텀시트 패턴 통일 완료
+
+- `DialogOverlay` 공용 컴포넌트 신규 생성 (`src/components/common/DialogOverlay.tsx`)
+  - `Modal transparent animationType="fade"` + 백드롭 Pressable(close) + 카드 Pressable(stopPropagation) 패턴 캡슐화
+  - `overlayStyle`, `cardStyle` prop으로 각 화면 스타일 그대로 사용
+  - `withKeyboard` prop으로 KeyboardAvoidingView 선택 추가
+- `BottomSheet` 공용 컴포넌트 신규 생성 (`src/components/common/BottomSheet.tsx`)
+  - `Modal transparent animationType="slide"` + KeyboardAvoidingView + 백드롭/시트 Pressable 패턴 캡슐화
+  - `backdropStyle`, `sheetStyle`, `keyboardBehavior` prop 지원
+- 인라인 Modal 9건 → 공용 컴포넌트 교체
+  - MeetingScreen 5건: bookshelfComposer(+keyboard), noticeBookSelector, contactModal, regularChatPicker, voteVotersModal
+  - MyPageScreen 1건: defaultAvatarPicker
+  - AuthFlowScreen 2건: termsModal, profileColorModal
+  - StoryScreen 1건: bookPicker (BottomSheet)
+- 미사용 `Modal` import 3개 제거 (AuthFlowScreen, StoryScreen, MyPageScreen)
+- `docs/todo.md` 7번 항목 ✅ 완료 처리
+
+## 작업 파일
+- `src/components/common/DialogOverlay.tsx` (신규)
+- `src/components/common/BottomSheet.tsx` (신규)
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+- `src/screens/AuthFlowScreen.tsx`
+- `src/screens/StoryScreen.tsx`
+- `docs/todo.md`
