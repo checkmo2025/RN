@@ -706,3 +706,40 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `src/components/common/ReportMemberModal.tsx`
 - `src/components/feature/groups/MeetingListCard.tsx`
 - `docs/todo.md`
+
+---
+
+## 업데이트 (2026-04-29)
+
+수정 시각: 2026-04-29 KST
+
+### UI 통일 5번 — spacing 토큰 통일 완료
+
+- spacing 관련 속성 하드코딩 54건 → 0건(정책 예외 제외)
+- 예외 정책 확정 후 `src/theme/spacing.ts`에 주석으로 명시
+  - 허용: `0`, 음수 보정값, `2·3·6`(미세 조정), `10·13·14·18` 등 컴포넌트 전용 디자인값
+  - 금지: spacing 토큰값(`4/8/12/16/20/24/32`)을 직접 숫자로 입력하는 경우
+- 교체 적용 파일 및 내용:
+  - `MeetingListCard`: `gap:4→xxs`, `paddingHorizontal:8→xs`, `gap:8→xs`(2곳)
+  - `BottomTabs`: `paddingTop/Bottom:8→xs`, `spacing` import 추가
+  - `BookFlipLoadingScreen`: `marginTop:14→sm`
+  - `MeetingScreen`: `gap:4→xxs`(filterRow), `paddingVertical:4→xxs`(inputDescenderSafe)
+  - `MyPageScreen`: `paddingVertical:4→xxs`(inputFieldDescenderSafe/inputFieldEmail)
+  - `AuthFlowScreen`: `paddingVertical:4→xxs`(inputDescenderSafe)
+  - `StoryScreen`: `marginTop:4→xxs`(replyPrefix)
+- `scripts/check-spacing-hardcode.sh` 신규 추가 — 토큰값 하드코딩 재발 방지
+- `package.json`: `check:spacing`, `check:spacing:staged` 스크립트 추가, `npm run check`에 통합
+- `docs/todo.md` 5번 항목 ✅ 완료 처리
+
+## 작업 파일
+- `src/theme/spacing.ts`
+- `src/navigation/BottomTabs.tsx`
+- `src/components/feature/groups/MeetingListCard.tsx`
+- `src/components/common/BookFlipLoadingScreen.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+- `src/screens/AuthFlowScreen.tsx`
+- `src/screens/StoryScreen.tsx`
+- `scripts/check-spacing-hardcode.sh` (신규)
+- `package.json`
+- `docs/todo.md`

@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     alignItems: 'flex-end',
-    gap: 4,
+    gap: spacing.xxs,
   },
   privateWrap: {
     flexDirection: 'row',
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   },
   tag: {
     borderRadius: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.xs,
     paddingVertical: 2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: spacing.xs,
   },
   thumb: {
     width: 74,
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     color: colors.gray6,
   },
   applySection: {
-    gap: 8,
+    gap: spacing.xs,
     marginTop: 2,
   },
   applyInput: {

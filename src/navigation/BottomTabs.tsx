@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 
-import { colors, typography } from '../theme';
+import { colors, spacing, typography } from '../theme';
 import { HomeScreen } from '../screens/HomeScreen';
 import { StoryScreen } from '../screens/StoryScreen';
 import { MyPageScreen } from '../screens/MyPageScreen';
@@ -184,8 +184,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -2 },
     elevation: 10,
     height: 84,
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.xs,
     paddingHorizontal: 10,
     marginBottom: 0,
   },

@@ -9,9 +9,11 @@
     "web": "expo start --web",
     "check:typography": "bash scripts/check-typography-hardcode.sh",
     "check:typography:staged": "bash scripts/check-typography-hardcode.sh --staged",
+    "check:spacing": "bash scripts/check-spacing-hardcode.sh",
+    "check:spacing:staged": "bash scripts/check-spacing-hardcode.sh --staged",
     "typecheck": "tsc --noEmit",
     "doctor": "npx expo-doctor",
-    "check": "npm run check:typography && npm run typecheck && npm run doctor"
+    "check": "npm run check:typography && npm run check:spacing && npm run typecheck && npm run doctor"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

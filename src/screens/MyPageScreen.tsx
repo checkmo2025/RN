@@ -3012,10 +3012,10 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   inputFieldDescenderSafe: {
-    paddingVertical: 4,
+    paddingVertical: spacing.xxs,
   },
   inputFieldEmail: {
-    paddingVertical: 4,
+    paddingVertical: spacing.xxs,
   },
   passwordInputRow: {
     flexDirection: 'row',

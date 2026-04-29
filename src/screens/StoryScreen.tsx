@@ -2939,7 +2939,7 @@ const styles = StyleSheet.create({
   replyPrefix: {
     ...typography.body2_3,
     color: colors.gray4,
-    marginTop: 4,
+    marginTop: spacing.xxs,
   },
   commentAvatar: {
     width: 28,

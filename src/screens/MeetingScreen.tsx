@@ -1415,7 +1415,7 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xxs,
     zIndex: 30,
   },
   outputFilterWrap: {
@@ -3474,7 +3474,7 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   bookshelfBookSearchInputDescenderSafe: {
-    paddingVertical: 4,
+    paddingVertical: spacing.xxs,
   },
   bookshelfBookSearchGuide: {
     ...typography.body2_3,

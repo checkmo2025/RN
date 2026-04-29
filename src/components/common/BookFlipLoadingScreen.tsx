@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...typography.caption1_2_trackingWide,
-    marginTop: 14,
+    marginTop: spacing.sm,
     color: '#BDBDBD',
   },
   detailTitle: {

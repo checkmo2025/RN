@@ -1610,7 +1610,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   inputDescenderSafe: {
-    paddingVertical: 4,
+    paddingVertical: spacing.xxs,
   },
   passwordInputRow: {
     position: 'relative',
