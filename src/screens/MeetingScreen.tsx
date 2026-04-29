@@ -12558,7 +12558,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       {activeTab === 'bookshelf' &&
       bookshelfViewMode === 'REGULAR_GROUP' &&
       selectedRegularGroup ? (
-        <FloatingActionButton onPress={handleOpenRegularChatPicker}>
+        <FloatingActionButton onPress={handleOpenRegularChatPicker} accessibilityLabel="채팅 조 선택">
           <SvgUri uri={chatIconUri} width={24} height={24} />
         </FloatingActionButton>
       ) : null}

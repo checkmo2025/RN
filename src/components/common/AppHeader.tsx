@@ -74,6 +74,7 @@ const ALADIN_HOME_URL = PUBLIC_ENV.ALADIN_HOME_URL;
 type HeaderAction = {
   key?: string;
   icon: IconName;
+  label?: string;
   onPress?: () => void;
 };
 
@@ -731,8 +732,8 @@ export function AppHeader(props: Props) {
     Array.isArray(actions) && actions.length > 0
       ? actions
       : [
-          { key: 'search', icon: 'search', onPress: onPressSearch },
-          { key: 'notifications', icon: 'notifications-none', onPress: onPressBell },
+          { key: 'search', icon: 'search', label: '검색', onPress: onPressSearch },
+          { key: 'notifications', icon: 'notifications-none', label: '알림', onPress: onPressBell },
         ];
 
   return (
@@ -745,6 +746,7 @@ export function AppHeader(props: Props) {
               color={colors.white}
               size={26}
               onPress={handleHeaderBack}
+              accessibilityLabel="뒤로가기"
             />
           ) : (
             <Pressable
@@ -766,6 +768,7 @@ export function AppHeader(props: Props) {
               name={action.icon}
               color={colors.white}
               size={24}
+              accessibilityLabel={action.label ?? action.key}
               onPress={() => {
                 if (action.icon === 'notifications-none') {
                   if (!isLoggedIn) {
@@ -928,6 +931,7 @@ export function AppHeader(props: Props) {
                     color={colors.gray2}
                     size={20}
                     onPress={() => setQuery('')}
+                    accessibilityLabel="검색어 지우기"
                   />
                 ) : null}
                 <Pressable
@@ -1042,6 +1046,7 @@ export function AppHeader(props: Props) {
                         name="close"
                         color={colors.gray4}
                         size={20}
+                        accessibilityLabel="검색어 지우기"
                         onPress={() => {
                           setQuery('');
                           setSearched(false);

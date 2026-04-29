@@ -673,7 +673,7 @@ export function NewsScreen() {
             />
           }
         />
-        <FloatingActionButton onPress={handleContact}>
+        <FloatingActionButton onPress={handleContact} accessibilityLabel="문의하기">
           <MaterialIcons name="phone-in-talk" size={22} color={colors.white} />
         </FloatingActionButton>
       </View>

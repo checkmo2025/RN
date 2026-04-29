@@ -33,7 +33,7 @@
 | ✅ | **RN** | **8번: 모션/햅틱 규칙 통일** | `docs/ui-motion-haptic-consistency.md` 작성. BottomTabs 직접 햅틱 호출(`Haptics.selectionAsync`) → `triggerSelectionHaptic()` 통일. `useNativeDriver: false` 3건 이유 주석 추가. MeetingScreen PanResponder 임계값 7개 named 상수로 추출(감도 값 유지). |
 | ⬜ | **RN** | **화면 움직임 신경쓰기(애니메이션 적용)** | 현재 화면 전환/요소 등장 모션이 부족해 딱딱한 느낌. 주요 화면(홈/모임/스토리/모달)에 공통 `duration/easing` 적용 후 체감 QA 진행. |
 | ✅ | **RN** | **9번: 피드백 문구 통일** | `docs/ui-feedback-message-consistency.md` 작성. Alert 메시지 본문 요→니다체 3건 수정(탈퇴할까요/삭제할까요/이용해주세요). Alert 버튼 레이블 이미 전부 취소/동사 일관 확인. 토스트 71건 어투 통일은 별도 todo로 분리. |
-| 🔄 | **RN** | **10번: 접근성/이벤트 네이밍 통일** | `docs/ui-accessibility-event-naming-consistency.md` 작성. 접근성 속성 사용 현황(7건), `testID` 공백(0건), 이벤트 네이밍 기준 정리 완료. |
+| ✅ | **RN** | **10번: 접근성/이벤트 네이밍 통일** | `docs/ui-accessibility-event-naming-consistency.md` 작성. `IconButton`·`FloatingActionButton` 컴포넌트에 `accessibilityRole="button"` + `accessibilityLabel` prop 추가. AppHeader(뒤로가기/검색/알림/검색어지우기) 4건·StoryScreen 3건·MeetingScreen 1건·NewsScreen 1건 총 9건 라벨 부여. |
 
 ---
 

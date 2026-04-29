@@ -2124,6 +2124,7 @@ export function StoryScreen() {
                     color={colors.gray5}
                     size={20}
                     onPress={closeBookPicker}
+                    accessibilityLabel="닫기"
                   />
                 </View>
                 <View style={styles.bookSearchInputRow}>
@@ -2145,6 +2146,7 @@ export function StoryScreen() {
                       name="close"
                       color={colors.gray4}
                       size={18}
+                      accessibilityLabel="검색어 지우기"
                       onPress={() => {
                         setBookSearchQuery('');
                         setBookSearchSearched(false);
@@ -2307,7 +2309,7 @@ export function StoryScreen() {
             />
           }
         />
-        <FloatingActionButton onPress={() => openCompose()}>
+        <FloatingActionButton onPress={() => openCompose()} accessibilityLabel="글 작성하기">
           <SvgUri uri={writeIconUri} width={20} height={20} />
         </FloatingActionButton>
       </KeyboardAvoidingView>

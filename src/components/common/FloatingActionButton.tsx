@@ -6,13 +6,16 @@ import { colors, radius, spacing } from '../../theme';
 type Props = {
   onPress: () => void;
   children: React.ReactNode;
+  accessibilityLabel?: string;
 };
 
-export function FloatingActionButton({ onPress, children }: Props) {
+export function FloatingActionButton({ onPress, children, accessibilityLabel }: Props) {
   return (
     <Pressable
       style={({ pressed }) => [styles.fab, pressed ? styles.pressed : null]}
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
     >
       <View pointerEvents="none">{children}</View>
     </Pressable>

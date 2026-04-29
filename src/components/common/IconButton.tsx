@@ -14,6 +14,7 @@ type Props = {
   hitSlop?: number | null;
   disabled?: boolean;
   renderIcon?: React.ReactNode;
+  accessibilityLabel?: string;
 };
 
 export function IconButton({
@@ -25,12 +26,15 @@ export function IconButton({
   hitSlop = 8,
   disabled,
   renderIcon,
+  accessibilityLabel,
 }: Props) {
   return (
     <Pressable
       onPress={onPress}
       hitSlop={hitSlop ?? undefined}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => [
         styles.button,
         style,
