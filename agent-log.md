@@ -596,3 +596,51 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `tsconfig.json`
 - `font.md`
 - `docs/todo.md`
+
+---
+
+## 업데이트 (2026-04-29)
+
+수정 시각: 2026-04-29 KST
+
+### UI 통일 1번 — 문구/카피 규칙 통일 완료
+
+- `~중` 표기 기준 확정: 상태 라벨형(`구독중`, `로딩중` 등)은 공백 없이, 진행 동작형(`업로드 중...` 등)은 공백 + 말줄임표
+- `MeetingScreen`, `MyPageScreen`, `AuthFlowScreen` 등 전체 화면 치환 완료 (1차 정리 대상 전부 처리)
+- 오류 메시지 기술 용어 → 사용자 친화 문구로 교체 (`이미지 업로드 URL 발급에 실패` → `이미지 업로드 준비에 실패` 등)
+- `docs/todo.md` 1번 항목 ✅ 완료 처리
+
+### UI 통일 2번 — 로딩 피드백 규칙 통일 완료
+
+- `App.tsx` 부팅 로더: 1500ms 고정 타이머 제거 → `AuthGateContext.isReady` 이벤트 기반으로 전환
+  - `AuthGateContext`에 `isReady` 상태 추가 (로그인 상태 조회 완료 시 true)
+  - 부팅 로더를 `bootOverlay`(zIndex 2000)로 재구성, NavigationContainer는 항상 마운트
+- `AuthGateContext` 전환 로더: 1200ms → `AUTH_TRANSITION_MS = 400ms` 상수로 단축
+- `StoryScreen`: `isLoadingMore` 리스트 하단 인라인 피드백(`불러오는 중...`) 추가
+- `docs/loading-screen.md` 변경 내용 반영 및 최신화
+- `docs/todo.md` 2번 항목 ✅ 완료 처리 + 직접 테스트 필요 섹션 추가
+
+### UI 통일 3번 — 버튼 규격 통일 완료
+
+- `PrimaryButton.tsx` → `AppButton` 통합 컴포넌트로 강화
+  - `variant`: `primary` / `secondary` / `outline` / `danger`
+  - `size`: `lg(52px)` / `md(paddingVertical 14)`
+  - `loading` + `loadingLabel` prop (버튼 비활성화 + 문구 자동 전환)
+  - `fullWidth` prop (`flex: 1`)
+  - 기존 `PrimaryButton` / `SecondaryButton` export는 호환성 alias로 유지
+- `AuthFlowScreen` 전체 주요 CTA 버튼 AppButton으로 교체
+  - 기존 `primaryButton` / `secondaryButton` / `buttonFlex` / `termsModalActionButton` 스타일 정의 제거
+  - 로그인·아이디찾기·비밀번호재발급·회원가입 각 스텝의 loading 상태를 `loadingLabel` prop으로 통합
+- `docs/todo.md` 3번 항목 ✅ 완료 처리
+
+## 작업 파일
+- `App.tsx`
+- `src/contexts/AuthGateContext.tsx`
+- `src/components/common/PrimaryButton.tsx`
+- `src/screens/AuthFlowScreen.tsx`
+- `src/screens/StoryScreen.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+- `src/screens/UserProfileScreen.tsx`
+- `docs/loading-screen.md`
+- `docs/todo.md`
