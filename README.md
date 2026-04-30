@@ -14,10 +14,10 @@ BE/웹 개발자도 빠르게 로컬 실행할 수 있도록 정리한 실행 �
 - Navigation: `@react-navigation/native`, `@react-navigation/bottom-tabs`
 - 주요 의존성: `expo-dev-client`, `react-native-svg`, `react-native-webview`, `@stomp/stompjs`
 - 스크립트:
-  - `npm run start`: Expo 개발 서버 실행
-  - `npm run ios`: iOS 개발 빌드 실행
-  - `npm run android`: Android 개발 빌드 실행
-  - `npm run web`: 웹 실행
+  - `npm run start` / `npx expo start`: Expo 개발 서버 실행
+  - `npm run ios` / `npx expo start --ios`: iOS 개발 빌드 실행
+  - `npm run android` / `npx expo start --android`: Android 개발 빌드 실행
+  - `npm run web` / `npx expo start --web`: 웹 실행
   - `npm run check`: 규칙 점검 + 타입체크 + Expo doctor
 
 ## 1) 사전 설치 (macOS 기준)
@@ -53,25 +53,46 @@ npm install
 cp .env.example .env
 ```
 
-3. iOS 실행 (권장 기본 경로)
+3. 개발 서버 실행 (기기/시뮬레이터 선택)
+
+```bash
+npx expo start
+```
+
+> 실행 후 터미널에서 키 입력으로 기기 선택:
+> - `i` : iOS 시뮬레이터
+> - `a` : Android 에뮬레이터
+> - `w` : 웹 브라우저
+
+또는 바로 실행:
+
+```bash
+npx expo start --ios      # iOS 시뮬레이터 바로 실행
+npx expo start --android  # Android 에뮬레이터 바로 실행
+npx expo start --web      # 웹 브라우저 바로 실행
+npx expo start --tunnel   # 외부 네트워크 접속 (ngrok)
+npx expo start --clear    # Metro 캐시 초기화 후 실행
+```
+
+4. iOS 실행 (권장 기본 경로)
 
 ```bash
 npm run ios
 ```
 
-4. Web 실행 (빠른 확인용)
+5. Web 실행 (빠른 확인용)
 
 ```bash
 npm run web
 ```
 
-5. Android 실행 (선택)
+6. Android 실행 (선택)
 
 ```bash
 npm run android
 ```
 
-6. 사전 점검(권장)
+7. 사전 점검(권장)
 
 ```bash
 npm run check

@@ -925,3 +925,19 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `src/screens/MyPageScreen.tsx`
 - `docs/todo.md`
 
+---
+
+## 업데이트 (2026-04-30)
+
+수정 시각: 2026-04-30 KST
+
+### README — `npx expo start` 실행 방법 추가
+
+- 스크립트 목록에 `npm run *` / `npx expo start --*` 대응 명령 병기
+- 빠른 실행 섹션(3번 항목)을 `npx expo start` 중심으로 재구성
+  - 실행 후 `i` / `a` / `w` 키 입력으로 기기 선택하는 방법 안내
+  - `--ios`, `--android`, `--web`, `--tunnel`, `--clear` 플래그 정리
+
+## 작업 파일
+- `README.md`
+
