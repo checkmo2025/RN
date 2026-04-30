@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { ApiError } from '../services/api/http';
 import { fetchLoginStatusSilently } from '../services/api/authApi';
 
-const AUTH_TRANSITION_MS = 400;
+const AUTH_TRANSITION_MS = 1000;
 
 type AuthGateContextValue = {
   isReady: boolean;
