@@ -235,12 +235,8 @@ export function AppHeader(props: Props) {
     [likedBookIds],
   );
 
-  const handleToggleBookLike = useCallback(
+  const executeBookLikeToggle = useCallback(
     (book: BookItem) => {
-      if (!isLoggedIn) {
-        requireAuth();
-        return;
-      }
       if (!isBookLikeTogglable(book)) return;
 
       triggerSelectionHaptic();
@@ -283,7 +279,18 @@ export function AppHeader(props: Props) {
       };
       void submit();
     },
-    [isBookLikeTogglable, isBookLikedInUi, isLoggedIn, requireAuth],
+    [isBookLikeTogglable, isBookLikedInUi],
+  );
+
+  const handleToggleBookLike = useCallback(
+    (book: BookItem) => {
+      if (!isLoggedIn) {
+        requireAuth(() => executeBookLikeToggle(book));
+        return;
+      }
+      executeBookLikeToggle(book);
+    },
+    [isLoggedIn, requireAuth, executeBookLikeToggle],
   );
 
   const hideDropdownImmediately = useCallback(() => {
@@ -772,7 +779,13 @@ export function AppHeader(props: Props) {
               onPress={() => {
                 if (action.icon === 'notifications-none') {
                   if (!isLoggedIn) {
-                    requireAuth();
+                    requireAuth(() => {
+                      setShowNoti(true);
+                      hideDropdownImmediately();
+                      closeSearchPage();
+                      void loadNotificationPreview();
+                      onPressBell?.();
+                    });
                     return;
                   }
 

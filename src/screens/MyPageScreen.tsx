@@ -1329,7 +1329,12 @@ export function MyPageScreen() {
 
   const openFollowerList = useCallback(() => {
     if (!isLoggedIn) {
-      requireAuth();
+      requireAuth(() => {
+        setGroupMenu(null);
+        setActiveFollowTab('FOLLOWER');
+        setShowFollowPage(true);
+        void loadFollowUsers();
+      });
       return;
     }
     setGroupMenu(null);
@@ -1340,7 +1345,12 @@ export function MyPageScreen() {
 
   const openFollowingList = useCallback(() => {
     if (!isLoggedIn) {
-      requireAuth();
+      requireAuth(() => {
+        setGroupMenu(null);
+        setActiveFollowTab('FOLLOWING');
+        setShowFollowPage(true);
+        void loadFollowUsers();
+      });
       return;
     }
     setGroupMenu(null);
@@ -2712,7 +2722,7 @@ export function MyPageScreen() {
           <Pressable
             onPress={() => {
               if (!isLoggedIn) {
-                requireAuth();
+                requireAuth(() => setShowSettings(true));
                 return;
               }
               setShowSettings(true);

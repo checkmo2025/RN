@@ -1,3 +1,38 @@
+# 2026-04-30 로그인 후 이전 화면 복귀
+
+## 작업 개요
+`requireAuth(callback)` + `pendingActionRef` 패턴을 활용해 로그인/회원가입 성공 후 직전에 시도했던 액션을 자동 재실행하도록 전면 점검 및 보완.
+
+## 구현 내용
+
+### 기존 동작 확인
+- `AuthGateContext`: `requireAuth(callback)` → `pendingActionRef` 저장 → `completeLogin()` 시 실행 패턴 이미 구현돼 있음.
+- `App.tsx`: Auth 오버레이 모델 — 로그인 중에도 하위 내비게이션 유지됨.
+- `AuthFlowScreen`: `completeAuthFlow()` 가 로그인/회원가입 완료 단계(모임 선택 포함) 모두에서 호출됨 → 로그인·회원가입 양쪽 모두 동작.
+- `StoryScreen.openCompose` (line 437): 이미 `requireAuth(() => setIsComposing(true))` 적용돼 있어 글 작성은 이미 정상 동작.
+
+### 신규 적용 — 콜백 없이 호출하던 곳 수정
+**`MyPageScreen`**
+- `openFollowerList`: 로그인 후 팔로워 목록 자동 열기
+- `openFollowingList`: 로그인 후 팔로잉 목록 자동 열기
+- 설정 아이콘 onPress: 로그인 후 설정 패널 자동 열기
+
+**`AppHeader`**
+- `handleToggleBookLike`: `executeBookLikeToggle` 분리 후 `requireAuth(() => executeBookLikeToggle(book))` 적용
+- 알림 벨 onPress: 로그인 후 알림 패널 자동 열기
+
+### 그대로 둔 케이스
+- `HomeScreen` line 310/353/397: `accessPolicy` 정책 게이트 → 인증 후 액션이 accessPolicy에 따라 달라지므로 콜백 불필요
+- `MeetingScreen` line 959: 401 에러 복구용 강제 재로그인 → 콜백 불필요
+- `MeetingScreen` line 5528: 세션 만료 후 재로그인 유도 → 콜백 불필요
+- `MyPageScreen` line 1683 (`renderGuestPrompt`): 로그인 후 `isLoggedIn` 변경으로 컴포넌트 자동 재렌더링
+
+## 파일
+- `src/screens/MyPageScreen.tsx`
+- `src/components/common/AppHeader.tsx`
+
+---
+
 # 2026-03-08 작업 요약
 
 ## 인증/로그인(Auth)
