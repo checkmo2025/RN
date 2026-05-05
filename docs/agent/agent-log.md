@@ -447,6 +447,53 @@ export const interactionOpacity = {
 
 ---
 
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 KST
+
+### 문서 운영 규칙 정리 + TODO 구조화
+
+- `codex.md`의 기존 작업 로그를 `docs/agent/agent-log.md`로 이관하고 `codex.md` 파일 삭제
+- `AGENTS.md` 정합성 수정: `/md` 요청 시 기록 대상 파일을 `docs/agent/agent-log.md`로 변경
+- `docs/agent/todo.md` 상단에 `에이전트 프롬프트 블록` 추가 및 운영 규칙 구체화
+  - 항목 작성 가독성 기준
+  - 생성일자/최종 편집일자 관리
+  - DoD(완료 기준) 1줄 명시
+  - 코드 TODO와 실기기 QA TODO 분리
+  - 상태 정렬 기준 고정(`⬜ 미완료 → 🔄 진행 중 → ✅ 완료`)
+- `todo.md` 주요 표 섹션에 `생성일자`, `최종 편집일자` 컬럼 추가
+- `todo.md` 섹션 정렬 기준을 실제 표 순서에도 반영 (`⬜ → 🔄 → ✅`)
+
+## 작업 파일
+- `AGENTS.md`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
+- `codex.md` (삭제)
+
+---
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 KST
+
+### codex.md 로그 이관
+
+**2026-04-28 23:48:08 KST**
+- `font.md` 신규 작성 (타이포 토큰/하드코딩 현황, 통일 우선순위 정리)
+- `docs/todo.md`에 `글씨 크기 통일 확인` TODO 1건 추가
+- `docs/todo.md` 마지막 업데이트 시각 갱신
+
+**2026-04-29 10:18:22 KST**
+- `RefreshControl` 커스텀 색상(`tintColor`, `colors`) 제거로 시스템 기본 새로고침 동그라미 사용으로 전환
+- 적용 화면: `HomeScreen`, `NewsScreen`, `StoryScreen`, `MeetingScreen`, `MyPageScreen`, `UserProfileScreen`
+- `docs/todo.md`에 로딩 UX 항목을 진행중으로 갱신하고 커스텀 적용 여부 문서 확인 TODO 추가
+
+## 작업 파일
+- `codex.md` (이관 후 삭제)
+- `docs/agent/agent-log.md`
+
+---
+
 ## 업데이트 (2026-05-05)
 
 수정 시각: 2026-05-05 KST
