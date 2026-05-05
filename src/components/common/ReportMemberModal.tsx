@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     color: colors.gray6,
   },
   closeButton: {
-    padding: spacing.xs / 2,
+    padding: spacing.xxs,
   },
   targetCard: {
     flexDirection: 'row',

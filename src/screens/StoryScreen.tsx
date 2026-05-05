@@ -2790,7 +2790,7 @@ const styles = StyleSheet.create({
   composeBack: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   composeBackText: {
     ...typography.body1_3,
@@ -2849,7 +2849,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   storyMenuButton: {
-    padding: spacing.xs / 2,
+    padding: spacing.xxs,
   },
   detailBookRow: {
     flexDirection: 'row',
@@ -2872,7 +2872,7 @@ const styles = StyleSheet.create({
   },
   detailBookInfo: {
     flex: 1,
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   detailBookTitle: {
     ...typography.subhead4_1,
@@ -2973,7 +2973,7 @@ const styles = StyleSheet.create({
   },
   commentBody: {
     flex: 1,
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   commentHeaderRow: {
     flexDirection: 'row',
@@ -2997,7 +2997,7 @@ const styles = StyleSheet.create({
     color: colors.primary1,
   },
   commentMenuButton: {
-    padding: spacing.xs / 2,
+    padding: spacing.xxs,
   },
   reportModalBackdrop: {
     flex: 1,
@@ -3026,7 +3026,7 @@ const styles = StyleSheet.create({
     color: colors.gray6,
   },
   reportModalCloseButton: {
-    padding: spacing.xs / 2,
+    padding: spacing.xxs,
   },
   reportTargetText: {
     ...typography.body2_3,

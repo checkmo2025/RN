@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
     marginTop: spacing.xs,
   },
   toggleText: {

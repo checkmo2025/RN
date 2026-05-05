@@ -48,8 +48,8 @@ export function IconButton({
 
 const styles = StyleSheet.create({
   button: {
-    paddingHorizontal: spacing.xs / 2,
-    paddingVertical: spacing.xs / 2,
+    paddingHorizontal: spacing.xxs,
+    paddingVertical: spacing.xxs,
   },
   pressed: {
     opacity: 0.6,

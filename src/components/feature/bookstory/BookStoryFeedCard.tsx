@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
   },
   meta: {
     flex: 1,
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   author: {
     ...typography.body1_2,

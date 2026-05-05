@@ -1431,7 +1431,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
     backgroundColor: colors.background,
   },
   outputFilterText: {
@@ -1468,7 +1468,7 @@ const styles = StyleSheet.create({
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   filterText: {
     ...typography.body1_3,
@@ -1518,7 +1518,7 @@ const styles = StyleSheet.create({
   tagRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   tag: {
     borderRadius: radius.md,
@@ -1934,7 +1934,7 @@ const styles = StyleSheet.create({
   },
   nameCheckText: {
     ...typography.body2_3,
-    marginTop: spacing.xs / 2,
+    marginTop: spacing.xxs,
   },
   nameCheckSuccessText: {
     color: '#2FA66A',
@@ -2046,7 +2046,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   detailTitleManageLink: {
-    paddingVertical: spacing.xs / 2,
+    paddingVertical: spacing.xxs,
   },
   detailTitleManageLinkText: {
     ...typography.body1_2,
@@ -2105,7 +2105,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   metaBlock: {
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   metaLabel: {
     ...typography.body2_3,
@@ -2470,7 +2470,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.subbrown4,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs / 2,
+    paddingVertical: spacing.xxs,
   },
   managementCountBadgeText: {
     ...typography.body2_2,
@@ -2575,7 +2575,7 @@ const styles = StyleSheet.create({
   managementRoleBadge: {
     borderRadius: radius.lg,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs / 2,
+    paddingVertical: spacing.xxs,
   },
   managementRoleBadgeOwner: {
     backgroundColor: '#FFF1D8',
@@ -2851,7 +2851,7 @@ const styles = StyleSheet.create({
   noticeTagRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
     flexShrink: 0,
   },
   noticeTag: {
@@ -2891,7 +2891,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   noticePageArrow: {
     width: 30,
@@ -2992,7 +2992,7 @@ const styles = StyleSheet.create({
   },
   noticeBookshelfInfo: {
     flex: 1,
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   noticeBookshelfTitle: {
     ...typography.body1_2,
@@ -3024,7 +3024,7 @@ const styles = StyleSheet.create({
   noticePollMetaPrivacy: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   noticePollMetaText: {
     ...typography.body2_3,
@@ -3045,7 +3045,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   noticePhotoImage: {
     width: '100%',
@@ -3092,9 +3092,9 @@ const styles = StyleSheet.create({
   noticePollOptionCount: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
     paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs / 2,
+    paddingVertical: spacing.xxs,
   },
   noticePollOptionCountText: {
     ...typography.body2_3,
@@ -3187,7 +3187,7 @@ const styles = StyleSheet.create({
   },
   noticeCommentBody: {
     flex: 1,
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   noticeCommentMetaRow: {
     flexDirection: 'row',
@@ -3261,7 +3261,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
     borderWidth: 1,
     borderColor: colors.gray2,
     borderRadius: radius.md,
@@ -3283,7 +3283,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
     borderWidth: 1,
     borderColor: colors.gray2,
     borderRadius: radius.md,
@@ -3330,7 +3330,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
     borderWidth: 1,
     borderColor: colors.gray2,
     borderRadius: radius.md,
@@ -3387,7 +3387,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
     position: 'relative',
   },
   noticeComposerPhotoImage: {
@@ -3520,7 +3520,7 @@ const styles = StyleSheet.create({
   },
   bookshelfBookSearchInfo: {
     flex: 1,
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   bookshelfBookSearchTitle: {
     ...typography.body2_2,
@@ -3706,7 +3706,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingVertical: spacing.xs / 2,
+    paddingVertical: spacing.xxs,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray1,
   },
@@ -3795,7 +3795,7 @@ const styles = StyleSheet.create({
   },
   contactModalLinkTextWrap: {
     flex: 1,
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   contactModalLinkLabel: {
     ...typography.subhead4_1,
@@ -3823,7 +3823,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.xs / 2,
+    paddingHorizontal: spacing.xxs,
   },
   bookshelfSessionChip: {
     borderWidth: 1,
@@ -3875,7 +3875,7 @@ const styles = StyleSheet.create({
   bookshelfBadgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   bookshelfSessionBadge: {
     borderRadius: radius.sm,
@@ -3921,12 +3921,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-    paddingTop: spacing.xs / 2,
+    paddingTop: spacing.xxs,
   },
   bookshelfRatingText: {
     ...typography.body2_3,
     color: colors.gray5,
-    marginLeft: spacing.xs / 2,
+    marginLeft: spacing.xxs,
   },
   bookshelfDetailSection: {
     gap: spacing.md,
@@ -4049,7 +4049,7 @@ const styles = StyleSheet.create({
   bookshelfComposerRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   bookshelfComposerRatingStarShell: {
     position: 'relative',
@@ -4171,7 +4171,7 @@ const styles = StyleSheet.create({
   bookshelfGroupChipRow: {
     flexDirection: 'row',
     gap: spacing.xs,
-    paddingVertical: spacing.xs / 2,
+    paddingVertical: spacing.xxs,
   },
   bookshelfGroupChip: {
     minWidth: 68,
@@ -4251,8 +4251,8 @@ const styles = StyleSheet.create({
   bookshelfGroupMemberButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs / 2,
-    paddingVertical: spacing.xs / 2,
+    gap: spacing.xxs,
+    paddingVertical: spacing.xxs,
   },
   bookshelfGroupMemberCount: {
     ...typography.body1_3,
@@ -4287,8 +4287,8 @@ const styles = StyleSheet.create({
   bookshelfGroupActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs / 2,
-    paddingVertical: spacing.xs / 2,
+    gap: spacing.xxs,
+    paddingVertical: spacing.xxs,
     paddingHorizontal: spacing.xs,
   },
   bookshelfGroupSortText: {
@@ -4395,7 +4395,7 @@ const styles = StyleSheet.create({
   },
   regularChatMessageRow: {
     alignSelf: 'flex-start',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
     maxWidth: '88%',
   },
   regularChatMessageRowMine: {

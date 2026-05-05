@@ -764,7 +764,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(41, 31, 26, 0.2)',
   },
   recommendedTextWrap: {
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   recommendedBookTitle: {
     ...typography.body1_2,
@@ -841,7 +841,7 @@ const styles = StyleSheet.create({
   },
   cardBody: {
     flex: 1,
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   cardTitle: {
     ...typography.subhead4_1,
@@ -867,7 +867,7 @@ const styles = StyleSheet.create({
   breadcrumb: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   breadcrumbText: {
     ...typography.body2_3,

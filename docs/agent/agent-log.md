@@ -1150,3 +1150,35 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 ## 작업 파일
 - `docs/component-internal-spacing-audit.md`
+
+---
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### 내부 간격 코드 표현 통일 — `spacing.xs / 2` → `spacing.xxs` (78건)
+
+**픽셀값 변경 없음** — `spacing.xs / 2` = 8 / 2 = 4 = `spacing.xxs` 로 완전히 동일.
+계산식 표현을 토큰으로 교체해 가독성 및 일관성 향상.
+
+- 양수 74건 (`gap`, `padding`, `paddingHorizontal/Vertical`)
+- 음수 4건 (`marginTop: -spacing.xxs`, AuthFlowScreen 타이포 보정값)
+
+적용 파일 (10개):
+- `src/screens/MeetingScreen.tsx` (34건)
+- `src/screens/MyPageScreen.tsx` (13건)
+- `src/screens/AuthFlowScreen.tsx` (5건)
+- `src/screens/UserProfileScreen.tsx` (6건)
+- `src/screens/StoryScreen.tsx` (6건)
+- `src/components/common/AppHeader.tsx` (6건)
+- `src/screens/NewsScreen.tsx` (3건)
+- `src/components/common/IconButton.tsx` (2건)
+- `src/components/common/ReportMemberModal.tsx` (1건)
+- `src/components/feature/bookstory/BookStoryFeedCard.tsx` (1건)
+- `src/components/feature/groups/MyGroupsDropdownCard.tsx` (1건)
+
+미적용: `MeetingListCard`의 `13/14/6`, 버튼의 `xs+2/sm+2`, `ReportMemberModal`의 `gap: 2` — 의도된 디자인값 유지
+
+## 작업 파일
+(위 10개 파일)

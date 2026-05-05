@@ -1441,7 +1441,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     top: 0,
-    paddingVertical: spacing.xs / 2,
+    paddingVertical: spacing.xxs,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1570,12 +1570,12 @@ const styles = StyleSheet.create({
     ...typography.body2_3,
     color: colors.gray4,
     textAlign: 'right',
-    marginTop: -spacing.xs / 2,
+    marginTop: -spacing.xxs,
   },
   helperInline: {
     ...typography.body2_3,
     color: colors.gray4,
-    marginTop: -spacing.xs / 2,
+    marginTop: -spacing.xxs,
   },
   input: {
     borderWidth: 1,
@@ -1630,7 +1630,7 @@ const styles = StyleSheet.create({
   },
   nicknameCheckText: {
     ...typography.body2_3,
-    marginTop: -spacing.xs / 2,
+    marginTop: -spacing.xxs,
   },
   nicknameCheckSuccess: {
     color: colors.green,
@@ -1642,7 +1642,7 @@ const styles = StyleSheet.create({
     ...typography.body2_2,
     color: colors.gray4,
     alignSelf: 'flex-end',
-    marginTop: -spacing.xs / 2,
+    marginTop: -spacing.xxs,
   },
   timerExpiredText: {
     color: colors.likeRed,

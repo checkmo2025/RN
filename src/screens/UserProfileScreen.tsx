@@ -1046,7 +1046,7 @@ const styles = StyleSheet.create({
   breadcrumbRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
     alignSelf: 'flex-start',
   },
   breadcrumbText: {
@@ -1075,7 +1075,7 @@ const styles = StyleSheet.create({
   },
   profileMeta: {
     flex: 1,
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   profileName: {
     ...typography.subhead2,
@@ -1214,7 +1214,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   inlineText: {
     ...typography.body2_3,
@@ -1237,7 +1237,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.subbrown4,
     padding: spacing.xs,
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
     alignItems: 'center',
   },
   bookThumb: {
@@ -1293,8 +1293,8 @@ const styles = StyleSheet.create({
   },
   groupMenuButton: {
     marginLeft: spacing.sm,
-    paddingVertical: spacing.xs / 2,
-    paddingHorizontal: spacing.xs / 2,
+    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.xxs,
   },
   followPageWrap: {
     gap: spacing.md,

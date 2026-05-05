@@ -2820,7 +2820,7 @@ const styles = StyleSheet.create({
   breadcrumbRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   breadcrumbText: {
     ...typography.body2_3,
@@ -2947,7 +2947,7 @@ const styles = StyleSheet.create({
   categoryChip: {
     borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs / 2,
+    paddingVertical: spacing.xxs,
     borderWidth: 1,
     borderColor: 'transparent',
   },
@@ -3041,7 +3041,7 @@ const styles = StyleSheet.create({
   },
   passwordToggleButton: {
     marginLeft: spacing.xs,
-    padding: spacing.xs / 2,
+    padding: spacing.xxs,
   },
   emailVerificationButton: {
     borderWidth: 1,
@@ -3066,7 +3066,7 @@ const styles = StyleSheet.create({
   emailVerificationTimerText: {
     ...typography.body2_3,
     color: colors.gray4,
-    marginTop: -spacing.xs / 2,
+    marginTop: -spacing.xxs,
   },
   emailVerificationTimerExpiredText: {
     color: colors.likeRed,
@@ -3102,7 +3102,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.white,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs / 2,
+    paddingVertical: spacing.xxs,
   },
   reportTypeChipActive: {
     borderColor: colors.primary1,
@@ -3135,7 +3135,7 @@ const styles = StyleSheet.create({
     color: colors.white,
     ...typography.body2_3,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs / 2,
+    paddingVertical: spacing.xxs,
     borderRadius: radius.lg,
   },
   reportHeader: {
@@ -3168,7 +3168,7 @@ const styles = StyleSheet.create({
   },
   alarmInfo: {
     flex: 1,
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   alarmDot: {
     width: 8,
@@ -3216,7 +3216,7 @@ const styles = StyleSheet.create({
   },
   myNewsBody: {
     flex: 1,
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   myNewsTitle: {
     ...typography.body1_2,
@@ -3424,7 +3424,7 @@ const styles = StyleSheet.create({
   },
   profileMeta: {
     flex: 1,
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   profileFollowRow: {
     flexDirection: 'row',
@@ -3558,7 +3558,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
   },
   inlineText: {
     ...typography.body2_3,
@@ -3580,7 +3580,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.subbrown4,
     padding: spacing.xs,
-    gap: spacing.xs / 2,
+    gap: spacing.xxs,
     alignItems: 'center',
   },
   bookThumb: {
@@ -3640,8 +3640,8 @@ const styles = StyleSheet.create({
   },
   groupMenuButton: {
     marginLeft: spacing.sm,
-    paddingVertical: spacing.xs / 2,
-    paddingHorizontal: spacing.xs / 2,
+    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.xxs,
   },
   pressed: {
     opacity: 0.7,
