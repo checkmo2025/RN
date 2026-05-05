@@ -1,6 +1,6 @@
 # UI 버튼 규격 통일 가이드 (3번 항목)
 
-> 기준 문서: `docs/ui-consistency-top10.md`의 3번 항목  
+> 기준 문서: `docs/(done)ui-consistency-top10.md`의 3번 항목  
 > 범위: RN `src/**/*.tsx` 버튼/클릭 액션 UI
 
 ## 1) 점검 목적

@@ -1074,3 +1074,32 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 ## 작업 파일
 - `docs/todo.md`
+
+---
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### docs 완료 문서 정리: `(done)` prefix 적용
+
+- `docs/todo.md`의 `✅ 완료` 기준으로 완료 문서 12개 파일명 앞에 `(done)` prefix 적용
+- 리네임된 문서들을 참조하는 `docs` 내부 링크/경로를 새 파일명으로 동기화
+- `docs/(done)ui-consistency-top10.md`의 10개 항목 상태를 `✅ 완료`로 정합화
+- `docs/todo.md` 내 완료 문서 표기/링크를 리네임 기준으로 갱신
+
+## 작업 파일
+- `docs/(done)loading-screen.md`
+- `docs/(done)ui-consistency-top10.md`
+- `docs/(done)ui-copy-consistency.md`
+- `docs/(done)ui-loading-feedback-consistency.md`
+- `docs/(done)ui-button-consistency.md`
+- `docs/(done)ui-input-form-consistency.md`
+- `docs/(done)ui-spacing-token-consistency.md`
+- `docs/(done)ui-radius-border-shadow-consistency.md`
+- `docs/(done)ui-modal-bottomsheet-consistency.md`
+- `docs/(done)ui-motion-haptic-consistency.md`
+- `docs/(done)ui-feedback-message-consistency.md`
+- `docs/(done)ui-accessibility-event-naming-consistency.md`
+- `docs/todo.md`
+

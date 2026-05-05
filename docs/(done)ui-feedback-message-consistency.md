@@ -1,6 +1,6 @@
 # UI 피드백 문구 통일 가이드 (9번 항목)
 
-> 기준 문서: `docs/ui-consistency-top10.md`의 9번 항목  
+> 기준 문서: `docs/(done)ui-consistency-top10.md`의 9번 항목  
 > 범위: RN `src/**/*.tsx`, `src/services/api/http.ts`, `src/utils/toast.ts`
 
 ## 1) 점검 목적

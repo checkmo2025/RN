@@ -1,6 +1,6 @@
 # UI spacing 토큰 통일 가이드 (5번 항목)
 
-> 기준 문서: `docs/ui-consistency-top10.md`의 5번 항목  
+> 기준 문서: `docs/(done)ui-consistency-top10.md`의 5번 항목  
 > 범위: RN `src/**/*.tsx` 간격(margin/padding/gap) 스타일
 
 ## 1) 점검 목적

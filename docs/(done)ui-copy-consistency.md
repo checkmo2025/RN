@@ -1,6 +1,6 @@
 # UI 문구 통일 가이드 (1번 항목)
 
-> 기준 문서: `docs/ui-consistency-top10.md`의 1번 항목  
+> 기준 문서: `docs/(done)ui-consistency-top10.md`의 1번 항목  
 > 범위: RN `src/**/*.ts(x)` 사용자 노출 문구  
 > 제외: BE/FE 코드 수정
 
