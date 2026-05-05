@@ -350,6 +350,23 @@
 
 ## 작업 파일
 - `src/screens/MeetingScreen.tsx`
+
+---
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### 헤더 알림 빨간점(unreadDot) 동기화 로직 정리
+
+- `AppHeader`의 `hasUnread` 갱신 경로를 `refreshUnreadBadge` 단일 함수로 통일
+- 기존 `notificationPreview` 변경 감시 `useEffect(setHasUnread(...))` 제거
+- 로그인/비로그인 전환 시 `fetchNotificationPreview(1)` 기반으로 unread 여부 재평가
+- 알림 패널 로드(`fetchNotificationPreview(5)`) 시 응답을 재사용해 빨간점 상태 즉시 반영
+- 읽음 처리 성공/실패 후 모두 unread 배지 재동기화 호출 추가
+
+## 작업 파일
+- `src/components/common/AppHeader.tsx`
 - `src/screens/AuthFlowScreen.tsx`
 - `src/components/common/ReportMemberModal.tsx`
 - `docs/agent/issue-fetch.md`

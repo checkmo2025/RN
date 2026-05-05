@@ -330,9 +330,34 @@ export function AppHeader(props: Props) {
     setBookStoriesLoading(false);
   }, []);
 
+  const refreshUnreadBadge = useCallback(
+    async (previewItems?: NotificationItem[]) => {
+      if (!isLoggedIn) {
+        setHasUnread(false);
+        return;
+      }
+
+      if (Array.isArray(previewItems)) {
+        setHasUnread(previewItems.some((item) => !item.read));
+        return;
+      }
+
+      try {
+        const items = await fetchNotificationPreview(1);
+        setHasUnread(items.some((item) => !item.read));
+      } catch (error) {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 404)) {
+          setHasUnread(false);
+        }
+      }
+    },
+    [isLoggedIn],
+  );
+
   const loadNotificationPreview = useCallback(async () => {
     if (!isLoggedIn) {
       setNotificationPreview([]);
+      void refreshUnreadBadge([]);
       return;
     }
 
@@ -340,9 +365,11 @@ export function AppHeader(props: Props) {
     try {
       const notifications = await fetchNotificationPreview(5);
       setNotificationPreview(notifications);
+      void refreshUnreadBadge(notifications);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         setNotificationPreview([]);
+        void refreshUnreadBadge([]);
         return;
       }
       if (!(error instanceof ApiError)) {
@@ -351,21 +378,11 @@ export function AppHeader(props: Props) {
     } finally {
       setNotificationPreviewLoading(false);
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, refreshUnreadBadge]);
 
   useEffect(() => {
-    setHasUnread(notificationPreview.some((n) => !n.read));
-  }, [notificationPreview]);
-
-  useEffect(() => {
-    if (!isLoggedIn) {
-      setHasUnread(false);
-      return;
-    }
-    fetchNotificationPreview(1)
-      .then((items) => setHasUnread(items.length > 0))
-      .catch(() => {});
-  }, [isLoggedIn]);
+    void refreshUnreadBadge();
+  }, [refreshUnreadBadge]);
 
   const navigateByNotification = useCallback(
     (notification: NotificationItem) => {
@@ -390,6 +407,7 @@ export function AppHeader(props: Props) {
         if (notification.read) return;
         try {
           await markNotificationAsRead(notification.notificationId);
+          void refreshUnreadBadge();
         } catch {
           setNotificationPreview((prev) =>
             prev.map((item) =>
@@ -398,11 +416,12 @@ export function AppHeader(props: Props) {
                 : item,
             ),
           );
+          void refreshUnreadBadge();
         }
       };
       void submit();
     },
-    [navigateByNotification],
+    [navigateByNotification, refreshUnreadBadge],
   );
 
   const loadRecommendedBooks = useCallback(async () => {
