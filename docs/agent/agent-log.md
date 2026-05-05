@@ -1134,3 +1134,19 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `docs/pm/home-access-policy.md`
 - `docs/pm/immediate-reflection-matrix.md`
 - `docs/pm/block-feature-spec.md`
+
+---
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### 내부 간격 인벤토리 문서 신규 작성
+
+- 외부 간격 문서와 분리해 내부 간격 전용 문서 `docs/component-internal-spacing-audit.md` 신규 작성
+- 범위: 입력폼, 버튼, 카드, 리스트 아이템, 모달/바텀시트 본문 내부 `padding/gap` 규칙
+- 파일/라인 근거와 하드코딩 예외값(2/6/13/14/18) 스냅샷을 함께 정리
+- 내부 spacing 통일을 위한 1차 실행 우선순위(MeetingListCard/ReportModal/입력 보정 규칙) 제시
+
+## 작업 파일
+- `docs/component-internal-spacing-audit.md`
