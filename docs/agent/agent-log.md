@@ -1235,3 +1235,17 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `docs/documents/*`
 - `README.md`
 
+
+---
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### todo 상태 업데이트 및 QA 항목 추가
+
+- "로그인 완료 직후 전환 + 이전 화면 복귀" 실기기 확인 완료 → ✅
+- "간격 통일 이후 컴포넌트 확인 QA" 항목 신규 추가 (`spacing.xs / 2` → `spacing.xxs` 78건 교체 이후 시각 확인 필요)
+
+## 작업 파일
+- `docs/agent/todo.md`
