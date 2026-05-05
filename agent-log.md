@@ -1022,3 +1022,20 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `src/components/feature/groups/MeetingListCard.tsx`
 - `src/constants/inputLimits.ts`
 - `docs/todo.md`
+
+---
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### TODO 테스트 항목 문구를 현재 입력 정책 기준으로 정합화
+
+- `docs/todo.md`의 `입력 한도 토스트` 항목을 기존 설명(한도 도달 시 토스트)에서 현재 동작으로 수정
+  - `maxLength` **초과 입력 시도** 시 입력 차단 + 토스트 `"입력 가능한 길이를 초과했습니다."`
+- 상태를 `🔄`로 조정하고, 실기기 확인 진행상태 반영
+  - 모임 가입 신청 사유 1차 확인 완료
+  - 나머지 필드 실기기 확인 필요
+
+## 작업 파일
+- `docs/todo.md`
