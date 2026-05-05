@@ -1455,6 +1455,23 @@ export const interactionOpacity = {
 - `AGENTS.md`
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+---
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 00:59:49 KST
+
+### TODO 문서 운영 보강 + 날짜 공란 일괄 정리
+
+- `docs/agent/todo.md` 프롬프트에 "알맞은 섹션이 없으면 새 섹션 생성 + 섹션 목록 동시 갱신" 규칙 추가
+- 프롬프트 바로 아래 `TODO 섹션 목록(위치 안내)` 인덱스 표 신설
+- `구현 예정`에 `프로젝트 루트 직속 *.md 파일 정리` TODO 추가
+- `todo.md` 전 표에서 `생성일자/최종편집일자` 공란(`-`)을 `(완료)`로 일괄 치환
+
+## 작업 파일
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
 - `codex.md` (삭제)
 
 ---
