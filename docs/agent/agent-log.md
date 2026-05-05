@@ -1249,3 +1249,19 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 ## 작업 파일
 - `docs/agent/todo.md`
+
+---
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### 모임 화면 UI 소폭 개선
+
+- `MeetingListCard` 모임 제목 폰트 크기 업: `subhead5`(16px) → `subhead3`(20px semibold)
+- `MeetingScreen` 모임 검색 placeholder 문구 변경: `"검색하기 (모임명, 지역별)"` → `"모임명, 지역별로 원하는 모임을 검색해보세요!"`
+- `MeetingScreen` 필터 드롭다운 버튼 `minWidth` 축소: 84 → 74 (전체/모임별/지역별 간격 약간 좁힘)
+
+## 작업 파일
+- `src/components/feature/groups/MeetingListCard.tsx`
+- `src/screens/MeetingScreen.tsx`

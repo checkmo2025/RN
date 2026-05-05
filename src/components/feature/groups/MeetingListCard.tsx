@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: {
-    ...typography.subhead5,
+    ...typography.subhead3,
     color: colors.gray7,
   },
   headerRight: {

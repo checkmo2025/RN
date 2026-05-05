@@ -1224,7 +1224,7 @@ export function MeetingScreen() {
         <FormTextInput
           value={search}
           onChangeText={setSearch}
-          placeholder="검색하기 (모임명, 지역별)"
+          placeholder="모임명, 지역별로 원하는 모임을 검색해보세요!"
           placeholderTextColor={colors.gray3}
           style={styles.searchInput}
           fieldType="search"
@@ -1425,7 +1425,7 @@ const styles = StyleSheet.create({
     zIndex: 40,
   },
   outputFilterButton: {
-    minWidth: 84,
+    minWidth: 74,
     height: 28,
     paddingHorizontal: spacing.xs,
     borderRadius: radius.sm,
