@@ -333,7 +333,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     const password = loginPassword.trim();
 
     if (!identifier || !password) {
-      showToast('아이디(이메일/닉네임)와 비밀번호를 입력해주세요.');
+      showToast('아이디(이메일/닉네임)와 비밀번호를 입력해야 합니다.');
       return;
     }
 
@@ -356,7 +356,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
     const email = signUpEmail.trim();
     if (!emailRegex.test(email)) {
-      showToast('올바른 이메일 형식을 입력해주세요.');
+      showToast('올바른 이메일 형식이어야 합니다.');
       return;
     }
 
@@ -382,15 +382,15 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     const code = verificationCode.trim();
 
     if (!verificationSent) {
-      showToast('먼저 인증번호를 발송해주세요.');
+      showToast('먼저 인증번호를 발송해야 합니다.');
       return;
     }
     if (remainingVerificationSeconds <= 0) {
-      showToast('인증번호가 만료되었습니다. 인증번호를 다시 발송해주세요.');
+      showToast('인증번호가 만료되었습니다. 인증번호를 다시 발송해야 합니다.');
       return;
     }
     if (!code) {
-      showToast('인증번호를 입력해주세요.');
+      showToast('인증번호를 입력해야 합니다.');
       return;
     }
 
@@ -432,7 +432,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     const passwordConfirm = signUpPasswordConfirm.trim();
 
     if (!password || !passwordConfirm) {
-      showToast('비밀번호와 비밀번호 확인을 입력해주세요.');
+      showToast('비밀번호와 비밀번호 확인을 입력해야 합니다.');
       return;
     }
     if (!passwordRegex.test(password)) {
@@ -449,7 +449,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const handleCheckNickname = async () => {
     const normalized = nickname.trim();
     if (!normalized) {
-      showToast('닉네임을 입력해주세요.');
+      showToast('닉네임을 입력해야 합니다.');
       return;
     }
     if (normalized.length > 20) {
@@ -481,7 +481,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     const normalizedNickname = nickname.trim();
 
     if (!normalizedNickname) {
-      showToast('닉네임을 입력해주세요.');
+      showToast('닉네임을 입력해야 합니다.');
       return;
     }
     if (!nicknameRegex.test(normalizedNickname)) {
@@ -489,11 +489,11 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       return;
     }
     if (!isNicknameValidCheck) {
-      showToast('닉네임 중복 확인을 완료해주세요.');
+      showToast('닉네임 중복 확인을 완료해야 합니다.');
       return;
     }
     if (!name.trim()) {
-      showToast('이름을 입력해주세요.');
+      showToast('이름을 입력해야 합니다.');
       return;
     }
     if (name.trim().length > 10) {
@@ -501,11 +501,11 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       return;
     }
     if (!phoneRegex.test(phoneNumber.trim())) {
-      showToast('전화번호 형식을 확인해주세요. 예: 010-1234-5678');
+      showToast('전화번호 형식이 올바르지 않습니다. 예: 010-1234-5678');
       return;
     }
     if (description.trim().length > 40) {
-      showToast('소개는 40자 이내로 입력해주세요.');
+      showToast('소개는 40자 이내여야 합니다.');
       return;
     }
     setStep('profileExtra');
@@ -539,7 +539,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
   const handleSubmitSignUp = async () => {
     if (selectedCategories.length === 0) {
-      showToast('관심 카테고리를 1개 이상 선택해주세요.');
+      showToast('관심 카테고리를 1개 이상 선택해야 합니다.');
       return;
     }
 
@@ -578,7 +578,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           error instanceof ApiError &&
           (error.status === 400 || error.status === 401)
         ) {
-          showToast('이미 가입된 이메일입니다. 로그인 또는 비밀번호 찾기를 이용해주세요.');
+          showToast('이미 가입된 이메일입니다. 로그인 또는 비밀번호 찾기를 이용하십시오.');
           return;
         }
         throw error;
@@ -627,7 +627,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     } catch (error) {
       if (error instanceof ApiError) {
         if (loginCompleted) {
-          showToast('추가 정보 저장에 실패했습니다. 다시 시도해주세요.');
+          showToast('추가 정보 저장에 실패했습니다. 다시 시도해 주십시오.');
           return;
         }
         if (signUpCreatedNow) {
@@ -638,7 +638,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         return;
       }
       if (loginCompleted || signUpCreatedNow) {
-        showToast('가입 절차가 일부만 완료되었습니다. 다시 시도해주세요.');
+        showToast('가입 절차가 일부만 완료되었습니다. 다시 시도해 주십시오.');
         return;
       }
       showToast('회원가입에 실패했습니다.');
@@ -653,11 +653,11 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     const normalizedPhone = formatPhoneNumberInput(findPhoneNumber.trim());
 
     if (!normalizedName || !normalizedPhone) {
-      showToast('이름과 전화번호를 입력해주세요.');
+      showToast('이름과 전화번호를 입력해야 합니다.');
       return;
     }
     if (!phoneRegex.test(normalizedPhone)) {
-      showToast('전화번호 형식을 확인해주세요. 예: 010-1234-5678');
+      showToast('전화번호 형식이 올바르지 않습니다. 예: 010-1234-5678');
       return;
     }
 
@@ -685,7 +685,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const handleSendTempPassword = async () => {
     const email = resetPasswordEmail.trim();
     if (!emailRegex.test(email)) {
-      showToast('올바른 이메일 형식을 입력해주세요.');
+      showToast('올바른 이메일 형식이어야 합니다.');
       return;
     }
 
@@ -867,7 +867,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             disabled={!canGoNextFromTerms}
             onPress={() => {
               if (!canGoNextFromTerms) {
-                showToast('필수 약관에 동의해주세요.');
+                showToast('필수 약관에 동의해야 합니다.');
                 return;
               }
               setStep('emailVerification');
@@ -959,7 +959,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             disabled={!emailVerified}
             onPress={() => {
               if (!emailVerified) {
-                showToast('이메일 인증을 완료해주세요.');
+                showToast('이메일 인증을 완료해야 합니다.');
                 return;
               }
               setStep('passwordSet');
@@ -1212,7 +1212,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           overlayStyle={styles.profileColorModalOverlay}
           cardStyle={styles.profileColorModalCard}
         >
-          <Text style={styles.profileColorModalTitle}>원하시는 색상을 선택해주세요.</Text>
+          <Text style={styles.profileColorModalTitle}>원하시는 색상을 선택해야 합니다.</Text>
           <View style={styles.profileColorGrid}>
             {defaultProfilePalette.map((color) => {
               const selected = selectedProfileColor === color;

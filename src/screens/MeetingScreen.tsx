@@ -590,8 +590,8 @@ function resolveMeetingSearchErrorMessage(
     return options?.recommendation ? '추천 모임을 불러오지 못했습니다.' : '모임 검색에 실패했습니다.';
   }
 
-  if (error.status === 401) return '로그인 상태를 확인해주세요.';
-  if (error.status === 400) return '검색 조건을 다시 확인해주세요.';
+  if (error.status === 401) return '로그인 상태를 확인해 주십시오.';
+  if (error.status === 400) return '검색 조건을 다시 확인해야 합니다.';
   if (error.status === 403) return '접근 권한이 없습니다.';
   if (error.status === 404) return '요청한 모임 정보를 찾을 수 없습니다.';
 
@@ -603,8 +603,8 @@ function resolveMeetingSearchErrorMessage(
 function resolveBookshelfActionErrorMessage(error: unknown, fallback: string): string {
   if (!(error instanceof ApiError)) return fallback;
 
-  if (error.status === 400) return '입력 값을 다시 확인해주세요.';
-  if (error.status === 401) return '로그인 상태를 확인해주세요.';
+  if (error.status === 400) return '입력 값을 다시 확인해야 합니다.';
+  if (error.status === 401) return '로그인 상태를 확인해 주십시오.';
   if (error.status === 403) return '권한이 없습니다.';
   if (error.status === 404) return '요청한 책장 정보를 찾을 수 없습니다.';
 
@@ -758,7 +758,7 @@ export function MeetingScreen() {
     const keyword = search.trim();
     if (keyword.length > MEETING_SEARCH_KEYWORD_MAX_LENGTH) {
       setDiscoverGroups([]);
-      showToast(`검색어는 ${MEETING_SEARCH_KEYWORD_MAX_LENGTH}자 이하로 입력해주세요.`);
+      showToast(`검색어는 ${MEETING_SEARCH_KEYWORD_MAX_LENGTH}자 이하여야 합니다.`);
       return;
     }
 
@@ -1102,7 +1102,7 @@ export function MeetingScreen() {
     requireAuth(() => {
       const reason = (applyReasonById[group.id] ?? '').trim();
       if (!reason) {
-        showToast('신청 사유를 입력해주세요.');
+        showToast('신청 사유를 입력해야 합니다.');
         return;
       }
       if (typeof group.clubId !== 'number') {
@@ -5529,7 +5529,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       setBookshelfDetailTab('TOPIC');
       setActiveTab('home');
       if (!options?.suppressToast) {
-        showToast('로그인이 만료되었습니다. 다시 로그인해주세요.');
+        showToast('로그인이 만료되었습니다. 다시 로그인해 주십시오.');
       }
       logout();
       requireAuth();
@@ -6960,13 +6960,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     if (!selectedNotice) return;
     const content = noticeCommentInput.trim();
     if (!content) {
-      showToast('댓글 내용을 입력해주세요.');
+      showToast('댓글 내용을 입력해야 합니다.');
       return;
     }
     const clubId = group.clubId;
     const noticeId = selectedNotice.remoteId;
     if (!isManagedClub || typeof clubId !== 'number' || typeof noticeId !== 'number') {
-      showToast('공지 댓글 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      showToast('공지 댓글 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
       return;
     }
 
@@ -7050,7 +7050,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         typeof noticeId !== 'number' ||
         typeof commentId !== 'number'
       ) {
-        showToast('공지 댓글 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
+        showToast('공지 댓글 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
         return;
       }
 
@@ -7276,13 +7276,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     }
     const selectedIds = selectedVoteOptionIdsByNotice[noticeKey] ?? [];
     if (selectedIds.length === 0) {
-      showToast('투표 항목을 선택해주세요.');
+      showToast('투표 항목을 선택해야 합니다.');
       return;
     }
     const clubId = group.clubId;
     const noticeId = selectedNotice.remoteId;
     if (!isManagedClub || typeof clubId !== 'number' || typeof noticeId !== 'number') {
-      showToast('공지 투표 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      showToast('공지 투표 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
       return;
     }
 
@@ -7555,12 +7555,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     }
 
     if (!description) {
-      showToast(bookshelfComposerType === 'TOPIC' ? '발제 내용을 입력해주세요.' : '한줄평을 입력해주세요.');
+      showToast(bookshelfComposerType === 'TOPIC' ? '발제 내용을 입력해야 합니다.' : '한줄평을 입력해야 합니다.');
       return;
     }
 
     if (bookshelfComposerType === 'REVIEW' && bookshelfComposerRating < 0.5) {
-      showToast('평점을 선택해주세요.');
+      showToast('평점을 선택해야 합니다.');
       return;
     }
 
@@ -8106,7 +8106,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     }
 
     if (teamManageTeams.some((team) => team.memberIds.length === 0)) {
-      showToast('빈 조를 삭제하거나 참여자를 배정해주세요.');
+      showToast('빈 조를 삭제하거나 참여자를 배정해야 합니다.');
       return;
     }
 
@@ -8337,7 +8337,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     if (!activeRegularChatGroup || !content || submittingRegularChat) return;
 
     if (!isChatConnected) {
-      showToast('채팅 서버에 연결 중입니다. 잠시 후 다시 시도해주세요.');
+      showToast('채팅 서버에 연결 중입니다. 잠시 후 다시 시도해 주십시오.');
       return;
     }
 
@@ -8481,7 +8481,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
   const handleDeleteManagedClub = useCallback(() => {
     if (!canManageClub || typeof group.clubId !== 'number') {
-      showToast('모임 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      showToast('모임 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
       return;
     }
 
@@ -8518,7 +8518,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const clubMemberId = request.clubMemberId;
     if (submittingJoinRequestAction) return;
     if (!canManageClub || typeof clubId !== 'number' || typeof clubMemberId !== 'number') {
-      showToast('가입 신청 처리 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      showToast('가입 신청 처리 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
       return;
     }
 
@@ -8554,7 +8554,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const clubMemberId = targetMember?.clubMemberId;
     if (submittingMemberAction) return;
     if (!canManageClub || typeof clubId !== 'number' || typeof clubMemberId !== 'number') {
-      showToast('회원 역할 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      showToast('회원 역할 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
       return;
     }
     if (!targetMember || targetMember.role === role) {
@@ -8615,7 +8615,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const clubMemberId = targetMember?.clubMemberId;
     if (submittingMemberAction) return;
     if (!canManageClub || typeof clubId !== 'number' || typeof clubMemberId !== 'number') {
-      showToast('회원 제외 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      showToast('회원 제외 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
       return;
     }
     if (!targetMember || targetMember.role === '개설자') {
@@ -8662,11 +8662,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const targets = editDraft.targets;
 
     if (!name || !region || !description || tags.length === 0 || targets.length === 0) {
-      showToast('모임 이름, 소개글, 지역, 카테고리, 대상을 입력해주세요.');
+      showToast('모임 이름, 소개글, 지역, 카테고리, 대상을 입력해야 합니다.');
       return;
     }
     if (!canManageClub) {
-      showToast('모임 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      showToast('모임 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
       return;
     }
 
@@ -8799,22 +8799,22 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const isEditMode = typeof editingMeetingId === 'number';
 
     if (!isEditMode && !bookshelfCreateDraft.sourceBook) {
-      showToast('책을 선택해주세요.');
+      showToast('책을 선택해야 합니다.');
       return;
     }
     const clubId = group.clubId;
     if (!canManageClub || typeof clubId !== 'number') {
       showToast(
         isEditMode
-          ? '책장 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.'
-          : '책장 생성 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.',
+          ? '책장 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'
+          : '책장 생성 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.',
       );
       return;
     }
 
     const generation = parseGenerationNumber(bookshelfCreateDraft.session);
     if (!generation) {
-      showToast('기수를 숫자로 입력해주세요.');
+      showToast('기수를 숫자로 입력해야 합니다.');
       return;
     }
 
@@ -8822,11 +8822,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const meetingLocation = bookshelfCreateDraft.meetingLocation.trim();
     const meetingDate = bookshelfCreateDraft.meetingDate.trim();
     if (regularMeetingName.length > BOOKSHELF_MEETING_TITLE_MAX_LENGTH) {
-      showToast(`정기모임 이름은 ${BOOKSHELF_MEETING_TITLE_MAX_LENGTH}자 이하로 입력해주세요.`);
+      showToast(`정기모임 이름은 ${BOOKSHELF_MEETING_TITLE_MAX_LENGTH}자 이하여야 합니다.`);
       return;
     }
     if (meetingLocation.length > BOOKSHELF_MEETING_LOCATION_MAX_LENGTH) {
-      showToast(`모임 장소는 ${BOOKSHELF_MEETING_LOCATION_MAX_LENGTH}자 이하로 입력해주세요.`);
+      showToast(`모임 장소는 ${BOOKSHELF_MEETING_LOCATION_MAX_LENGTH}자 이하여야 합니다.`);
       return;
     }
 
@@ -8837,7 +8837,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     }
     const sourceBookIsbn = sourceBook?.isbn.trim() ?? '';
     if (!isEditMode && !ISBN13_REGEX.test(sourceBookIsbn)) {
-      showToast('책 정보 형식을 확인해주세요.');
+      showToast('책 정보 형식이 올바르지 않습니다.');
       return;
     }
     const primaryCategory = bookshelfCreateDraft.categories[0];
@@ -8850,7 +8850,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       try {
         const meetingTime = meetingDate ? toApiDateTime(meetingDate) : undefined;
         if (meetingDate && !meetingTime) {
-          showToast('올바른 모임 날짜를 선택해주세요.');
+          showToast('올바른 모임 날짜를 선택해야 합니다.');
           return;
         }
 
@@ -8954,7 +8954,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       typeof clubId !== 'number' ||
       typeof meetingId !== 'number'
     ) {
-      showToast('책장 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      showToast('책장 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
       return;
     }
 
@@ -9095,11 +9095,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const title = noticeDraft.title.trim();
     const content = noticeDraft.content.trim();
     if (!title || !content) {
-      showToast('제목과 내용을 입력해주세요.');
+      showToast('제목과 내용을 입력해야 합니다.');
       return;
     }
     if (!canManageClub) {
-      showToast('공지 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      showToast('공지 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
       return;
     }
 
@@ -9208,7 +9208,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const clubId = group.clubId;
     const noticeId = selectedNotice.remoteId;
     if (!canManageClub || typeof clubId !== 'number' || typeof noticeId !== 'number') {
-      showToast('공지 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      showToast('공지 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
       return;
     }
 
@@ -11030,7 +11030,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 </Text>
               ) : (
                 <Text style={styles.bookshelfBookSearchGuide}>
-                  검색어를 입력하고 책을 선택해주세요.
+                  검색어를 입력하고 책을 선택해야 합니다.
                 </Text>
               )}
               <ScrollView
@@ -11610,7 +11610,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     </View>
                     <MaterialIcons name="chevron-right" size={20} color={colors.gray4} />
                   </Pressable>
-                  <Text style={styles.helperText}>달력에서 날짜를 선택해주세요.</Text>
+                  <Text style={styles.helperText}>달력에서 날짜를 선택해야 합니다.</Text>
                 </View>
               </View>
             ) : null}
@@ -11999,7 +11999,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               </View>
               <Text style={styles.managementMenuTitle}>모임 관리하기</Text>
               <Text style={styles.managementMenuCaption}>
-                운영진용 관리 기능을 선택해주세요.
+                운영진용 관리 기능을 선택해야 합니다.
               </Text>
               {[
                 {
@@ -12138,7 +12138,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               <TextInput
                 value={noticeDraft.title}
                 onChangeText={(text) => setNoticeDraft((prev) => ({ ...prev, title: text }))}
-                placeholder="제목을 입력해주세요."
+                placeholder="제목을 입력해야 합니다."
                 placeholderTextColor={colors.gray3}
                 style={styles.input}
               />
@@ -12147,7 +12147,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               <TextInput
                 value={noticeDraft.content}
                 onChangeText={(text) => setNoticeDraft((prev) => ({ ...prev, content: text }))}
-                placeholder="내용을 입력해주세요."
+                placeholder="내용을 입력해야 합니다."
                 placeholderTextColor={colors.gray3}
                 style={[styles.input, styles.noticeComposerTextArea]}
                 multiline
@@ -12310,7 +12310,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                       ) : null;
                     })()
                   ) : (
-                    <Text style={styles.helperText}>연결할 책장을 선택해주세요.</Text>
+                    <Text style={styles.helperText}>연결할 책장을 선택해야 합니다.</Text>
                   )}
                 </View>
               ) : null}
@@ -12899,7 +12899,7 @@ function MeetingCreateFlow({
   const handleCheckName = async () => {
     const normalized = name.trim();
     if (!normalized) {
-      showToast('모임 이름을 입력해주세요.');
+      showToast('모임 이름을 입력해야 합니다.');
       return;
     }
 
@@ -12957,7 +12957,7 @@ function MeetingCreateFlow({
       .filter((code): code is ClubParticipantTypeCode => Boolean(code));
 
     if (categoryCodes.length === 0 || participantCodes.length === 0) {
-      showToast('카테고리와 모임 대상을 확인해주세요.');
+      showToast('카테고리와 모임 대상을 확인해야 합니다.');
       return;
     }
 

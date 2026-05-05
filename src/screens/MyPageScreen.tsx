@@ -322,7 +322,7 @@ async function fetchAllFollowUsers(
 function resolveStoryFeedErrorMessage(error: unknown, fallback: string): string {
   if (!(error instanceof ApiError)) return fallback;
 
-  if (error.status === 401) return '로그인 상태를 확인해주세요.';
+  if (error.status === 401) return '로그인 상태를 확인해 주십시오.';
   if (error.status === 403) return '접근 권한이 없습니다.';
   if (error.status === 404) return '요청한 책이야기를 찾을 수 없습니다.';
 
@@ -333,8 +333,8 @@ function resolveStoryFeedErrorMessage(error: unknown, fallback: string): string 
 function resolveMyPageFetchErrorMessage(error: unknown, fallback: string): string {
   if (!(error instanceof ApiError)) return fallback;
 
-  if (error.status === 400) return '요청 정보를 다시 확인해주세요.';
-  if (error.status === 401) return '로그인 상태를 확인해주세요.';
+  if (error.status === 400) return '요청 정보를 다시 확인해야 합니다.';
+  if (error.status === 401) return '로그인 상태를 확인해 주십시오.';
   if (error.status === 403) return '접근 권한이 없습니다.';
   if (error.status === 404) return '요청한 정보를 찾을 수 없습니다.';
 
@@ -1035,14 +1035,14 @@ export function MyPageScreen() {
   const handleSubmitProfileEdit = useCallback(() => {
     const description = profileEditDescription.trim();
     if (description.length > INPUT_LIMITS.USER_DESCRIPTION) {
-      showToast(`소개는 ${INPUT_LIMITS.USER_DESCRIPTION}자 이내로 입력해주세요.`);
+      showToast(`소개는 ${INPUT_LIMITS.USER_DESCRIPTION}자 이내여야 합니다.`);
       return;
     }
 
     const categories =
       profileEditCategoryCodes.length > 0 ? profileEditCategoryCodes : profileCategoryCodes;
     if (categories.length === 0) {
-      showToast('관심 카테고리를 1개 이상 선택해주세요.');
+      showToast('관심 카테고리를 1개 이상 선택해야 합니다.');
       return;
     }
 
@@ -1101,15 +1101,15 @@ export function MyPageScreen() {
     const newEmail = emailNext.trim();
 
     if (!currentEmail || !newEmail) {
-      showToast('기존 이메일과 변경 이메일을 입력해주세요.');
+      showToast('기존 이메일과 변경 이메일을 입력해야 합니다.');
       return;
     }
     if (!emailRegex.test(currentEmail) || !emailRegex.test(newEmail)) {
-      showToast('올바른 이메일 형식을 입력해주세요.');
+      showToast('올바른 이메일 형식이어야 합니다.');
       return;
     }
     if (currentEmail.localeCompare(newEmail, 'ko', { sensitivity: 'accent' }) === 0) {
-      showToast('기존 이메일과 다른 이메일을 입력해주세요.');
+      showToast('기존 이메일과 다른 이메일을 입력해야 합니다.');
       return;
     }
 
@@ -1138,19 +1138,19 @@ export function MyPageScreen() {
     const verificationCode = emailVerificationCode.trim();
 
     if (!emailVerificationSent) {
-      showToast('먼저 인증번호를 발송해주세요.');
+      showToast('먼저 인증번호를 발송해야 합니다.');
       return;
     }
     if (remainingEmailVerificationSeconds <= 0) {
-      showToast('인증번호가 만료되었습니다. 인증번호를 다시 발송해주세요.');
+      showToast('인증번호가 만료되었습니다. 인증번호를 다시 발송해야 합니다.');
       return;
     }
     if (!verificationCode) {
-      showToast('인증번호를 입력해주세요.');
+      showToast('인증번호를 입력해야 합니다.');
       return;
     }
     if (!emailRegex.test(newEmail)) {
-      showToast('변경 이메일 형식을 확인해주세요.');
+      showToast('변경 이메일 형식이 올바르지 않습니다.');
       return;
     }
 
@@ -1185,15 +1185,15 @@ export function MyPageScreen() {
     const verificationCode = emailVerificationCode.trim();
 
     if (!currentEmail || !newEmail || !verificationCode) {
-      showToast('이메일 변경 정보를 모두 입력해주세요.');
+      showToast('이메일 변경 정보를 모두 입력해야 합니다.');
       return;
     }
     if (!emailRegex.test(currentEmail) || !emailRegex.test(newEmail)) {
-      showToast('올바른 이메일 형식을 입력해주세요.');
+      showToast('올바른 이메일 형식이어야 합니다.');
       return;
     }
     if (!emailVerified) {
-      showToast('변경 이메일 인증을 완료해주세요.');
+      showToast('변경 이메일 인증을 완료해야 합니다.');
       return;
     }
 
@@ -1230,7 +1230,7 @@ export function MyPageScreen() {
     const confirmPassword = passwordConfirm.trim();
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      showToast('비밀번호 정보를 모두 입력해주세요.');
+      showToast('비밀번호 정보를 모두 입력해야 합니다.');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -2169,7 +2169,7 @@ export function MyPageScreen() {
             overlayStyle={styles.defaultAvatarModalOverlay}
             cardStyle={styles.defaultAvatarModalCard}
           >
-            <Text style={styles.defaultAvatarModalTitle}>원하시는 색상을 선택해주세요.</Text>
+            <Text style={styles.defaultAvatarModalTitle}>원하시는 색상을 선택해야 합니다.</Text>
             <View style={styles.defaultAvatarGrid}>
               {defaultProfilePalette.map((color) => {
                 const selected = profileEditDefaultColor === color;

@@ -969,6 +969,41 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 수정 시각: 2026-05-05 KST
 
+### 토스트 문구 어투 통일 (~해주세요 → ~합니다/~주십시오 체)
+
+`docs/ui-feedback-message-consistency.md` 기준 todo 9번 항목 후속 작업 완료. 전체 103건 치환.
+
+**변환 규칙:**
+
+| 유형 | 기존 | 변경 |
+|---|---|---|
+| 입력 안내형 | `~을 입력해주세요.` | `~을 입력해야 합니다.` |
+| 선택 안내형 | `~을 선택해주세요.` | `~을 선택해야 합니다.` |
+| 완료/동의 안내형 | `~을 완료/동의해주세요.` | `~을 완료/동의해야 합니다.` |
+| 자릿수 안내형 | `N자 이내/이하로 입력해주세요.` | `N자 이내/이하여야 합니다.` |
+| 형식 확인형 | `형식을 확인/입력해주세요.` | `형식이 올바르지 않습니다.` |
+| 재시도형 | `다시 시도해주세요.` | `다시 시도해 주십시오.` |
+| 로그인/이용 안내형 | `로그인/이용해주세요.` | `로그인/이용하십시오.` |
+
+**적용 파일 (103건):**
+- `src/services/api/http.ts` (4건)
+- `src/services/api/clubApi.ts` (1건)
+- `src/services/api/newsApi.ts` (1건)
+- `src/screens/AuthFlowScreen.tsx` (21건)
+- `src/screens/MeetingScreen.tsx` (43건)
+- `src/screens/MyPageScreen.tsx` (17건)
+- `src/screens/StoryScreen.tsx` (11건)
+- `src/screens/HomeScreen.tsx` (1건)
+- `src/screens/NewsScreen.tsx` (1건)
+- `src/screens/UserProfileScreen.tsx` (1건)
+- `src/components/common/AppHeader.tsx` (2건)
+
+**미적용 범위:** TextInput `placeholder` 속성 및 UI 섹션 타이틀 (`<Text>` 안내 문구) — 토스트 범위 외
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
 ### 책이야기 작성 화면 — 임시저장 버튼 추가
 
 - 글 작성 폼 하단 액션 영역에 `임시저장` 버튼 추가 (`취소 | 임시저장 | 등록` 순서)

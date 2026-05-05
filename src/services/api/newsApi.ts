@@ -86,7 +86,7 @@ async function requestJsonSilent<T>(path: string, options: RequestOptions = {}):
       credentials: 'include',
     });
   } catch (error) {
-    throw new ApiError('네트워크 연결을 확인해주세요.', 0, 'NETWORK_ERROR', error);
+    throw new ApiError('네트워크 연결을 확인해 주십시오.', 0, 'NETWORK_ERROR', error);
   }
 
   const text = await response.text();

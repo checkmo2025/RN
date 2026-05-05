@@ -173,7 +173,7 @@ async function fetchAllFollowUsers(
 function resolveStoryFeedErrorMessage(error: unknown, fallback: string): string {
   if (!(error instanceof ApiError)) return fallback;
 
-  if (error.status === 401) return '로그인 상태를 확인해주세요.';
+  if (error.status === 401) return '로그인 상태를 확인해 주십시오.';
   if (error.status === 403) return '접근 권한이 없습니다.';
   if (error.status === 404) return '요청한 책이야기를 찾을 수 없습니다.';
 

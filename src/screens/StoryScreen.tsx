@@ -246,7 +246,7 @@ function mapBookItemToBook(item: BookItem): Book {
 function resolveStoryFeedErrorMessage(error: unknown, fallback: string): string {
   if (!(error instanceof ApiError)) return fallback;
 
-  if (error.status === 401) return '로그인 상태를 확인해주세요.';
+  if (error.status === 401) return '로그인 상태를 확인해 주십시오.';
   if (error.status === 403) return '접근 권한이 없습니다.';
   if (error.status === 404) return '요청한 책이야기를 찾을 수 없습니다.';
 
@@ -951,7 +951,7 @@ export function StoryScreen() {
     if (!reportModal?.nickname) return;
     const content = payload.content?.trim() ?? '';
     if (content.length > 500) {
-      showToast('신고 내용은 500자 이하로 입력해주세요.');
+      showToast('신고 내용은 500자 이하여야 합니다.');
       return;
     }
 
@@ -1103,7 +1103,7 @@ export function StoryScreen() {
         return;
       }
       if (typeof current.remoteId !== 'number') {
-        showToast('잠시 후 다시 시도해주세요.');
+        showToast('잠시 후 다시 시도해 주십시오.');
         return;
       }
 
@@ -1175,7 +1175,7 @@ export function StoryScreen() {
   const handleSubmitBookSearch = useCallback(() => {
     const keyword = bookSearchQuery.trim();
     if (!keyword) {
-      showToast('검색어를 입력해주세요.');
+      showToast('검색어를 입력해야 합니다.');
       return;
     }
     void runBookSearch(keyword);
@@ -1192,15 +1192,15 @@ export function StoryScreen() {
     const nextDescription = body.trim();
 
     if (!isEditingStory && !selectedBook) {
-      showToast('책을 선택해주세요.');
+      showToast('책을 선택해야 합니다.');
       return;
     }
     if (isEditingStory && !nextDescription) {
-      showToast('내용을 입력해주세요.');
+      showToast('내용을 입력해야 합니다.');
       return;
     }
     if (!isEditingStory && (!nextTitle || !nextDescription)) {
-      showToast('제목과 내용을 입력해주세요.');
+      showToast('제목과 내용을 입력해야 합니다.');
       return;
     }
     requireAuth(() => {
@@ -1213,12 +1213,12 @@ export function StoryScreen() {
             showToast('책이야기를 수정했습니다.');
           } else {
             if (!selectedBook) {
-              showToast('책을 선택해주세요.');
+              showToast('책을 선택해야 합니다.');
               return;
             }
             const isbn = selectedBook.id.trim();
             if (!ISBN13_REGEX.test(isbn)) {
-              showToast('책 정보 형식을 확인해주세요.');
+              showToast('책 정보 형식이 올바르지 않습니다.');
               return;
             }
             await createBookStory({
@@ -1442,7 +1442,7 @@ export function StoryScreen() {
   const handleSubmitComment = () => {
     requireAuth(() => {
       if (!selectedStory || !commentInput.trim()) {
-        showToast('댓글 내용을 입력해주세요.');
+        showToast('댓글 내용을 입력해야 합니다.');
         return;
       }
       const content = commentInput.trim();
@@ -2082,7 +2082,7 @@ export function StoryScreen() {
             <TextInput
               value={title}
               onChangeText={setTitle}
-              placeholder="제목을 입력해주세요."
+              placeholder="제목을 입력해야 합니다."
               placeholderTextColor={colors.gray3}
               style={[styles.titleInput, isEditingStory && styles.titleInputReadOnly]}
               editable={!isEditingStory}
@@ -2179,7 +2179,7 @@ export function StoryScreen() {
                     </Text>
                   )
                 ) : (
-                  <Text style={styles.bookSearchGuideText}>검색어를 입력하고 책을 선택해주세요.</Text>
+                  <Text style={styles.bookSearchGuideText}>검색어를 입력하고 책을 선택해야 합니다.</Text>
                 )}
 
                 <ScrollView

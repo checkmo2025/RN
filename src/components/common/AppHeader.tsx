@@ -605,7 +605,7 @@ export function AppHeader(props: Props) {
   const handleSearchSubmitFromDropdown = useCallback(() => {
     const keyword = query.trim();
     if (!keyword) {
-      showToast('검색어를 입력해주세요.');
+      showToast('검색어를 입력해야 합니다.');
       return;
     }
 
@@ -618,7 +618,7 @@ export function AppHeader(props: Props) {
   const handleSearchSubmitInPage = useCallback(() => {
     const keyword = query.trim();
     if (!keyword) {
-      showToast('검색어를 입력해주세요.');
+      showToast('검색어를 입력해야 합니다.');
       return;
     }
 
