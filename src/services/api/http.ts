@@ -26,6 +26,8 @@ export class ApiError extends Error {
   }
 }
 
+const DEFAULT_TIMEOUT_MS = 15_000;
+
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   query?: Record<string, QueryValue>;
@@ -33,6 +35,7 @@ type RequestOptions = {
   headers?: Record<string, string>;
   credentials?: RequestCredentials;
   suppressErrorToast?: boolean;
+  timeoutMs?: number;
 };
 
 function toDefaultHttpErrorMessage(status: number): string {
@@ -84,6 +87,7 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
     headers = {},
     credentials = 'include',
     suppressErrorToast = false,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
   } = options;
 
   const requestHeaders: Record<string, string> = {
@@ -94,6 +98,9 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
     requestHeaders['Content-Type'] = 'application/json';
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   let response: Response;
   try {
     response = await fetch(buildUrl(path, query), {
@@ -101,6 +108,7 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
       headers: requestHeaders,
       body: typeof body !== 'undefined' ? JSON.stringify(body) : undefined,
       credentials,
+      signal: controller.signal,
     });
   } catch (error) {
     const message = '네트워크 연결을 확인해주세요.';
@@ -108,6 +116,8 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
       showToast(message);
     }
     throw new ApiError(message, 0, 'NETWORK_ERROR', error);
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   const text = await response.text();

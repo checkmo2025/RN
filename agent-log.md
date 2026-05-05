@@ -942,6 +942,29 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 ---
 
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### 네트워크 타임아웃 + 로그아웃 안전성 개선
+
+**문제**: 실기기에서 로그아웃 후 홈 화면에서 `TypeError: Network request timed out` 콘솔 에러 발생. iOS 기본 네트워크 타임아웃(60초+)까지 `fetch()`가 대기하다가 타임아웃되는 구조였음.
+
+**변경 1 — `requestJson` 15초 타임아웃 추가** (`src/services/api/http.ts`)
+- `AbortController` + `setTimeout(15_000)`으로 모든 API 요청에 기본 타임아웃 적용
+- 타임아웃 발생 시 기존과 동일하게 `ApiError(NETWORK_ERROR)`로 처리됨
+- `timeoutMs` 옵션으로 호출별 오버라이드 가능
+
+**변경 2 — 로그아웃 로컬 세션 보장** (`src/screens/MyPageScreen.tsx`)
+- 기존: `logoutSession()` 서버 호출 실패 시 `logout()`(로컬 상태 초기화)이 호출되지 않아 사용자가 로그인 상태로 남음
+- 변경: `finally` 블록에서 서버 응답 성공/실패 무관하게 `logout()` + 홈 이동 보장
+
+## 작업 파일
+- `src/services/api/http.ts`
+- `src/screens/MyPageScreen.tsx`
+
+---
+
 ## 업데이트 (2026-04-30)
 
 수정 시각: 2026-04-30 KST

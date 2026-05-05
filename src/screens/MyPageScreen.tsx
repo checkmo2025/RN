@@ -1309,16 +1309,14 @@ export function MyPageScreen() {
           const submit = async () => {
             try {
               await logoutSession();
+            } catch {
+              // 서버 로그아웃 실패 시에도 로컬 세션은 초기화
+            } finally {
               logout();
               setShowSettings(false);
               setSelectedSetting(null);
               navigateToHome(navigation);
               showToast('로그아웃되었습니다.');
-            } catch (error) {
-              if (!(error instanceof ApiError)) {
-                showToast('로그아웃에 실패했습니다.');
-              }
-            } finally {
               setSubmittingLogout(false);
             }
           };
@@ -2081,6 +2079,9 @@ export function MyPageScreen() {
                 maxLength={INPUT_LIMITS.USER_DESCRIPTION}
               />
             </View>
+            <Text style={styles.inputCounterText}>
+              {profileEditDescription.length}/{INPUT_LIMITS.USER_DESCRIPTION}
+            </Text>
           </View>
           <View style={styles.formBlock}>
             <Text style={styles.detailLabel}>프로필 이미지</Text>
@@ -3022,6 +3023,11 @@ const styles = StyleSheet.create({
   },
   inputFieldDescenderSafe: {
     paddingVertical: spacing.xxs,
+  },
+  inputCounterText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textAlign: 'right',
   },
   inputFieldEmail: {
     paddingVertical: spacing.xxs,
