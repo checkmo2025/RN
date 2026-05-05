@@ -37,7 +37,7 @@ import * as Clipboard from 'expo-clipboard';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import { INPUT_LIMITS } from '../constants/inputLimits';
-import { colors, interactionOpacity, motion, radius, spacing, typography } from '../theme';
+import { colors, interactionOpacity, layers, motion, radius, spacing, typography } from '../theme';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
@@ -2402,7 +2402,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     width: DETAIL_BACK_EDGE_WIDTH,
-    zIndex: 20,
+    zIndex: layers.dropdown,
   },
   listContent: {
     paddingBottom: spacing.xl,

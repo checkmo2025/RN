@@ -1569,3 +1569,28 @@ export const interactionOpacity = {
 ## 작업 파일
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 08:51:23 KST
+
+### TOKEN-03 zIndex 레이어 상수화 + TOKEN-05 버튼 height 4단계 고정
+
+- `src/theme/layers.ts` 신규 생성 (raised=2/sticky=10/dropdown=20/overlay=40/toast=60)
+- `src/theme/buttonSize.ts` 신규 생성 (chip=28/icon=36/field=48/cta=52)
+- zIndex 하드코딩 9곳 → layers 토큰 교체 (AppHeader/ToastHost/MeetingScreen/StoryScreen), zIndex:999 제거
+- MeetingScreen 버튼 height 14곳 토큰화 (chip×7, icon×5, field×1, cta×1), 30→chip(28), 32→icon(36) 수렴
+- teamManageSaveButton minHeight:56 → height:buttonSize.cta(52) 교체
+- MyPageScreen emailVerificationButton minHeight:52 → height:buttonSize.cta 교체
+
+## 작업 파일
+- `src/theme/layers.ts` (신규)
+- `src/theme/buttonSize.ts` (신규)
+- `src/theme/index.ts`
+- `src/components/common/AppHeader.tsx`
+- `src/components/common/ToastHost.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+- `src/screens/StoryScreen.tsx`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`

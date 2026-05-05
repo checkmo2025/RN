@@ -4,5 +4,7 @@ export { spacing } from './spacing';
 export { radius } from './radius';
 export { interactionOpacity } from './interactionOpacity';
 export { motion } from './motion';
+export { layers } from './layers';
+export { buttonSize } from './buttonSize';
 export { getDeviceScale, scaleFont, scaleSize } from './responsive';
 export { inputStyles } from './inputStyles';

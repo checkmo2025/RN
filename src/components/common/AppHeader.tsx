@@ -24,7 +24,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
 import { PUBLIC_ENV } from '../../constants/publicEnv';
-import { colors, interactionOpacity, motion, radius, scaleSize, spacing, typography } from '../../theme';
+import { colors, interactionOpacity, layers, motion, radius, scaleSize, spacing, typography } from '../../theme';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
 import { IconButton, IconName } from './IconButton';
 import { useAuthGate } from '../../contexts/AuthGateContext';
@@ -1317,8 +1317,8 @@ export function AppHeader(props: Props) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.primary1,
-    zIndex: 20,
-    elevation: 20,
+    zIndex: layers.dropdown,
+    elevation: layers.dropdown,
   },
   headerBar: {
     height: HEADER_HEIGHT,
@@ -1524,8 +1524,8 @@ const styles = StyleSheet.create({
   },
   searchPageRoot: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 30,
-    elevation: 30,
+    zIndex: layers.overlay,
+    elevation: layers.overlay,
   },
   searchPageSheet: {
     position: 'absolute',

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Keyboard, KeyboardEvent, Platform, StyleSheet, Text, View } from 'react-native';
 
-import { colors, motion, radius, spacing, typography } from '../../theme';
+import { colors, layers, motion, radius, spacing, typography } from '../../theme';
 import { subscribeToast } from '../../utils/toast';
 
 const HIDE_DELAY_MS = 2200;
@@ -125,8 +125,8 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     justifyContent: 'flex-end',
-    zIndex: 999,
-    elevation: 999,
+    zIndex: layers.toast,
+    elevation: layers.toast,
   },
   toast: {
     minWidth: 220,

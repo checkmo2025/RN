@@ -28,7 +28,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import { termsDocumentOrder, termsDocuments } from '../constants/termsDocuments';
-import { colors, interactionOpacity, motion, radius, spacing, typography, scaleSize } from '../theme';
+import { buttonSize, colors, interactionOpacity, motion, radius, spacing, typography, scaleSize } from '../theme';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
@@ -3048,7 +3048,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary1,
     borderRadius: radius.md,
     backgroundColor: colors.white,
-    minHeight: 52,
+    height: buttonSize.cta,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,

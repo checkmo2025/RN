@@ -38,7 +38,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { SvgUri } from 'react-native-svg';
 
-import { colors, interactionOpacity, motion, radius, spacing, typography } from '../theme';
+import { buttonSize, colors, interactionOpacity, layers, motion, radius, spacing, typography } from '../theme';
 import { useMeetingChatStomp } from '../hooks/useMeetingChatStomp';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
@@ -1355,8 +1355,8 @@ const styles = StyleSheet.create({
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 20,
-    elevation: 20,
+    zIndex: layers.overlay,
+    elevation: layers.overlay,
   },
   container: {
     flex: 1,
@@ -1420,15 +1420,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xxs,
-    zIndex: 30,
+    zIndex: layers.dropdown,
   },
   outputFilterWrap: {
     position: 'relative',
-    zIndex: 40,
+    zIndex: layers.overlay,
   },
   outputFilterButton: {
     minWidth: 74,
-    height: 28,
+    height: buttonSize.chip,
     paddingHorizontal: spacing.xs,
     borderRadius: radius.sm,
     flexDirection: 'row',
@@ -1867,9 +1867,9 @@ const styles = StyleSheet.create({
     borderColor: colors.primary1,
   },
   createVisibilityIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: buttonSize.icon,
+    height: buttonSize.icon,
+    borderRadius: buttonSize.icon / 2,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F3EAE4',
@@ -1973,7 +1973,7 @@ const styles = StyleSheet.create({
   },
   dupCheckButton: {
     minWidth: 92,
-    height: 48,
+    height: buttonSize.field,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.subbrown4,
@@ -2259,9 +2259,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   managementMenuIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: buttonSize.icon,
+    height: buttonSize.icon,
+    borderRadius: buttonSize.icon / 2,
     backgroundColor: colors.subbrown4,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2353,7 +2353,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   teamManageDropChip: {
-    minHeight: 36,
+    minHeight: buttonSize.icon,
     borderWidth: 1,
     borderColor: colors.gray2,
     borderRadius: radius.lg,
@@ -2371,11 +2371,11 @@ const styles = StyleSheet.create({
     color: colors.gray6,
   },
   teamManageAddButton: {
-    width: 36,
-    height: 36,
+    width: buttonSize.icon,
+    height: buttonSize.icon,
     borderWidth: 1,
     borderColor: colors.subbrown3,
-    borderRadius: 18,
+    borderRadius: buttonSize.icon / 2,
     backgroundColor: colors.subbrown4,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2404,8 +2404,8 @@ const styles = StyleSheet.create({
     color: colors.gray6,
   },
   teamManageRemoveButton: {
-    width: 28,
-    height: 28,
+    width: buttonSize.chip,
+    height: buttonSize.chip,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2481,7 +2481,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   teamManageSaveButton: {
-    minHeight: 56,
+    height: buttonSize.cta,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2917,7 +2917,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   noticeTag: {
-    height: 28,
+    height: buttonSize.chip,
     minWidth: 42,
     borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
@@ -2956,8 +2956,8 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   noticePageArrow: {
-    width: 30,
-    height: 30,
+    width: buttonSize.chip,
+    height: buttonSize.chip,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.sm,
@@ -2969,8 +2969,8 @@ const styles = StyleSheet.create({
     opacity: interactionOpacity.disabled,
   },
   noticePageButton: {
-    width: 30,
-    height: 30,
+    width: buttonSize.chip,
+    height: buttonSize.chip,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.sm,
@@ -3005,8 +3005,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   noticeDetailMenuButton: {
-    width: 28,
-    height: 28,
+    width: buttonSize.chip,
+    height: buttonSize.chip,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -3654,9 +3654,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   bookshelfCalendarMonthButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: buttonSize.icon,
+    height: buttonSize.icon,
+    borderRadius: buttonSize.icon / 2,
     backgroundColor: colors.subbrown4,
     alignItems: 'center',
     justifyContent: 'center',
@@ -3800,7 +3800,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 10,
+    zIndex: layers.sticky,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -4059,11 +4059,11 @@ const styles = StyleSheet.create({
     color: colors.gray6,
   },
   bookshelfPanelAddButton: {
-    width: 32,
-    height: 32,
+    width: buttonSize.icon,
+    height: buttonSize.icon,
     borderWidth: 1,
     borderColor: colors.subbrown3,
-    borderRadius: 16,
+    borderRadius: buttonSize.icon / 2,
     backgroundColor: colors.subbrown4,
     alignItems: 'center',
     justifyContent: 'center',
@@ -4163,8 +4163,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   bookshelfPostMenuButton: {
-    width: 28,
-    height: 28,
+    width: buttonSize.chip,
+    height: buttonSize.chip,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -4308,7 +4308,7 @@ const styles = StyleSheet.create({
   },
   bookshelfGroupMemberWrap: {
     position: 'relative',
-    zIndex: 2,
+    zIndex: layers.raised,
   },
   bookshelfGroupMemberButton: {
     flexDirection: 'row',
@@ -4515,9 +4515,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   regularChatSendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: buttonSize.icon,
+    height: buttonSize.icon,
+    borderRadius: buttonSize.icon / 2,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.subbrown4,
