@@ -1,3 +1,31 @@
+# 2026-05-05 UI round 버튼/칩 radius 통일
+
+## 작업 개요
+버튼·칩·탭 스타일 키 전수 점검 결과를 바탕으로 하드코딩 값 토큰 교체 및 동일 역할 컴포넌트 간 radius 불일치 교정.
+
+## 변경 내용
+
+### Task 1 — 하드코딩 → radius 토큰 교체
+- `AppHeader dropdownRecoCard`: `borderRadius: 18` → `radius.lg` (비원형 카드 컨테이너, 유일한 비-원형 하드코딩 케이스)
+
+### Task 2 — 동일 역할 radius 불일치 교정
+- `MyPageScreen reportTypeChip`: `radius.lg` → `radius.sm`
+  - 근거: `StoryScreen reportTypeButton`(sm) + `ReportMemberModal typeButton`(sm)과 역할 동일
+- `BookStoryCard subscribeChip`: `radius.lg` → `radius.sm`
+  - 근거: `BookStoryFeedCard subButton`(sm) + `SubscribeUserItem subscribeButton`(sm)과 역할 동일
+- `MyPageScreen categoryChip`: `radius.sm` → `radius.lg`
+  - 근거: `AuthFlowScreen chip`(lg) + `MeetingScreen chip`(lg)와 역할 동일(장르/카테고리 선택 chip)
+- `MeetingScreen bookshelfSessionChip`: `radius.md` → `radius.sm`
+  - 근거: 같은 섹션 `bookshelfGroupChip`(sm)과 동일 필터 칩 역할
+
+## 파일
+- `src/components/common/AppHeader.tsx`
+- `src/components/feature/bookstory/BookStoryCard.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+
+---
+
 # 2026-04-30 로그인 후 이전 화면 복귀
 
 ## 작업 개요
