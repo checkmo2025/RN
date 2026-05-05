@@ -1594,3 +1594,17 @@ export const interactionOpacity = {
 - `src/screens/StoryScreen.tsx`
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 08:53:15 KST
+
+### TOKEN-04 hitSlop 전수 확인 → 이미 완료 상태
+
+- 전체 `hitSlop` 35건 전수 확인: 모두 8, hitSlop=6 0건
+- `IconButton` 기본값도 8로 고정돼 있음 확인
+- todo.md TOKEN-04 항목 ✅ 처리
+
+## 작업 파일
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
