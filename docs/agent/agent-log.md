@@ -1,3 +1,69 @@
+# 2026-05-06 UI 상호작용 토큰 통일 (1번: opacity + hitSlop)
+
+## 작업 개요
+`ui-interaction-token-consistency.md` 계획의 1번 항목 적용.
+`interactionOpacity` 토큰을 신규 생성하고, 전 파일에 흩어진 인터랙션 opacity 숫자를 토큰으로 교체.
+hitSlop 불일치(6 → 8) 4곳 수정.
+
+## 신규 토큰
+
+```ts
+// src/theme/interactionOpacity.ts
+export const interactionOpacity = {
+  pressed: 0.72,        // 일반 눌림 (FeedbackPressable 기준)
+  pressedStrong: 0.8,   // CTA/FAB 강조 눌림
+  disabled: 0.5,        // 비활성 버튼 (업계 표준)
+  disabledSoft: 0.65,   // 토글/팔로우 등 부드러운 비활성
+};
+```
+
+## opacity 교체 내역
+
+| 파일 | 스타일 키 | 변경 전 | 적용 토큰 |
+|------|-----------|---------|-----------|
+| `FeedbackPressable` | `pressed` | 0.72 | `pressed` |
+| `PrimaryButton` | `secondaryDisabled`, `dangerDisabled` | 0.5 | `disabled` |
+| `PrimaryButton` | `pressed` | 0.8 | `pressedStrong` |
+| `IconButton` | `pressed` | 0.6 | `pressed` |
+| `FloatingActionButton` | `pressed` | 0.8 | `pressedStrong` |
+| `AppHeader` | `searchMoreButtonPressed`, `resultWriteButtonPressed` | 0.82/0.8 | `pressedStrong` |
+| `ReportMemberModal` | `targetCardPressed` | 0.72 | `pressed` |
+| `ReportMemberModal` | `submitButtonDisabled` | 0.6 | `disabled` |
+| `ActionMenu` | `itemDisabled` | 0.45 | `disabled` |
+| `SubscribeUserItem` | `pressed` | 0.75 | `pressed` |
+| `MeetingListCard` | `pressed` | 0.75 | `pressed` |
+| `BookStoryCard` | `pressed` | 0.75 | `pressed` |
+| `MyGroupsDropdownCard` | `pressed` | 0.7 | `pressed` |
+| `AuthFlowScreen` | `pressed` | 0.75 | `pressed` |
+| `StoryScreen` | `reportSubmitButtonDisabled` | 0.6 | `disabled` |
+| `StoryScreen` | `pressed` | 0.75 | `pressed` |
+| `MyPageScreen` | `submitButtonDisabled` | 0.7 | `disabled` |
+| `MyPageScreen` | `toggleButtonDisabled` | 0.65 | `disabledSoft` |
+| `MyPageScreen` | `followDeleteButtonDisabled` | 0.6 | `disabled` |
+| `MyPageScreen` | `pressed` | 0.7 | `pressed` |
+| `MeetingScreen` | `pressed` | 0.7 | `pressed` |
+| `MeetingScreen` | `createProfileActionButtonDisabled` | 0.6 | `disabled` |
+| `MeetingScreen` | `dupCheckButtonDisabled` | 0.6 | `disabled` |
+| `MeetingScreen` | `managementJoinActionItemDisabled` | 0.45 | `disabled` |
+| `MeetingScreen` | `noticePageArrowDisabled` | 0.35 | `disabled` |
+| `MeetingScreen` | `noticePollOptionRowDisabled` | 0.55 | `disabled` |
+| `UserProfileScreen` | `followButtonDisabled` | 0.65 | `disabledSoft` |
+| `UserProfileScreen` | `pressed` | 0.7 | `pressed` |
+
+## 예외 유지 (장식성)
+- `AppHeader activeAction: 0.88` — 검색 활성 상태 시각 표시
+- `BookFlipLoadingScreen: 0.22` — 로딩 shine 효과
+- `BookStoryCard/FeedCard/Large: 0.9` — 이미지 그라데이션 오버레이
+- `MeetingScreen teamManageMemberChipDragging: 0.35` — 드래그 고스트 효과
+- `MeetingScreen bookshelfCalendarDayOutside: 0.35` — 이전/다음 달 날짜 시각 처리
+- `StoryScreen storyImageBg: 0.55` — 책이야기 배경 이미지 오버레이
+
+## hitSlop 교체
+- `UserProfileScreen` 팔로잉/팔로워 수 Pressable: `hitSlop={6}` → `8` (2곳)
+- `MyPageScreen` 팔로워/팔로잉 수 Pressable: `hitSlop={6}` → `8` (2곳)
+
+---
+
 # 2026-05-05 UI round 버튼/칩 radius 통일
 
 ## 작업 개요
