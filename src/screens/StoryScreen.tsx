@@ -36,6 +36,7 @@ import { SvgUri } from 'react-native-svg';
 import * as Clipboard from 'expo-clipboard';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
+import { INPUT_LIMITS } from '../constants/inputLimits';
 import { colors, radius, spacing, typography } from '../theme';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
@@ -46,6 +47,7 @@ import { ScreenLayout } from '../components/common/ScreenLayout';
 import { IconButton } from '../components/common/IconButton';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
 import { BottomSheet } from '../components/common/BottomSheet';
+import { FormTextInput } from '../components/common/FormTextInput';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import BookStoryFeedCard from '../components/feature/bookstory/BookStoryFeedCard';
 import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
@@ -2086,15 +2088,19 @@ export function StoryScreen() {
               editable={!isEditingStory}
               selectTextOnFocus={!isEditingStory}
             />
-            <TextInput
+            <FormTextInput
               value={body}
               onChangeText={setBody}
-              placeholder="자신의 책이야기를 들려주세요. (최대 5000자)"
+              placeholder={`자신의 책이야기를 들려주세요. (최대 ${INPUT_LIMITS.BOOK_STORY_CONTENT}자)`}
               placeholderTextColor={colors.gray3}
               style={styles.bodyInput}
               multiline
               textAlignVertical="top"
+              maxLength={INPUT_LIMITS.BOOK_STORY_CONTENT}
             />
+            <Text style={styles.bodyCounterText}>
+              {body.length}/{INPUT_LIMITS.BOOK_STORY_CONTENT}
+            </Text>
             <View style={styles.formActions}>
               <Pressable
                 style={styles.secondaryButton}
@@ -2102,6 +2108,14 @@ export function StoryScreen() {
               >
                 <Text style={styles.secondaryButtonText}>취소</Text>
               </Pressable>
+              {!editingStoryId && (
+                <Pressable
+                  style={styles.draftButton}
+                  onPress={() => showToast('임시저장 기능 구현전')}
+                >
+                  <Text style={styles.draftButtonText}>임시저장</Text>
+                </Pressable>
+              )}
               <Pressable style={styles.primaryButton} onPress={handleSubmit}>
                 <Text style={styles.primaryButtonText}>
                   {editingStoryId ? '수정' : '등록'}
@@ -2626,6 +2640,18 @@ const styles = StyleSheet.create({
     ...typography.body1_2,
     color: colors.white,
   },
+  draftButton: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.subbrown4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  draftButtonText: {
+    ...typography.body1_2,
+    color: colors.primary3,
+  },
   formCard: {
     backgroundColor: colors.white,
     borderRadius: radius.md,
@@ -2652,6 +2678,11 @@ const styles = StyleSheet.create({
     color: colors.gray6,
     minHeight: 160,
     paddingTop: spacing.sm,
+  },
+  bodyCounterText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textAlign: 'right',
   },
   formActions: {
     flexDirection: 'row',

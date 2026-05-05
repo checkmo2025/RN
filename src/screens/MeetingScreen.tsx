@@ -48,6 +48,7 @@ import { FloatingActionButton } from '../components/common/FloatingActionButton'
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
 import { DialogOverlay } from '../components/common/DialogOverlay';
+import { FormTextInput } from '../components/common/FormTextInput';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import { MeetingListCard } from '../components/feature/groups/MeetingListCard';
 import { MyGroupsDropdownCard } from '../components/feature/groups/MyGroupsDropdownCard';
@@ -135,7 +136,6 @@ import {
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
-import { withLimitToast } from '../utils/input';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 
@@ -1221,12 +1221,13 @@ export function MeetingScreen() {
 
       <Text style={styles.sectionTitle}>모임 검색하기</Text>
       <View style={styles.searchRow}>
-        <TextInput
+        <FormTextInput
           value={search}
           onChangeText={setSearch}
           placeholder="검색하기 (모임명, 지역별)"
           placeholderTextColor={colors.gray3}
           style={styles.searchInput}
+          fieldType="search"
           maxLength={MEETING_SEARCH_KEYWORD_MAX_LENGTH}
         />
         <MaterialIcons name="search" size={22} color={colors.gray5} />
@@ -1620,6 +1621,12 @@ const styles = StyleSheet.create({
   helperText: {
     ...typography.caption1_3_relaxed,
     color: colors.gray4,
+  },
+  infiniteScrollLoadingText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textAlign: 'center',
+    paddingVertical: spacing.md,
   },
   textArea: {
     height: 124,
@@ -9856,7 +9863,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   </View>
                 ) : null}
                 {currentNoticeCommentPageState?.loadingMore ? (
-                  <Text style={styles.helperText}>다음 댓글을 불러오는 중...</Text>
+                  <Text style={styles.infiniteScrollLoadingText}>불러오는 중...</Text>
                 ) : null}
               </View>
             </View>
@@ -10223,7 +10230,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                       </View>
                     ) : null}
                     {currentBookshelfTopicPageState?.loadingMore ? (
-                      <Text style={styles.helperText}>다음 발제를 불러오는 중...</Text>
+                      <Text style={styles.infiniteScrollLoadingText}>불러오는 중...</Text>
                     ) : null}
                   </View>
                 </View>
@@ -10907,9 +10914,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 <Text style={styles.bookshelfComposerLabel}>
                   {bookshelfComposerType === 'TOPIC' ? '발제 내용' : '한줄평 내용'}
                 </Text>
-                <TextInput
+                <FormTextInput
                   value={bookshelfComposerInput}
-                  onChangeText={withLimitToast(setBookshelfComposerInput, INPUT_LIMITS.BOOKSHELF_COMPOSER)}
+                  onChangeText={setBookshelfComposerInput}
                   placeholder={
                     bookshelfComposerType === 'TOPIC'
                       ? '발제 내용을 입력해주세요'
@@ -11264,26 +11271,25 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
                     독서 모임 이름을 입력해주세요!
                   </Text>
-                  <TextInput
+                  <FormTextInput
                     value={editDraft.name}
                     onChangeText={(text) => {
                       setEditDraft((prev) => ({ ...prev, name: text }));
-                      if (text.length >= INPUT_LIMITS.CLUB_NAME) showToast(`최대 ${INPUT_LIMITS.CLUB_NAME}자까지 입력할 수 있습니다.`);
                     }}
                     placeholder="독서 모임 이름을 입력해주세요"
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
+                    fieldType="text"
                     maxLength={INPUT_LIMITS.CLUB_NAME}
                   />
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
                     모임의 소개글을 입력해주세요!
                   </Text>
-                  <TextInput
+                  <FormTextInput
                     value={editDraft.description}
                     onChangeText={(text) => {
                       setEditDraft((prev) => ({ ...prev, description: text }));
-                      if (text.length >= INPUT_LIMITS.CLUB_DESCRIPTION) showToast(`최대 ${INPUT_LIMITS.CLUB_DESCRIPTION}자까지 입력할 수 있습니다.`);
                     }}
                     placeholder="자유롭게 입력해주세요! (500자 제한)"
                     placeholderTextColor={colors.gray3}
@@ -11291,6 +11297,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     multiline
                     maxLength={INPUT_LIMITS.CLUB_DESCRIPTION}
                   />
+                  <Text style={styles.bookshelfComposerCounter}>
+                    {editDraft.description.length}/{INPUT_LIMITS.CLUB_DESCRIPTION}
+                  </Text>
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
                     모임의 프로필 사진을 변경할 수 있어요!
@@ -11403,11 +11412,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
                     활동 지역을 입력해주세요!
                   </Text>
-                  <TextInput
+                  <FormTextInput
                     value={editDraft.region}
                     onChangeText={(text) => {
                       setEditDraft((prev) => ({ ...prev, region: text }));
-                      if (text.length >= INPUT_LIMITS.CLUB_REGION) showToast(`최대 ${INPUT_LIMITS.CLUB_REGION}자까지 입력할 수 있습니다.`);
                     }}
                     placeholder="활동 지역을 입력해주세요 (40자 제한)"
                     placeholderTextColor={colors.gray3}
@@ -11544,7 +11552,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
                     정기모임 이름 (선택)
                   </Text>
-                  <TextInput
+                  <FormTextInput
                     value={bookshelfCreateDraft.regularMeetingName}
                     onChangeText={(text) =>
                       setBookshelfCreateDraft((prev) => ({ ...prev, regularMeetingName: text }))
@@ -11558,7 +11566,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
                     모임 장소 (선택)
                   </Text>
-                  <TextInput
+                  <FormTextInput
                     value={bookshelfCreateDraft.meetingLocation}
                     onChangeText={(text) =>
                       setBookshelfCreateDraft((prev) => ({ ...prev, meetingLocation: text }))
@@ -13044,7 +13052,7 @@ function MeetingCreateFlow({
             <View style={styles.sectionBox}>
               <Text style={styles.sectionTitle}>독서 모임 이름을 입력해주세요!</Text>
               <View style={styles.inlineRow}>
-                <TextInput
+                <FormTextInput
                   value={name}
                   onChangeText={(value) => {
                     setName(value);
@@ -13052,7 +13060,6 @@ function MeetingCreateFlow({
                     if (checkedName && checkedName.value !== normalized) {
                       setCheckedName(null);
                     }
-                    if (value.length >= INPUT_LIMITS.CLUB_NAME) showToast(`최대 ${INPUT_LIMITS.CLUB_NAME}자까지 입력할 수 있습니다.`);
                   }}
                   placeholder="독서 모임 이름을 입력해주세요"
                   placeholderTextColor={colors.gray3}
@@ -13094,15 +13101,18 @@ function MeetingCreateFlow({
               <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
                 모임의 소개글을 입력해주세요!
               </Text>
-              <TextInput
+              <FormTextInput
                 value={desc}
-                onChangeText={withLimitToast(setDesc, INPUT_LIMITS.CLUB_DESCRIPTION)}
+                onChangeText={setDesc}
                 placeholder="자유롭게 입력해주세요! (500자 제한)"
                 placeholderTextColor={colors.gray3}
                 style={[styles.input, styles.textArea]}
                 multiline
                 maxLength={INPUT_LIMITS.CLUB_DESCRIPTION}
               />
+              <Text style={styles.bookshelfComposerCounter}>
+                {desc.length}/{INPUT_LIMITS.CLUB_DESCRIPTION}
+              </Text>
             </View>
           )}
 
@@ -13308,9 +13318,9 @@ function MeetingCreateFlow({
               <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
                 활동 지역을 입력해주세요! (40자 제한)
               </Text>
-              <TextInput
+              <FormTextInput
                 value={region}
-                onChangeText={withLimitToast(setRegion, INPUT_LIMITS.CLUB_REGION)}
+                onChangeText={setRegion}
                 placeholder="활동 지역을 입력해주세요 (40자 제한)"
                 placeholderTextColor={colors.gray3}
                 style={styles.input}
@@ -13346,7 +13356,7 @@ function MeetingCreateFlow({
               <Text style={styles.sectionTitle}>SNS나 링크 연동이 있다면 해주세요! (선택)</Text>
               {links.map((link, idx) => (
                 <View key={idx} style={styles.formGroup}>
-                  <TextInput
+                  <FormTextInput
                     value={link.text}
                     onChangeText={(v) => {
                       setLinks((prev: LinkItem[]) => {
@@ -13354,14 +13364,13 @@ function MeetingCreateFlow({
                         copy[idx] = { ...copy[idx], text: v };
                         return copy;
                       });
-                      if (v.length >= INPUT_LIMITS.CLUB_LINK_LABEL) showToast(`최대 ${INPUT_LIMITS.CLUB_LINK_LABEL}자까지 입력할 수 있습니다.`);
                     }}
                     placeholder="링크 대체 텍스트 입력(최대 20자)"
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
                     maxLength={INPUT_LIMITS.CLUB_LINK_LABEL}
                   />
-                  <TextInput
+                  <FormTextInput
                     value={link.url}
                     onChangeText={(v) => {
                       setLinks((prev: LinkItem[]) => {
@@ -13369,11 +13378,11 @@ function MeetingCreateFlow({
                         copy[idx] = { ...copy[idx], url: v };
                         return copy;
                       });
-                      if (v.length >= INPUT_LIMITS.CLUB_LINK_URL) showToast(`최대 ${INPUT_LIMITS.CLUB_LINK_URL}자까지 입력할 수 있습니다.`);
                     }}
                     placeholder="링크 입력(최대 100자)"
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
+                    fieldType="url"
                     maxLength={INPUT_LIMITS.CLUB_LINK_URL}
                   />
                 </View>

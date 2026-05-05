@@ -1,10 +1,10 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../../theme';
 import { INPUT_LIMITS } from '../../../constants/inputLimits';
-import { showToast } from '../../../utils/toast';
+import { FormTextInput } from '../../common/FormTextInput';
 
 const CLUB_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../../../assets/images/club-default.png')).uri;
 
@@ -113,12 +113,9 @@ export function MeetingListCard({
 
       {applyOpen ? (
         <View style={styles.applySection}>
-          <TextInput
+          <FormTextInput
             value={applyReason}
-            onChangeText={(text) => {
-              onChangeApplyReason?.(text);
-              if (text.length >= INPUT_LIMITS.APPLY_REASON) showToast(`최대 ${INPUT_LIMITS.APPLY_REASON}자까지 입력할 수 있습니다.`);
-            }}
+            onChangeText={(text) => onChangeApplyReason?.(text)}
             placeholder="신청 사유를 입력해보세요(300자 제한)"
             placeholderTextColor={colors.gray3}
             multiline
@@ -126,6 +123,9 @@ export function MeetingListCard({
             textAlignVertical="top"
             style={styles.applyInput}
           />
+          <Text style={styles.applyCounterText}>
+            {(applyReason ?? '').length}/{INPUT_LIMITS.APPLY_REASON}
+          </Text>
           <Pressable
             style={({ pressed }) => [
               styles.applySubmitButton,
@@ -307,6 +307,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     ...typography.body1_3,
     color: colors.gray6,
+  },
+  applyCounterText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textAlign: 'right',
   },
   applySubmitButton: {
     height: 36,

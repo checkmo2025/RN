@@ -19,6 +19,7 @@ import { colors, radius, spacing, typography } from '../theme';
 import { AppButton } from '../components/common/PrimaryButton';
 import { DialogOverlay } from '../components/common/DialogOverlay';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
+import { FormTextInput } from '../components/common/FormTextInput';
 import {
   checkNicknameDuplicate,
   confirmEmailVerification,
@@ -32,7 +33,6 @@ import {
 } from '../services/api/authApi';
 import { ApiError } from '../services/api/http';
 import { showToast } from '../utils/toast';
-import { withLimitToast } from '../utils/input';
 
 type Step =
   | 'login'
@@ -886,7 +886,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
         <View style={styles.formGroup}>
           <Text style={styles.label}>이메일</Text>
-          <TextInput
+          <FormTextInput
             value={signUpEmail}
             onChangeText={(value) => {
               setSignUpEmail(value);
@@ -895,9 +895,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             placeholder="이메일"
             style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
+            fieldType="email"
           />
           <Pressable
             style={({ pressed }) => [
@@ -917,13 +915,13 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           </Pressable>
 
           <Text style={styles.label}>인증번호</Text>
-          <TextInput
+          <FormTextInput
             value={verificationCode}
             onChangeText={setVerificationCode}
             placeholder="인증번호 입력"
             style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
-            keyboardType="number-pad"
+            fieldType="number"
           />
           {verificationSent && !emailVerified ? (
             <Text
@@ -984,12 +982,13 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             비밀번호는 6~12자, 영어 최소 1자 이상, 특수문자 최소 1자 이상
           </Text>
           <View style={styles.passwordInputRow}>
-            <TextInput
+            <FormTextInput
               value={signUpPassword}
               onChangeText={setSignUpPassword}
               placeholder="비밀번호"
               style={[styles.input, styles.inputDescenderSafe, styles.passwordInput]}
               placeholderTextColor={colors.gray3}
+              fieldType="password"
               secureTextEntry={!showSignUpPassword}
             />
             <Pressable
@@ -1005,12 +1004,13 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             </Pressable>
           </View>
           <View style={styles.passwordInputRow}>
-            <TextInput
+            <FormTextInput
               value={signUpPasswordConfirm}
               onChangeText={setSignUpPasswordConfirm}
               placeholder="비밀번호 확인"
               style={[styles.input, styles.inputDescenderSafe, styles.passwordInput]}
               placeholderTextColor={colors.gray3}
+              fieldType="password"
               secureTextEntry={!showSignUpPasswordConfirm}
             />
             <Pressable
@@ -1047,7 +1047,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             <Text style={styles.labelHint}>최대 20글자</Text>
           </View>
           <View style={styles.inlineRow}>
-            <TextInput
+            <FormTextInput
               value={nickname}
               onChangeText={(value) => {
                 setNickname(value);
@@ -1055,16 +1055,12 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
                 if (nicknameChecked && nicknameChecked.value !== trimmed) {
                   setNicknameChecked(null);
                 }
-                if (value.length >= INPUT_LIMITS.NICKNAME) {
-                  showToast(`최대 ${INPUT_LIMITS.NICKNAME}자까지 입력할 수 있습니다.`);
-                }
               }}
               placeholder="닉네임 입력해주세요"
               style={[styles.input, styles.inputDescenderSafe, styles.inlineInput]}
               placeholderTextColor={colors.gray3}
+              fieldType="nickname"
               maxLength={INPUT_LIMITS.NICKNAME}
-              autoCapitalize="none"
-              autoCorrect={false}
             />
             <Pressable
               style={({ pressed }) => [styles.outlineButton, styles.inlineButton, pressed && styles.pressed]}
@@ -1088,33 +1084,37 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           ) : null}
 
           <Text style={styles.label}>소개</Text>
-          <TextInput
+          <FormTextInput
             value={description}
-            onChangeText={withLimitToast(setDescription, INPUT_LIMITS.USER_DESCRIPTION)}
+            onChangeText={setDescription}
             placeholder={`${INPUT_LIMITS.USER_DESCRIPTION}자 이내로 작성해주세요`}
             style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
             maxLength={INPUT_LIMITS.USER_DESCRIPTION}
           />
+          <Text style={styles.inputCounterText}>
+            {description.length}/{INPUT_LIMITS.USER_DESCRIPTION}
+          </Text>
 
           <Text style={styles.label}>이름</Text>
-          <TextInput
+          <FormTextInput
             value={name}
-            onChangeText={withLimitToast(setName, INPUT_LIMITS.USER_NAME)}
+            onChangeText={setName}
             placeholder="이름을 입력해주세요"
             style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
+            fieldType="name"
             maxLength={INPUT_LIMITS.USER_NAME}
           />
 
           <Text style={styles.label}>전화번호</Text>
-          <TextInput
+          <FormTextInput
             value={phoneNumber}
             onChangeText={(value) => setPhoneNumber(formatPhoneNumberInput(value))}
             placeholder="010-0000-0000"
             style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
-            keyboardType="phone-pad"
+            fieldType="phone"
           />
         </View>
 
@@ -1275,20 +1275,21 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         <Text style={styles.title}>아이디{'\n'}(이메일 찾기)</Text>
         <Text style={styles.subLabel}>이름과 전화번호를 입력해주세요</Text>
         <View style={styles.formGroup}>
-          <TextInput
+          <FormTextInput
             value={findName}
             onChangeText={setFindName}
             placeholder="이름"
             style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
+            fieldType="name"
           />
-          <TextInput
+          <FormTextInput
             value={findPhoneNumber}
             onChangeText={(value) => setFindPhoneNumber(formatPhoneNumberInput(value))}
             placeholder="전화번호"
             style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
-            keyboardType="phone-pad"
+            fieldType="phone"
           />
         </View>
         <AppButton
@@ -1326,15 +1327,13 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         <Text style={styles.title}>비밀번호 재발급</Text>
         <Text style={styles.subLabel}>이메일을 입력해주세요</Text>
         <View style={styles.formGroup}>
-          <TextInput
+          <FormTextInput
             value={resetPasswordEmail}
             onChangeText={setResetPasswordEmail}
             placeholder="이메일"
             style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
+            fieldType="email"
           />
         </View>
         <AppButton
@@ -1352,22 +1351,22 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     <>
       <Text style={styles.title}>로그인</Text>
       <View style={styles.formGroup}>
-        <TextInput
+        <FormTextInput
           value={loginIdentifier}
           onChangeText={setLoginIdentifier}
           placeholder="아이디(이메일/닉네임)"
           style={[styles.input, styles.inputDescenderSafe]}
           placeholderTextColor={colors.gray3}
-          autoCapitalize="none"
-          autoCorrect={false}
+          fieldType="nickname"
         />
         <View style={styles.passwordInputRow}>
-          <TextInput
+          <FormTextInput
             value={loginPassword}
             onChangeText={setLoginPassword}
             placeholder="비밀번호"
             style={[styles.input, styles.inputDescenderSafe, styles.passwordInput]}
             placeholderTextColor={colors.gray3}
+            fieldType="password"
             secureTextEntry={!showLoginPassword}
             returnKeyType="done"
             onSubmitEditing={() => {
@@ -1566,6 +1565,12 @@ const styles = StyleSheet.create({
   labelHint: {
     ...typography.body2_3,
     color: colors.gray4,
+  },
+  inputCounterText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textAlign: 'right',
+    marginTop: -spacing.xs / 2,
   },
   helperInline: {
     ...typography.body2_3,

@@ -13,6 +13,7 @@ export const INPUT_LIMITS = {
   APPLY_REASON: 300,
 
   // 콘텐츠
+  BOOK_STORY_CONTENT: 5000,
   BOOKSHELF_COMPOSER: 300,
   REPORT_CONTENT: 500,
 } as const;

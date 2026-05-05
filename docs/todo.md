@@ -1,6 +1,6 @@
 # TODO
 
-> 마지막 업데이트: 2026-04-30 KST
+> 마지막 업데이트: 2026-05-05 KST
 
 ---
 
@@ -26,7 +26,7 @@
 | ✅ | **RN** | **1번: 문구/카피 규칙 통일** | `docs/ui-copy-consistency.md` 작성. `~중` 표기 통일 완료 — 상태 라벨형(`구독중`, `로딩중` 등) 공백 없이, 진행 동작형(`업로드 중...` 등) 공백+말줄임표 적용. `오류 메시지 기술용어 대체` 커밋(f6b7b32) 포함. |
 | ✅ | **RN** | **2번: 로딩 피드백 규칙 통일** | 부팅 로더 1500ms 고정 타이머 → `AuthGate.isReady` 이벤트 기반 전환. 전환 로더 1200ms → `AUTH_TRANSITION_MS=400ms` 상수 단축. `StoryScreen` `isLoadingMore` 리스트 하단 인라인 피드백 추가. `loading-screen.md` 최신화 완료. |
 | ✅ | **RN** | **3번: 버튼 규격 통일** | `AppButton` 컴포넌트 강화 — variant(primary/secondary/outline/danger), size(lg/md), loading+loadingLabel, fullWidth prop 추가. `AuthFlowScreen` 전체 주요 CTA 버튼 AppButton으로 교체 완료. 나머지 336 Pressable은 2차 정리 대상. |
-| ✅ | **RN** | **4번: 입력 폼 규격 통일** | `src/constants/inputLimits.ts` (INPUT_LIMITS 상수) + `src/theme/inputStyles.ts` (base/multiline 토큰) 신규 생성. AuthFlowScreen·MyPageScreen·MeetingScreen·ReportMemberModal·MeetingListCard 전체 `maxLength` 하드코딩 → INPUT_LIMITS 교체. MyPageScreen 소개 20자→40자 버그 수정. AppHeader placeholderTextColor gray2→gray3 통일. |
+| ✅ | **RN** | **4번: 입력 폼 규격 통일** | `src/constants/inputLimits.ts` (INPUT_LIMITS 상수) + `src/theme/inputStyles.ts` (base/multiline 토큰) 신규 생성. AuthFlowScreen·MyPageScreen·MeetingScreen·ReportMemberModal·MeetingListCard 전체 `maxLength` 하드코딩 → INPUT_LIMITS 교체. MyPageScreen 소개 20자→40자 버그 수정. AppHeader placeholderTextColor gray2→gray3 통일. `FormTextInput` 공용 컴포넌트 적용(필드타입 규칙 공통화), 길이 초과 입력 차단 + 토스트 `"입력 가능한 길이를 초과했습니다."`로 통일. |
 | ✅ | **RN** | **5번: spacing 토큰 적용 통일** | 하드코딩 54건 → 0건(정책 예외 제외). 예외 정책(0/음수/2·3·6/디자인값) 주석 명시. `npm run check:spacing` 스크립트 추가, `npm run check`에 통합. |
 | ✅ | **RN** | **6번: radius/border/shadow 통일** | borderRadius 하드코딩 58건 → 0건(정책 예외 제외). shadowColor `'#000'`/`'#000000'` 11건 → `colors.black` 교체. AppHeader의 `spacing.xs/md` borderRadius 오용 → `radius.sm/lg` 교정. 예외 정책(원형 아바타 width/2, 컴포넌트 전용 shape) `radius.ts` 주석에 명시. |
 | ✅ | **RN** | **7번: 모달/바텀시트 패턴 통일** | `docs/ui-modal-bottomsheet-consistency.md` 작성. `DialogOverlay`(`Modal+transparent+fade`) · `BottomSheet`(`Modal+transparent+slide`) 공용 컴포넌트 생성. MeetingScreen 5건·MyPageScreen 1건·AuthFlowScreen 2건·StoryScreen 1건 총 9개 인라인 Modal → 공용 컴포넌트 교체 완료. |
@@ -49,7 +49,7 @@
 
 | 상태 | 항목 | 배경 |
 |------|------|------|
-| ⬜ | **입력 필드 글자 수 카운터 추가 여부** | 현재는 maxLength 도달 시 토스트만 뜸. 카운터(N/max)를 상시 표시하면 사용자가 남은 글자 수를 미리 알 수 있음. 단, UI 복잡도 증가. 테스트 이후 결정. |
+| ✅ | **입력 필드 글자 수 카운터 추가 적용** | 장문 입력 5종(발제/한줄평, 책이야기 본문, 모임 소개글(생성/수정), 프로필 소개글(회원가입/프로필편집))에 `N/max` 카운터 적용 완료. |
 | ⬜ | **토스트 문구 어투 통일 (~해주세요 → ~합니다 체)** | `showToast` 호출 중 "~해주세요." 끝나는 문구 약 71건. 입력 안내형(`닉네임을 입력해주세요`) → `~해야 합니다` 또는 `~이 필요합니다` 체로 통일. 재시도형(`다시 시도해주세요`) → `다시 시도해 주십시오` 체로 분리 처리. |
 
 ---
@@ -63,8 +63,8 @@
 | ⬜ | **앱 처음 켤 때 로딩 화면** | 앱을 완전히 종료 후 다시 실행 | 책모 로딩 화면이 뜨다가, 네트워크 응답 끝나는 시점에 자연스럽게 사라지는지. 전에는 무조건 1.5초였는데 이제 서버 응답 기준으로 바뀜 → 너무 빨리 사라지거나 아예 안 사라지면 이상한 것. |
 | ⬜ | **로그인 안 된 상태에서 로그인 필요 기능 누를 때** | 비로그인 상태로 구독, 좋아요 등 버튼 클릭 | 책모 로딩 화면이 잠깐 뜨면서(약 0.4초) "로그인이 필요합니다" 안내가 보이고, 그 뒤 로그인 화면으로 넘어가는지. 전엔 1.2초였는데 짧아짐. |
 | ⬜ | **로그인 완료 직후 전환 + 이전 화면 복귀** | 책이야기 작성 버튼 클릭 → 로그인/회원가입 성공 | 로그인 완료 후 작성 화면이 자동으로 열리는지. 팔로워/팔로잉 목록, 설정, 책 좋아요도 동일 확인. |
-| ⬜ | **로그아웃 직후 전환** | 내 페이지 → 설정 → 로그아웃 | 로그아웃 확인 후 홈 탭으로 이동하는지. (`navigateToHome` 적용 완료, 실기기 확인 필요) |
-| ⬜ | **책이야기 피드 스크롤 끝까지** | 책이야기 탭에서 맨 아래까지 스크롤 | 다음 페이지 불러올 때 맨 아래에 "불러오는 중..." 텍스트가 잠깐 보이는지. |
+| ✅ | **로그아웃 직후 전환** | 내 페이지 → 설정 → 로그아웃 | 로그아웃 확인 후 홈 탭으로 이동하는지. (`navigateToHome` 적용 완료, 실기기 확인 완료) |
+| 🔄 | **책이야기 피드 스크롤 끝까지 (데이터 쌓이고 확인 필요)** | 책이야기 탭에서 맨 아래까지 스크롤 | 현재 데이터량 부족으로 실기기 확인 보류. 데이터가 충분히 쌓인 뒤, 다음 페이지 불러올 때 맨 아래에 "불러오는 중..." 텍스트가 잠깐 보이는지 확인. |
 | ⬜ | **입력 한도 토스트** | 닉네임·이름·소개·모임이름·소개·지역·링크·신청사유·신고내용 각 필드에서 마지막 글자까지 입력 | 한도(maxLength)에 딱 찼을 때 "최대 N자까지 입력할 수 있습니다." 토스트가 한 번 뜨는지. 이후 삭제하고 다시 치면 다시 뜨는지. |
 
 ---

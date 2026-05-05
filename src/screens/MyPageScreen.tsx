@@ -35,6 +35,7 @@ import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
 import { DialogOverlay } from '../components/common/DialogOverlay';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
+import { FormTextInput } from '../components/common/FormTextInput';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import {
   confirmEmailVerification,
@@ -81,7 +82,6 @@ import { formatNotificationText, resolveNotificationTarget } from '../utils/noti
 import { showToast } from '../utils/toast';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { INPUT_LIMITS } from '../constants/inputLimits';
-import { withLimitToast } from '../utils/input';
 
 const tabs = ['내 책 이야기', '내 서재', '내 모임', '내 알림'] as const;
 type TabKey = (typeof tabs)[number];
@@ -2070,9 +2070,9 @@ export function MyPageScreen() {
           <View style={styles.formBlock}>
             <Text style={styles.detailLabel}>소개</Text>
             <View style={styles.inputPlaceholder}>
-              <TextInput
+              <FormTextInput
                 value={profileEditDescription}
-                onChangeText={withLimitToast(setProfileEditDescription, INPUT_LIMITS.USER_DESCRIPTION)}
+                onChangeText={setProfileEditDescription}
                 placeholder={`소개를 입력해주세요 (최대 ${INPUT_LIMITS.USER_DESCRIPTION}자)`}
                 placeholderTextColor={colors.gray3}
                 style={[styles.inputField, styles.inputFieldDescenderSafe]}

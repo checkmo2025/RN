@@ -979,3 +979,30 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 ## 작업 파일
 - `README.md`
 
+---
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### 입력 폼 공용 컴포넌트화 + 길이 초과 차단 통일
+
+- `FormTextInput` 공용 컴포넌트 신규 추가
+  - 필드 타입(`text/nickname/name/email/phone/number/password/url/search`)별 기본 입력 규칙 통일
+  - `maxLength` 초과 입력 시 추가 입력 차단 + 토스트 `"입력 가능한 길이를 초과했습니다."` 노출
+- `maxLength`가 적용된 입력 필드를 `FormTextInput`으로 이관
+  - `AuthFlowScreen`, `MeetingScreen`, `MyPageScreen`, `StoryScreen`, `ReportMemberModal`, `MeetingListCard`
+- 입력 카운터 보강
+  - 신고 내용, 가입 신청 사유, 책이야기 본문, 모임 소개글(생성/수정), 프로필 소개글(회원가입/프로필편집)
+- `docs/todo.md` 입력 폼 통일 항목 설명 업데이트
+
+## 작업 파일
+- `src/components/common/FormTextInput.tsx`
+- `src/screens/AuthFlowScreen.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+- `src/screens/StoryScreen.tsx`
+- `src/components/common/ReportMemberModal.tsx`
+- `src/components/feature/groups/MeetingListCard.tsx`
+- `src/constants/inputLimits.ts`
+- `docs/todo.md`

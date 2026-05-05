@@ -4,16 +4,15 @@ import {
   Modal,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../theme';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
-import { withLimitToast } from '../../utils/input';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
 import { DefaultProfileAvatar } from './DefaultProfileAvatar';
+import { FormTextInput } from './FormTextInput';
 import type { MemberReportType } from '../../services/api/memberApi';
 
 export type ReportMemberModalState = {
@@ -143,9 +142,9 @@ export function ReportMemberModal({
 
             <Text style={styles.label}>내용</Text>
             <View style={styles.contentBox}>
-              <TextInput
+              <FormTextInput
                 value={content}
-                onChangeText={withLimitToast(setContent, INPUT_LIMITS.REPORT_CONTENT)}
+                onChangeText={setContent}
                 placeholder="신고 내용 작성 (최대 500자)"
                 placeholderTextColor={colors.gray3}
                 style={styles.contentInput}
@@ -154,6 +153,9 @@ export function ReportMemberModal({
                 textAlignVertical="top"
               />
             </View>
+            <Text style={styles.contentCounterText}>
+              {content.length}/{INPUT_LIMITS.REPORT_CONTENT}
+            </Text>
 
             <Pressable
               style={[styles.submitButton, submitting ? styles.submitButtonDisabled : null]}
@@ -279,6 +281,11 @@ const styles = StyleSheet.create({
     ...typography.body1_3,
     color: colors.gray6,
     minHeight: 200,
+  },
+  contentCounterText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textAlign: 'right',
   },
   submitButton: {
     height: 52,
