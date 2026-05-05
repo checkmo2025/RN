@@ -1464,7 +1464,7 @@ const styles = StyleSheet.create({
   },
   dropdownRecoCard: {
     flex: 1,
-    borderRadius: 18,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.subbrown3,
     backgroundColor: colors.subbrown2,

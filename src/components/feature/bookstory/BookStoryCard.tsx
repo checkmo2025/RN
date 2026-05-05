@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   subscribeChip: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: radius.lg,
+    borderRadius: radius.sm,
     borderWidth: 1,
   },
   subscribeActive: {

@@ -3890,7 +3890,7 @@ const styles = StyleSheet.create({
   bookshelfSessionChip: {
     borderWidth: 1,
     borderColor: colors.gray2,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     backgroundColor: colors.white,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,

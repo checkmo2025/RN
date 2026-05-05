@@ -2945,7 +2945,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   categoryChip: {
-    borderRadius: radius.sm,
+    borderRadius: radius.lg,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
     borderWidth: 1,
@@ -3099,7 +3099,7 @@ const styles = StyleSheet.create({
   reportTypeChip: {
     borderWidth: 1,
     borderColor: colors.gray2,
-    borderRadius: radius.lg,
+    borderRadius: radius.sm,
     backgroundColor: colors.white,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
