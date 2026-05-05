@@ -1103,3 +1103,34 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `docs/(done)ui-accessibility-event-naming-consistency.md`
 - `docs/todo.md`
 
+---
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### docs 구조 정리: `pm/agent` 폴더 분리 + spacing audit 완료 처리
+
+- `docs/pm` 폴더 신설 후 기획 문서 이동
+  - `functional-spec.md`, `ia.md`, `access-gate-map.md`, `home-access-policy.md`, `immediate-reflection-matrix.md`, `block-feature-spec.md`
+- `docs/agent` 폴더 신설 후 운영 문서 이동
+  - `todo.md`, `agent-log.md`
+- 완료 처리 요청 반영
+  - `component-spacing-audit.md`를 `(done)component-spacing-audit.md`로 리네임
+  - `docs/(done)ui-spacing-token-consistency.md` 참조 경로 갱신
+- 문서 링크 정합화
+  - `README.md` 참고 문서 링크를 `docs/pm/*` 경로로 업데이트
+  - `docs/agent/todo.md` 내부 `issue-fetch.md`, `(done)` 문서 상대 경로 보정
+
+## 작업 파일
+- `README.md`
+- `docs/agent/agent-log.md`
+- `docs/agent/todo.md`
+- `docs/(done)ui-spacing-token-consistency.md`
+- `docs/(done)component-spacing-audit.md`
+- `docs/pm/functional-spec.md`
+- `docs/pm/ia.md`
+- `docs/pm/access-gate-map.md`
+- `docs/pm/home-access-policy.md`
+- `docs/pm/immediate-reflection-matrix.md`
+- `docs/pm/block-feature-spec.md`

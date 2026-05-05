@@ -45,7 +45,7 @@
 
 ## 5) 2차 정리 대상
 - spacing 숫자 하드코딩을 파일 단위로 0건화
-- `component-spacing-audit.md`와 정책 연결
+- `(done)component-spacing-audit.md`와 정책 연결
 - CI/PR 점검용 `rg` 룰을 spacing 항목에도 추가
 
 ## 6) 완료 조건
