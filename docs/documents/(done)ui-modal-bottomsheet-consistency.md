@@ -1,6 +1,6 @@
 # UI 모달/바텀시트 통일 가이드 (7번 항목)
 
-> 기준 문서: `docs/(done)ui-consistency-top10.md`의 7번 항목  
+> 기준 문서: `docs/documents/(done)ui-consistency-top10.md`의 7번 항목  
 > 범위: RN `src/**/*.tsx` `Modal` 기반 레이어 UI
 
 ## 1) 점검 목적

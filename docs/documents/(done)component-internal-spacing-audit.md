@@ -124,7 +124,7 @@
 
 1. 외부/내부 문서 분리 유지
 - 외부: `(done)component-spacing-audit.md`
-- 내부: `component-internal-spacing-audit.md` (현재 문서)
+- 내부: `(done)component-internal-spacing-audit.md` (현재 문서)
 
 2. 내부 spacing 표준 세트 고정
 - 기본: `card(md)`, `item(sm/md)`, `chip(xs/sm)`, `modal(md|lg)`
@@ -134,4 +134,3 @@
 - `MeetingListCard`의 `13/14/6/2` 규칙을 토큰/의도 주석으로 정리
 - `ReportMemberModal` `gap: 2` 등 미세값을 `spacing.xs / 2`로 치환 가능한지 검토
 - 입력 폼 계열(`AuthFlow`, `MyPage`, `Meeting`)의 `paddingVertical: 0/2` 보정 규칙 공통 문구화
-

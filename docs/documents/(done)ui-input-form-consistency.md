@@ -1,6 +1,6 @@
 # UI 입력 폼 규격 통일 가이드 (4번 항목)
 
-> 기준 문서: `docs/(done)ui-consistency-top10.md`의 4번 항목  
+> 기준 문서: `docs/documents/(done)ui-consistency-top10.md`의 4번 항목  
 > 범위: RN `src/**/*.tsx` `TextInput`/폼 레이아웃/검증 메시지
 
 ## 1) 점검 목적

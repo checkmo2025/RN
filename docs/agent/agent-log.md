@@ -306,7 +306,7 @@
 
 - 정기모임 공지 3점 메뉴의 `신고하기`를 실제 신고 흐름으로 연결하고, 공지 작성자 정보를 목록/상세 응답에서 수집해 `ReportMemberModal`로 연동함
 - Swagger + 실서버 응답 기준으로 회원/책이야기/소식 fetch 점검을 수행해 응답 불일치, 페이징 누락, 무음 에러처리 구간을 정리함
-- 점검 결과를 문서화한 `docs/issue-fetch.md`를 신규 추가하고, 각 이슈별로 `RN/BE/BE 문서/공동` 판정과 변경 방향을 기록함
+- 점검 결과를 문서화한 `docs/agent/issue-fetch.md`를 신규 추가하고, 각 이슈별로 `RN/BE/BE 문서/공동` 판정과 변경 방향을 기록함
 
 ---
 
@@ -315,7 +315,7 @@
 수정 시각: 2026-04-27 11:40:26 KST
 
 - Swagger(OpenAPI)와 실서버 응답 샘플을 기준으로 책 검색 API(`/books/*`)를 추가 점검함
-- `docs/issue-fetch.md`에 `책 검색 영역` 섹션을 신설하고 페이징/좋아요 동기화/문서 불일치 이슈를 `RN/BE 문서`로 분류함
+- `docs/agent/issue-fetch.md`에 `책 검색 영역` 섹션을 신설하고 페이징/좋아요 동기화/문서 불일치 이슈를 `RN/BE 문서`로 분류함
 - `README.md`를 기존 팀원 실행 중심 구조(프로젝트 소개/스펙/실행/문서 링크)로 정리함
 
 ---
@@ -352,7 +352,7 @@
 - `src/screens/MeetingScreen.tsx`
 - `src/screens/AuthFlowScreen.tsx`
 - `src/components/common/ReportMemberModal.tsx`
-- `docs/issue-fetch.md`
+- `docs/agent/issue-fetch.md`
 
 ---
 
@@ -525,7 +525,7 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 수정 시각: 2026-04-28 22:49 KST
 
 ### docs/todo.md — issue-fetch 미완료 항목 및 역할 분류 추가
-- `docs/issue-fetch.md` 기준으로 미처리 이슈 전체를 `docs/todo.md`에 이관
+- `docs/agent/issue-fetch.md` 기준으로 미처리 이슈 전체를 `docs/todo.md`에 이관
 - 각 항목에 `BE` / `BE 문서` / `RN` / `공동` 역할 명시
 - 마지막 업데이트 표기에 KST 시각 포함하도록 포맷 변경
 
@@ -1085,22 +1085,22 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 - `docs/todo.md`의 `✅ 완료` 기준으로 완료 문서 12개 파일명 앞에 `(done)` prefix 적용
 - 리네임된 문서들을 참조하는 `docs` 내부 링크/경로를 새 파일명으로 동기화
-- `docs/(done)ui-consistency-top10.md`의 10개 항목 상태를 `✅ 완료`로 정합화
+- `docs/documents/(done)ui-consistency-top10.md`의 10개 항목 상태를 `✅ 완료`로 정합화
 - `docs/todo.md` 내 완료 문서 표기/링크를 리네임 기준으로 갱신
 
 ## 작업 파일
-- `docs/(done)loading-screen.md`
-- `docs/(done)ui-consistency-top10.md`
-- `docs/(done)ui-copy-consistency.md`
-- `docs/(done)ui-loading-feedback-consistency.md`
-- `docs/(done)ui-button-consistency.md`
-- `docs/(done)ui-input-form-consistency.md`
-- `docs/(done)ui-spacing-token-consistency.md`
-- `docs/(done)ui-radius-border-shadow-consistency.md`
-- `docs/(done)ui-modal-bottomsheet-consistency.md`
-- `docs/(done)ui-motion-haptic-consistency.md`
-- `docs/(done)ui-feedback-message-consistency.md`
-- `docs/(done)ui-accessibility-event-naming-consistency.md`
+- `docs/documents/(done)loading-screen.md`
+- `docs/documents/(done)ui-consistency-top10.md`
+- `docs/documents/(done)ui-copy-consistency.md`
+- `docs/documents/(done)ui-loading-feedback-consistency.md`
+- `docs/documents/(done)ui-button-consistency.md`
+- `docs/documents/(done)ui-input-form-consistency.md`
+- `docs/documents/(done)ui-spacing-token-consistency.md`
+- `docs/documents/(done)ui-radius-border-shadow-consistency.md`
+- `docs/documents/(done)ui-modal-bottomsheet-consistency.md`
+- `docs/documents/(done)ui-motion-haptic-consistency.md`
+- `docs/documents/(done)ui-feedback-message-consistency.md`
+- `docs/documents/(done)ui-accessibility-event-naming-consistency.md`
 - `docs/todo.md`
 
 ---
@@ -1117,7 +1117,7 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
   - `todo.md`, `agent-log.md`
 - 완료 처리 요청 반영
   - `component-spacing-audit.md`를 `(done)component-spacing-audit.md`로 리네임
-  - `docs/(done)ui-spacing-token-consistency.md` 참조 경로 갱신
+  - `docs/documents/(done)ui-spacing-token-consistency.md` 참조 경로 갱신
 - 문서 링크 정합화
   - `README.md` 참고 문서 링크를 `docs/pm/*` 경로로 업데이트
   - `docs/agent/todo.md` 내부 `issue-fetch.md`, `(done)` 문서 상대 경로 보정
@@ -1126,8 +1126,8 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `README.md`
 - `docs/agent/agent-log.md`
 - `docs/agent/todo.md`
-- `docs/(done)ui-spacing-token-consistency.md`
-- `docs/(done)component-spacing-audit.md`
+- `docs/documents/(done)ui-spacing-token-consistency.md`
+- `docs/documents/(done)component-spacing-audit.md`
 - `docs/pm/functional-spec.md`
 - `docs/pm/ia.md`
 - `docs/pm/access-gate-map.md`
@@ -1143,13 +1143,13 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 ### 내부 간격 인벤토리 문서 신규 작성
 
-- 외부 간격 문서와 분리해 내부 간격 전용 문서 `docs/component-internal-spacing-audit.md` 신규 작성
+- 외부 간격 문서와 분리해 내부 간격 전용 문서 `docs/documents/(done)component-internal-spacing-audit.md` 신규 작성
 - 범위: 입력폼, 버튼, 카드, 리스트 아이템, 모달/바텀시트 본문 내부 `padding/gap` 규칙
 - 파일/라인 근거와 하드코딩 예외값(2/6/13/14/18) 스냅샷을 함께 정리
 - 내부 spacing 통일을 위한 1차 실행 우선순위(MeetingListCard/ReportModal/입력 보정 규칙) 제시
 
 ## 작업 파일
-- `docs/component-internal-spacing-audit.md`
+- `docs/documents/(done)component-internal-spacing-audit.md`
 
 ---
 
@@ -1182,3 +1182,56 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 ## 작업 파일
 (위 10개 파일)
+
+---
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### docs 추가 구조 정리: `issue-fetch` 이동 + `documents` 폴더 분리
+
+- `docs/issue-fetch.md`를 `docs/agent/issue-fetch.md`로 이동
+- 완료/정리 문서 묶음용 `docs/documents` 폴더 신설 후 `(done)*.md` 문서 일괄 이동
+- `README.md`, `docs/agent/todo.md`, `docs` 내부 참조 경로를 신규 구조 기준으로 동기화
+- 내부 간격 인벤토리 문서 경로 표기를 `docs/documents/(done)component-internal-spacing-audit.md`로 정합화
+
+## 작업 파일
+- `README.md`
+- `docs/agent/issue-fetch.md`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
+- `docs/documents/(done)component-internal-spacing-audit.md`
+- `docs/documents/(done)component-spacing-audit.md`
+- `docs/documents/(done)loading-screen.md`
+- `docs/documents/(done)ui-accessibility-event-naming-consistency.md`
+- `docs/documents/(done)ui-button-consistency.md`
+- `docs/documents/(done)ui-consistency-top10.md`
+- `docs/documents/(done)ui-copy-consistency.md`
+- `docs/documents/(done)ui-feedback-message-consistency.md`
+- `docs/documents/(done)ui-input-form-consistency.md`
+- `docs/documents/(done)ui-loading-feedback-consistency.md`
+- `docs/documents/(done)ui-modal-bottomsheet-consistency.md`
+- `docs/documents/(done)ui-motion-haptic-consistency.md`
+- `docs/documents/(done)ui-radius-border-shadow-consistency.md`
+- `docs/documents/(done)ui-spacing-token-consistency.md`
+
+---
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### docs 폴더명 변경 반영: `done` → `documents`
+
+- 완료 문서 묶음 폴더 명을 `docs/done`에서 `docs/documents`로 통일
+- `README.md`, `docs/agent/todo.md`, `docs/documents/*` 내부 참조 경로를 `documents` 기준으로 재정렬
+- `issue-fetch.md`는 `docs/agent/issue-fetch.md` 위치 유지
+
+## 작업 파일
+- `docs/agent/agent-log.md`
+- `docs/agent/todo.md`
+- `docs/agent/issue-fetch.md`
+- `docs/documents/*`
+- `README.md`
+

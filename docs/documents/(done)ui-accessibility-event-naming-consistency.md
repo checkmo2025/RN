@@ -1,6 +1,6 @@
 # UI 접근성/이벤트 네이밍 통일 가이드 (10번 항목)
 
-> 기준 문서: `docs/(done)ui-consistency-top10.md`의 10번 항목  
+> 기준 문서: `docs/documents/(done)ui-consistency-top10.md`의 10번 항목  
 > 범위: RN `src/**/*.tsx`, `src/**/*.ts`
 
 ## 1) 점검 목적
