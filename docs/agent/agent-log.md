@@ -1555,3 +1555,17 @@ export const interactionOpacity = {
 - `CLAUDE.md` (신규)
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 08:34:06 KST
+
+### todo.md — UI 상호작용 토큰 통일 항목 추가
+
+- TOKEN-01(opacity) ✅, TOKEN-02(motion) ✅ 완료 이력 항목 추가
+- TOKEN-03(zIndex) ⬜, TOKEN-04(hitSlop) ⬜, TOKEN-05(버튼 height) ⬜ 미완료 항목 추가
+- 참고 문서: `docs/documents/ui-interaction-token-consistency.md`
+
+## 작업 파일
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
