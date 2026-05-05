@@ -1290,3 +1290,27 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 ## 작업 파일
 - `src/screens/MeetingScreen.tsx`
+
+---
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### 모임 생성 스텝 인디케이터 개선 + 프로필 이미지 레이아웃 A안 적용
+
+**스텝 인디케이터 개선**
+- `maxStep` 상태 추가 — 방문한 최대 단계 추적
+- `goNext` 수정 — 다음 단계 이동 시 `maxStep` 갱신
+- `done` 조건을 `i <= maxStep && i !== step` (방문 기준)으로 변경
+  → 1단계에서 이미 방문한 3단계 버튼 클릭 가능
+- 완료 단계 색: `primary2` → `subbrown2` (#BBAA9B, 더 연한 갈색)
+
+**프로필 이미지 피커 레이아웃 A안으로 교체**
+- 기존: 이미지 프리뷰(좌) + 버튼 2개 세로(우) → 텍스트 줄바꿈 어색
+- 변경: 전체 너비 이미지 프리뷰(180px) + 버튼 2개 가로 나란히
+- `ClubDefaultProfileArtwork`에 `'large'` variant 추가
+- 신규 스타일: `createProfilePreviewLarge`, `createProfileButtonRow`, `createProfileBtn` 계열
+
+## 작업 파일
+- `src/screens/MeetingScreen.tsx`

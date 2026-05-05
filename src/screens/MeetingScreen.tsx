@@ -236,7 +236,7 @@ const calendarWeekdayLabels = ['일', '월', '화', '수', '목', '금', '토'] 
 function ClubDefaultProfileArtwork({
   variant = 'detail',
 }: {
-  variant?: 'detail' | 'preview';
+  variant?: 'detail' | 'preview' | 'large';
 }) {
   return (
     <Image
@@ -244,6 +244,8 @@ function ClubDefaultProfileArtwork({
       style={[
         variant === 'preview'
           ? styles.clubDefaultProfileArtworkPreview
+          : variant === 'large'
+          ? styles.clubDefaultProfileArtworkLarge
           : styles.clubDefaultProfileArtworkDetail,
       ]}
       resizeMode="cover"
@@ -1596,8 +1598,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary1,
   },
   stepDotDone: {
-    borderColor: colors.primary2,
-    backgroundColor: colors.primary2,
+    borderColor: colors.subbrown2,
+    backgroundColor: colors.subbrown2,
   },
   stepDotFuture: {
     borderColor: colors.gray2,
@@ -1767,6 +1769,55 @@ const styles = StyleSheet.create({
   },
   createProfileActionDescriptionPrimary: {
     color: colors.gray5,
+  },
+  createProfilePreviewLarge: {
+    width: '100%',
+    height: 180,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.subbrown3,
+  },
+  createProfilePreviewLargeImage: {
+    width: '100%',
+    height: 180,
+  },
+  createProfileButtonRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  createProfileBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xxs,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.subbrown3,
+    backgroundColor: colors.white,
+  },
+  createProfileBtnSelected: {
+    backgroundColor: colors.primary1,
+    borderColor: colors.primary1,
+  },
+  createProfileBtnPrimary: {
+    borderColor: colors.primary1,
+  },
+  createProfileBtnText: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
+  createProfileBtnTextSelected: {
+    color: colors.white,
+  },
+  createProfileBtnTextPrimary: {
+    ...typography.body1_2,
+    color: colors.primary1,
   },
   createProfileHint: {
     ...typography.caption1_3,
@@ -2100,6 +2151,11 @@ const styles = StyleSheet.create({
   clubDefaultProfileArtworkPreview: {
     width: 132,
     height: 148,
+    borderRadius: radius.lg,
+  },
+  clubDefaultProfileArtworkLarge: {
+    width: '100%',
+    height: 180,
     borderRadius: radius.lg,
   },
   clubDefaultProfileArtworkDetail: {
@@ -12836,6 +12892,7 @@ function MeetingCreateFlow({
   onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [step, setStep] = useState<CreateStep>(1);
+  const [maxStep, setMaxStep] = useState<CreateStep>(1);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [isPublic, setIsPublic] = useState<boolean | null>(null);
@@ -12999,7 +13056,11 @@ function MeetingCreateFlow({
   };
 
   const goNext = () => {
-    if (step < 4) setStep((prev) => (prev + 1) as CreateStep);
+    if (step < 4) {
+      const next = (step + 1) as CreateStep;
+      setStep(next);
+      if (next > maxStep) setMaxStep(next);
+    }
   };
   const goPrev = () => {
     if (step > 1) setStep((prev) => (prev - 1) as CreateStep);
@@ -13043,22 +13104,22 @@ function MeetingCreateFlow({
           <View style={styles.stepRow}>
             {[1, 2, 3, 4].map((i) => {
               const active = i === step;
-              const done = i < step;
-              const future = i > step;
+              const visited = i !== step && i <= maxStep;
+              const future = i > maxStep;
               return (
                 <Pressable
                   key={i}
                   style={[
                     styles.stepDot,
-                    active ? styles.stepDotActive : done ? styles.stepDotDone : styles.stepDotFuture,
+                    active ? styles.stepDotActive : visited ? styles.stepDotDone : styles.stepDotFuture,
                   ]}
-                  onPress={() => done && setStep(i as CreateStep)}
-                  disabled={!done}
+                  onPress={() => setStep(i as CreateStep)}
+                  disabled={!visited}
                 >
                   <Text
                     style={[
                       styles.stepText,
-                      active || done ? styles.stepTextActive : styles.stepTextFuture,
+                      active || visited ? styles.stepTextActive : styles.stepTextFuture,
                     ]}
                   >
                     {i}
@@ -13140,107 +13201,76 @@ function MeetingCreateFlow({
             <View style={styles.sectionBox}>
               <Text style={styles.sectionTitle}>모임의 프로필 사진을 업로드 해주세요!</Text>
               <View style={styles.createProfileCard}>
-                <View style={styles.logoRow}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.createProfilePreviewLarge,
+                    clubImageMode === 'empty' && styles.createProfilePreviewEmpty,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={handlePickClubImage}
+                >
+                  {clubImageMode === 'uploaded' && clubImageUrl ? (
+                    <Image
+                      source={{ uri: clubImageUrl }}
+                      style={styles.createProfilePreviewLargeImage}
+                      resizeMode="cover"
+                    />
+                  ) : clubImageMode === 'default' ? (
+                    <ClubDefaultProfileArtwork variant="large" />
+                  ) : (
+                    <View style={styles.createProfileEmptyState}>
+                      <View style={styles.createProfileCameraBadge}>
+                        <MaterialIcons name="photo-camera" size={26} color={colors.primary1} />
+                      </View>
+                      <Text style={styles.createProfileEmptyTitle}>사진 업로드</Text>
+                      <Text style={styles.createProfileEmptyDescription}>
+                        탭하여 앨범에서 사진을 선택하세요
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+
+                <View style={styles.createProfileButtonRow}>
                   <Pressable
                     style={({ pressed }) => [
-                      styles.createProfilePreview,
-                      clubImageMode === 'empty' && styles.createProfilePreviewEmpty,
+                      styles.createProfileBtn,
+                      clubImageMode === 'default' && styles.createProfileBtnSelected,
                       pressed && styles.pressed,
                     ]}
-                    onPress={handlePickClubImage}
+                    onPress={handleUseDefaultClubImage}
                   >
-                    {clubImageMode === 'uploaded' && clubImageUrl ? (
-                      <Image
-                        source={{ uri: clubImageUrl }}
-                        style={styles.managementEditImagePreview}
-                        resizeMode="cover"
-                      />
-                    ) : clubImageMode === 'default' ? (
-                      <ClubDefaultProfileArtwork variant="preview" />
-                    ) : (
-                      <View style={styles.createProfileEmptyState}>
-                        <View style={styles.createProfileCameraBadge}>
-                          <MaterialIcons name="photo-camera" size={26} color={colors.primary1} />
-                        </View>
-                        <Text style={styles.createProfileEmptyTitle}>사진 업로드</Text>
-                        <Text style={styles.createProfileEmptyDescription}>
-                          비어 있는 박스를 눌러 사진을 선택하세요
-                        </Text>
-                      </View>
-                    )}
+                    <MaterialIcons
+                      name="auto-awesome"
+                      size={15}
+                      color={clubImageMode === 'default' ? colors.white : colors.primary1}
+                    />
+                    <Text
+                      style={[
+                        styles.createProfileBtnText,
+                        clubImageMode === 'default' && styles.createProfileBtnTextSelected,
+                      ]}
+                    >
+                      기본 이미지
+                    </Text>
                   </Pressable>
 
-                  <View style={styles.createProfileActionColumn}>
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.createProfileActionButton,
-                        clubImageMode === 'default' && styles.createProfileActionButtonSelected,
-                        pressed && styles.pressed,
-                      ]}
-                      onPress={handleUseDefaultClubImage}
-                    >
-                      <View
-                        style={[
-                          styles.createProfileActionIcon,
-                          clubImageMode === 'default' && styles.createProfileActionIconSelected,
-                        ]}
-                      >
-                        <MaterialIcons
-                          name="auto-awesome"
-                          size={16}
-                          color={clubImageMode === 'default' ? colors.white : colors.primary1}
-                        />
-                      </View>
-                      <View style={styles.createProfileActionTextWrap}>
-                        <Text
-                          style={[
-                            styles.createProfileActionTitle,
-                            clubImageMode === 'default' && styles.createProfileActionTitleSelected,
-                          ]}
-                        >
-                          기본 프로필 사용하기
-                        </Text>
-                        <Text
-                          style={[
-                            styles.createProfileActionDescription,
-                            clubImageMode === 'default' &&
-                              styles.createProfileActionDescriptionSelected,
-                          ]}
-                        >
-                          책모 로고가 모임 대표 이미지로 표시됩니다.
-                        </Text>
-                      </View>
-                    </Pressable>
-
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.createProfileActionButton,
-                        styles.createProfileActionButtonPrimary,
-                        uploadingClubImage && styles.createProfileActionButtonDisabled,
-                        pressed && !uploadingClubImage && styles.pressed,
-                      ]}
-                      onPress={handlePickClubImage}
-                      disabled={uploadingClubImage}
-                    >
-                      <View style={[styles.createProfileActionIcon, styles.createProfileActionIconPrimary]}>
-                        <MaterialIcons name="photo-camera" size={16} color={colors.white} />
-                      </View>
-                      <View style={styles.createProfileActionTextWrap}>
-                        <Text style={[styles.createProfileActionTitle, styles.createProfileActionTitlePrimary]}>
-                          {uploadingClubImage ? '업로드 중...' : '사진 업로드하기'}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.createProfileActionDescription,
-                            styles.createProfileActionDescriptionPrimary,
-                          ]}
-                        >
-                          앨범에서 모임 이미지를 선택할 수 있어요.
-                        </Text>
-                      </View>
-                    </Pressable>
-                  </View>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.createProfileBtn,
+                      styles.createProfileBtnPrimary,
+                      uploadingClubImage && styles.createProfileActionButtonDisabled,
+                      pressed && !uploadingClubImage && styles.pressed,
+                    ]}
+                    onPress={handlePickClubImage}
+                    disabled={uploadingClubImage}
+                  >
+                    <MaterialIcons name="photo-camera" size={15} color={colors.primary1} />
+                    <Text style={styles.createProfileBtnTextPrimary}>
+                      {uploadingClubImage ? '업로드 중...' : '사진 업로드'}
+                    </Text>
+                  </Pressable>
                 </View>
+
                 <Text style={styles.createProfileHint}>
                   프로필 이미지는 나중에 모임 관리 화면에서 다시 변경할 수 있습니다.
                 </Text>
