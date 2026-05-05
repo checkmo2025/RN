@@ -1265,3 +1265,28 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 ## 작업 파일
 - `src/components/feature/groups/MeetingListCard.tsx`
 - `src/screens/MeetingScreen.tsx`
+
+---
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### 모임 생성 화면 UI 버그 수정 + 스텝 인디케이터 개선
+
+**프로필 이미지 레이아웃 버그 수정**
+- 원인: `createProfilePreview`에 `minHeight`만 있고 고정 `height` 없이 `height: '100%'` 이미지를 자식으로 두면, `alignItems: 'stretch'`와 결합되어 무한 확장
+- `createProfilePreview`: `minHeight: 132` → `height: 148` 고정
+- `createProfileActionButton`: `flex: 1` 제거 → 콘텐츠 높이 기반 자연 크기
+- `clubDefaultProfileArtworkPreview`: `width/height: '100%'` → `132×148` 고정값
+- `managementEditImagePreview`: `height: '100%'` → `aspectRatio: 1`
+
+**스텝 인디케이터 뒤로가기 지원**
+- `View` → `Pressable`로 교체, 3가지 상태 구분:
+  - 현재 단계: `primary1` (진한 갈색), 비활성
+  - 완료 단계: `primary2` (연한 갈색), 클릭 시 해당 단계로 복귀 가능
+  - 미래 단계: 흰 배경 + 회색 테두리, 비활성
+- 스타일 추가: `stepDotDone`, `stepDotFuture`, `stepTextFuture`
+
+## 작업 파일
+- `src/screens/MeetingScreen.tsx`

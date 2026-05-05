@@ -1595,7 +1595,11 @@ const styles = StyleSheet.create({
     borderColor: colors.primary1,
     backgroundColor: colors.primary1,
   },
-  stepDotInactive: {
+  stepDotDone: {
+    borderColor: colors.primary2,
+    backgroundColor: colors.primary2,
+  },
+  stepDotFuture: {
     borderColor: colors.gray2,
     backgroundColor: colors.white,
   },
@@ -1605,6 +1609,9 @@ const styles = StyleSheet.create({
   },
   stepTextActive: {
     color: colors.white,
+  },
+  stepTextFuture: {
+    color: colors.gray3,
   },
   sectionBox: {
     paddingTop: spacing.xs,
@@ -1658,7 +1665,7 @@ const styles = StyleSheet.create({
   },
   createProfilePreview: {
     width: 132,
-    minHeight: 132,
+    height: 148,
     borderRadius: radius.lg,
     overflow: 'hidden',
     alignItems: 'center',
@@ -1701,7 +1708,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   createProfileActionButton: {
-    flex: 1,
     minHeight: 62,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
@@ -2092,8 +2098,8 @@ const styles = StyleSheet.create({
     color: colors.gray5,
   },
   clubDefaultProfileArtworkPreview: {
-    width: '100%',
-    height: '100%',
+    width: 132,
+    height: 148,
     borderRadius: radius.lg,
   },
   clubDefaultProfileArtworkDetail: {
@@ -2617,7 +2623,7 @@ const styles = StyleSheet.create({
   },
   managementEditImagePreview: {
     width: '100%',
-    height: '100%',
+    aspectRatio: 1,
     borderRadius: radius.md,
   },
   managementToggleRow: {
@@ -13037,13 +13043,27 @@ function MeetingCreateFlow({
           <View style={styles.stepRow}>
             {[1, 2, 3, 4].map((i) => {
               const active = i === step;
+              const done = i < step;
+              const future = i > step;
               return (
-                <View
+                <Pressable
                   key={i}
-                  style={[styles.stepDot, active ? styles.stepDotActive : styles.stepDotInactive]}
+                  style={[
+                    styles.stepDot,
+                    active ? styles.stepDotActive : done ? styles.stepDotDone : styles.stepDotFuture,
+                  ]}
+                  onPress={() => done && setStep(i as CreateStep)}
+                  disabled={!done}
                 >
-                  <Text style={[styles.stepText, active ? styles.stepTextActive : null]}>{i}</Text>
-                </View>
+                  <Text
+                    style={[
+                      styles.stepText,
+                      active || done ? styles.stepTextActive : styles.stepTextFuture,
+                    ]}
+                  >
+                    {i}
+                  </Text>
+                </Pressable>
               );
             })}
           </View>
