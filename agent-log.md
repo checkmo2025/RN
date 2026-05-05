@@ -927,6 +927,21 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 ---
 
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### 로그아웃 중 로딩 화면 추가
+
+- `MyPageScreen`에서 `submittingLogout` 상태일 때 `BookFlipLoadingScreen` 표시
+  - `detailTitle`: "로그아웃중입니다", `detailDescription`: "홈화면으로 이동합니다"
+- 로그아웃 API 처리 동안 빈 화면 노출 없이 일관된 로딩 피드백 제공
+
+## 작업 파일
+- `src/screens/MyPageScreen.tsx`
+
+---
+
 ## 업데이트 (2026-04-30)
 
 수정 시각: 2026-04-30 KST
