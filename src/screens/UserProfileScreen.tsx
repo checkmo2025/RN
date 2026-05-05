@@ -22,7 +22,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, interactionOpacity, radius, spacing, typography } from '../theme';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
@@ -934,11 +934,11 @@ export function UserProfileScreen() {
                 <View style={styles.profileMeta}>
                   <Text style={styles.profileName}>{profileName}</Text>
                   <View style={styles.profileFollowRow}>
-                    <Pressable onPress={openFollowingList} hitSlop={6}>
+                    <Pressable onPress={openFollowingList} hitSlop={8}>
                       <Text style={styles.profileSub}>구독중 {followingCount}</Text>
                     </Pressable>
                     <Text style={styles.profileSub}> · </Text>
-                    <Pressable onPress={openFollowerList} hitSlop={6}>
+                    <Pressable onPress={openFollowerList} hitSlop={8}>
                       <Text style={styles.profileSub}>구독자 {followerCount}</Text>
                     </Pressable>
                   </View>
@@ -1399,7 +1399,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary1,
   },
   followButtonDisabled: {
-    opacity: 0.65,
+    opacity: interactionOpacity.disabledSoft,
   },
   followButtonText: {
     ...typography.body2_2,
@@ -1411,6 +1411,6 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: interactionOpacity.pressed,
   },
 });

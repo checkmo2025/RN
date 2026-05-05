@@ -1,6 +1,6 @@
 import { Modal, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, interactionOpacity, radius, spacing, typography } from '../../theme';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
 
 export type ActionMenuAnchor = {
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   itemDisabled: {
-    opacity: 0.45,
+    opacity: interactionOpacity.disabled,
   },
   divider: {
     height: StyleSheet.hairlineWidth,

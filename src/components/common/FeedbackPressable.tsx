@@ -1,5 +1,7 @@
 import { Pressable as RNPressable, StyleSheet, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
 
+import { interactionOpacity } from '../../theme';
+
 type Props = PressableProps & {
   disableFeedback?: boolean;
   pressedStyle?: StyleProp<ViewStyle>;
@@ -33,7 +35,7 @@ export function FeedbackPressable({
 
 const styles = StyleSheet.create({
   pressed: {
-    opacity: 0.72,
+    opacity: interactionOpacity.pressed,
   },
 });
 

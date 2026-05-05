@@ -38,7 +38,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { SvgUri } from 'react-native-svg';
 
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, interactionOpacity, radius, spacing, typography } from '../theme';
 import { useMeetingChatStomp } from '../hooks/useMeetingChatStomp';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
@@ -1579,7 +1579,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: interactionOpacity.pressed,
   },
   stepRow: {
     flexDirection: 'row',
@@ -1730,7 +1730,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary1,
   },
   createProfileActionButtonDisabled: {
-    opacity: 0.6,
+    opacity: interactionOpacity.disabled,
   },
   createProfileActionIcon: {
     width: 32,
@@ -1983,7 +1983,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   dupCheckButtonDisabled: {
-    opacity: 0.6,
+    opacity: interactionOpacity.disabled,
   },
   dupCheckText: {
     ...typography.body2_2,
@@ -2814,7 +2814,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.gray1,
   },
   managementJoinActionItemDisabled: {
-    opacity: 0.45,
+    opacity: interactionOpacity.disabled,
   },
   managementJoinActionItemLast: {
     borderBottomWidth: 0,
@@ -2966,7 +2966,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   noticePageArrowDisabled: {
-    opacity: 0.35,
+    opacity: interactionOpacity.disabled,
   },
   noticePageButton: {
     width: 30,
@@ -3138,7 +3138,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.subbrown4,
   },
   noticePollOptionRowDisabled: {
-    opacity: 0.55,
+    opacity: interactionOpacity.disabled,
   },
   noticePollOptionLeft: {
     flexDirection: 'row',

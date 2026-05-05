@@ -28,7 +28,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import { termsDocumentOrder, termsDocuments } from '../constants/termsDocuments';
-import { colors, radius, spacing, typography, scaleSize } from '../theme';
+import { colors, interactionOpacity, radius, spacing, typography, scaleSize } from '../theme';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
@@ -2713,10 +2713,10 @@ export function MyPageScreen() {
           <View style={styles.profileMeta}>
             <Text style={styles.profileName}>{profileName}</Text>
             <View style={styles.profileFollowRow}>
-              <Pressable onPress={openFollowerList} hitSlop={6}>
+              <Pressable onPress={openFollowerList} hitSlop={8}>
                 <Text style={styles.profileSub}>구독자 {followerCount}</Text>
               </Pressable>
-              <Pressable onPress={openFollowingList} hitSlop={6}>
+              <Pressable onPress={openFollowingList} hitSlop={8}>
                 <Text style={styles.profileSub}>구독중 {followingCount}</Text>
               </Pressable>
             </View>
@@ -3082,7 +3082,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   submitButtonDisabled: {
-    opacity: 0.7,
+    opacity: interactionOpacity.disabled,
   },
   submitButtonDanger: {
     backgroundColor: colors.gray6,
@@ -3268,7 +3268,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   toggleButtonDisabled: {
-    opacity: 0.65,
+    opacity: interactionOpacity.disabledSoft,
   },
   toggleThumb: {
     width: 18,
@@ -3399,7 +3399,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   followDeleteButtonDisabled: {
-    opacity: 0.6,
+    opacity: interactionOpacity.disabled,
   },
   followDeleteButtonText: {
     ...typography.body2_2,
@@ -3644,6 +3644,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxs,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: interactionOpacity.pressed,
   },
 });

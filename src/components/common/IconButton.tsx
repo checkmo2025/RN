@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-import { colors, spacing } from '../../theme';
+import { colors, interactionOpacity, spacing } from '../../theme';
 
 export type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -52,6 +52,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxs,
   },
   pressed: {
-    opacity: 0.6,
+    opacity: interactionOpacity.pressed,
   },
 });

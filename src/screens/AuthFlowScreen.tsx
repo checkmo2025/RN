@@ -15,7 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { termsDocuments, type TermsAgreementKey } from '../constants/termsDocuments';
 import { INPUT_LIMITS } from '../constants/inputLimits';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, interactionOpacity, radius, spacing, typography } from '../theme';
 import { AppButton } from '../components/common/PrimaryButton';
 import { DialogOverlay } from '../components/common/DialogOverlay';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
@@ -1826,6 +1826,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray3,
   },
   pressed: {
-    opacity: 0.75,
+    opacity: interactionOpacity.pressed,
   },
 });

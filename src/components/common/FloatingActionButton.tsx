@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { colors, radius, spacing } from '../../theme';
+import { colors, interactionOpacity, radius, spacing } from '../../theme';
 
 type Props = {
   onPress: () => void;
@@ -35,6 +35,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary1,
   },
   pressed: {
-    opacity: 0.8,
+    opacity: interactionOpacity.pressedStrong,
   },
 });

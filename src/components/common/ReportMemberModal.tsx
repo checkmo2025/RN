@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, interactionOpacity, radius, spacing, typography } from '../../theme';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
 import { DefaultProfileAvatar } from './DefaultProfileAvatar';
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   targetCardPressed: {
-    opacity: 0.72,
+    opacity: interactionOpacity.pressed,
   },
   avatar: {
     width: 40,
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   submitButtonDisabled: {
-    opacity: 0.6,
+    opacity: interactionOpacity.disabled,
   },
   submitButtonText: {
     ...typography.body1_2,

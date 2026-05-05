@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-import { colors, radius, spacing, typography } from '../../../theme';
+import { colors, interactionOpacity, radius, spacing, typography } from '../../../theme';
 
 export type MyGroupSummary = {
   id: string;
@@ -113,6 +113,6 @@ const styles = StyleSheet.create({
     color: colors.gray6,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: interactionOpacity.pressed,
   },
 });

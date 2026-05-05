@@ -10,7 +10,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
-import { colors, radius, spacing, typography } from '../../../theme';
+import { colors, interactionOpacity, radius, spacing, typography } from '../../../theme';
 import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../../common/DefaultProfileAvatar';
 
@@ -276,6 +276,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray2,
   },
   pressed: {
-    opacity: 0.75,
+    opacity: interactionOpacity.pressed,
   },
 });

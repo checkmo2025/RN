@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
 
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, interactionOpacity, radius, spacing, typography } from '../../theme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger';
 type ButtonSize = 'lg' | 'md';
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   secondaryDisabled: {
-    opacity: 0.5,
+    opacity: interactionOpacity.disabled,
   },
   // outline
   outline: {
@@ -140,10 +140,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.likeRed,
   },
   dangerDisabled: {
-    opacity: 0.5,
+    opacity: interactionOpacity.disabled,
   },
   pressed: {
-    opacity: 0.8,
+    opacity: interactionOpacity.pressedStrong,
   },
   // text
   baseText: {

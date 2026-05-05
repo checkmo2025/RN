@@ -2,7 +2,7 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-import { colors, radius, spacing, typography } from '../../../theme';
+import { colors, interactionOpacity, radius, spacing, typography } from '../../../theme';
 import { INPUT_LIMITS } from '../../../constants/inputLimits';
 import { FormTextInput } from '../../common/FormTextInput';
 
@@ -328,6 +328,6 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   pressed: {
-    opacity: 0.75,
+    opacity: interactionOpacity.pressed,
   },
 });

@@ -37,7 +37,7 @@ import * as Clipboard from 'expo-clipboard';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import { INPUT_LIMITS } from '../constants/inputLimits';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, interactionOpacity, radius, spacing, typography } from '../theme';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
@@ -3086,7 +3086,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   reportSubmitButtonDisabled: {
-    opacity: 0.6,
+    opacity: interactionOpacity.disabled,
   },
   reportSubmitButtonText: {
     ...typography.body1_2,
@@ -3111,6 +3111,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   pressed: {
-    opacity: 0.75,
+    opacity: interactionOpacity.pressed,
   },
 });

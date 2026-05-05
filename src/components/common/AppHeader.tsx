@@ -24,7 +24,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
 import { PUBLIC_ENV } from '../../constants/publicEnv';
-import { colors, radius, scaleSize, spacing, typography } from '../../theme';
+import { colors, interactionOpacity, radius, scaleSize, spacing, typography } from '../../theme';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
 import { IconButton, IconName } from './IconButton';
 import { useAuthGate } from '../../contexts/AuthGateContext';
@@ -1586,7 +1586,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   searchMoreButtonPressed: {
-    opacity: 0.82,
+    opacity: interactionOpacity.pressedStrong,
   },
   searchMoreButtonText: {
     ...typography.body1_2,
@@ -1653,7 +1653,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   resultWriteButtonPressed: {
-    opacity: 0.8,
+    opacity: interactionOpacity.pressedStrong,
   },
 	  detailBackRow: {
     flexDirection: 'row',

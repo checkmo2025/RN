@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
-import { colors, radius, spacing, typography } from '../../../theme';
+import { colors, interactionOpacity, radius, spacing, typography } from '../../../theme';
 import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../../common/DefaultProfileAvatar';
 
@@ -136,6 +136,6 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   pressed: {
-    opacity: 0.75,
+    opacity: interactionOpacity.pressed,
   },
 });
