@@ -1,132 +1,3 @@
-# 2026-05-06 UI 상호작용 토큰 통일 (1번: opacity + hitSlop)
-
-## 작업 개요
-`ui-interaction-token-consistency.md` 계획의 1번 항목 적용.
-`interactionOpacity` 토큰을 신규 생성하고, 전 파일에 흩어진 인터랙션 opacity 숫자를 토큰으로 교체.
-hitSlop 불일치(6 → 8) 4곳 수정.
-
-## 신규 토큰
-
-```ts
-// src/theme/interactionOpacity.ts
-export const interactionOpacity = {
-  pressed: 0.72,        // 일반 눌림 (FeedbackPressable 기준)
-  pressedStrong: 0.8,   // CTA/FAB 강조 눌림
-  disabled: 0.5,        // 비활성 버튼 (업계 표준)
-  disabledSoft: 0.65,   // 토글/팔로우 등 부드러운 비활성
-};
-```
-
-## opacity 교체 내역
-
-| 파일 | 스타일 키 | 변경 전 | 적용 토큰 |
-|------|-----------|---------|-----------|
-| `FeedbackPressable` | `pressed` | 0.72 | `pressed` |
-| `PrimaryButton` | `secondaryDisabled`, `dangerDisabled` | 0.5 | `disabled` |
-| `PrimaryButton` | `pressed` | 0.8 | `pressedStrong` |
-| `IconButton` | `pressed` | 0.6 | `pressed` |
-| `FloatingActionButton` | `pressed` | 0.8 | `pressedStrong` |
-| `AppHeader` | `searchMoreButtonPressed`, `resultWriteButtonPressed` | 0.82/0.8 | `pressedStrong` |
-| `ReportMemberModal` | `targetCardPressed` | 0.72 | `pressed` |
-| `ReportMemberModal` | `submitButtonDisabled` | 0.6 | `disabled` |
-| `ActionMenu` | `itemDisabled` | 0.45 | `disabled` |
-| `SubscribeUserItem` | `pressed` | 0.75 | `pressed` |
-| `MeetingListCard` | `pressed` | 0.75 | `pressed` |
-| `BookStoryCard` | `pressed` | 0.75 | `pressed` |
-| `MyGroupsDropdownCard` | `pressed` | 0.7 | `pressed` |
-| `AuthFlowScreen` | `pressed` | 0.75 | `pressed` |
-| `StoryScreen` | `reportSubmitButtonDisabled` | 0.6 | `disabled` |
-| `StoryScreen` | `pressed` | 0.75 | `pressed` |
-| `MyPageScreen` | `submitButtonDisabled` | 0.7 | `disabled` |
-| `MyPageScreen` | `toggleButtonDisabled` | 0.65 | `disabledSoft` |
-| `MyPageScreen` | `followDeleteButtonDisabled` | 0.6 | `disabled` |
-| `MyPageScreen` | `pressed` | 0.7 | `pressed` |
-| `MeetingScreen` | `pressed` | 0.7 | `pressed` |
-| `MeetingScreen` | `createProfileActionButtonDisabled` | 0.6 | `disabled` |
-| `MeetingScreen` | `dupCheckButtonDisabled` | 0.6 | `disabled` |
-| `MeetingScreen` | `managementJoinActionItemDisabled` | 0.45 | `disabled` |
-| `MeetingScreen` | `noticePageArrowDisabled` | 0.35 | `disabled` |
-| `MeetingScreen` | `noticePollOptionRowDisabled` | 0.55 | `disabled` |
-| `UserProfileScreen` | `followButtonDisabled` | 0.65 | `disabledSoft` |
-| `UserProfileScreen` | `pressed` | 0.7 | `pressed` |
-
-## 예외 유지 (장식성)
-- `AppHeader activeAction: 0.88` — 검색 활성 상태 시각 표시
-- `BookFlipLoadingScreen: 0.22` — 로딩 shine 효과
-- `BookStoryCard/FeedCard/Large: 0.9` — 이미지 그라데이션 오버레이
-- `MeetingScreen teamManageMemberChipDragging: 0.35` — 드래그 고스트 효과
-- `MeetingScreen bookshelfCalendarDayOutside: 0.35` — 이전/다음 달 날짜 시각 처리
-- `StoryScreen storyImageBg: 0.55` — 책이야기 배경 이미지 오버레이
-
-## hitSlop 교체
-- `UserProfileScreen` 팔로잉/팔로워 수 Pressable: `hitSlop={6}` → `8` (2곳)
-- `MyPageScreen` 팔로워/팔로잉 수 Pressable: `hitSlop={6}` → `8` (2곳)
-
----
-
-# 2026-05-05 UI round 버튼/칩 radius 통일
-
-## 작업 개요
-버튼·칩·탭 스타일 키 전수 점검 결과를 바탕으로 하드코딩 값 토큰 교체 및 동일 역할 컴포넌트 간 radius 불일치 교정.
-
-## 변경 내용
-
-### Task 1 — 하드코딩 → radius 토큰 교체
-- `AppHeader dropdownRecoCard`: `borderRadius: 18` → `radius.lg` (비원형 카드 컨테이너, 유일한 비-원형 하드코딩 케이스)
-
-### Task 2 — 동일 역할 radius 불일치 교정
-- `MyPageScreen reportTypeChip`: `radius.lg` → `radius.sm`
-  - 근거: `StoryScreen reportTypeButton`(sm) + `ReportMemberModal typeButton`(sm)과 역할 동일
-- `BookStoryCard subscribeChip`: `radius.lg` → `radius.sm`
-  - 근거: `BookStoryFeedCard subButton`(sm) + `SubscribeUserItem subscribeButton`(sm)과 역할 동일
-- `MyPageScreen categoryChip`: `radius.sm` → `radius.lg`
-  - 근거: `AuthFlowScreen chip`(lg) + `MeetingScreen chip`(lg)와 역할 동일(장르/카테고리 선택 chip)
-- `MeetingScreen bookshelfSessionChip`: `radius.md` → `radius.sm`
-  - 근거: 같은 섹션 `bookshelfGroupChip`(sm)과 동일 필터 칩 역할
-
-## 파일
-- `src/components/common/AppHeader.tsx`
-- `src/components/feature/bookstory/BookStoryCard.tsx`
-- `src/screens/MeetingScreen.tsx`
-- `src/screens/MyPageScreen.tsx`
-
----
-
-# 2026-04-30 로그인 후 이전 화면 복귀
-
-## 작업 개요
-`requireAuth(callback)` + `pendingActionRef` 패턴을 활용해 로그인/회원가입 성공 후 직전에 시도했던 액션을 자동 재실행하도록 전면 점검 및 보완.
-
-## 구현 내용
-
-### 기존 동작 확인
-- `AuthGateContext`: `requireAuth(callback)` → `pendingActionRef` 저장 → `completeLogin()` 시 실행 패턴 이미 구현돼 있음.
-- `App.tsx`: Auth 오버레이 모델 — 로그인 중에도 하위 내비게이션 유지됨.
-- `AuthFlowScreen`: `completeAuthFlow()` 가 로그인/회원가입 완료 단계(모임 선택 포함) 모두에서 호출됨 → 로그인·회원가입 양쪽 모두 동작.
-- `StoryScreen.openCompose` (line 437): 이미 `requireAuth(() => setIsComposing(true))` 적용돼 있어 글 작성은 이미 정상 동작.
-
-### 신규 적용 — 콜백 없이 호출하던 곳 수정
-**`MyPageScreen`**
-- `openFollowerList`: 로그인 후 팔로워 목록 자동 열기
-- `openFollowingList`: 로그인 후 팔로잉 목록 자동 열기
-- 설정 아이콘 onPress: 로그인 후 설정 패널 자동 열기
-
-**`AppHeader`**
-- `handleToggleBookLike`: `executeBookLikeToggle` 분리 후 `requireAuth(() => executeBookLikeToggle(book))` 적용
-- 알림 벨 onPress: 로그인 후 알림 패널 자동 열기
-
-### 그대로 둔 케이스
-- `HomeScreen` line 310/353/397: `accessPolicy` 정책 게이트 → 인증 후 액션이 accessPolicy에 따라 달라지므로 콜백 불필요
-- `MeetingScreen` line 959: 401 에러 복구용 강제 재로그인 → 콜백 불필요
-- `MeetingScreen` line 5528: 세션 만료 후 재로그인 유도 → 콜백 불필요
-- `MyPageScreen` line 1683 (`renderGuestPrompt`): 로그인 후 `isLoggedIn` 변경으로 컴포넌트 자동 재렌더링
-
-## 파일
-- `src/screens/MyPageScreen.tsx`
-- `src/components/common/AppHeader.tsx`
-
----
-
 # 2026-03-08 작업 요약
 
 ## 인증/로그인(Auth)
@@ -278,6 +149,16 @@ export const interactionOpacity = {
 
 ---
 
+## 업데이트 (2026-04-25)
+
+- 수정 시각: `2026-04-25 10:47:59 KST`
+- 소식 화면 `오늘의 추천 책` 카드 탭 시 홈 탭의 책 검색 상세(`openSearchBook`)로 이동하도록 라우팅 연결
+- 책 검색 상세에서 `GET /api/book-stories/search/{bookId}` 호출 시 ISBN(13자리 포함) 기반 식별자를 허용하도록 조회 키 해석 로직 수정
+- 책이야기 조회 API 함수에서 `bookId`를 문자열/숫자 모두 처리하고 경로 인코딩하도록 보강
+- 타입체크 및 Expo Doctor 점검 통과(`npm run check`)
+
+---
+
 ## 업데이트 (2026-04-26)
 
 - 수정 시각: `2026-04-26 KST`
@@ -331,33 +212,12 @@ export const interactionOpacity = {
 
 ---
 
-## 업데이트 (2026-04-25)
-
-- 수정 시각: `2026-04-25 10:47:59 KST`
-- 소식 화면 `오늘의 추천 책` 카드 탭 시 홈 탭의 책 검색 상세(`openSearchBook`)로 이동하도록 라우팅 연결
-- 책 검색 상세에서 `GET /api/book-stories/search/{bookId}` 호출 시 ISBN(13자리 포함) 기반 식별자를 허용하도록 조회 키 해석 로직 수정
-- 책이야기 조회 API 함수에서 `bookId`를 문자열/숫자 모두 처리하고 경로 인코딩하도록 보강
-- 타입체크 및 Expo Doctor 점검 통과(`npm run check`)
-
----
-
 ## 업데이트 (2026-04-26)
 
 수정 시각: `2026-04-26 16:54:11 KST`
 
 - 신고 모달에서 신고 대상 사용자 클릭 시 프로필 화면 이동 동선 연결 (`src/components/common/ReportMemberModal.tsx`, `src/screens/StoryScreen.tsx`, `src/screens/MeetingScreen.tsx`)
 - 소식 프로모션 캐러셀 로딩을 `carousel=PROMOTION` 기준으로 정리 (`src/screens/HomeScreen.tsx`, `src/screens/NewsScreen.tsx`, `src/services/api/newsApi.ts`)
-
----
-
-## 업데이트 (2026-04-27)
-
-- 수정 시각: `2026-04-27 01:00:48 KST`
-- `hamburger.md` 파일 신규 작성: 햄버거/3점 메뉴를 팝오버, 폰 기본 Alert, 앱 커스텀 바텀시트로 분류
-- `StoryScreen`, `MyPageScreen`, `MeetingScreen`, `UserProfileScreen` 기준으로 메뉴 동작 위치를 파일/라인 단위로 정리
-- `다른사람 프로필` 3점 아이콘(`UserProfileScreen`) 미연결 상태(`onPress` 없음) 참고 항목으로 기록
-- 모임 정기모임 상세 로딩 2-Phase 흐름 보정 및 관련 화면 배치 미세 조정 (`src/screens/MeetingScreen.tsx`, `src/screens/StoryScreen.tsx`)
-- 문서 초안 추가 (`docs/functional-spec.md`, `docs/ia.md`, `docs/immediate-reflection-matrix.md`, `docs/push-notification-implementation.md`)
 
 ---
 
@@ -369,6 +229,17 @@ export const interactionOpacity = {
 - 소식 이미지 노출을 웹/반응형에서 의도한 방향으로 맞추기 위해 프로모션/상세/목록 썸네일의 커버 크롭 기준(좌측 포커스)과 캐러셀 렌더링 스타일을 보정함
 - 정기모임 상세의 조 정보 로딩 실패 케이스를 보완하도록 그룹/멤버 조회 fallback 및 관련 상태 동기화 로직을 보강함
 
+
+---
+
+## 업데이트 (2026-04-27)
+
+- 수정 시각: `2026-04-27 01:00:48 KST`
+- `hamburger.md` 파일 신규 작성: 햄버거/3점 메뉴를 팝오버, 폰 기본 Alert, 앱 커스텀 바텀시트로 분류
+- `StoryScreen`, `MyPageScreen`, `MeetingScreen`, `UserProfileScreen` 기준으로 메뉴 동작 위치를 파일/라인 단위로 정리
+- `다른사람 프로필` 3점 아이콘(`UserProfileScreen`) 미연결 상태(`onPress` 없음) 참고 항목으로 기록
+- 모임 정기모임 상세 로딩 2-Phase 흐름 보정 및 관련 화면 배치 미세 조정 (`src/screens/MeetingScreen.tsx`, `src/screens/StoryScreen.tsx`)
+- 문서 초안 추가 (`docs/functional-spec.md`, `docs/ia.md`, `docs/immediate-reflection-matrix.md`, `docs/push-notification-implementation.md`)
 
 ---
 
@@ -444,73 +315,6 @@ export const interactionOpacity = {
 
 ## 작업 파일
 - `src/screens/MeetingScreen.tsx`
-
----
-
-## 업데이트 (2026-05-06)
-
-수정 시각: 2026-05-06 KST
-
-### 문서 운영 규칙 정리 + TODO 구조화
-
-- `codex.md`의 기존 작업 로그를 `docs/agent/agent-log.md`로 이관하고 `codex.md` 파일 삭제
-- `AGENTS.md` 정합성 수정: `/md` 요청 시 기록 대상 파일을 `docs/agent/agent-log.md`로 변경
-- `docs/agent/todo.md` 상단에 `에이전트 프롬프트 블록` 추가 및 운영 규칙 구체화
-  - 항목 작성 가독성 기준
-  - 생성일자/최종 편집일자 관리
-  - DoD(완료 기준) 1줄 명시
-  - 코드 TODO와 실기기 QA TODO 분리
-  - 상태 정렬 기준 고정(`⬜ 미완료 → 🔄 진행 중 → ✅ 완료`)
-- `todo.md` 주요 표 섹션에 `생성일자`, `최종 편집일자` 컬럼 추가
-- `todo.md` 섹션 정렬 기준을 실제 표 순서에도 반영 (`⬜ → 🔄 → ✅`)
-
-## 작업 파일
-- `AGENTS.md`
-- `docs/agent/todo.md`
-- `docs/agent/agent-log.md`
-- `codex.md` (삭제)
-
----
-
-## 업데이트 (2026-05-06)
-
-수정 시각: 2026-05-06 KST
-
-### codex.md 로그 이관
-
-**2026-04-28 23:48:08 KST**
-- `font.md` 신규 작성 (타이포 토큰/하드코딩 현황, 통일 우선순위 정리)
-- `docs/todo.md`에 `글씨 크기 통일 확인` TODO 1건 추가
-- `docs/todo.md` 마지막 업데이트 시각 갱신
-
-**2026-04-29 10:18:22 KST**
-- `RefreshControl` 커스텀 색상(`tintColor`, `colors`) 제거로 시스템 기본 새로고침 동그라미 사용으로 전환
-- 적용 화면: `HomeScreen`, `NewsScreen`, `StoryScreen`, `MeetingScreen`, `MyPageScreen`, `UserProfileScreen`
-- `docs/todo.md`에 로딩 UX 항목을 진행중으로 갱신하고 커스텀 적용 여부 문서 확인 TODO 추가
-
-## 작업 파일
-- `codex.md` (이관 후 삭제)
-- `docs/agent/agent-log.md`
-
----
-
-## 업데이트 (2026-05-05)
-
-수정 시각: 2026-05-05 KST
-
-### 헤더 알림 빨간점(unreadDot) 동기화 로직 정리
-
-- `AppHeader`의 `hasUnread` 갱신 경로를 `refreshUnreadBadge` 단일 함수로 통일
-- 기존 `notificationPreview` 변경 감시 `useEffect(setHasUnread(...))` 제거
-- 로그인/비로그인 전환 시 `fetchNotificationPreview(1)` 기반으로 unread 여부 재평가
-- 알림 패널 로드(`fetchNotificationPreview(5)`) 시 응답을 재사용해 빨간점 상태 즉시 반영
-- 읽음 처리 성공/실패 후 모두 unread 배지 재동기화 호출 추가
-
-## 작업 파일
-- `src/components/common/AppHeader.tsx`
-- `src/screens/AuthFlowScreen.tsx`
-- `src/components/common/ReportMemberModal.tsx`
-- `docs/agent/issue-fetch.md`
 
 ---
 
@@ -763,6 +567,38 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 ---
 
+## 업데이트 (2026-04-28)
+
+수정 시각: 2026-04-28 KST
+
+### UI 통일 7번 — 모달/바텀시트 패턴 통일 완료
+
+- `DialogOverlay` 공용 컴포넌트 신규 생성 (`src/components/common/DialogOverlay.tsx`)
+  - `Modal transparent animationType="fade"` + 백드롭 Pressable(close) + 카드 Pressable(stopPropagation) 패턴 캡슐화
+  - `overlayStyle`, `cardStyle` prop으로 각 화면 스타일 그대로 사용
+  - `withKeyboard` prop으로 KeyboardAvoidingView 선택 추가
+- `BottomSheet` 공용 컴포넌트 신규 생성 (`src/components/common/BottomSheet.tsx`)
+  - `Modal transparent animationType="slide"` + KeyboardAvoidingView + 백드롭/시트 Pressable 패턴 캡슐화
+  - `backdropStyle`, `sheetStyle`, `keyboardBehavior` prop 지원
+- 인라인 Modal 9건 → 공용 컴포넌트 교체
+  - MeetingScreen 5건: bookshelfComposer(+keyboard), noticeBookSelector, contactModal, regularChatPicker, voteVotersModal
+  - MyPageScreen 1건: defaultAvatarPicker
+  - AuthFlowScreen 2건: termsModal, profileColorModal
+  - StoryScreen 1건: bookPicker (BottomSheet)
+- 미사용 `Modal` import 3개 제거 (AuthFlowScreen, StoryScreen, MyPageScreen)
+- `docs/todo.md` 7번 항목 ✅ 완료 처리
+
+## 작업 파일
+- `src/components/common/DialogOverlay.tsx` (신규)
+- `src/components/common/BottomSheet.tsx` (신규)
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+- `src/screens/AuthFlowScreen.tsx`
+- `src/screens/StoryScreen.tsx`
+- `docs/todo.md`
+
+---
+
 ## 업데이트 (2026-04-29)
 
 수정 시각: 2026-04-29 09:35:40 KST
@@ -978,35 +814,7 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 - `src/screens/MyPageScreen.tsx`
 - `docs/todo.md`
 
-## 업데이트 (2026-04-28)
-
-수정 시각: 2026-04-28 KST
-
-### UI 통일 7번 — 모달/바텀시트 패턴 통일 완료
-
-- `DialogOverlay` 공용 컴포넌트 신규 생성 (`src/components/common/DialogOverlay.tsx`)
-  - `Modal transparent animationType="fade"` + 백드롭 Pressable(close) + 카드 Pressable(stopPropagation) 패턴 캡슐화
-  - `overlayStyle`, `cardStyle` prop으로 각 화면 스타일 그대로 사용
-  - `withKeyboard` prop으로 KeyboardAvoidingView 선택 추가
-- `BottomSheet` 공용 컴포넌트 신규 생성 (`src/components/common/BottomSheet.tsx`)
-  - `Modal transparent animationType="slide"` + KeyboardAvoidingView + 백드롭/시트 Pressable 패턴 캡슐화
-  - `backdropStyle`, `sheetStyle`, `keyboardBehavior` prop 지원
-- 인라인 Modal 9건 → 공용 컴포넌트 교체
-  - MeetingScreen 5건: bookshelfComposer(+keyboard), noticeBookSelector, contactModal, regularChatPicker, voteVotersModal
-  - MyPageScreen 1건: defaultAvatarPicker
-  - AuthFlowScreen 2건: termsModal, profileColorModal
-  - StoryScreen 1건: bookPicker (BottomSheet)
-- 미사용 `Modal` import 3개 제거 (AuthFlowScreen, StoryScreen, MyPageScreen)
-- `docs/todo.md` 7번 항목 ✅ 완료 처리
-
-## 작업 파일
-- `src/components/common/DialogOverlay.tsx` (신규)
-- `src/components/common/BottomSheet.tsx` (신규)
-- `src/screens/MeetingScreen.tsx`
-- `src/screens/MyPageScreen.tsx`
-- `src/screens/AuthFlowScreen.tsx`
-- `src/screens/StoryScreen.tsx`
-- `docs/todo.md`
+---
 
 ## 업데이트 (2026-04-29)
 
@@ -1069,6 +877,41 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 ---
 
+# 2026-04-30 로그인 후 이전 화면 복귀
+
+## 작업 개요
+`requireAuth(callback)` + `pendingActionRef` 패턴을 활용해 로그인/회원가입 성공 후 직전에 시도했던 액션을 자동 재실행하도록 전면 점검 및 보완.
+
+## 구현 내용
+
+### 기존 동작 확인
+- `AuthGateContext`: `requireAuth(callback)` → `pendingActionRef` 저장 → `completeLogin()` 시 실행 패턴 이미 구현돼 있음.
+- `App.tsx`: Auth 오버레이 모델 — 로그인 중에도 하위 내비게이션 유지됨.
+- `AuthFlowScreen`: `completeAuthFlow()` 가 로그인/회원가입 완료 단계(모임 선택 포함) 모두에서 호출됨 → 로그인·회원가입 양쪽 모두 동작.
+- `StoryScreen.openCompose` (line 437): 이미 `requireAuth(() => setIsComposing(true))` 적용돼 있어 글 작성은 이미 정상 동작.
+
+### 신규 적용 — 콜백 없이 호출하던 곳 수정
+**`MyPageScreen`**
+- `openFollowerList`: 로그인 후 팔로워 목록 자동 열기
+- `openFollowingList`: 로그인 후 팔로잉 목록 자동 열기
+- 설정 아이콘 onPress: 로그인 후 설정 패널 자동 열기
+
+**`AppHeader`**
+- `handleToggleBookLike`: `executeBookLikeToggle` 분리 후 `requireAuth(() => executeBookLikeToggle(book))` 적용
+- 알림 벨 onPress: 로그인 후 알림 패널 자동 열기
+
+### 그대로 둔 케이스
+- `HomeScreen` line 310/353/397: `accessPolicy` 정책 게이트 → 인증 후 액션이 accessPolicy에 따라 달라지므로 콜백 불필요
+- `MeetingScreen` line 959: 401 에러 복구용 강제 재로그인 → 콜백 불필요
+- `MeetingScreen` line 5528: 세션 만료 후 재로그인 유도 → 콜백 불필요
+- `MyPageScreen` line 1683 (`renderGuestPrompt`): 로그인 후 `isLoggedIn` 변경으로 컴포넌트 자동 재렌더링
+
+## 파일
+- `src/screens/MyPageScreen.tsx`
+- `src/components/common/AppHeader.tsx`
+
+---
+
 ## 업데이트 (2026-04-30)
 
 수정 시각: 2026-04-30 KST
@@ -1082,6 +925,70 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 ## 작업 파일
 - `src/screens/MyPageScreen.tsx`
 - `docs/todo.md`
+
+---
+
+## 업데이트 (2026-04-30)
+
+수정 시각: 2026-04-30 KST
+
+### README — `npx expo start` 실행 방법 추가
+
+- 스크립트 목록에 `npm run *` / `npx expo start --*` 대응 명령 병기
+- 빠른 실행 섹션(3번 항목)을 `npx expo start` 중심으로 재구성
+  - 실행 후 `i` / `a` / `w` 키 입력으로 기기 선택하는 방법 안내
+  - `--ios`, `--android`, `--web`, `--tunnel`, `--clear` 플래그 정리
+
+## 작업 파일
+- `README.md`
+
+---
+
+# 2026-05-05 UI round 버튼/칩 radius 통일
+
+## 작업 개요
+버튼·칩·탭 스타일 키 전수 점검 결과를 바탕으로 하드코딩 값 토큰 교체 및 동일 역할 컴포넌트 간 radius 불일치 교정.
+
+## 변경 내용
+
+### Task 1 — 하드코딩 → radius 토큰 교체
+- `AppHeader dropdownRecoCard`: `borderRadius: 18` → `radius.lg` (비원형 카드 컨테이너, 유일한 비-원형 하드코딩 케이스)
+
+### Task 2 — 동일 역할 radius 불일치 교정
+- `MyPageScreen reportTypeChip`: `radius.lg` → `radius.sm`
+  - 근거: `StoryScreen reportTypeButton`(sm) + `ReportMemberModal typeButton`(sm)과 역할 동일
+- `BookStoryCard subscribeChip`: `radius.lg` → `radius.sm`
+  - 근거: `BookStoryFeedCard subButton`(sm) + `SubscribeUserItem subscribeButton`(sm)과 역할 동일
+- `MyPageScreen categoryChip`: `radius.sm` → `radius.lg`
+  - 근거: `AuthFlowScreen chip`(lg) + `MeetingScreen chip`(lg)와 역할 동일(장르/카테고리 선택 chip)
+- `MeetingScreen bookshelfSessionChip`: `radius.md` → `radius.sm`
+  - 근거: 같은 섹션 `bookshelfGroupChip`(sm)과 동일 필터 칩 역할
+
+## 파일
+- `src/components/common/AppHeader.tsx`
+- `src/components/feature/bookstory/BookStoryCard.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+
+---
+
+## 업데이트 (2026-05-05)
+
+수정 시각: 2026-05-05 KST
+
+### 헤더 알림 빨간점(unreadDot) 동기화 로직 정리
+
+- `AppHeader`의 `hasUnread` 갱신 경로를 `refreshUnreadBadge` 단일 함수로 통일
+- 기존 `notificationPreview` 변경 감시 `useEffect(setHasUnread(...))` 제거
+- 로그인/비로그인 전환 시 `fetchNotificationPreview(1)` 기반으로 unread 여부 재평가
+- 알림 패널 로드(`fetchNotificationPreview(5)`) 시 응답을 재사용해 빨간점 상태 즉시 반영
+- 읽음 처리 성공/실패 후 모두 unread 배지 재동기화 호출 추가
+
+## 작업 파일
+- `src/components/common/AppHeader.tsx`
+- `src/screens/AuthFlowScreen.tsx`
+- `src/components/common/ReportMemberModal.tsx`
+- `docs/agent/issue-fetch.md`
 
 ---
 
@@ -1158,6 +1065,8 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 **미적용 범위:** TextInput `placeholder` 속성 및 UI 섹션 타이틀 (`<Text>` 안내 문구) — 토스트 범위 외
 
+---
+
 ## 업데이트 (2026-05-05)
 
 수정 시각: 2026-05-05 KST
@@ -1171,22 +1080,6 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 ## 작업 파일
 - `src/screens/StoryScreen.tsx`
-
----
-
-## 업데이트 (2026-04-30)
-
-수정 시각: 2026-04-30 KST
-
-### README — `npx expo start` 실행 방법 추가
-
-- 스크립트 목록에 `npm run *` / `npx expo start --*` 대응 명령 병기
-- 빠른 실행 섹션(3번 항목)을 `npx expo start` 중심으로 재구성
-  - 실행 후 `i` / `a` / `w` 키 입력으로 기기 선택하는 방법 안내
-  - `--ios`, `--android`, `--web`, `--tunnel`, `--clear` 플래그 정리
-
-## 작업 파일
-- `README.md`
 
 ---
 
@@ -1472,3 +1365,133 @@ AppHeader 내 `resultList`, `detailStoryList`는 헤더 팝업 컨텍스트 특�
 
 ## 작업 파일
 - `src/screens/MeetingScreen.tsx`
+
+---
+
+# 2026-05-06 UI 상호작용 토큰 통일 (1번: opacity + hitSlop)
+
+## 작업 개요
+`ui-interaction-token-consistency.md` 계획의 1번 항목 적용.
+`interactionOpacity` 토큰을 신규 생성하고, 전 파일에 흩어진 인터랙션 opacity 숫자를 토큰으로 교체.
+hitSlop 불일치(6 → 8) 4곳 수정.
+
+## 신규 토큰
+
+```ts
+// src/theme/interactionOpacity.ts
+export const interactionOpacity = {
+  pressed: 0.72,        // 일반 눌림 (FeedbackPressable 기준)
+  pressedStrong: 0.8,   // CTA/FAB 강조 눌림
+  disabled: 0.5,        // 비활성 버튼 (업계 표준)
+  disabledSoft: 0.65,   // 토글/팔로우 등 부드러운 비활성
+};
+```
+
+## opacity 교체 내역
+
+| 파일 | 스타일 키 | 변경 전 | 적용 토큰 |
+|------|-----------|---------|-----------|
+| `FeedbackPressable` | `pressed` | 0.72 | `pressed` |
+| `PrimaryButton` | `secondaryDisabled`, `dangerDisabled` | 0.5 | `disabled` |
+| `PrimaryButton` | `pressed` | 0.8 | `pressedStrong` |
+| `IconButton` | `pressed` | 0.6 | `pressed` |
+| `FloatingActionButton` | `pressed` | 0.8 | `pressedStrong` |
+| `AppHeader` | `searchMoreButtonPressed`, `resultWriteButtonPressed` | 0.82/0.8 | `pressedStrong` |
+| `ReportMemberModal` | `targetCardPressed` | 0.72 | `pressed` |
+| `ReportMemberModal` | `submitButtonDisabled` | 0.6 | `disabled` |
+| `ActionMenu` | `itemDisabled` | 0.45 | `disabled` |
+| `SubscribeUserItem` | `pressed` | 0.75 | `pressed` |
+| `MeetingListCard` | `pressed` | 0.75 | `pressed` |
+| `BookStoryCard` | `pressed` | 0.75 | `pressed` |
+| `MyGroupsDropdownCard` | `pressed` | 0.7 | `pressed` |
+| `AuthFlowScreen` | `pressed` | 0.75 | `pressed` |
+| `StoryScreen` | `reportSubmitButtonDisabled` | 0.6 | `disabled` |
+| `StoryScreen` | `pressed` | 0.75 | `pressed` |
+| `MyPageScreen` | `submitButtonDisabled` | 0.7 | `disabled` |
+| `MyPageScreen` | `toggleButtonDisabled` | 0.65 | `disabledSoft` |
+| `MyPageScreen` | `followDeleteButtonDisabled` | 0.6 | `disabled` |
+| `MyPageScreen` | `pressed` | 0.7 | `pressed` |
+| `MeetingScreen` | `pressed` | 0.7 | `pressed` |
+| `MeetingScreen` | `createProfileActionButtonDisabled` | 0.6 | `disabled` |
+| `MeetingScreen` | `dupCheckButtonDisabled` | 0.6 | `disabled` |
+| `MeetingScreen` | `managementJoinActionItemDisabled` | 0.45 | `disabled` |
+| `MeetingScreen` | `noticePageArrowDisabled` | 0.35 | `disabled` |
+| `MeetingScreen` | `noticePollOptionRowDisabled` | 0.55 | `disabled` |
+| `UserProfileScreen` | `followButtonDisabled` | 0.65 | `disabledSoft` |
+| `UserProfileScreen` | `pressed` | 0.7 | `pressed` |
+
+## 예외 유지 (장식성)
+- `AppHeader activeAction: 0.88` — 검색 활성 상태 시각 표시
+- `BookFlipLoadingScreen: 0.22` — 로딩 shine 효과
+- `BookStoryCard/FeedCard/Large: 0.9` — 이미지 그라데이션 오버레이
+- `MeetingScreen teamManageMemberChipDragging: 0.35` — 드래그 고스트 효과
+- `MeetingScreen bookshelfCalendarDayOutside: 0.35` — 이전/다음 달 날짜 시각 처리
+- `StoryScreen storyImageBg: 0.55` — 책이야기 배경 이미지 오버레이
+
+## hitSlop 교체
+- `UserProfileScreen` 팔로잉/팔로워 수 Pressable: `hitSlop={6}` → `8` (2곳)
+- `MyPageScreen` 팔로워/팔로잉 수 Pressable: `hitSlop={6}` → `8` (2곳)
+
+---
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 KST
+
+### 문서 운영 규칙 정리 + TODO 구조화
+
+- `codex.md`의 기존 작업 로그를 `docs/agent/agent-log.md`로 이관하고 `codex.md` 파일 삭제
+- `AGENTS.md` 정합성 수정: `/md` 요청 시 기록 대상 파일을 `docs/agent/agent-log.md`로 변경
+- `docs/agent/todo.md` 상단에 `에이전트 프롬프트 블록` 추가 및 운영 규칙 구체화
+  - 항목 작성 가독성 기준
+  - 생성일자/최종 편집일자 관리
+  - DoD(완료 기준) 1줄 명시
+  - 코드 TODO와 실기기 QA TODO 분리
+  - 상태 정렬 기준 고정(`⬜ 미완료 → 🔄 진행 중 → ✅ 완료`)
+- `todo.md` 주요 표 섹션에 `생성일자`, `최종 편집일자` 컬럼 추가
+- `todo.md` 섹션 정렬 기준을 실제 표 순서에도 반영 (`⬜ → 🔄 → ✅`)
+
+## 작업 파일
+- `AGENTS.md`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
+- `codex.md` (삭제)
+
+---
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 KST
+
+### codex.md 로그 이관
+
+**2026-04-28 23:48:08 KST**
+- `font.md` 신규 작성 (타이포 토큰/하드코딩 현황, 통일 우선순위 정리)
+- `docs/todo.md`에 `글씨 크기 통일 확인` TODO 1건 추가
+- `docs/todo.md` 마지막 업데이트 시각 갱신
+
+**2026-04-29 10:18:22 KST**
+- `RefreshControl` 커스텀 색상(`tintColor`, `colors`) 제거로 시스템 기본 새로고침 동그라미 사용으로 전환
+- 적용 화면: `HomeScreen`, `NewsScreen`, `StoryScreen`, `MeetingScreen`, `MyPageScreen`, `UserProfileScreen`
+- `docs/todo.md`에 로딩 UX 항목을 진행중으로 갱신하고 커스텀 적용 여부 문서 확인 TODO 추가
+
+## 작업 파일
+- `codex.md` (이관 후 삭제)
+- `docs/agent/agent-log.md`
+
+---
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 00:47:15 KST
+
+### `/cpa` 워크플로우 규칙 반영 + 로그 정렬 정비
+
+- `AGENTS.md`에 커밋/푸시 기본 순서(`todo → agent-log → 검증 → 커밋 → 푸시`) 고정 규칙 추가
+- `AGENTS.md`에 `agent-log` 시간 오름차순 유지(과거 위, 최신 아래) + 신규 로그 하단 추가 규칙 추가
+- `AGENTS.md`에 `/cpa` 요청 시 `agent-log 업데이트 → 관련 파일만 스테이징 → 커밋 → 푸시` 순서로 수행하는 규칙 추가
+- `docs/agent/agent-log.md`를 시간 오름차순 기준으로 재정렬하고 중복 구분선(`---`)을 정리
+
+## 작업 파일
+- `AGENTS.md`
+- `docs/agent/agent-log.md`
