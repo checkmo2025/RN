@@ -38,7 +38,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { SvgUri } from 'react-native-svg';
 
-import { colors, interactionOpacity, radius, spacing, typography } from '../theme';
+import { colors, interactionOpacity, motion, radius, spacing, typography } from '../theme';
 import { useMeetingChatStomp } from '../hooks/useMeetingChatStomp';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
@@ -5374,7 +5374,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         if (gestureState.dy > MGMT_SHEET_DISMISS_DISTANCE || gestureState.vy > MGMT_SHEET_DISMISS_VELOCITY) {
           Animated.timing(managementSheetY, {
             toValue: 600,
-            duration: 220,
+            duration: motion.duration.sheet,
             useNativeDriver: true,
           }).start(() => setManagementMenuVisible(false));
         } else {

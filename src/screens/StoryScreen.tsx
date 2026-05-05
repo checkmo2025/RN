@@ -37,7 +37,7 @@ import * as Clipboard from 'expo-clipboard';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import { INPUT_LIMITS } from '../constants/inputLimits';
-import { colors, interactionOpacity, radius, spacing, typography } from '../theme';
+import { colors, interactionOpacity, motion, radius, spacing, typography } from '../theme';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
@@ -382,7 +382,7 @@ export function StoryScreen() {
           if (shouldClose) {
             Animated.timing(detailTranslateX, {
               toValue: screenWidth,
-              duration: 180,
+              duration: motion.duration.normal,
               useNativeDriver: true,
             }).start(({ finished }) => {
               if (!finished) return;

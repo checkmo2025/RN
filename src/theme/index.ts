@@ -3,5 +3,6 @@ export { typography } from './typography';
 export { spacing } from './spacing';
 export { radius } from './radius';
 export { interactionOpacity } from './interactionOpacity';
+export { motion } from './motion';
 export { getDeviceScale, scaleFont, scaleSize } from './responsive';
 export { inputStyles } from './inputStyles';

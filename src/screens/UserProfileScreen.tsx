@@ -22,7 +22,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
-import { colors, interactionOpacity, radius, spacing, typography } from '../theme';
+import { colors, interactionOpacity, motion, radius, spacing, typography } from '../theme';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
@@ -866,7 +866,7 @@ export function UserProfileScreen() {
           if (shouldGoBack) {
             Animated.timing(translateX, {
               toValue: screenWidth,
-              duration: 180,
+              duration: motion.duration.normal,
               useNativeDriver: true,
             }).start(({ finished }) => {
               if (!finished) return;

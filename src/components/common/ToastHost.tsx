@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Keyboard, KeyboardEvent, Platform, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, motion, radius, spacing, typography } from '../../theme';
 import { subscribeToast } from '../../utils/toast';
 
 const HIDE_DELAY_MS = 2200;
@@ -33,12 +33,12 @@ export function ToastHost() {
       Animated.parallel([
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 180,
+          duration: motion.duration.normal,
           useNativeDriver: true,
         }),
         Animated.timing(translateY, {
           toValue: 0,
-          duration: 180,
+          duration: motion.duration.normal,
           useNativeDriver: true,
         }),
       ]).start();
@@ -47,12 +47,12 @@ export function ToastHost() {
         Animated.parallel([
           Animated.timing(opacity, {
             toValue: 0,
-            duration: 180,
+            duration: motion.duration.normal,
             useNativeDriver: true,
           }),
           Animated.timing(translateY, {
             toValue: 6,
-            duration: 180,
+            duration: motion.duration.normal,
             useNativeDriver: true,
           }),
         ]).start(() => {

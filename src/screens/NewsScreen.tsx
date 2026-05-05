@@ -30,7 +30,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, motion, radius, spacing, typography } from '../theme';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { LeftFocalCoverImage } from '../components/common/LeftFocalCoverImage';
 import { ScreenLayout } from '../components/common/ScreenLayout';
@@ -504,7 +504,7 @@ export function NewsScreen() {
           if (shouldClose) {
             Animated.timing(detailTranslateX, {
               toValue: width,
-              duration: 180,
+              duration: motion.duration.normal,
               useNativeDriver: true,
             }).start(({ finished }) => {
               if (!finished) return;

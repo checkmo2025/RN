@@ -24,7 +24,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
 import { PUBLIC_ENV } from '../../constants/publicEnv';
-import { colors, interactionOpacity, radius, scaleSize, spacing, typography } from '../../theme';
+import { colors, interactionOpacity, motion, radius, scaleSize, spacing, typography } from '../../theme';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
 import { IconButton, IconName } from './IconButton';
 import { useAuthGate } from '../../contexts/AuthGateContext';
@@ -301,7 +301,7 @@ export function AppHeader(props: Props) {
   const closeSearchDropdown = useCallback(() => {
     Animated.timing(dropdownAnim, {
       toValue: 0,
-      duration: 160,
+      duration: motion.duration.fast,
       useNativeDriver: true,
     }).start(({ finished }) => {
       if (finished) {
@@ -737,7 +737,7 @@ export function AppHeader(props: Props) {
     dropdownAnim.setValue(0);
     Animated.timing(dropdownAnim, {
       toValue: 1,
-      duration: 180,
+      duration: motion.duration.normal,
       useNativeDriver: true,
     }).start();
   }, [dropdownAnim, showSearchDropdown]);

@@ -1529,3 +1529,29 @@ export const interactionOpacity = {
 - `AGENTS.md`
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 08:31:53 KST
+
+### motion 토큰화 + CLAUDE.md 생성
+
+- `src/theme/motion.ts` 신규 생성 — duration 6종(fast/normal/sheet/loaderShort/loaderLoop/loaderFill) + easing.standard 토큰 정의
+- `src/theme/index.ts`에 `motion` export 추가
+- `Animated.timing duration` 하드코딩 15건 → `motion.duration.*` 토큰 참조로 교체 (AppHeader/BookFlipLoadingScreen/ToastHost/MeetingScreen/MyPageScreen/NewsScreen/StoryScreen/UserProfileScreen)
+- 프로젝트 루트에 `CLAUDE.md` 생성 — `AGENTS.md` 규칙(agent-log/cpa/todo 참조 조건) Claude Code용으로 이전
+
+## 작업 파일
+- `src/theme/motion.ts` (신규)
+- `src/theme/index.ts`
+- `src/components/common/AppHeader.tsx`
+- `src/components/common/BookFlipLoadingScreen.tsx`
+- `src/components/common/ToastHost.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+- `src/screens/NewsScreen.tsx`
+- `src/screens/StoryScreen.tsx`
+- `src/screens/UserProfileScreen.tsx`
+- `CLAUDE.md` (신규)
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`

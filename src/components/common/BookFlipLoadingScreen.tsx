@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 
-import { colors, spacing, typography } from '../../theme';
+import { colors, motion, spacing, typography } from '../../theme';
 
 const LOGO_WIDTH = 100;
 const LOGO_HEIGHT = 60;
@@ -26,14 +26,14 @@ export function BookFlipLoadingScreen({
       Animated.sequence([
         Animated.timing(fillProgress, {
           toValue: 1,
-          duration: 1300,
+          duration: motion.duration.loaderFill,
           easing: Easing.inOut(Easing.cubic),
           useNativeDriver: false, // width 애니메이션은 native driver 불가
         }),
         Animated.delay(120),
         Animated.timing(fillProgress, {
           toValue: 0,
-          duration: 240,
+          duration: motion.duration.loaderShort,
           easing: Easing.out(Easing.quad),
           useNativeDriver: false, // width 애니메이션은 native driver 불가
         }),
@@ -44,13 +44,13 @@ export function BookFlipLoadingScreen({
       Animated.sequence([
         Animated.timing(textOpacity, {
           toValue: 0.75,
-          duration: 700,
+          duration: motion.duration.loaderLoop,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(textOpacity, {
           toValue: 0.35,
-          duration: 700,
+          duration: motion.duration.loaderLoop,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),

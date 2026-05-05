@@ -28,7 +28,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import { termsDocumentOrder, termsDocuments } from '../constants/termsDocuments';
-import { colors, interactionOpacity, radius, spacing, typography, scaleSize } from '../theme';
+import { colors, interactionOpacity, motion, radius, spacing, typography, scaleSize } from '../theme';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
@@ -356,7 +356,7 @@ function NotificationToggle({
   useEffect(() => {
     Animated.timing(progress, {
       toValue: enabled ? 1 : 0,
-      duration: 180,
+      duration: motion.duration.normal,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false, // backgroundColor 애니메이션은 native driver 불가
     }).start();
