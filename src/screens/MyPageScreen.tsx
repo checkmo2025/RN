@@ -34,6 +34,7 @@ import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar'
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
 import { DialogOverlay } from '../components/common/DialogOverlay';
+import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import {
   confirmEmailVerification,
@@ -2655,6 +2656,15 @@ export function MyPageScreen() {
           )}
         </ScrollView>
       </ScreenLayout>
+    );
+  }
+
+  if (submittingLogout) {
+    return (
+      <BookFlipLoadingScreen
+        detailTitle="로그아웃중입니다"
+        detailDescription="홈화면으로 이동합니다"
+      />
     );
   }
 
