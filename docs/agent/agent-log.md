@@ -1495,3 +1495,20 @@ export const interactionOpacity = {
 ## 작업 파일
 - `AGENTS.md`
 - `docs/agent/agent-log.md`
+
+---
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 00:55:23 KST
+
+### `/cpa` 실행 전 규칙 정합성 반영
+
+- `AGENTS.md`에서 커밋/푸시 기본 순서와 `/cpa` 전용 순서가 다르게 적힌 충돌을 제거하고 단일 워크플로로 통합
+- `/cpa`는 커밋/푸시 기본 순서를 그대로 즉시 수행하도록 단순화
+- `docs/agent/todo.md`에 MeetingScreen 분해 5단계 TODO(`MEET-SPLIT-01~05`)와 `CLAUDE.md` 관련 TODO 항목 추가 상태 유지
+
+## 작업 파일
+- `AGENTS.md`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
