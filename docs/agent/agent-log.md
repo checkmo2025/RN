@@ -1623,3 +1623,17 @@ export const interactionOpacity = {
 - `assets/adaptive-icon.png` (삭제)
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 09:07:06 KST
+
+### TODO 프롬프트 압축 + 아이콘 가이드 제거
+
+- `docs/agent/todo.md` 에이전트 프롬프트 블록을 핵심 6개 규칙으로 압축
+- TODO 섹션 목록에서 `아이콘 교체 작업` 제거 및 상태 범례 순번 정리
+- 완료된 아이콘 교체 가이드/체크리스트 섹션 삭제
+
+## 작업 파일
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
