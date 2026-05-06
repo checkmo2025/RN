@@ -1637,3 +1637,21 @@ export const interactionOpacity = {
 ## 작업 파일
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 09:23:09 KST
+
+### 루트 Markdown 문서 정리
+
+- 루트의 `font.md`, `hamburger.md`, `icon-usage.md`, `svg-usage.md`를 `docs/documents` 완료 문서로 이동
+- `docs/agent/todo.md`의 날짜 미상 표기를 `(완료)`에서 `-`로 변경
+- 별도 인벤토리 문서 없이 TODO 완료 설명에 이동 결과 반영
+
+## 작업 파일
+- `docs/documents/(done)font-consistency.md`
+- `docs/documents/(done)hamburger-menu-audit.md`
+- `docs/documents/(done)icon-favicon-usage-report.md`
+- `docs/documents/(done)svg-usage-report.md`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
