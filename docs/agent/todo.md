@@ -72,8 +72,8 @@ TODO 수정 시 아래 규칙만 지킨다.
 
 | 상태 | 항목 | 설명 | 생성일자 | 최종 편집일자 |
 | ------ | ------ | ------ | ------ | ------ |
-| ⬜ | **[MEET-SPLIT-01] MeetingScreen 분해 설계/경계 정의** | `src/screens/MeetingScreen.tsx`의 상태/이펙트/핸들러를 도메인(검색·가입·홈·공지·책장·정기모임·채팅·관리) 단위로 분해 계획 표로 정리한다. 완료 기준(DoD): 분해 대상 함수/상태 목록 + 우선순위 + 목표 파일 경로가 문서로 확정된다. | 2026-05-06 | 2026-05-06 |
-| ⬜ | **[MEET-SPLIT-02] mapper/formatter 순수 함수 분리** | `MeetingScreen` 내부의 순수 변환 로직을 `meeting/utils` 계층으로 분리해 화면 의존도를 낮춘다. 완료 기준(DoD): mapper/formatter가 화면 파일 밖으로 이동하고, 기존 동작 동일성(타입체크 + 주요 표시값 확인)이 검증된다. | 2026-05-06 | 2026-05-06 |
+| ✅ | **[MEET-SPLIT-01] MeetingScreen 분해 설계/경계 정의** | `src/screens/MeetingScreen.tsx`의 도메인 경계 + 목표 파일 구조 + 단계별 계획을 `docs/agent/meet-split-design.md`에 확정. search/home/notice/bookshelf/regularMeeting/management 6개 도메인 정의. | 2026-05-06 | 2026-05-06 |
+| ✅ | **[MEET-SPLIT-02] mapper/formatter 순수 함수 분리** | `src/screens/meeting/formatters.ts` (16개) + `src/screens/meeting/mappers.ts` (6개) 신규 생성. MeetingScreen.tsx에서 함수 본체 제거 → import로 교체. tsc 타입 에러 0건 확인. | 2026-05-06 | 2026-05-06 |
 | ⬜ | **[MEET-SPLIT-03] 공지/책장/채팅/관리 도메인 hook 분리** | 공지, 책장(발제 포함), 채팅, 관리 영역의 API 호출·페이징·로딩·에러 상태를 도메인별 hook으로 분리한다. 완료 기준(DoD): 각 도메인이 독립 hook 파일을 갖고 `MeetingScreen`에서는 조립만 수행한다. | 2026-05-06 | 2026-05-06 |
 | ⬜ | **[MEET-SPLIT-04] 하위 View 컴포넌트 분리** | 도메인별 UI 블록(공지 리스트/책장 본문/채팅 본문/관리 모달 등)을 프레젠테이션 컴포넌트로 분리한다. 완료 기준(DoD): `MeetingScreen`에서 JSX 대형 블록이 제거되고, 하위 컴포넌트 props 계약이 타입으로 고정된다. | 2026-05-06 | 2026-05-06 |
 | ⬜ | **[MEET-SPLIT-05] MeetingScreen 컨테이너 축소(조립 전용화)** | 최종 단계에서 `MeetingScreen`의 역할을 라우팅/탭/상태 조립 중심으로 축소하고 도메인 로직 직접 보유를 최소화한다. 완료 기준(DoD): 파일 길이와 내부 state/effect 수가 초기 대비 의미 있게 감소하고, 회귀 체크리스트를 통과한다. | 2026-05-06 | 2026-05-06 |

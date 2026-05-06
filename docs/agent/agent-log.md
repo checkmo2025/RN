@@ -1655,3 +1655,23 @@ export const interactionOpacity = {
 - `docs/documents/(done)svg-usage-report.md`
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 17:18:10 KST
+
+### MEET-SPLIT-01 설계 문서 + MEET-SPLIT-02 formatter/mapper 분리
+
+- `docs/agent/meet-split-design.md` 신규 생성 — 도메인 6개 경계 정의, 목표 파일 구조, 단계별 계획 확정
+- `src/screens/meeting/formatters.ts` 신규 생성 — 순수 포매터 16개 이동 (date/string, 외부 타입 의존 없음)
+- `src/screens/meeting/mappers.ts` 신규 생성 — 변환 함수 6개 이동 (ClubContact/ApiError만 의존)
+- `MeetingScreen.tsx` 함수 본체 22개 제거 → import로 교체, 미사용 date util import 정리
+- tsc --noEmit 에러 0건 확인
+
+## 작업 파일
+- `docs/agent/meet-split-design.md` (신규)
+- `src/screens/meeting/formatters.ts` (신규)
+- `src/screens/meeting/mappers.ts` (신규)
+- `src/screens/MeetingScreen.tsx`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
