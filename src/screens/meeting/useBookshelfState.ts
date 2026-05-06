@@ -1,0 +1,2116 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, PanResponder, View } from 'react-native';
+import type { GestureResponderEvent } from 'react-native';
+import type { ReportMemberModalState } from '../../components/common/ReportMemberModal';
+import { ApiError } from '../../services/api/http';
+import {
+  createClubBookshelf,
+  createClubBookshelfReview,
+  createClubBookshelfTopic,
+  deleteClubBookshelf,
+  deleteClubBookshelfReview,
+  deleteClubBookshelfTopic,
+  fetchClubBookshelfDetail,
+  fetchClubBookshelfEditInfo,
+  fetchClubBookshelfReviews,
+  fetchClubBookshelfTopics,
+  fetchClubBookshelves,
+  fetchClubMeeting,
+  fetchClubMeetingMembers,
+  fetchClubMeetingTeamChatMessages,
+  fetchClubMeetingTeamTopics,
+  fetchClubNextMeetingRedirect,
+  manageClubMeetingTeams,
+  updateClubBookshelf,
+  updateClubBookshelfReview,
+  updateClubBookshelfTopic,
+} from '../../services/api/clubApi';
+import type {
+  ClubBookshelfReview,
+  ClubMeetingChatHistory,
+  ClubMeetingChatMessage,
+  ClubMeetingTeamTopics,
+} from '../../services/api/clubApi';
+import { searchBooks, type BookItem } from '../../services/api/bookApi';
+import { getCurrentKstDateLabel, getCurrentKstYearMonth } from '../../utils/date';
+import { showToast } from '../../utils/toast';
+import { triggerSelectionHaptic } from '../../utils/haptics';
+import { useMeetingChatStomp } from '../../hooks/useMeetingChatStomp';
+import type {
+  BookshelfCreateDraft,
+  BookshelfDetailTab,
+  BookshelfItem,
+  BookshelfPostItem,
+  BookshelfPostMenuState,
+  BookshelfViewMode,
+  CursorPageState,
+  Group,
+  GroupManagementScreen,
+  RegularMeetingGroupItem,
+  RegularMeetingInfo,
+  TeamManageMemberItem,
+  TeamManageTeamItem,
+} from './types';
+import {
+  areRegularGroupChatMessagesEqual,
+  areRegularGroupPostsEqual,
+  buildBookshelfCreateDraft,
+  ensureRegularMeetingInfo,
+  logMeetingAction,
+  mapApiBookshelfToItem,
+  mapBookshelfDetailToItem,
+  mapBookshelfReviewToPostItem,
+  mapBookshelfTopicToPostItem,
+  mapMeetingChatMessageToUi,
+  mapMeetingToRegularMeetingInfo,
+  normalizeAverageRating,
+  resolveRegularMeetingId,
+  sortBookshelfPostsByLatest,
+} from './helpers';
+import {
+  buildCalendarDays,
+  formatDotDate,
+  formatGenerationLabel,
+  getTeamManageTargetKey,
+  parseGenerationNumber,
+  parseDotDate,
+  sanitizeGenerationInput,
+  toApiDateTime,
+} from './formatters';
+import { resolveBookshelfActionErrorMessage } from './mappers';
+
+const BOOKSHELF_CURSOR_LOOP_LIMIT = 100;
+const MAX_REGULAR_GROUP_COUNT = 10;
+const BOOKSHELF_MEETING_TITLE_MAX_LENGTH = 12;
+const BOOKSHELF_MEETING_LOCATION_MAX_LENGTH = 12;
+const ISBN13_REGEX = /^\d{13}$/;
+
+export type BookshelfStateParams = {
+  group: Group;
+  isManagedClub: boolean;
+  canManageClub: boolean;
+  currentMemberNickname: string;
+  isLoggedIn: boolean;
+  requireAuth: (callback?: () => void) => void;
+  setReportModal: (modal: ReportMemberModalState | null) => void;
+  setActiveTab: (tab: 'home' | 'notice' | 'bookshelf') => void;
+  setActiveManagementScreen: (screen: GroupManagementScreen | null) => void;
+};
+
+export async function fetchAllClubBookshelvesWithCursor(clubId: number): Promise<{
+  items: ReturnType<typeof mapApiBookshelfToItem>[];
+  isStaff: boolean;
+}> {
+  const raw: Array<{
+    meetingId: number;
+    generation?: number;
+    tag?: string;
+    averageRate?: number;
+    bookId?: string;
+    title?: string;
+    author?: string;
+    imgUrl?: string;
+  }> = [];
+  const seenMeetingIds = new Set<number>();
+  const visitedCursors = new Set<number>();
+  let cursorId: number | undefined;
+  let isStaff = false;
+
+  for (let page = 0; page < BOOKSHELF_CURSOR_LOOP_LIMIT; page += 1) {
+    const response = await fetchClubBookshelves(clubId, cursorId);
+    if (response.isStaff) isStaff = true;
+
+    response.items.forEach((item) => {
+      if (seenMeetingIds.has(item.meetingId)) return;
+      seenMeetingIds.add(item.meetingId);
+      raw.push(item);
+    });
+
+    if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+    if (visitedCursors.has(response.nextCursor)) break;
+
+    visitedCursors.add(response.nextCursor);
+    cursorId = response.nextCursor;
+  }
+
+  return { items: raw.map(mapApiBookshelfToItem), isStaff };
+}
+
+export function useBookshelfState({
+  group,
+  isManagedClub,
+  canManageClub,
+  currentMemberNickname,
+  isLoggedIn,
+  requireAuth,
+  setReportModal,
+  setActiveTab,
+  setActiveManagementScreen,
+}: BookshelfStateParams) {
+  const [selectedBookshelfSession, setSelectedBookshelfSession] = useState('');
+  const [bookshelfViewMode, setBookshelfViewMode] = useState<BookshelfViewMode>('GRID');
+  const [bookshelfDetailTab, setBookshelfDetailTab] = useState<BookshelfDetailTab>('TOPIC');
+  const [selectedBookshelfBookId, setSelectedBookshelfBookId] = useState<string | null>(null);
+  const [bookshelfItems, setBookshelfItems] = useState<BookshelfItem[]>([]);
+  const [selectedRegularGroupId, setSelectedRegularGroupId] = useState<string | null>(null);
+  const [regularGroupPostsById, setRegularGroupPostsById] = useState<
+    Record<string, Array<{ id: string; remoteTopicId?: number; author: string; authorProfileImageUrl?: string; content: string; completed: boolean }>>
+  >({});
+  const [regularGroupChatMessagesById, setRegularGroupChatMessagesById] = useState<
+    Record<string, Array<{ id: string; author: string; content: string; time: string; mine?: boolean }>>
+  >({});
+  const [regularGroupMembersVisible, setRegularGroupMembersVisible] = useState(false);
+  const [regularChatPickerVisible, setRegularChatPickerVisible] = useState(false);
+  const [activeRegularChatGroupId, setActiveRegularChatGroupId] = useState<string | null>(null);
+  const [regularChatInput, setRegularChatInput] = useState('');
+  const [submittingRegularChat, setSubmittingRegularChat] = useState(false);
+  const [creatingBookshelf, setCreatingBookshelf] = useState(false);
+  const [updatingBookshelf, setUpdatingBookshelf] = useState(false);
+  const [deletingBookshelf, setDeletingBookshelf] = useState(false);
+  const [editingBookshelfMeetingId, setEditingBookshelfMeetingId] = useState<number | null>(null);
+  const [openingNextMeeting, setOpeningNextMeeting] = useState(false);
+  const [loadingBookshelfDetail, setLoadingBookshelfDetail] = useState(false);
+  const [photoViewer, setPhotoViewer] = useState<{ photos: string[]; index: number } | null>(null);
+  const [bookshelfComposerType, setBookshelfComposerType] = useState<'TOPIC' | 'REVIEW' | null>(null);
+  const [editingBookshelfPost, setEditingBookshelfPost] = useState<BookshelfPostItem | null>(null);
+  const [bookshelfComposerInput, setBookshelfComposerInput] = useState('');
+  const [bookshelfComposerRating, setBookshelfComposerRating] = useState(0);
+  const [submittingBookshelfComposer, setSubmittingBookshelfComposer] = useState(false);
+  const [teamManageVisible, setTeamManageVisible] = useState(false);
+  const [teamManageLoading, setTeamManageLoading] = useState(false);
+  const [teamManageSaving, setTeamManageSaving] = useState(false);
+  const [teamManageTeams, setTeamManageTeams] = useState<TeamManageTeamItem[]>([]);
+  const [teamManageMembers, setTeamManageMembers] = useState<TeamManageMemberItem[]>([]);
+  const [teamManageSelectedMemberId, setTeamManageSelectedMemberId] = useState<number | null>(null);
+  const [teamManageDropLayouts, setTeamManageDropLayouts] = useState<
+    Record<string, { x: number; y: number; width: number; height: number }>
+  >({});
+  const [draggingTeamMemberId, setDraggingTeamMemberId] = useState<number | null>(null);
+  const [draggingTeamMemberPosition, setDraggingTeamMemberPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [bookshelfCreateDraft, setBookshelfCreateDraft] = useState<BookshelfCreateDraft>(() =>
+    buildBookshelfCreateDraft(),
+  );
+  const [bookshelfTopicsByMeetingId, setBookshelfTopicsByMeetingId] = useState<
+    Record<number, BookshelfPostItem[]>
+  >({});
+  const [bookshelfTopicPageStateByMeetingId, setBookshelfTopicPageStateByMeetingId] = useState<
+    Record<number, CursorPageState>
+  >({});
+  const [bookshelfReviewsByMeetingId, setBookshelfReviewsByMeetingId] = useState<
+    Record<number, BookshelfPostItem[]>
+  >({});
+  const [regularMeetingInfoByMeetingId, setRegularMeetingInfoByMeetingId] = useState<
+    Record<number, RegularMeetingInfo>
+  >({});
+  const [bookshelfPostMenu, setBookshelfPostMenu] = useState<BookshelfPostMenuState | null>(null);
+  const [bookshelfBookSelectorVisible, setBookshelfBookSelectorVisible] = useState(false);
+  const [bookshelfBookSearchQuery, setBookshelfBookSearchQuery] = useState('');
+  const [bookshelfBookSearchKeyword, setBookshelfBookSearchKeyword] = useState('');
+  const [bookshelfBookSearchResults, setBookshelfBookSearchResults] = useState<BookItem[]>([]);
+  const [bookshelfBookSearchLoading, setBookshelfBookSearchLoading] = useState(false);
+  const [bookshelfBookSearchSearched, setBookshelfBookSearchSearched] = useState(false);
+  const [bookshelfCalendarVisible, setBookshelfCalendarVisible] = useState(false);
+  const [bookshelfCalendarMonth, setBookshelfCalendarMonth] = useState(() => {
+    const { year, month } = getCurrentKstYearMonth();
+    return new Date(year, month - 1, 1);
+  });
+
+  const chatScrollRef = useRef<import('react-native').ScrollView>(null);
+  const shouldScrollToBookshelfDetailRef = useRef(false);
+  const bookshelfMeetingDetailRequestIdRef = useRef<Record<number, number>>({});
+  const teamManageDropRefs = useRef<Record<string, View | null>>({});
+  const dragStartRef = useRef<{
+    memberId: number;
+    pageX: number;
+    pageY: number;
+    moved: boolean;
+  } | null>(null);
+  const teamManageScrollRef = useRef<import('react-native').ScrollView>(null);
+  const teamManageScrollViewRef = useRef<View>(null);
+  const teamManageScrollOffsetRef = useRef(0);
+  const teamManageScrollBoundsRef = useRef<{ top: number; bottom: number } | null>(null);
+  const dragAutoScrollFrameRef = useRef<number | null>(null);
+  const dragCurrentPageYRef = useRef(0);
+  const activeRegularChatGroupIdRef = useRef(activeRegularChatGroupId);
+  const currentMemberNicknameRef = useRef(currentMemberNickname);
+
+  useEffect(() => {
+    activeRegularChatGroupIdRef.current = activeRegularChatGroupId;
+  });
+  useEffect(() => {
+    currentMemberNicknameRef.current = currentMemberNickname;
+  });
+
+  const bookshelfSessions = useMemo(() => {
+    const sessions = Array.from(
+      new Set(bookshelfItems.map((item) => item.session).filter((item) => item.length > 0)),
+    );
+    return sessions.sort((left, right) => {
+      const leftNumber = parseGenerationNumber(left) ?? 0;
+      const rightNumber = parseGenerationNumber(right) ?? 0;
+      return rightNumber - leftNumber;
+    });
+  }, [bookshelfItems]);
+
+  const bookshelfCalendarDays = useMemo(
+    () => buildCalendarDays(bookshelfCalendarMonth),
+    [bookshelfCalendarMonth],
+  );
+
+  const visibleBookshelfItems = useMemo(
+    () => bookshelfItems.filter((item) => item.session === selectedBookshelfSession),
+    [bookshelfItems, selectedBookshelfSession],
+  );
+
+  const selectedBookshelfBook = useMemo(() => {
+    const fallbackBook = visibleBookshelfItems[0] ?? bookshelfItems[0] ?? null;
+    if (!fallbackBook) return null;
+    if (!selectedBookshelfBookId) return fallbackBook;
+    return bookshelfItems.find((item) => item.id === selectedBookshelfBookId) ?? fallbackBook;
+  }, [bookshelfItems, selectedBookshelfBookId, visibleBookshelfItems]);
+
+  const selectedRegularMeetingId = useMemo(
+    () => resolveRegularMeetingId(selectedBookshelfBook),
+    [selectedBookshelfBook],
+  );
+
+  const bookshelfTopicItems = useMemo<BookshelfPostItem[]>(() => {
+    const remoteMeetingId = selectedBookshelfBook?.remoteMeetingId;
+    if (remoteMeetingId && bookshelfTopicsByMeetingId[remoteMeetingId]) {
+      return sortBookshelfPostsByLatest(bookshelfTopicsByMeetingId[remoteMeetingId]);
+    }
+    return [];
+  }, [bookshelfTopicsByMeetingId, selectedBookshelfBook?.remoteMeetingId]);
+
+  const bookshelfReviewItems = useMemo<BookshelfPostItem[]>(() => {
+    const remoteMeetingId = selectedBookshelfBook?.remoteMeetingId;
+    if (remoteMeetingId && bookshelfReviewsByMeetingId[remoteMeetingId]) {
+      return sortBookshelfPostsByLatest(bookshelfReviewsByMeetingId[remoteMeetingId]);
+    }
+    return [];
+  }, [bookshelfReviewsByMeetingId, selectedBookshelfBook?.remoteMeetingId]);
+
+  const currentBookshelfTopicPageState = useMemo<CursorPageState | null>(() => {
+    const remoteMeetingId = selectedBookshelfBook?.remoteMeetingId;
+    if (typeof remoteMeetingId !== 'number') return null;
+    return bookshelfTopicPageStateByMeetingId[remoteMeetingId] ?? null;
+  }, [bookshelfTopicPageStateByMeetingId, selectedBookshelfBook?.remoteMeetingId]);
+
+  const canSubmitBookshelfComposer =
+    bookshelfComposerInput.trim().length > 0 &&
+    (bookshelfComposerType !== 'REVIEW' || bookshelfComposerRating >= 0.5);
+
+  const baseRegularMeetingInfo = useMemo<RegularMeetingInfo | null>(() => {
+    const remoteMeetingId = selectedBookshelfBook?.remoteMeetingId;
+    if (remoteMeetingId && regularMeetingInfoByMeetingId[remoteMeetingId]) {
+      return regularMeetingInfoByMeetingId[remoteMeetingId];
+    }
+    return null;
+  }, [regularMeetingInfoByMeetingId, selectedBookshelfBook?.remoteMeetingId]);
+
+  useEffect(() => {
+    if (!baseRegularMeetingInfo) return;
+
+    setRegularGroupPostsById((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      baseRegularMeetingInfo.groups.forEach((groupItem) => {
+        const currentPosts = next[groupItem.id];
+        if (!currentPosts) {
+          next[groupItem.id] = groupItem.posts;
+          changed = true;
+          return;
+        }
+        const currentCompletedByPostId = new Map(
+          currentPosts.map((post) => [post.id, post.completed] as const),
+        );
+        const mergedPosts = groupItem.posts.map((post) => ({
+          ...post,
+          completed: currentCompletedByPostId.get(post.id) ?? post.completed,
+        }));
+        if (!areRegularGroupPostsEqual(currentPosts, mergedPosts)) {
+          next[groupItem.id] = mergedPosts;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+
+    setRegularGroupChatMessagesById((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      baseRegularMeetingInfo.groups.forEach((groupItem) => {
+        const currentMessages = next[groupItem.id];
+        if (!currentMessages) {
+          next[groupItem.id] = groupItem.chatMessages;
+          changed = true;
+          return;
+        }
+        if (!areRegularGroupChatMessagesEqual(currentMessages, groupItem.chatMessages)) {
+          next[groupItem.id] = groupItem.chatMessages;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [baseRegularMeetingInfo]);
+
+  const regularMeetingInfo = useMemo<RegularMeetingInfo | null>(() => {
+    if (!baseRegularMeetingInfo) return null;
+    return {
+      ...baseRegularMeetingInfo,
+      groups: baseRegularMeetingInfo.groups.map((groupItem) => ({
+        ...groupItem,
+        posts: regularGroupPostsById[groupItem.id] ?? groupItem.posts,
+        chatMessages: regularGroupChatMessagesById[groupItem.id] ?? groupItem.chatMessages,
+      })),
+    };
+  }, [baseRegularMeetingInfo, regularGroupChatMessagesById, regularGroupPostsById]);
+
+  const selectedRegularGroup = useMemo(() => {
+    if (!regularMeetingInfo || !selectedRegularGroupId) return null;
+    return regularMeetingInfo.groups.find((g) => g.id === selectedRegularGroupId) ?? null;
+  }, [regularMeetingInfo, selectedRegularGroupId]);
+
+  const activeRegularChatGroup = useMemo(() => {
+    if (!regularMeetingInfo || !activeRegularChatGroupId) return null;
+    return regularMeetingInfo.groups.find((g) => g.id === activeRegularChatGroupId) ?? null;
+  }, [activeRegularChatGroupId, regularMeetingInfo]);
+
+  const teamManageMemberById = useMemo(
+    () =>
+      Object.fromEntries(
+        teamManageMembers.map((member) => [member.clubMemberId, member]),
+      ) as Record<number, TeamManageMemberItem>,
+    [teamManageMembers],
+  );
+  const teamManageAssignedMemberIds = useMemo(
+    () => new Set(teamManageTeams.flatMap((team) => team.memberIds)),
+    [teamManageTeams],
+  );
+  const teamManageUnassignedMembers = useMemo(
+    () => teamManageMembers.filter((member) => !teamManageAssignedMemberIds.has(member.clubMemberId)),
+    [teamManageAssignedMemberIds, teamManageMembers],
+  );
+
+  const { isConnected: isChatConnected, publish: publishChatToStomp } = useMeetingChatStomp({
+    clubId: group.clubId,
+    meetingId: selectedRegularMeetingId,
+    teamId: activeRegularChatGroup?.teamId,
+    enabled: Boolean(activeRegularChatGroup),
+    onMessage: (event) => {
+      const groupId = activeRegularChatGroupIdRef.current;
+      if (!groupId) return;
+      const message = mapMeetingChatMessageToUi(
+        {
+          messageId: event.messageId,
+          content: event.content,
+          sendAt: event.sendAt,
+          senderNickname: event.senderNickname,
+          senderProfileImageUrl: event.senderProfileImageUrl ?? undefined,
+        },
+        currentMemberNicknameRef.current,
+      );
+      setRegularGroupChatMessagesById((prev) => {
+        const currentMessages = prev[groupId] ?? [];
+        if (currentMessages.some((item) => item.id === message.id)) return prev;
+        return { ...prev, [groupId]: [...currentMessages, message] };
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (bookshelfSessions.length === 0) return;
+    if (bookshelfSessions.includes(selectedBookshelfSession)) return;
+    setSelectedBookshelfSession(bookshelfSessions[0]);
+  }, [bookshelfSessions, selectedBookshelfSession]);
+
+  useEffect(() => {
+    if (bookshelfViewMode === 'GRID') return;
+    if (!selectedBookshelfBook) {
+      setBookshelfViewMode('GRID');
+      setSelectedRegularGroupId(null);
+      return;
+    }
+    if (!selectedBookshelfBookId) {
+      setSelectedBookshelfBookId(selectedBookshelfBook.id);
+    }
+  }, [bookshelfViewMode, selectedBookshelfBook, selectedBookshelfBookId]);
+
+  useEffect(() => {
+    if (!regularMeetingInfo) {
+      setSelectedRegularGroupId(null);
+      return;
+    }
+    if (
+      selectedRegularGroupId &&
+      regularMeetingInfo.groups.some((g) => g.id === selectedRegularGroupId)
+    ) {
+      return;
+    }
+    setSelectedRegularGroupId(regularMeetingInfo.groups[0]?.id ?? null);
+  }, [regularMeetingInfo, selectedRegularGroupId]);
+
+  useEffect(() => {
+    setRegularGroupMembersVisible(false);
+  }, [bookshelfViewMode, selectedRegularGroupId]);
+
+  useEffect(() => {
+    if (activeRegularChatGroupId) {
+      setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: false }), 50);
+    }
+  }, [activeRegularChatGroupId, activeRegularChatGroup?.chatMessages]);
+
+  useEffect(() => {
+    if (!teamManageVisible) return;
+    refreshTeamManageDropLayouts();
+  }, [teamManageTeams, teamManageVisible]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchAllBookshelfReviewsForMeeting = useCallback(
+    async (
+      clubId: number,
+      meetingId: number,
+      options?: { suppressErrorToast?: boolean },
+    ): Promise<ClubBookshelfReview[]> => {
+      const merged: ClubBookshelfReview[] = [];
+      const seenReviewIds = new Set<number>();
+      const visitedCursors = new Set<number>();
+      let cursorId: number | undefined;
+
+      for (let page = 0; page < BOOKSHELF_CURSOR_LOOP_LIMIT; page += 1) {
+        const response = await fetchClubBookshelfReviews(clubId, meetingId, cursorId, {
+          suppressErrorToast: options?.suppressErrorToast,
+        });
+        response.items.forEach((item) => {
+          if (seenReviewIds.has(item.bookReviewId)) return;
+          seenReviewIds.add(item.bookReviewId);
+          merged.push(item);
+        });
+        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+        if (visitedCursors.has(response.nextCursor)) break;
+        visitedCursors.add(response.nextCursor);
+        cursorId = response.nextCursor;
+      }
+      return merged;
+    },
+    [],
+  );
+
+  const fetchAllMeetingTeamTopics = useCallback(
+    async (
+      clubId: number,
+      meetingId: number,
+      teamId: number,
+      options?: { suppressErrorToast?: boolean },
+    ): Promise<ClubMeetingTeamTopics> => {
+      const mergedTopics: ClubMeetingTeamTopics['topics'] = [];
+      const seenTopicIds = new Set<number>();
+      const visitedCursors = new Set<number>();
+      let cursorId: number | undefined;
+      let latestMeta: ClubMeetingTeamTopics | null = null;
+
+      for (let page = 0; page < BOOKSHELF_CURSOR_LOOP_LIMIT; page += 1) {
+        const response = await fetchClubMeetingTeamTopics(clubId, meetingId, teamId, cursorId, {
+          suppressErrorToast: options?.suppressErrorToast,
+        });
+        latestMeta = response;
+        response.topics.forEach((item) => {
+          if (seenTopicIds.has(item.topicId)) return;
+          seenTopicIds.add(item.topicId);
+          mergedTopics.push(item);
+        });
+        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+        if (visitedCursors.has(response.nextCursor)) break;
+        visitedCursors.add(response.nextCursor);
+        cursorId = response.nextCursor;
+      }
+
+      if (!latestMeta) {
+        return { existingTeams: [], requestedTeam: undefined, topics: [], hasNext: false, nextCursor: null };
+      }
+      return { existingTeams: latestMeta.existingTeams, requestedTeam: latestMeta.requestedTeam, topics: mergedTopics, hasNext: false, nextCursor: null };
+    },
+    [],
+  );
+
+  const fetchAllMeetingTeamChats = useCallback(
+    async (
+      clubId: number,
+      meetingId: number,
+      teamId: number,
+      options?: { suppressErrorToast?: boolean },
+    ): Promise<ClubMeetingChatHistory> => {
+      const mergedChats: ClubMeetingChatMessage[] = [];
+      const seenMessageIds = new Set<number>();
+      const visitedCursors = new Set<number>();
+      let cursorId: number | undefined;
+      let latestMeta: ClubMeetingChatHistory | null = null;
+
+      for (let page = 0; page < BOOKSHELF_CURSOR_LOOP_LIMIT; page += 1) {
+        const response = await fetchClubMeetingTeamChatMessages(clubId, meetingId, teamId, cursorId, {
+          suppressErrorToast: options?.suppressErrorToast,
+        });
+        latestMeta = response;
+        response.chats.forEach((item) => {
+          if (seenMessageIds.has(item.messageId)) return;
+          seenMessageIds.add(item.messageId);
+          mergedChats.push(item);
+        });
+        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
+        if (visitedCursors.has(response.nextCursor)) break;
+        visitedCursors.add(response.nextCursor);
+        cursorId = response.nextCursor;
+      }
+
+      const sortedChats = [...mergedChats].sort((left, right) => {
+        const leftTime = left.sendAt ? Date.parse(left.sendAt) : NaN;
+        const rightTime = right.sendAt ? Date.parse(right.sendAt) : NaN;
+        if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+          return leftTime - rightTime;
+        }
+        return left.messageId - right.messageId;
+      });
+
+      if (!latestMeta) return { chats: sortedChats, hasNext: false, nextCursor: null };
+      return { chats: sortedChats, hasNext: false, nextCursor: null };
+    },
+    [],
+  );
+
+  const reloadBookshelfMeetingDetail = useCallback(
+    async (book: BookshelfItem, options?: { suppressErrorToast?: boolean }) => {
+      const clubId = group.clubId;
+      const meetingId = book.remoteMeetingId;
+      if (typeof clubId !== 'number' || typeof meetingId !== 'number') return;
+      const requestId = (bookshelfMeetingDetailRequestIdRef.current[meetingId] ?? 0) + 1;
+      bookshelfMeetingDetailRequestIdRef.current[meetingId] = requestId;
+      const isStale = () => bookshelfMeetingDetailRequestIdRef.current[meetingId] !== requestId;
+
+      try {
+        const [topicPage, reviews, detail, editDetail] = await Promise.all([
+          fetchClubBookshelfTopics(clubId, meetingId, undefined, {
+            suppressErrorToast: options?.suppressErrorToast,
+          }),
+          fetchAllBookshelfReviewsForMeeting(clubId, meetingId, {
+            suppressErrorToast: options?.suppressErrorToast,
+          }),
+          fetchClubBookshelfDetail(clubId, meetingId, {
+            suppressErrorToast: options?.suppressErrorToast,
+          }),
+          canManageClub
+            ? fetchClubBookshelfEditInfo(clubId, meetingId, { suppressErrorToast: true }).catch(
+                () => null,
+              )
+            : Promise.resolve(null),
+        ]);
+
+        const richDetail = editDetail ?? detail;
+        const regularMeetingId = detail?.meetingId ?? book.regularMeetingId ?? meetingId;
+
+        if (isStale()) return;
+        setBookshelfTopicsByMeetingId((prev) => ({
+          ...prev,
+          [meetingId]: topicPage.items.map(mapBookshelfTopicToPostItem),
+        }));
+        setBookshelfTopicPageStateByMeetingId((prev) => ({
+          ...prev,
+          [meetingId]: {
+            hasNext: Boolean(topicPage.hasNext),
+            nextCursor: topicPage.nextCursor,
+            loadingMore: false,
+          },
+        }));
+        setBookshelfReviewsByMeetingId((prev) => ({
+          ...prev,
+          [meetingId]: reviews.map(mapBookshelfReviewToPostItem),
+        }));
+
+        if (detail) {
+          setBookshelfItems((prev) =>
+            prev.map((item) => {
+              if (item.remoteMeetingId !== meetingId) return item;
+              const nextGeneration = detail.generation ?? item.generation;
+              const nextSession = formatGenerationLabel(nextGeneration);
+              const nextCategory = detail.tag?.trim() || item.category;
+              const nextRegularMeetingName = richDetail?.title ?? item.regularMeetingName;
+              const nextMeetingLocation = richDetail?.location ?? item.meetingLocation;
+              const nextMeetingDate =
+                typeof richDetail?.meetingTime === 'string'
+                  ? formatDotDate(richDetail.meetingTime)
+                  : item.meetingDate;
+
+              if (
+                item.generation === nextGeneration &&
+                item.session === nextSession &&
+                item.category === nextCategory &&
+                item.regularMeetingId === regularMeetingId &&
+                item.regularMeetingName === nextRegularMeetingName &&
+                item.meetingLocation === nextMeetingLocation &&
+                item.meetingDate === nextMeetingDate
+              ) {
+                return item;
+              }
+              return {
+                ...item,
+                generation: nextGeneration,
+                session: nextSession,
+                category: nextCategory,
+                regularMeetingId,
+                regularMeetingName: nextRegularMeetingName,
+                meetingLocation: nextMeetingLocation,
+                meetingDate: nextMeetingDate,
+              };
+            }),
+          );
+        }
+
+        if (richDetail) {
+          const summaryInfo = ensureRegularMeetingInfo(
+            {
+              id: `${book.id}-regular`,
+              name: richDetail.title?.trim() || `${book.title} 정기모임`,
+              date: formatDotDate(richDetail.meetingTime),
+              location: richDetail.location?.trim() || '장소 미정',
+              groups: [],
+            },
+            book,
+            richDetail,
+          );
+          setRegularMeetingInfoByMeetingId((prev) => ({ ...prev, [meetingId]: summaryInfo }));
+        }
+
+        if (isStale()) return;
+
+        let meeting: import('../../services/api/clubApi').ClubMeetingInfo | null = null;
+
+        try {
+          meeting = await fetchClubMeeting(clubId, regularMeetingId, {
+            suppressErrorToast: options?.suppressErrorToast,
+          });
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 401) throw error;
+          if (!(error instanceof ApiError) && !options?.suppressErrorToast) {
+            showToast('정기모임 정보를 불러오지 못했습니다.');
+          }
+        }
+
+        let regularInfo: RegularMeetingInfo | null = null;
+        let meetingMembersFallback: import('../../services/api/clubApi').ClubMeetingMemberList | null = null;
+
+        if (meeting) {
+          if (meeting.teams.length === 0 || meeting.members.length === 0) {
+            try {
+              meetingMembersFallback = await fetchClubMeetingMembers(clubId, regularMeetingId, { suppressErrorToast: true });
+            } catch (fallbackError) {
+              if (fallbackError instanceof ApiError && fallbackError.status === 401) throw fallbackError;
+            }
+          }
+
+          const effectiveMeeting =
+            meetingMembersFallback && (meeting.teams.length === 0 || meeting.members.length === 0)
+              ? {
+                  ...meeting,
+                  teams: meeting.teams.length > 0 ? meeting.teams : meetingMembersFallback.teams,
+                  members: meeting.members.length > 0 ? meeting.members : meetingMembersFallback.members,
+                }
+              : meeting;
+
+          const [topicSettled, chatSettled] = await Promise.all([
+            Promise.allSettled(
+              effectiveMeeting.teams.map(async (team) => [
+                team.teamId,
+                await fetchAllMeetingTeamTopics(clubId, regularMeetingId, team.teamId, {
+                  suppressErrorToast: options?.suppressErrorToast,
+                }),
+              ] as const),
+            ),
+            Promise.allSettled(
+              effectiveMeeting.teams.map(async (team) => [
+                team.teamId,
+                await fetchAllMeetingTeamChats(clubId, regularMeetingId, team.teamId, {
+                  suppressErrorToast: options?.suppressErrorToast,
+                }),
+              ] as const),
+            ),
+          ]);
+
+          if (isStale()) return;
+
+          const topicEntries = effectiveMeeting.teams.map((team, index) => {
+            const settled = topicSettled[index];
+            if (settled?.status === 'fulfilled') return settled.value as [number, ClubMeetingTeamTopics];
+            return [team.teamId, { existingTeams: effectiveMeeting.teams, requestedTeam: team, topics: [], hasNext: false, nextCursor: null }] as [number, ClubMeetingTeamTopics];
+          });
+
+          const chatEntries = effectiveMeeting.teams.map((team, index) => {
+            const settled = chatSettled[index];
+            if (settled?.status === 'fulfilled') return settled.value as [number, ClubMeetingChatHistory];
+            return [team.teamId, { chats: [], hasNext: false, nextCursor: null }] as [number, ClubMeetingChatHistory];
+          });
+
+          const topicsByTeamId = Object.fromEntries(topicEntries);
+          const chatsByTeamId = Object.fromEntries(chatEntries);
+          regularInfo = mapMeetingToRegularMeetingInfo(
+            book, effectiveMeeting, topicsByTeamId, chatsByTeamId, currentMemberNicknameRef.current,
+          );
+        }
+
+        if (!regularInfo || regularInfo.groups.length === 0) {
+          try {
+            const meetingMembersResponse =
+              meetingMembersFallback ??
+              (await fetchClubMeetingMembers(clubId, regularMeetingId, { suppressErrorToast: true }));
+            const fallbackMeeting = {
+              meetingId: regularMeetingId,
+              title: meeting?.title ?? richDetail?.title ?? book.regularMeetingName ?? `${book.title} 정기모임`,
+              meetingTime: meeting?.meetingTime ?? richDetail?.meetingTime,
+              location: meeting?.location ?? richDetail?.location,
+              teams: meetingMembersResponse.teams.length > 0 ? meetingMembersResponse.teams : meeting?.teams ?? [],
+              members: meetingMembersResponse.members.length > 0 ? meetingMembersResponse.members : meeting?.members ?? [],
+              isStaff: meeting?.isStaff ?? canManageClub,
+            };
+            const fallbackInfo = mapMeetingToRegularMeetingInfo(book, fallbackMeeting, {}, {}, currentMemberNicknameRef.current);
+            if (fallbackInfo && fallbackInfo.groups.length > 0) {
+              regularInfo = fallbackInfo;
+            }
+          } catch (fallbackError) {
+            if (fallbackError instanceof ApiError && fallbackError.status === 401) throw fallbackError;
+          }
+        }
+
+        if (isStale()) return;
+
+        const finalInfo = ensureRegularMeetingInfo(regularInfo, book, richDetail);
+        setRegularMeetingInfoByMeetingId((prev) => ({ ...prev, [meetingId]: finalInfo }));
+      } catch (error) {
+        if (isStale()) return;
+        if (error instanceof ApiError && error.status === 401) {
+          if (!options?.suppressErrorToast) showToast('로그인이 만료되었습니다.');
+          return;
+        }
+        if (!options?.suppressErrorToast) {
+          showToast(resolveBookshelfActionErrorMessage(error, '책장 상세를 불러오지 못했습니다.'));
+        }
+      }
+    },
+    [
+      canManageClub,
+      fetchAllBookshelfReviewsForMeeting,
+      fetchAllMeetingTeamChats,
+      fetchAllMeetingTeamTopics,
+      group.clubId,
+    ],
+  );
+
+  const closeBookshelfBookSelector = useCallback(() => {
+    setBookshelfBookSelectorVisible(false);
+    setBookshelfBookSearchQuery('');
+    setBookshelfBookSearchKeyword('');
+    setBookshelfBookSearchResults([]);
+    setBookshelfBookSearchLoading(false);
+    setBookshelfBookSearchSearched(false);
+  }, []);
+
+  const closeBookshelfCalendar = useCallback(() => {
+    setBookshelfCalendarVisible(false);
+  }, []);
+
+  const openBookshelfCalendar = useCallback(() => {
+    const { year, month } = getCurrentKstYearMonth();
+    const selectedDate = parseDotDate(bookshelfCreateDraft.meetingDate) ?? new Date(year, month - 1, 1);
+    setBookshelfCalendarMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+    setBookshelfCalendarVisible(true);
+  }, [bookshelfCreateDraft.meetingDate]);
+
+  const handleSelectBookshelfMeetingDate = useCallback(
+    (value: string) => {
+      setBookshelfCreateDraft((prev) => ({ ...prev, meetingDate: value }));
+      closeBookshelfCalendar();
+    },
+    [closeBookshelfCalendar],
+  );
+
+  const handlePickTodayBookshelfMeetingDate = useCallback(() => {
+    const { year, month } = getCurrentKstYearMonth();
+    setBookshelfCalendarMonth(new Date(year, month - 1, 1));
+    handleSelectBookshelfMeetingDate(getCurrentKstDateLabel());
+  }, [handleSelectBookshelfMeetingDate]);
+
+  const loadMoreBookshelfTopics = useCallback(
+    async (meetingId: number) => {
+      const clubId = group.clubId;
+      if (typeof clubId !== 'number') return;
+      const pageState = bookshelfTopicPageStateByMeetingId[meetingId];
+      if (
+        !pageState || pageState.loadingMore || !pageState.hasNext ||
+        typeof pageState.nextCursor !== 'number'
+      ) return;
+
+      setBookshelfTopicPageStateByMeetingId((prev) => ({
+        ...prev,
+        [meetingId]: { ...pageState, loadingMore: true },
+      }));
+
+      try {
+        const response = await fetchClubBookshelfTopics(clubId, meetingId, pageState.nextCursor, {
+          suppressErrorToast: true,
+        });
+        setBookshelfTopicsByMeetingId((prev) => {
+          const currentItems = prev[meetingId] ?? [];
+          const appended = response.items.map(mapBookshelfTopicToPostItem);
+          const seen = new Set(currentItems.map((item) => item.id));
+          return { ...prev, [meetingId]: [...currentItems, ...appended.filter((item) => !seen.has(item.id))] };
+        });
+        setBookshelfTopicPageStateByMeetingId((prev) => ({
+          ...prev,
+          [meetingId]: {
+            hasNext: Boolean(response.hasNext),
+            nextCursor: response.nextCursor,
+            loadingMore: false,
+          },
+        }));
+      } catch (error) {
+        setBookshelfTopicPageStateByMeetingId((prev) => ({
+          ...prev,
+          [meetingId]: { ...pageState, loadingMore: false },
+        }));
+        if (!(error instanceof ApiError)) {
+          showToast('발제를 추가로 불러오지 못했습니다.');
+        }
+      }
+    },
+    [bookshelfTopicPageStateByMeetingId, group.clubId],
+  );
+
+  const openBookshelfDetail = useCallback(
+    (book: BookshelfItem, tab: BookshelfDetailTab) => {
+      const open = () => {
+        shouldScrollToBookshelfDetailRef.current = true;
+        setSelectedBookshelfBookId(book.id);
+        setBookshelfDetailTab(tab);
+        setSelectedRegularGroupId(null);
+        setBookshelfViewMode('DETAIL');
+      };
+
+      if (tab === 'REGULAR' && !isLoggedIn) {
+        requireAuth(open);
+        return;
+      }
+      open();
+    },
+    [isLoggedIn, requireAuth],
+  );
+
+  const openBookshelfTopicByMeetingId = useCallback(
+    async (meetingId: number) => {
+      const clubId = group.clubId;
+      if (typeof clubId !== 'number') return false;
+
+      let targetBook =
+        bookshelfItems.find(
+          (item) =>
+            item.remoteMeetingId === meetingId || item.regularMeetingId === meetingId,
+        ) ?? null;
+
+      if (!targetBook) {
+        const detail = await fetchClubBookshelfDetail(clubId, meetingId);
+        if (detail) {
+          targetBook = mapBookshelfDetailToItem(detail, meetingId);
+          setBookshelfItems((prev) =>
+            prev.some(
+              (item) =>
+                item.remoteMeetingId === targetBook!.remoteMeetingId ||
+                (typeof targetBook!.regularMeetingId === 'number' &&
+                  item.regularMeetingId === targetBook!.regularMeetingId),
+            )
+              ? prev
+              : [targetBook!, ...prev],
+          );
+        }
+      }
+
+      if (!targetBook) return false;
+
+      setActiveTab('bookshelf');
+      setSelectedBookshelfSession(targetBook.session);
+      openBookshelfDetail(targetBook, 'TOPIC');
+      return true;
+    },
+    [bookshelfItems, group.clubId, openBookshelfDetail, setActiveTab],
+  );
+
+  const refreshBookshelfPostsByType = useCallback(
+    async (clubId: number, meetingId: number, type: 'TOPIC' | 'REVIEW') => {
+      if (type === 'TOPIC') {
+        const topics = await fetchClubBookshelfTopics(clubId, meetingId);
+        setBookshelfTopicsByMeetingId((prev) => ({
+          ...prev,
+          [meetingId]: topics.items.map(mapBookshelfTopicToPostItem),
+        }));
+        setBookshelfTopicPageStateByMeetingId((prev) => ({
+          ...prev,
+          [meetingId]: {
+            hasNext: Boolean(topics.hasNext),
+            nextCursor: topics.nextCursor,
+            loadingMore: false,
+          },
+        }));
+        return;
+      }
+      const reviews = await fetchAllBookshelfReviewsForMeeting(clubId, meetingId);
+      setBookshelfReviewsByMeetingId((prev) => ({
+        ...prev,
+        [meetingId]: reviews.map(mapBookshelfReviewToPostItem),
+      }));
+    },
+    [fetchAllBookshelfReviewsForMeeting],
+  );
+
+  const closeBookshelfComposer = useCallback(() => {
+    if (submittingBookshelfComposer) return;
+    setEditingBookshelfPost(null);
+    setBookshelfComposerType(null);
+    setBookshelfComposerInput('');
+    setBookshelfComposerRating(0);
+  }, [submittingBookshelfComposer]);
+
+  const handleOpenBookshelfComposer = useCallback(
+    (type: 'TOPIC' | 'REVIEW', post?: BookshelfPostItem) => {
+      const open = () => {
+        if (typeof selectedBookshelfBook?.remoteMeetingId !== 'number') {
+          showToast('책장 정보를 찾을 수 없습니다.');
+          return;
+        }
+        setEditingBookshelfPost(post ?? null);
+        setBookshelfComposerType(type);
+        setBookshelfComposerInput(post?.content ?? '');
+        setBookshelfComposerRating(type === 'REVIEW' ? (post?.rating ?? 0) : 0);
+      };
+      if (!isLoggedIn) {
+        requireAuth(open);
+        return;
+      }
+      open();
+    },
+    [isLoggedIn, requireAuth, selectedBookshelfBook?.remoteMeetingId],
+  );
+
+  const handleSubmitBookshelfComposer = useCallback(() => {
+    const clubId = group.clubId;
+    const meetingId = selectedBookshelfBook?.remoteMeetingId;
+    const description = bookshelfComposerInput.trim();
+
+    if (typeof clubId !== 'number' || typeof meetingId !== 'number' || !bookshelfComposerType) {
+      showToast('책장 정보를 찾을 수 없습니다.');
+      return;
+    }
+    if (!description) {
+      showToast(bookshelfComposerType === 'TOPIC' ? '발제 내용을 입력해야 합니다.' : '한줄평을 입력해야 합니다.');
+      return;
+    }
+    if (bookshelfComposerType === 'REVIEW' && bookshelfComposerRating < 0.5) {
+      showToast('평점을 선택해야 합니다.');
+      return;
+    }
+
+    const submit = async () => {
+      setSubmittingBookshelfComposer(true);
+      try {
+        const isEditing = editingBookshelfPost?.type === bookshelfComposerType;
+        if (bookshelfComposerType === 'TOPIC') {
+          if (isEditing && typeof editingBookshelfPost?.remoteId === 'number') {
+            await updateClubBookshelfTopic(clubId, meetingId, editingBookshelfPost.remoteId, { description });
+          } else {
+            await createClubBookshelfTopic(clubId, meetingId, { description });
+          }
+          await refreshBookshelfPostsByType(clubId, meetingId, 'TOPIC');
+          if (selectedBookshelfBook) {
+            await reloadBookshelfMeetingDetail(selectedBookshelfBook, { suppressErrorToast: true });
+          }
+          showToast(isEditing ? '발제가 수정되었습니다.' : '발제가 등록되었습니다.');
+        } else {
+          if (isEditing && typeof editingBookshelfPost?.remoteId === 'number') {
+            await updateClubBookshelfReview(clubId, meetingId, editingBookshelfPost.remoteId, {
+              description,
+              rate: bookshelfComposerRating,
+            });
+          } else {
+            await createClubBookshelfReview(clubId, meetingId, {
+              description,
+              rate: bookshelfComposerRating,
+            });
+          }
+          await refreshBookshelfPostsByType(clubId, meetingId, 'REVIEW');
+          showToast(isEditing ? '한줄평이 수정되었습니다.' : '한줄평이 등록되었습니다.');
+        }
+        setEditingBookshelfPost(null);
+        setBookshelfComposerType(null);
+        setBookshelfComposerInput('');
+        setBookshelfComposerRating(0);
+      } catch (error) {
+        showToast(
+          resolveBookshelfActionErrorMessage(
+            error,
+            bookshelfComposerType === 'TOPIC'
+              ? (editingBookshelfPost ? '발제 수정에 실패했습니다.' : '발제 등록에 실패했습니다.')
+              : (editingBookshelfPost ? '한줄평 수정에 실패했습니다.' : '한줄평 등록에 실패했습니다.'),
+          ),
+        );
+      } finally {
+        setSubmittingBookshelfComposer(false);
+      }
+    };
+    void submit();
+  }, [
+    bookshelfComposerInput,
+    bookshelfComposerRating,
+    bookshelfComposerType,
+    editingBookshelfPost,
+    group.clubId,
+    reloadBookshelfMeetingDetail,
+    refreshBookshelfPostsByType,
+    selectedBookshelfBook,
+  ]);
+
+  const handlePressBookshelfPostMenu = useCallback(
+    (post: BookshelfPostItem, event: GestureResponderEvent) => {
+      setBookshelfPostMenu({
+        post,
+        pageX: event.nativeEvent.pageX,
+        pageY: event.nativeEvent.pageY,
+      });
+    },
+    [],
+  );
+
+  const handleSelectBookshelfPostMenuAction = useCallback(
+    (action: 'edit' | 'delete' | 'report') => {
+      const post = bookshelfPostMenu?.post;
+      if (!post) return;
+      setBookshelfPostMenu(null);
+
+      if (action === 'report') {
+        setReportModal({
+          nickname: post.author,
+          initialType: 'CLUB_MEETING',
+          allowedTypes: ['CLUB_MEETING'],
+        });
+        return;
+      }
+
+      const clubId = group.clubId;
+      const meetingId = selectedBookshelfBook?.remoteMeetingId;
+      const postLabel = post.type === 'TOPIC' ? '발제' : '한줄평';
+
+      if (
+        !post.isAuthor ||
+        typeof clubId !== 'number' ||
+        typeof meetingId !== 'number' ||
+        typeof post.remoteId !== 'number'
+      ) return;
+
+      if (action === 'edit') {
+        handleOpenBookshelfComposer(post.type, post);
+        return;
+      }
+
+      Alert.alert(`${postLabel} 삭제`, `이 ${postLabel}를 삭제하시겠습니까?`, [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: () => {
+            const remove = async () => {
+              try {
+                if (post.type === 'TOPIC') {
+                  await deleteClubBookshelfTopic(clubId, meetingId, post.remoteId);
+                } else {
+                  await deleteClubBookshelfReview(clubId, meetingId, post.remoteId);
+                }
+                await refreshBookshelfPostsByType(clubId, meetingId, post.type);
+                showToast(`${postLabel}를 삭제했습니다.`);
+              } catch (error) {
+                showToast(resolveBookshelfActionErrorMessage(error, `${postLabel} 삭제에 실패했습니다.`));
+              }
+            };
+            void remove();
+          },
+        },
+      ]);
+    },
+    [
+      bookshelfPostMenu,
+      group.clubId,
+      handleOpenBookshelfComposer,
+      refreshBookshelfPostsByType,
+      selectedBookshelfBook?.remoteMeetingId,
+      setReportModal,
+    ],
+  );
+
+  const handleOpenNextMeeting = useCallback(() => {
+    const clubId = group.clubId;
+    if (typeof clubId !== 'number' || openingNextMeeting) return;
+
+    const open = async () => {
+      setOpeningNextMeeting(true);
+      try {
+        const nextMeeting = await fetchClubNextMeetingRedirect(clubId);
+        const meetingId = nextMeeting?.meetingId;
+        if (typeof meetingId !== 'number') {
+          showToast('예정된 정기모임이 없습니다.');
+          return;
+        }
+        const opened = await openBookshelfTopicByMeetingId(meetingId);
+        if (!opened) showToast('이번 모임 정보를 찾을 수 없습니다.');
+      } catch (error) {
+        if (error instanceof ApiError) {
+          if (error.status === 404) {
+            showToast('예정된 정기모임이 없습니다.');
+            return;
+          }
+          showToast(error.message);
+          return;
+        }
+        showToast('이번 모임을 열지 못했습니다.');
+      } finally {
+        setOpeningNextMeeting(false);
+      }
+    };
+    void open();
+  }, [group.clubId, openBookshelfTopicByMeetingId, openingNextMeeting]);
+
+  const handleBackToBookshelfGrid = useCallback(() => {
+    setBookshelfViewMode('GRID');
+    setSelectedRegularGroupId(null);
+  }, []);
+
+  const handleChangeBookshelfTab = useCallback(
+    (tab: BookshelfDetailTab) => {
+      triggerSelectionHaptic();
+      const change = () => {
+        setBookshelfDetailTab(tab);
+        if (tab !== 'REGULAR') {
+          setSelectedRegularGroupId(null);
+          setBookshelfViewMode('DETAIL');
+          return;
+        }
+        setBookshelfViewMode('DETAIL');
+      };
+      if (tab === 'REGULAR' && !isLoggedIn) {
+        requireAuth(change);
+        return;
+      }
+      change();
+    },
+    [isLoggedIn, requireAuth],
+  );
+
+  const handleSelectRegularGroup = useCallback((groupId: string) => {
+    setSelectedRegularGroupId(groupId);
+  }, []);
+
+  const handleEnterRegularGroup = useCallback((groupId: string) => {
+    setSelectedRegularGroupId(groupId);
+    setBookshelfDetailTab('REGULAR');
+    setBookshelfViewMode('REGULAR_GROUP');
+  }, []);
+
+  const handleToggleRegularGroupMembers = useCallback(() => {
+    setRegularGroupMembersVisible((prev) => !prev);
+  }, []);
+
+  const handleToggleRegularGroupPost = useCallback((groupId: string, postId: string) => {
+    setRegularGroupPostsById((prev) => {
+      const current = prev[groupId];
+      if (!current) return prev;
+      return {
+        ...prev,
+        [groupId]: current.map((post) =>
+          post.id === postId ? { ...post, completed: !post.completed } : post,
+        ),
+      };
+    });
+  }, []);
+
+  const handleSortRegularGroupPosts = useCallback((groupId: string) => {
+    setRegularGroupPostsById((prev) => {
+      const current = prev[groupId];
+      if (!current) return prev;
+      return {
+        ...prev,
+        [groupId]: [
+          ...current.filter((post) => post.completed),
+          ...current.filter((post) => !post.completed),
+        ],
+      };
+    });
+  }, []);
+
+  const refreshRegularChatGroupMessages = useCallback(
+    async (groupItem: RegularMeetingGroupItem, options?: { suppressErrorToast?: boolean }) => {
+      const clubId = group.clubId;
+      const meetingId = selectedRegularMeetingId;
+      const teamId = groupItem.teamId;
+      if (typeof clubId !== 'number' || typeof meetingId !== 'number' || typeof teamId !== 'number') return;
+
+      const history = await fetchAllMeetingTeamChats(clubId, meetingId, teamId, {
+        suppressErrorToast: options?.suppressErrorToast,
+      });
+      const nextMessages = history.chats.map((item) =>
+        mapMeetingChatMessageToUi(item, currentMemberNicknameRef.current),
+      );
+
+      setRegularGroupChatMessagesById((prev) => {
+        const currentMessages = prev[groupItem.id] ?? [];
+        if (areRegularGroupChatMessagesEqual(currentMessages, nextMessages)) return prev;
+        return { ...prev, [groupItem.id]: nextMessages };
+      });
+    },
+    [fetchAllMeetingTeamChats, group.clubId, selectedRegularMeetingId],
+  );
+
+  const handleOpenRegularChatPicker = useCallback(() => {
+    setRegularChatPickerVisible(true);
+    setActiveRegularChatGroupId(null);
+    setRegularChatInput('');
+  }, []);
+
+  const handleSelectRegularChatGroup = useCallback(
+    (groupId: string) => {
+      const groupItem = regularMeetingInfo?.groups.find((item) => item.id === groupId);
+      triggerSelectionHaptic();
+      setActiveRegularChatGroupId(groupId);
+      setRegularChatPickerVisible(false);
+      setRegularChatInput('');
+      if (groupItem) {
+        void refreshRegularChatGroupMessages(groupItem, { suppressErrorToast: true });
+      }
+    },
+    [refreshRegularChatGroupMessages, regularMeetingInfo],
+  );
+
+  const handleBackToRegularChatPicker = useCallback(() => {
+    setActiveRegularChatGroupId(null);
+    setRegularChatPickerVisible(true);
+    setRegularChatInput('');
+  }, []);
+
+  const handleCloseRegularChat = useCallback(() => {
+    setRegularChatPickerVisible(false);
+    setActiveRegularChatGroupId(null);
+    setRegularChatInput('');
+  }, []);
+
+  const handleCloseRegularChatRef = useRef(handleCloseRegularChat);
+  useEffect(() => {
+    handleCloseRegularChatRef.current = handleCloseRegularChat;
+  });
+
+  const CHAT_SWIPE_START_X = 30;
+  const CHAT_SWIPE_START_DX = 8;
+  const CHAT_SWIPE_DISMISS_DISTANCE = 60;
+  const CHAT_SWIPE_DISMISS_VELOCITY = 0.5;
+  const chatSwipePanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) =>
+        evt.nativeEvent.pageX < CHAT_SWIPE_START_X &&
+        gestureState.dx > CHAT_SWIPE_START_DX &&
+        Math.abs(gestureState.dy) < Math.abs(gestureState.dx),
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (
+          gestureState.dx > CHAT_SWIPE_DISMISS_DISTANCE ||
+          gestureState.vx > CHAT_SWIPE_DISMISS_VELOCITY
+        ) {
+          handleCloseRegularChatRef.current();
+        }
+      },
+    }),
+  ).current;
+
+  const handleSubmitRegularChat = useCallback(() => {
+    const content = regularChatInput.trim();
+    if (!activeRegularChatGroup || !content || submittingRegularChat) return;
+    if (!isChatConnected) {
+      showToast('채팅 서버에 연결 중입니다. 잠시 후 다시 시도해 주십시오.');
+      return;
+    }
+    triggerSelectionHaptic();
+    setSubmittingRegularChat(true);
+    try {
+      publishChatToStomp(content);
+      setRegularChatInput('');
+    } catch {
+      showToast('채팅 전송에 실패했습니다.');
+    } finally {
+      setSubmittingRegularChat(false);
+    }
+  }, [activeRegularChatGroup, isChatConnected, publishChatToStomp, regularChatInput, submittingRegularChat]);
+
+  // Team management
+  const stopDragAutoScroll = useCallback(() => {
+    if (dragAutoScrollFrameRef.current !== null) {
+      cancelAnimationFrame(dragAutoScrollFrameRef.current);
+      dragAutoScrollFrameRef.current = null;
+    }
+  }, []);
+
+  const closeTeamManage = useCallback(() => {
+    if (teamManageSaving) return;
+    setTeamManageVisible(false);
+    setTeamManageSelectedMemberId(null);
+    setDraggingTeamMemberId(null);
+    setDraggingTeamMemberPosition(null);
+    setTeamManageDropLayouts({});
+    dragStartRef.current = null;
+    stopDragAutoScroll();
+    teamManageScrollBoundsRef.current = null;
+    teamManageScrollOffsetRef.current = 0;
+  }, [stopDragAutoScroll, teamManageSaving]);
+
+  const refreshTeamManageDropLayouts = useCallback(() => {
+    if (!teamManageVisible) return;
+    const entries = Object.entries(teamManageDropRefs.current).filter(([, node]) => Boolean(node));
+    if (entries.length === 0) {
+      setTeamManageDropLayouts({});
+      return;
+    }
+    requestAnimationFrame(() => {
+      const nextLayouts: Record<string, { x: number; y: number; width: number; height: number }> = {};
+      let measuredCount = 0;
+      entries.forEach(([key, node]) => {
+        node?.measureInWindow((x, y, width, height) => {
+          nextLayouts[key] = { x, y, width, height };
+          measuredCount += 1;
+          if (measuredCount === entries.length) {
+            setTeamManageDropLayouts(nextLayouts);
+          }
+        });
+      });
+    });
+  }, [teamManageVisible]);
+
+  const moveTeamManageMemberToTarget = useCallback(
+    (memberId: number, targetTeamNumber: number | null) => {
+      setTeamManageTeams((prev) => {
+        const removed = prev.map((team) => ({
+          ...team,
+          memberIds: team.memberIds.filter((id) => id !== memberId),
+        }));
+        if (targetTeamNumber === null) return removed;
+        return removed.map((team) =>
+          team.teamNumber === targetTeamNumber
+            ? {
+                ...team,
+                memberIds: team.memberIds.includes(memberId)
+                  ? team.memberIds
+                  : [...team.memberIds, memberId],
+              }
+            : team,
+        );
+      });
+      setTeamManageSelectedMemberId(null);
+    },
+    [],
+  );
+
+  const findTeamManageDropTarget = useCallback(
+    (pageX: number, pageY: number) => {
+      const matchedEntry = Object.entries(teamManageDropLayouts).find(
+        ([, layout]) =>
+          pageX >= layout.x &&
+          pageX <= layout.x + layout.width &&
+          pageY >= layout.y &&
+          pageY <= layout.y + layout.height,
+      );
+      if (!matchedEntry) return undefined;
+      const [key] = matchedEntry;
+      if (key === getTeamManageTargetKey(null)) return null;
+      const teamNumber = Number(key.replace('team-', ''));
+      return Number.isFinite(teamNumber) ? teamNumber : undefined;
+    },
+    [teamManageDropLayouts],
+  );
+
+  const handlePressManageRegularGroups = useCallback(() => {
+    const clubId = group.clubId;
+    const meetingId = selectedRegularMeetingId;
+    if (!canManageClub || typeof clubId !== 'number' || typeof meetingId !== 'number') {
+      showToast('정기모임 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    const open = async () => {
+      setTeamManageVisible(true);
+      setTeamManageLoading(true);
+      setTeamManageSelectedMemberId(null);
+      setDraggingTeamMemberId(null);
+      setDraggingTeamMemberPosition(null);
+
+      try {
+        const [meeting, meetingMembersResponse] = await Promise.all([
+          fetchClubMeeting(clubId, meetingId),
+          fetchClubMeetingMembers(clubId, meetingId),
+        ]);
+        if (!meeting) {
+          showToast('정기모임 정보를 찾을 수 없습니다.');
+          setTeamManageVisible(false);
+          return;
+        }
+
+        const memberMap = new Map<number, TeamManageMemberItem>();
+        meetingMembersResponse.members.forEach((member) => {
+          memberMap.set(member.clubMemberId, {
+            clubMemberId: member.clubMemberId,
+            nickname: member.nickname,
+            profileImageUrl: member.profileImageUrl,
+          });
+        });
+
+        const teamNumbers = Array.from(
+          new Set([
+            1,
+            ...meeting.teams.map((team) => team.teamNumber),
+            ...meetingMembersResponse.members
+              .map((member) => member.teamNumber)
+              .filter((tn): tn is number => typeof tn === 'number'),
+          ]),
+        )
+          .filter((tn) => tn >= 1 && tn <= MAX_REGULAR_GROUP_COUNT)
+          .sort((a, b) => a - b);
+
+        const nextTeams = teamNumbers.map((teamNumber) => ({
+          teamNumber,
+          memberIds: meetingMembersResponse.members
+            .filter((member) => member.teamNumber === teamNumber)
+            .map((member) => member.clubMemberId),
+        }));
+
+        setTeamManageMembers(
+          Array.from(memberMap.values()).sort((a, b) =>
+            a.nickname.localeCompare(b.nickname, 'ko', { sensitivity: 'base' }),
+          ),
+        );
+        setTeamManageTeams(nextTeams.length > 0 ? nextTeams : [{ teamNumber: 1, memberIds: [] }]);
+      } catch (error) {
+        showToast(resolveBookshelfActionErrorMessage(error, '조 편성 화면을 불러오지 못했습니다.'));
+        setTeamManageVisible(false);
+      } finally {
+        setTeamManageLoading(false);
+        setTimeout(refreshTeamManageDropLayouts, 0);
+      }
+    };
+    void open();
+  }, [canManageClub, group.clubId, refreshTeamManageDropLayouts, selectedRegularMeetingId]);
+
+  const handleAddTeamManageTeam = useCallback(() => {
+    setTeamManageTeams((prev) => {
+      if (prev.length >= MAX_REGULAR_GROUP_COUNT) {
+        showToast('조는 최대 10개까지 만들 수 있습니다.');
+        return prev;
+      }
+      const usedNumbers = new Set(prev.map((team) => team.teamNumber));
+      const nextTeamNumber = Array.from(
+        { length: MAX_REGULAR_GROUP_COUNT },
+        (_, index) => index + 1,
+      ).find((tn) => !usedNumbers.has(tn));
+      if (!nextTeamNumber) return prev;
+      return [...prev, { teamNumber: nextTeamNumber, memberIds: [] }].sort(
+        (a, b) => a.teamNumber - b.teamNumber,
+      );
+    });
+    setTimeout(refreshTeamManageDropLayouts, 0);
+  }, [refreshTeamManageDropLayouts]);
+
+  const handleRemoveTeamManageTeam = useCallback(
+    (teamNumber: number) => {
+      setTeamManageTeams((prev) => {
+        if (prev.length <= 1) {
+          showToast('최소 한 개의 조는 필요합니다.');
+          return prev;
+        }
+        return prev.filter((team) => team.teamNumber !== teamNumber);
+      });
+      setTimeout(refreshTeamManageDropLayouts, 0);
+    },
+    [refreshTeamManageDropLayouts],
+  );
+
+  const handlePressTeamManageTarget = useCallback(
+    (teamNumber: number | null) => {
+      if (teamManageSelectedMemberId === null) return;
+      moveTeamManageMemberToTarget(teamManageSelectedMemberId, teamNumber);
+    },
+    [moveTeamManageMemberToTarget, teamManageSelectedMemberId],
+  );
+
+  const startDragAutoScroll = useCallback(() => {
+    if (dragAutoScrollFrameRef.current !== null) return;
+    const ZONE = 80;
+    const MAX_SPEED = 10;
+    const tick = () => {
+      const bounds = teamManageScrollBoundsRef.current;
+      const scrollRef = teamManageScrollRef.current;
+      if (!bounds || !scrollRef) {
+        dragAutoScrollFrameRef.current = null;
+        return;
+      }
+      const pageY = dragCurrentPageYRef.current;
+      if (pageY < bounds.top + ZONE) {
+        const ratio = Math.max(0, 1 - (pageY - bounds.top) / ZONE);
+        teamManageScrollOffsetRef.current = Math.max(
+          0,
+          teamManageScrollOffsetRef.current - MAX_SPEED * ratio,
+        );
+        scrollRef.scrollTo({ y: teamManageScrollOffsetRef.current, animated: false });
+        dragAutoScrollFrameRef.current = requestAnimationFrame(tick);
+      } else if (pageY > bounds.bottom - ZONE) {
+        const ratio = Math.max(0, (pageY - (bounds.bottom - ZONE)) / ZONE);
+        teamManageScrollOffsetRef.current += MAX_SPEED * ratio;
+        scrollRef.scrollTo({ y: teamManageScrollOffsetRef.current, animated: false });
+        dragAutoScrollFrameRef.current = requestAnimationFrame(tick);
+      } else {
+        dragAutoScrollFrameRef.current = null;
+      }
+    };
+    dragAutoScrollFrameRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  const finishTeamManageDrag = useCallback(
+    (pageX: number, pageY: number) => {
+      const dragState = dragStartRef.current;
+      if (!dragState) return;
+      const targetTeamNumber = findTeamManageDropTarget(pageX, pageY);
+      if (dragState.moved) {
+        if (typeof targetTeamNumber !== 'undefined') {
+          moveTeamManageMemberToTarget(dragState.memberId, targetTeamNumber);
+        }
+      } else {
+        setTeamManageSelectedMemberId((prev) =>
+          prev === dragState.memberId ? null : dragState.memberId,
+        );
+      }
+      stopDragAutoScroll();
+      dragStartRef.current = null;
+      setDraggingTeamMemberId(null);
+      setDraggingTeamMemberPosition(null);
+    },
+    [findTeamManageDropTarget, moveTeamManageMemberToTarget, stopDragAutoScroll],
+  );
+
+  const handleTeamManageMemberGrant = useCallback(
+    (memberId: number, event: GestureResponderEvent) => {
+      dragStartRef.current = {
+        memberId,
+        pageX: event.nativeEvent.pageX,
+        pageY: event.nativeEvent.pageY,
+        moved: false,
+      };
+      setDraggingTeamMemberId(memberId);
+      setDraggingTeamMemberPosition({
+        x: event.nativeEvent.pageX,
+        y: event.nativeEvent.pageY,
+      });
+    },
+    [],
+  );
+
+  const handleTeamManageMemberMove = useCallback(
+    (event: GestureResponderEvent) => {
+      const dragState = dragStartRef.current;
+      if (!dragState) return;
+      const dx = Math.abs(event.nativeEvent.pageX - dragState.pageX);
+      const dy = Math.abs(event.nativeEvent.pageY - dragState.pageY);
+      if (dx > 6 || dy > 6) dragState.moved = true;
+      const { pageX, pageY } = event.nativeEvent;
+      dragCurrentPageYRef.current = pageY;
+      setDraggingTeamMemberPosition({ x: pageX, y: pageY });
+      if (dragState.moved) {
+        const bounds = teamManageScrollBoundsRef.current;
+        if (bounds && (pageY < bounds.top + 80 || pageY > bounds.bottom - 80)) {
+          startDragAutoScroll();
+        } else {
+          stopDragAutoScroll();
+        }
+      }
+    },
+    [startDragAutoScroll, stopDragAutoScroll],
+  );
+
+  const handleTeamManageMemberRelease = useCallback(
+    (event: GestureResponderEvent) => {
+      finishTeamManageDrag(event.nativeEvent.pageX, event.nativeEvent.pageY);
+    },
+    [finishTeamManageDrag],
+  );
+
+  const handleSaveTeamManage = useCallback(() => {
+    const clubId = group.clubId;
+    const meetingId = selectedRegularMeetingId;
+    const selectedBook = selectedBookshelfBook;
+    if (typeof clubId !== 'number' || typeof meetingId !== 'number' || !selectedBook) {
+      showToast('정기모임 정보를 찾을 수 없습니다.');
+      return;
+    }
+    if (teamManageTeams.some((team) => team.memberIds.length === 0)) {
+      showToast('빈 조를 삭제하거나 참여자를 배정해야 합니다.');
+      return;
+    }
+
+    const submit = async () => {
+      setTeamManageSaving(true);
+      try {
+        await manageClubMeetingTeams(clubId, meetingId, {
+          teamMemberList: teamManageTeams.map((team) => ({
+            teamNumber: team.teamNumber,
+            clubMemberIds: team.memberIds,
+          })),
+        });
+        await reloadBookshelfMeetingDetail(selectedBook, { suppressErrorToast: true });
+        logMeetingAction('team_manage_save_success', {
+          clubId,
+          meetingId,
+          teamCount: teamManageTeams.length,
+        });
+        showToast('조 편성이 저장되었습니다.');
+        setBookshelfDetailTab('REGULAR');
+        setBookshelfViewMode('DETAIL');
+        setSelectedRegularGroupId(null);
+        closeTeamManage();
+      } catch (error) {
+        logMeetingAction('team_manage_save_failure', {
+          clubId,
+          meetingId,
+          teamCount: teamManageTeams.length,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        showToast(resolveBookshelfActionErrorMessage(error, '조 편성 저장에 실패했습니다.'));
+      } finally {
+        setTeamManageSaving(false);
+      }
+    };
+    void submit();
+  }, [
+    closeTeamManage,
+    group.clubId,
+    reloadBookshelfMeetingDetail,
+    selectedBookshelfBook,
+    selectedRegularMeetingId,
+    teamManageTeams,
+  ]);
+
+  const handleOpenBookshelfEdit = useCallback(() => {
+    const clubId = group.clubId;
+    const meetingId = selectedBookshelfBook?.remoteMeetingId;
+    const fallbackBook = selectedBookshelfBook;
+
+    if (!canManageClub || typeof clubId !== 'number' || typeof meetingId !== 'number' || !fallbackBook) {
+      showToast('수정할 책장 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    const open = async () => {
+      try {
+        const detail = await fetchClubBookshelfEditInfo(clubId, meetingId);
+        if (!detail) {
+          showToast('수정할 책장 정보를 찾을 수 없습니다.');
+          setActiveManagementScreen(null);
+          setEditingBookshelfMeetingId(null);
+          return;
+        }
+        setActiveManagementScreen('BOOKSHELF_CREATE');
+        setEditingBookshelfMeetingId(meetingId);
+        closeBookshelfBookSelector();
+        closeBookshelfCalendar();
+        setBookshelfCreateDraft({
+          sourceBook: {
+            isbn: (detail.book.bookId ?? fallbackBook.bookId ?? '').trim(),
+            title: detail.book.title ?? fallbackBook.title,
+            author: detail.book.author ?? fallbackBook.author,
+            coverImage: detail.book.imgUrl ?? fallbackBook.coverImage,
+            publisher: detail.book.publisher,
+            description: detail.book.description,
+          },
+          session: String(detail.generation ?? parseGenerationNumber(fallbackBook.session) ?? 1),
+          categories: detail.tag?.trim() ? [detail.tag.trim()] : [],
+          regularMeetingName: detail.title?.trim() ?? fallbackBook.regularMeetingName ?? '',
+          meetingLocation: detail.location?.trim() ?? fallbackBook.meetingLocation ?? '',
+          meetingDate: formatDotDate(detail.meetingTime),
+        });
+      } catch (error) {
+        showToast(resolveBookshelfActionErrorMessage(error, '책장 수정 정보를 불러오지 못했습니다.'));
+        setActiveManagementScreen(null);
+        setEditingBookshelfMeetingId(null);
+      }
+    };
+    void open();
+  }, [
+    canManageClub,
+    closeBookshelfBookSelector,
+    closeBookshelfCalendar,
+    group.clubId,
+    selectedBookshelfBook,
+    setActiveManagementScreen,
+  ]);
+
+  const runBookshelfBookSearch = useCallback(async (keyword: string) => {
+    const trimmed = keyword.trim();
+    if (!trimmed) {
+      setBookshelfBookSearchSearched(false);
+      setBookshelfBookSearchKeyword('');
+      setBookshelfBookSearchResults([]);
+      return;
+    }
+    setBookshelfBookSearchLoading(true);
+    setBookshelfBookSearchSearched(true);
+    setBookshelfBookSearchKeyword(trimmed);
+    setBookshelfBookSearchResults([]);
+    try {
+      const response = await searchBooks(trimmed, 1);
+      setBookshelfBookSearchResults(response.items);
+    } catch (error) {
+      showToast(resolveBookshelfActionErrorMessage(error, '책 검색에 실패했습니다.'));
+      setBookshelfBookSearchResults([]);
+    } finally {
+      setBookshelfBookSearchLoading(false);
+    }
+  }, []);
+
+  const handleSubmitBookshelfBookSearch = useCallback(() => {
+    void runBookshelfBookSearch(bookshelfBookSearchQuery);
+  }, [bookshelfBookSearchQuery, runBookshelfBookSearch]);
+
+  const handleSelectBookshelfSourceBook = useCallback(
+    (book: BookItem) => {
+      setBookshelfCreateDraft((prev) => ({
+        ...prev,
+        sourceBook: {
+          isbn: book.isbn,
+          title: book.title,
+          author: book.author,
+          coverImage: book.imgUrl,
+          publisher: book.publisher,
+          description: book.description,
+        },
+      }));
+      closeBookshelfBookSelector();
+    },
+    [closeBookshelfBookSelector],
+  );
+
+  const handleSubmitBookshelfCreate = useCallback(() => {
+    if (creatingBookshelf || updatingBookshelf || deletingBookshelf) return;
+    const editingMeetingId = editingBookshelfMeetingId;
+    const isEditMode = typeof editingMeetingId === 'number';
+
+    if (!isEditMode && !bookshelfCreateDraft.sourceBook) {
+      showToast('책을 선택해야 합니다.');
+      return;
+    }
+    const clubId = group.clubId;
+    if (!canManageClub || typeof clubId !== 'number') {
+      showToast(
+        isEditMode
+          ? '책장 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'
+          : '책장 생성 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.',
+      );
+      return;
+    }
+
+    const generation = parseGenerationNumber(bookshelfCreateDraft.session);
+    if (!generation) {
+      showToast('기수를 숫자로 입력해야 합니다.');
+      return;
+    }
+
+    const regularMeetingName = bookshelfCreateDraft.regularMeetingName.trim();
+    const meetingLocation = bookshelfCreateDraft.meetingLocation.trim();
+    const meetingDate = bookshelfCreateDraft.meetingDate.trim();
+    if (regularMeetingName.length > BOOKSHELF_MEETING_TITLE_MAX_LENGTH) {
+      showToast(`정기모임 이름은 ${BOOKSHELF_MEETING_TITLE_MAX_LENGTH}자 이하여야 합니다.`);
+      return;
+    }
+    if (meetingLocation.length > BOOKSHELF_MEETING_LOCATION_MAX_LENGTH) {
+      showToast(`모임 장소는 ${BOOKSHELF_MEETING_LOCATION_MAX_LENGTH}자 이하여야 합니다.`);
+      return;
+    }
+    const sourceBook = bookshelfCreateDraft.sourceBook;
+    if (isEditMode && !sourceBook) {
+      showToast('수정할 책장 정보를 다시 불러와주세요.');
+      return;
+    }
+    const sourceBookIsbn = sourceBook?.isbn.trim() ?? '';
+    if (!isEditMode && !ISBN13_REGEX.test(sourceBookIsbn)) {
+      showToast('책 정보 형식이 올바르지 않습니다.');
+      return;
+    }
+    const primaryCategory = bookshelfCreateDraft.categories[0];
+
+    const submit = async () => {
+      if (isEditMode) setUpdatingBookshelf(true);
+      else setCreatingBookshelf(true);
+
+      try {
+        const meetingTime = meetingDate ? toApiDateTime(meetingDate) : undefined;
+        if (meetingDate && !meetingTime) {
+          showToast('올바른 모임 날짜를 선택해야 합니다.');
+          return;
+        }
+
+        if (isEditMode && typeof editingMeetingId === 'number') {
+          await updateClubBookshelf(clubId, editingMeetingId, {
+            title: regularMeetingName || undefined,
+            location: meetingLocation || undefined,
+            meetingTime,
+            generation,
+            tag: primaryCategory,
+          });
+        } else {
+          await createClubBookshelf(clubId, {
+            isbn: sourceBookIsbn,
+            title: regularMeetingName || undefined,
+            location: meetingLocation || undefined,
+            meetingTime,
+            generation,
+            tag: primaryCategory,
+          });
+        }
+
+        const bookshelfList = await fetchAllClubBookshelvesWithCursor(clubId);
+        const nextItemsWithMeetingDraft =
+          isEditMode && typeof editingMeetingId === 'number'
+            ? bookshelfList.items.map((item) =>
+                item.remoteMeetingId === editingMeetingId
+                  ? {
+                      ...item,
+                      regularMeetingName: regularMeetingName || undefined,
+                      meetingLocation: meetingLocation || undefined,
+                      meetingDate: meetingDate || undefined,
+                    }
+                  : item,
+              )
+            : bookshelfList.items;
+
+        setBookshelfItems(nextItemsWithMeetingDraft);
+        setActiveTab('bookshelf');
+
+        if (isEditMode && typeof editingMeetingId === 'number') {
+          const updatedItem =
+            nextItemsWithMeetingDraft.find((item) => item.remoteMeetingId === editingMeetingId) ?? null;
+          if (updatedItem) {
+            setSelectedBookshelfBookId(updatedItem.id);
+            await reloadBookshelfMeetingDetail(updatedItem, { suppressErrorToast: true });
+            setBookshelfViewMode('DETAIL');
+            setBookshelfDetailTab('REGULAR');
+          } else {
+            setBookshelfViewMode('GRID');
+          }
+          setActiveManagementScreen(null);
+          setEditingBookshelfMeetingId(null);
+          showToast('책장이 수정되었습니다.');
+        } else {
+          const createdSession = formatGenerationLabel(generation);
+          setSelectedBookshelfSession(createdSession);
+          setBookshelfViewMode('GRID');
+          setActiveManagementScreen(null);
+          setBookshelfCreateDraft(buildBookshelfCreateDraft(String(generation)));
+          showToast('책장이 생성되었습니다.');
+        }
+      } catch (error) {
+        showToast(
+          resolveBookshelfActionErrorMessage(
+            error,
+            isEditMode ? '책장 수정에 실패했습니다.' : '책장 생성에 실패했습니다.',
+          ),
+        );
+      } finally {
+        if (isEditMode) setUpdatingBookshelf(false);
+        else setCreatingBookshelf(false);
+      }
+    };
+    void submit();
+  }, [
+    bookshelfCreateDraft,
+    canManageClub,
+    creatingBookshelf,
+    deletingBookshelf,
+    editingBookshelfMeetingId,
+    group.clubId,
+    reloadBookshelfMeetingDetail,
+    setActiveManagementScreen,
+    setActiveTab,
+    updatingBookshelf,
+  ]);
+
+  const handleDeleteEditingBookshelf = useCallback(() => {
+    const clubId = group.clubId;
+    const meetingId = editingBookshelfMeetingId;
+    if (deletingBookshelf || !canManageClub || typeof clubId !== 'number' || typeof meetingId !== 'number') {
+      showToast('책장 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+      return;
+    }
+
+    Alert.alert('책장 삭제', '이 책장을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: () => {
+          const submit = async () => {
+            setDeletingBookshelf(true);
+            try {
+              await deleteClubBookshelf(clubId, meetingId);
+              const bookshelfList = await fetchAllClubBookshelvesWithCursor(clubId);
+              setBookshelfItems(bookshelfList.items);
+              setSelectedBookshelfBookId(bookshelfList.items[0]?.id ?? null);
+              setBookshelfViewMode('GRID');
+              setActiveManagementScreen(null);
+              setEditingBookshelfMeetingId(null);
+              showToast('책장이 삭제되었습니다.');
+            } catch (error) {
+              showToast(resolveBookshelfActionErrorMessage(error, '책장 삭제에 실패했습니다.'));
+            } finally {
+              setDeletingBookshelf(false);
+            }
+          };
+          void submit();
+        },
+      },
+    ]);
+  }, [canManageClub, deletingBookshelf, editingBookshelfMeetingId, group.clubId, setActiveManagementScreen]);
+
+  const resetBookshelfOnGroupChange = useCallback(() => {
+    setSelectedBookshelfSession('');
+    setBookshelfViewMode('GRID');
+    setBookshelfDetailTab('TOPIC');
+    setSelectedBookshelfBookId(null);
+    setSelectedRegularGroupId(null);
+    setRegularChatPickerVisible(false);
+    setActiveRegularChatGroupId(null);
+    setRegularChatInput('');
+  }, []);
+
+  return {
+    selectedBookshelfSession, setSelectedBookshelfSession,
+    bookshelfViewMode, setBookshelfViewMode,
+    bookshelfDetailTab, setBookshelfDetailTab,
+    selectedBookshelfBookId, setSelectedBookshelfBookId,
+    bookshelfItems, setBookshelfItems,
+    selectedRegularGroupId, setSelectedRegularGroupId,
+    regularGroupPostsById, setRegularGroupPostsById,
+    regularGroupChatMessagesById, setRegularGroupChatMessagesById,
+    regularGroupMembersVisible,
+    regularChatPickerVisible,
+    activeRegularChatGroupId, setActiveRegularChatGroupId,
+    regularChatInput, setRegularChatInput,
+    submittingRegularChat,
+    creatingBookshelf,
+    updatingBookshelf,
+    deletingBookshelf,
+    editingBookshelfMeetingId, setEditingBookshelfMeetingId,
+    openingNextMeeting,
+    loadingBookshelfDetail, setLoadingBookshelfDetail,
+    photoViewer, setPhotoViewer,
+    bookshelfComposerType,
+    editingBookshelfPost,
+    bookshelfComposerInput, setBookshelfComposerInput,
+    bookshelfComposerRating, setBookshelfComposerRating,
+    submittingBookshelfComposer,
+    teamManageVisible,
+    teamManageLoading,
+    teamManageSaving,
+    teamManageTeams,
+    teamManageMembers,
+    teamManageSelectedMemberId,
+    teamManageDropLayouts,
+    draggingTeamMemberId,
+    draggingTeamMemberPosition,
+    bookshelfCreateDraft, setBookshelfCreateDraft,
+    bookshelfTopicsByMeetingId, setBookshelfTopicsByMeetingId,
+    bookshelfTopicPageStateByMeetingId, setBookshelfTopicPageStateByMeetingId,
+    bookshelfReviewsByMeetingId, setBookshelfReviewsByMeetingId,
+    regularMeetingInfoByMeetingId, setRegularMeetingInfoByMeetingId,
+    bookshelfPostMenu,
+    bookshelfBookSelectorVisible, setBookshelfBookSelectorVisible,
+    bookshelfBookSearchQuery, setBookshelfBookSearchQuery,
+    bookshelfBookSearchKeyword,
+    bookshelfBookSearchResults,
+    bookshelfBookSearchLoading,
+    bookshelfBookSearchSearched,
+    bookshelfCalendarVisible,
+    bookshelfCalendarMonth, setBookshelfCalendarMonth,
+    bookshelfSessions,
+    bookshelfCalendarDays,
+    visibleBookshelfItems,
+    selectedBookshelfBook,
+    selectedRegularMeetingId,
+    bookshelfTopicItems,
+    bookshelfReviewItems,
+    currentBookshelfTopicPageState,
+    canSubmitBookshelfComposer,
+    regularMeetingInfo,
+    selectedRegularGroup,
+    activeRegularChatGroup,
+    teamManageMemberById,
+    teamManageAssignedMemberIds,
+    teamManageUnassignedMembers,
+    isChatConnected,
+    chatScrollRef,
+    shouldScrollToBookshelfDetailRef,
+    bookshelfMeetingDetailRequestIdRef,
+    teamManageDropRefs,
+    teamManageScrollRef,
+    teamManageScrollViewRef,
+    teamManageScrollBoundsRef,
+    chatSwipePanResponder,
+    reloadBookshelfMeetingDetail,
+    loadMoreBookshelfTopics,
+    closeBookshelfBookSelector,
+    closeBookshelfCalendar,
+    openBookshelfCalendar,
+    handleSelectBookshelfMeetingDate,
+    handlePickTodayBookshelfMeetingDate,
+    openBookshelfDetail,
+    openBookshelfTopicByMeetingId,
+    refreshBookshelfPostsByType,
+    closeBookshelfComposer,
+    handleOpenBookshelfComposer,
+    handleSubmitBookshelfComposer,
+    handlePressBookshelfPostMenu,
+    handleSelectBookshelfPostMenuAction,
+    handleOpenNextMeeting,
+    handleBackToBookshelfGrid,
+    handleChangeBookshelfTab,
+    handleSelectRegularGroup,
+    handleEnterRegularGroup,
+    handleToggleRegularGroupMembers,
+    handleToggleRegularGroupPost,
+    handleSortRegularGroupPosts,
+    refreshRegularChatGroupMessages,
+    handleOpenRegularChatPicker,
+    handleSelectRegularChatGroup,
+    handleBackToRegularChatPicker,
+    handleCloseRegularChat,
+    handleSubmitRegularChat,
+    closeTeamManage,
+    refreshTeamManageDropLayouts,
+    handlePressManageRegularGroups,
+    handleAddTeamManageTeam,
+    handleRemoveTeamManageTeam,
+    handlePressTeamManageTarget,
+    handleTeamManageMemberGrant,
+    handleTeamManageMemberMove,
+    handleTeamManageMemberRelease,
+    handleSaveTeamManage,
+    handleOpenBookshelfEdit,
+    runBookshelfBookSearch,
+    handleSubmitBookshelfBookSearch,
+    handleSelectBookshelfSourceBook,
+    handleSubmitBookshelfCreate,
+    handleDeleteEditingBookshelf,
+    resetBookshelfOnGroupChange,
+  };
+}

@@ -1675,3 +1675,21 @@ export const interactionOpacity = {
 - `src/screens/MeetingScreen.tsx`
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 20:40:50 KST
+
+### MEET-SPLIT 중간 상태 정리 및 Claude 핸드오프 준비
+
+- `MEET-SPLIT-03/04` 진행 상태를 `docs/agent/todo.md`에 반영하고, 남은 작업 경계를 명시함.
+- `useNoticeState.ts`, `useBookshelfState.ts` import 경로 오류를 수정해 `tsc --noEmit` 타입체크를 통과시킴.
+- `to-claude-2605062036.md`를 생성해 현재 완료 범위/남은 작업/주의사항을 즉시 실행 가능한 체크리스트로 정리함.
+- 아키텍처/표준화 문서(`docs/documents/app-architecture-*`, `app-standardization-*`)와 Meeting 분리 파일들을 커밋 대상 범위로 확정함.
+
+## 작업 파일
+- `docs/agent/todo.md`
+- `src/screens/meeting/useNoticeState.ts`
+- `src/screens/meeting/useBookshelfState.ts`
+- `to-claude-2605062036.md`
+- `docs/agent/agent-log.md`
