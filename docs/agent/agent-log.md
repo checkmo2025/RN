@@ -1608,3 +1608,18 @@ export const interactionOpacity = {
 ## 작업 파일
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 업데이트 (2026-05-06)
+
+수정 시각: 2026-05-06 09:03:46 KST
+
+### 미사용 템플릿 에셋 삭제
+
+- `app.json`에서 참조하지 않는 `assets/icon.png`, `assets/adaptive-icon.png` 삭제
+- `docs/agent/todo.md` 아이콘 교체 섹션에 템플릿 에셋 삭제 완료 상태 반영
+
+## 작업 파일
+- `assets/icon.png` (삭제)
+- `assets/adaptive-icon.png` (삭제)
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`

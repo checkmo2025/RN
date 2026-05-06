@@ -201,9 +201,9 @@
 - `ios/app/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png` — iOS AppIcon 원본
 - `android/app/src/main/res/mipmap-*/ic_launcher*.webp` 및 `mipmap-anydpi-v26/ic_launcher*.xml` — Android 런처 아이콘
 
-### 바로 삭제 가능한 템플릿 후보
-- `assets/icon.png`
-- `assets/adaptive-icon.png`
+### 삭제 완료된 템플릿 에셋
+- `assets/icon.png` — 2026-05-06 삭제 완료
+- `assets/adaptive-icon.png` — 2026-05-06 삭제 완료
 
 ### 교체할 파일 (내 에셋으로 덮어쓰기)
 - `assets/icon-checkmo.png`
@@ -219,7 +219,7 @@
 
 ### 작업 순서
 1. 위 4개 교체 대상 파일을 새 에셋으로 덮어쓰기
-2. 템플릿 후보 2개 (`assets/icon.png`, `assets/adaptive-icon.png`) 삭제
+2. 템플릿 후보 2개 삭제 완료 (`assets/icon.png`, `assets/adaptive-icon.png`)
 3. 네이티브 리소스 재생성
 4. iOS / Android / Web 실행 확인
 
