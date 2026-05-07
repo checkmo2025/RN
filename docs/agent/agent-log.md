@@ -1950,3 +1950,14 @@ export const interactionOpacity = {
 - `src/components/common/BookFlipLoadingScreen.tsx`
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 2026-05-07 | 23:00:10 KST
+
+- 전체 점검(`npm run check`) 수행 결과 `expo-doctor`에서 SDK 패치 버전 불일치 3건(`expo`, `expo-dev-client`, `expo-image-picker`)을 확인함.
+- `npx expo install`로 권장 패치 버전 정합화 적용 (`package-lock.json` 갱신).
+- 재검증(`npm run check`)에서 typography/spacing/typecheck/doctor 전 항목 17/17 통과를 확인함.
+- 무관한 untracked 디렉터리는 제외하고 관련 파일만 `/cpa` 반영 준비를 완료함.
+
+## 작업 파일
+- `package-lock.json`
+- `docs/agent/agent-log.md`
