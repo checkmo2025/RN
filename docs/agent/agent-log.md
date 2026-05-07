@@ -1708,3 +1708,19 @@ export const interactionOpacity = {
 - `src/screens/MeetingScreen.tsx`
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+---
+
+## 2026-05-07 | 22:30:00 KST
+
+- `GroupHomeView`에 `useNoticeState`, `useBookshelfState`, `useManagementState` 3개 hook 실제 조립 완료.
+- proxy ref 패턴(`useRef` + `useCallback`)으로 circular dependency(`setReportModal`, `setActiveManagementScreen`, `handleOpenNoticeComposer`) 해결.
+- 중복 state/effect/handler 제거: `MeetingScreen.tsx` 8099줄 → 4475줄 (-3624줄).
+- `GroupManagementOverlay` JSX에 `setBookshelfBookSearchKeyword/Results/Searched` 3개 누락 prop 추가.
+- `tsc --noEmit` 통과. `MEET-SPLIT-03` ✅ 완료.
+
+## 작업 파일
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/meeting/useBookshelfState.ts`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
