@@ -1895,3 +1895,20 @@ export const interactionOpacity = {
 
 ## 작업 파일
 - `docs/agent/agent-log.md`
+
+## 2026-05-07 | 22:50:12 KST
+
+- 미사용 아이콘 `assets/icons/add_story.svg`, `assets/icons/bookstorycard.svg`를 삭제함.
+- 소셜 로그인 로고 에셋 `googleLogo.svg`, `kakaoImage.svg`, `kakaoLogo.svg`, `naverLogo.svg`를 삭제함.
+- `src/services/api/authApi.ts`의 `LoginStatus`에서 소셜 provider 필드를 제거해 잔여 의존을 정리함.
+- `npm run typecheck`로 타입 검증을 통과함.
+
+## 작업 파일
+- `assets/icons/add_story.svg` (삭제)
+- `assets/icons/bookstorycard.svg` (삭제)
+- `assets/icons/googleLogo.svg` (삭제)
+- `assets/icons/kakaoImage.svg` (삭제)
+- `assets/icons/kakaoLogo.svg` (삭제)
+- `assets/icons/naverLogo.svg` (삭제)
+- `src/services/api/authApi.ts`
+- `docs/agent/agent-log.md`

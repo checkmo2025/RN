@@ -5,7 +5,6 @@ type FindEmailResult = {
   email?: string;
 };
 type LoginStatus = {
-  provider?: string;
   email?: string;
 };
 
