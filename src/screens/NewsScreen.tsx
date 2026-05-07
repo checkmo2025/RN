@@ -51,6 +51,7 @@ import { showToast } from '../utils/toast';
 import { collectAllCursorPages } from '../utils/pagination';
 import { resolveApiError } from '../utils/resolveApiError';
 import { useEdgeBackSwipe } from '../hooks/useEdgeBackSwipe';
+import { useConsumeRouteParam } from '../hooks/useConsumeRouteParam';
 import { parsePositiveIntParam, findNavigatorWithRoute } from '../navigation/navigateToHome';
 
 type NewsItem = {
@@ -346,12 +347,13 @@ export function NewsScreen() {
     [navigation],
   );
 
-  useEffect(() => {
-    const newsId = parsePositiveIntParam(route.params?.openNewsId);
-    if (newsId === null) return;
-    navigation.setParams({ openNewsId: undefined });
-    openNewsDetailById(newsId);
-  }, [navigation, openNewsDetailById, route.params?.openNewsId]);
+  useConsumeRouteParam(
+    route.params?.openNewsId,
+    parsePositiveIntParam,
+    openNewsDetailById,
+    navigation,
+    'openNewsId',
+  );
 
   useEffect(() => {
     const parent = navigation.getParent() as

@@ -51,6 +51,7 @@ import {
 import { toKstTimeAgoLabel } from '../../utils/date';
 import { formatNotificationText, resolveNotificationTarget } from '../../utils/notification';
 import { showToast } from '../../utils/toast';
+import { useConsumeRouteParam } from '../../hooks/useConsumeRouteParam';
 import BookStoryFeedCard from '../feature/bookstory/BookStoryFeedCard';
 
 const logoUri = Image.resolveAssetSource(
@@ -603,23 +604,20 @@ export function AppHeader(props: Props) {
     }
   }, [isLoggedIn]);
 
-  useEffect(() => {
-    const routeBook = toBookItemFromRouteParam(route.params?.openSearchBook);
-    if (!routeBook) return;
-
-    hideDropdownImmediately();
-    setShowNoti(false);
-    setShowSearchPage(true);
-    setSearchStage('detail');
-    setQuery(routeBook.title);
-    void loadSelectedBookData(routeBook);
-    navigation.setParams({ openSearchBook: undefined });
-  }, [
-    hideDropdownImmediately,
-    loadSelectedBookData,
-    navigation,
+  useConsumeRouteParam(
     route.params?.openSearchBook,
-  ]);
+    toBookItemFromRouteParam,
+    (routeBook) => {
+      hideDropdownImmediately();
+      setShowNoti(false);
+      setShowSearchPage(true);
+      setSearchStage('detail');
+      setQuery(routeBook.title);
+      void loadSelectedBookData(routeBook);
+    },
+    navigation,
+    'openSearchBook',
+  );
 
   const handleSearchSubmitFromDropdown = useCallback(() => {
     const keyword = query.trim();

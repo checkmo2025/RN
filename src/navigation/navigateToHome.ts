@@ -1,7 +1,7 @@
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import type { RootStackParamList } from './types';
 
-export function parsePositiveIntParam(value: number | string | null | undefined): number | null {
+export function parsePositiveIntParam(value: unknown): number | null {
   const n = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
   return Number.isInteger(n) && n > 0 ? n : null;
 }

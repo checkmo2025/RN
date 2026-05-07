@@ -39,6 +39,7 @@ import { SvgUri } from 'react-native-svg';
 
 import { buttonSize, colors, interactionOpacity, layers, motion, radius, spacing, typography } from '../theme';
 import { navigateToHome, parsePositiveIntParam } from '../navigation/navigateToHome';
+import { useConsumeRouteParam } from '../hooks/useConsumeRouteParam';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
@@ -323,12 +324,13 @@ export function MeetingScreen() {
     outputFilterOptions.find((option) => option.value === selectedOutputFilter)?.label ?? '전체';
 
 
-  useEffect(() => {
-    const clubId = parsePositiveIntParam(route.params?.openClubId);
-    if (clubId === null) return;
-    setPendingOpenClubId(clubId);
-    navigation.setParams({ openClubId: undefined });
-  }, [navigation, route.params?.openClubId]);
+  useConsumeRouteParam(
+    route.params?.openClubId,
+    parsePositiveIntParam,
+    setPendingOpenClubId,
+    navigation,
+    'openClubId',
+  );
 
   useEffect(() => {
     if (activeGroup) return;

@@ -62,6 +62,7 @@ import { showToast } from '../utils/toast';
 import { pickAndUploadImage } from '../utils/imageUpload';
 import { collectAllCursorPages } from '../utils/pagination';
 import { resolveApiError } from '../utils/resolveApiError';
+import { useConsumeRouteParam } from '../hooks/useConsumeRouteParam';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import { BOOK_DEFAULT_IMAGE } from '../constants/defaultAssets';
 import {
@@ -1300,28 +1301,32 @@ export function MyPageScreen() {
     setShowDefaultAvatarPicker(false);
   }, [profileCategoryCodes, profileDefaultColor, profileDesc, profileImageUrl, selectedSetting]);
 
-  useEffect(() => {
-    const nextMyTab = route.params?.openMyTab;
-    if (nextMyTab !== 'ALARM') return;
+  useConsumeRouteParam(
+    route.params?.openMyTab,
+    (raw) => (raw === 'ALARM' ? (raw as 'ALARM') : null),
+    () => {
+      setShowFollowPage(false);
+      setShowSettings(false);
+      setSelectedSetting(null);
+      setActiveTab('내 알림');
+    },
+    navigation,
+    'openMyTab',
+  );
 
-    setShowFollowPage(false);
-    setShowSettings(false);
-    setSelectedSetting(null);
-    setActiveTab('내 알림');
-    navigation.setParams({ openMyTab: undefined });
-  }, [navigation, route.params?.openMyTab]);
-
-  useEffect(() => {
-    const nextFollowTab = route.params?.openFollowTab;
-    if (nextFollowTab !== 'FOLLOWER' && nextFollowTab !== 'FOLLOWING') return;
-
-    setShowSettings(false);
-    setSelectedSetting(null);
-    setShowFollowPage(true);
-    setActiveFollowTab(nextFollowTab);
-    void loadFollowUsers();
-    navigation.setParams({ openFollowTab: undefined });
-  }, [loadFollowUsers, navigation, route.params?.openFollowTab]);
+  useConsumeRouteParam(
+    route.params?.openFollowTab,
+    (raw) => (raw === 'FOLLOWER' || raw === 'FOLLOWING' ? (raw as 'FOLLOWER' | 'FOLLOWING') : null),
+    (tab) => {
+      setShowSettings(false);
+      setSelectedSetting(null);
+      setShowFollowPage(true);
+      setActiveFollowTab(tab);
+      void loadFollowUsers();
+    },
+    navigation,
+    'openFollowTab',
+  );
 
   const handleLeaveGroup = useCallback((group: GroupItem) => {
     if (typeof group.clubId !== 'number') {

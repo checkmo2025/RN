@@ -1833,3 +1833,11 @@ export const interactionOpacity = {
 - `MyPageScreen`·`UserProfileScreen`·`AuthFlowScreen`·`meeting/helpers.ts`·`MeetingScreen`·`useManagementState.ts` 6개 파일에서 인라인 Record(카테고리 15종·참가자 6종) 제거.
 - `CATEGORY_CODE_TO_LABEL` / `CATEGORY_CHIP_COLOR` / `CATEGORY_LABEL_TO_CODE` / `PARTICIPANT_CODE_TO_LABEL` / `PARTICIPANT_LABEL_TO_CODE` 중앙 상수로 전환.
 - `tsc --noEmit` 0 errors 확인.
+
+## 2026-05-07 | 22:40:00 KST
+
+- `[STD-19]` 라우트 파라미터 소비/초기화 훅 통일: `src/hooks/useConsumeRouteParam.ts` 신규 생성.
+- NewsScreen(`openNewsId`)·MeetingScreen(`openClubId`)·MyPageScreen(`openMyTab`, `openFollowTab`)·AppHeader(`openSearchBook`) 5곳의 one-shot param useEffect 제거 → `useConsumeRouteParam` 호출로 교체.
+- `parsePositiveIntParam` 파라미터 타입을 `unknown`으로 넓혀 훅 타입 호환성 확보.
+- StoryScreen의 복합 연결 파라미터(openCompose+composeBook, openStoryId+openStoryFocus)는 스킵.
+- `tsc --noEmit` 0 errors 확인.
