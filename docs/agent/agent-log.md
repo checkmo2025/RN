@@ -1808,3 +1808,14 @@ export const interactionOpacity = {
 - `docs/documents/app-standardization-21-logging-observability-layer.md` (신규)
 - `docs/documents/app-standardization-22-ci-quality-gate-pipeline.md` (신규)
 - `docs/agent/agent-log.md`
+
+## 2026-05-07 | 21:23:31 KST
+
+- `docs/agent/todo.md`에서 완료 반영 누락 항목을 최신 코드 기준으로 상태 정리.
+- UI 통일 10개 항목의 `화면 움직임 신경쓰기(애니메이션 적용)`을 `✅`로 갱신.
+- `구현 예정` 섹션에 완료된 `ARCH-03/05~09`, `STD-10/11`, 후속 문서 6건 작성 이력을 `✅`로 추가.
+- 완료 항목 참고 문서 경로를 `docs/documents/(done)/*` 기준으로 정합화.
+
+## 작업 파일
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
