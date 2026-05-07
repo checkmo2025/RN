@@ -1841,3 +1841,10 @@ export const interactionOpacity = {
 - `parsePositiveIntParam` 파라미터 타입을 `unknown`으로 넓혀 훅 타입 호환성 확보.
 - StoryScreen의 복합 연결 파라미터(openCompose+composeBook, openStoryId+openStoryFocus)는 스킵.
 - `tsc --noEmit` 0 errors 확인.
+
+## 2026-05-07 | 23:10:00 KST
+
+- `[STD-20]` 이메일 인증 플로우 공통 훅화: `src/hooks/useEmailVerificationFlow.ts` 신규 생성.
+- `AuthFlowScreen`: 인증 상태 7개·useMemo·타이머 useEffect·두 핸들러 제거 → `useEmailVerificationFlow` 적용. `confirmEmailVerification`·`requestEmailVerification` 직접 import 제거.
+- `useAccountSettingsState`: 동일 패턴 전면 교체. `EMAIL_VERIFICATION_COUNTDOWN_SECONDS` 상수·상태 8개·useMemo·타이머 useEffect 제거. 반환 API는 기존 이름 유지(MyPageScreen 변경 없음).
+- `tsc --noEmit` 0 errors 확인.

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -23,10 +23,8 @@ import { FeedbackPressable as Pressable } from '../components/common/FeedbackPre
 import { FormTextInput } from '../components/common/FormTextInput';
 import {
   checkNicknameDuplicate,
-  confirmEmailVerification,
   findEmailByNamePhone,
   loginByIdentifier,
-  requestEmailVerification,
   issueProfileImageUploadUrl,
   sendTemporaryPassword,
   signUpByEmail,
@@ -35,6 +33,7 @@ import {
 import { ApiError } from '../services/api/http';
 import { showToast } from '../utils/toast';
 import { CATEGORY_OPTIONS } from '../constants/domain/category';
+import { useEmailVerificationFlow } from '../hooks/useEmailVerificationFlow';
 
 type Step =
   | 'login'
@@ -66,7 +65,6 @@ const topLogoUri = Image.resolveAssetSource(
   require('../../assets/mobile-header-logo.svg'),
 ).uri;
 
-const VERIFICATION_COUNTDOWN_SECONDS = 10 * 60;
 
 function formatPhoneNumberInput(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -99,6 +97,7 @@ const defaultProfilePalette = [
 ];
 
 export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
+  const ev = useEmailVerificationFlow();
   const [step, setStep] = useState<Step>('login');
 
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -114,12 +113,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
   const [signUpEmail, setSignUpEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
-  const [verificationSent, setVerificationSent] = useState(false);
-  const [emailVerified, setEmailVerified] = useState(false);
-  const [sendingCode, setSendingCode] = useState(false);
-  const [confirmingCode, setConfirmingCode] = useState(false);
-  const [verificationDeadline, setVerificationDeadline] = useState<number | null>(null);
-  const [remainingVerificationSeconds, setRemainingVerificationSeconds] = useState(0);
 
   const [signUpPassword, setSignUpPassword] = useState('');
   const [signUpPasswordConfirm, setSignUpPasswordConfirm] = useState('');
@@ -156,11 +149,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     nicknameChecked &&
     nicknameChecked.value === nickname.trim() &&
     !nicknameChecked.duplicate;
-  const verificationRemainingText = useMemo(() => {
-    const minutes = Math.floor(remainingVerificationSeconds / 60);
-    const seconds = remainingVerificationSeconds % 60;
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  }, [remainingVerificationSeconds]);
   const hideTopBrand =
     step === 'login' ||
     step === 'findId' ||
@@ -233,10 +221,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     setActiveTermsModalKey(null);
     setSignUpEmail('');
     setVerificationCode('');
-    setVerificationSent(false);
-    setEmailVerified(false);
-    setVerificationDeadline(null);
-    setRemainingVerificationSeconds(0);
+    ev.reset();
     setSignUpPassword('');
     setSignUpPasswordConfirm('');
     setShowSignUpPassword(false);
@@ -259,10 +244,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     setStep('login');
     setActiveTermsModalKey(null);
     setVerificationCode('');
-    setVerificationSent(false);
-    setEmailVerified(false);
-    setVerificationDeadline(null);
-    setRemainingVerificationSeconds(0);
+    ev.reset();
   };
 
   const startSignUp = () => {
@@ -303,40 +285,23 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   };
 
   const handleSendVerificationCode = async () => {
-    if (emailVerified) return;
-
+    if (ev.verified) return;
     const email = signUpEmail.trim();
     if (!emailRegex.test(email)) {
       showToast('올바른 이메일 형식이어야 합니다.');
       return;
     }
-
-    setSendingCode(true);
-    try {
-      await requestEmailVerification(email, 'SIGN_UP');
-      setVerificationSent(true);
-      setEmailVerified(false);
-      setRemainingVerificationSeconds(VERIFICATION_COUNTDOWN_SECONDS);
-      setVerificationDeadline(Date.now() + VERIFICATION_COUNTDOWN_SECONDS * 1000);
-      showToast('인증번호를 발송했습니다.');
-    } catch (error) {
-      if (!(error instanceof ApiError)) {
-        showToast('인증번호 발송에 실패했습니다.');
-      }
-    } finally {
-      setSendingCode(false);
-    }
+    await ev.sendCode(email, 'SIGN_UP');
   };
 
   const handleConfirmVerificationCode = async () => {
     const email = signUpEmail.trim();
     const code = verificationCode.trim();
-
-    if (!verificationSent) {
+    if (!ev.sent) {
       showToast('먼저 인증번호를 발송해야 합니다.');
       return;
     }
-    if (remainingVerificationSeconds <= 0) {
+    if (ev.remainingSeconds <= 0) {
       showToast('인증번호가 만료되었습니다. 인증번호를 다시 발송해야 합니다.');
       return;
     }
@@ -344,39 +309,8 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       showToast('인증번호를 입력해야 합니다.');
       return;
     }
-
-    setConfirmingCode(true);
-    try {
-      await confirmEmailVerification(email, code);
-      setEmailVerified(true);
-      setVerificationDeadline(null);
-      setRemainingVerificationSeconds(0);
-      showToast('인증이 완료되었습니다.');
-    } catch (error) {
-      if (!(error instanceof ApiError)) {
-        showToast('이메일 인증에 실패했습니다.');
-      }
-      setEmailVerified(false);
-    } finally {
-      setConfirmingCode(false);
-    }
+    await ev.confirmCode(email, code);
   };
-
-  useEffect(() => {
-    if (!verificationDeadline || emailVerified) return;
-
-    const updateRemaining = () => {
-      const remain = Math.max(0, Math.ceil((verificationDeadline - Date.now()) / 1000));
-      setRemainingVerificationSeconds(remain);
-      if (remain <= 0) {
-        setVerificationDeadline(null);
-      }
-    };
-
-    updateRemaining();
-    const interval = setInterval(updateRemaining, 1000);
-    return () => clearInterval(interval);
-  }, [emailVerified, verificationDeadline]);
 
   const handlePasswordStepNext = () => {
     const password = signUpPassword.trim();
@@ -841,7 +775,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             value={signUpEmail}
             onChangeText={(value) => {
               setSignUpEmail(value);
-              setEmailVerified(false);
+              ev.reset();
             }}
             placeholder="이메일"
             style={[styles.input, styles.inputDescenderSafe]}
@@ -852,16 +786,16 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             style={({ pressed }) => [
               styles.outlineButton,
               styles.actionButton,
-              emailVerified && styles.outlineButtonDisabled,
-              pressed && !emailVerified && styles.pressed,
+              ev.verified && styles.outlineButtonDisabled,
+              pressed && !ev.verified && styles.pressed,
             ]}
             onPress={() => {
               void handleSendVerificationCode();
             }}
-            disabled={sendingCode || emailVerified}
+            disabled={ev.sending || ev.verified}
           >
-            <Text style={[styles.outlineText, emailVerified && styles.outlineTextDisabled]}>
-              {sendingCode ? '발송 중...' : verificationSent ? '인증번호 재발송' : '인증번호 발송'}
+            <Text style={[styles.outlineText, ev.verified && styles.outlineTextDisabled]}>
+              {ev.sending ? '발송 중...' : ev.sent ? '인증번호 재발송' : '인증번호 발송'}
             </Text>
           </Pressable>
 
@@ -874,30 +808,30 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             placeholderTextColor={colors.gray3}
             fieldType="number"
           />
-          {verificationSent && !emailVerified ? (
+          {ev.sent && !ev.verified ? (
             <Text
               style={[
                 styles.timerText,
-                remainingVerificationSeconds <= 0 ? styles.timerExpiredText : null,
+                ev.remainingSeconds <= 0 ? styles.timerExpiredText : null,
               ]}
             >
-              남은 시간 {verificationRemainingText}
+              남은 시간 {ev.remainingText}
             </Text>
           ) : null}
           <Pressable
             style={({ pressed }) => [
               styles.outlineButton,
               styles.actionButton,
-              emailVerified && styles.outlineButtonActive,
+              ev.verified && styles.outlineButtonActive,
               pressed && styles.pressed,
             ]}
             onPress={() => {
               void handleConfirmVerificationCode();
             }}
-            disabled={confirmingCode}
+            disabled={ev.confirming}
           >
-            <Text style={[styles.outlineText, emailVerified && styles.outlineTextActive]}>
-              {confirmingCode ? '확인 중...' : emailVerified ? '인증 완료되었습니다' : '인증 완료'}
+            <Text style={[styles.outlineText, ev.verified && styles.outlineTextActive]}>
+              {ev.confirming ? '확인 중...' : ev.verified ? '인증 완료되었습니다' : '인증 완료'}
             </Text>
           </Pressable>
         </View>
@@ -907,9 +841,9 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           <AppButton
             label="다음"
             fullWidth
-            disabled={!emailVerified}
+            disabled={!ev.verified}
             onPress={() => {
-              if (!emailVerified) {
+              if (!ev.verified) {
                 showToast('이메일 인증을 완료해야 합니다.');
                 return;
               }

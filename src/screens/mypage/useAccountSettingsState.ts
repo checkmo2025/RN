@@ -1,12 +1,8 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { type NavigationProp, type ParamListBase } from '@react-navigation/native';
 import { ApiError } from '../../services/api/http';
-import {
-  confirmEmailVerification,
-  logoutSession,
-  requestEmailVerification,
-} from '../../services/api/authApi';
+import { logoutSession } from '../../services/api/authApi';
 import {
   fetchMyReports,
   updateMyEmail,
@@ -18,8 +14,7 @@ import { formatKstDateLabel } from '../../utils/date';
 import { showToast } from '../../utils/toast';
 import { navigateToHome } from '../../navigation/navigateToHome';
 import { emailRegex, passwordRegex } from '../../constants/validation';
-
-const EMAIL_VERIFICATION_COUNTDOWN_SECONDS = 10 * 60;
+import { useEmailVerificationFlow } from '../../hooks/useEmailVerificationFlow';
 
 const reportTypeLabelByCode: Record<string, string> = {
   GENERAL: '일반',
@@ -51,15 +46,10 @@ export function useAccountSettingsState({
   onCloseSettings,
   selectedSetting,
 }: Params) {
+  const ev = useEmailVerificationFlow();
   const [emailCurrent, setEmailCurrent] = useState('');
   const [emailNext, setEmailNext] = useState('');
   const [emailVerificationCode, setEmailVerificationCode] = useState('');
-  const [emailVerificationSent, setEmailVerificationSent] = useState(false);
-  const [emailVerified, setEmailVerified] = useState(false);
-  const [sendingEmailVerificationCode, setSendingEmailVerificationCode] = useState(false);
-  const [confirmingEmailVerificationCode, setConfirmingEmailVerificationCode] = useState(false);
-  const [emailVerificationDeadline, setEmailVerificationDeadline] = useState<number | null>(null);
-  const [remainingEmailVerificationSeconds, setRemainingEmailVerificationSeconds] = useState(0);
   const [submittingEmailUpdate, setSubmittingEmailUpdate] = useState(false);
   const [passwordCurrent, setPasswordCurrent] = useState('');
   const [passwordNext, setPasswordNext] = useState('');
@@ -73,38 +63,13 @@ export function useAccountSettingsState({
   const [submittingWithdrawal, setSubmittingWithdrawal] = useState(false);
   const [submittingLogout, setSubmittingLogout] = useState(false);
 
-  const emailVerificationRemainingText = useMemo(() => {
-    const minutes = Math.floor(remainingEmailVerificationSeconds / 60);
-    const seconds = remainingEmailVerificationSeconds % 60;
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  }, [remainingEmailVerificationSeconds]);
-
-  useEffect(() => {
-    if (!emailVerificationDeadline || emailVerified) return;
-
-    const updateRemaining = () => {
-      const remain = Math.max(0, Math.ceil((emailVerificationDeadline - Date.now()) / 1000));
-      setRemainingEmailVerificationSeconds(remain);
-      if (remain <= 0) {
-        setEmailVerificationDeadline(null);
-      }
-    };
-
-    updateRemaining();
-    const interval = setInterval(updateRemaining, 1000);
-    return () => clearInterval(interval);
-  }, [emailVerificationDeadline, emailVerified]);
-
   useEffect(() => {
     if (selectedSetting === '이메일 변경') return;
     setEmailCurrent('');
     setEmailNext('');
     setEmailVerificationCode('');
-    setEmailVerificationSent(false);
-    setEmailVerified(false);
-    setEmailVerificationDeadline(null);
-    setRemainingEmailVerificationSeconds(0);
-  }, [selectedSetting]);
+    ev.reset();
+  }, [selectedSetting]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const mapReportItems = useCallback((items: ReportItem[]): ReportHistoryItem[] => {
     return items.map((item, index) => {
@@ -149,7 +114,7 @@ export function useAccountSettingsState({
   }, [isLoggedIn, mapReportItems]);
 
   const handleSendEmailVerificationCode = useCallback(() => {
-    if (emailVerified) return;
+    if (ev.verified) return;
 
     const currentEmail = emailCurrent.trim();
     const newEmail = emailNext.trim();
@@ -167,35 +132,18 @@ export function useAccountSettingsState({
       return;
     }
 
-    setSendingEmailVerificationCode(true);
-    const submit = async () => {
-      try {
-        await requestEmailVerification(newEmail, 'UPDATE_EMAIL');
-        setEmailVerificationSent(true);
-        setEmailVerified(false);
-        setRemainingEmailVerificationSeconds(EMAIL_VERIFICATION_COUNTDOWN_SECONDS);
-        setEmailVerificationDeadline(Date.now() + EMAIL_VERIFICATION_COUNTDOWN_SECONDS * 1000);
-        showToast('인증번호를 발송했습니다.');
-      } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast('인증번호 발송에 실패했습니다.');
-        }
-      } finally {
-        setSendingEmailVerificationCode(false);
-      }
-    };
-    void submit();
-  }, [emailCurrent, emailNext, emailVerified]);
+    void ev.sendCode(newEmail, 'UPDATE_EMAIL');
+  }, [emailCurrent, emailNext, ev]);
 
   const handleConfirmEmailVerificationCode = useCallback(() => {
     const newEmail = emailNext.trim();
     const verificationCode = emailVerificationCode.trim();
 
-    if (!emailVerificationSent) {
+    if (!ev.sent) {
       showToast('먼저 인증번호를 발송해야 합니다.');
       return;
     }
-    if (remainingEmailVerificationSeconds <= 0) {
+    if (ev.remainingSeconds <= 0) {
       showToast('인증번호가 만료되었습니다. 인증번호를 다시 발송해야 합니다.');
       return;
     }
@@ -208,25 +156,8 @@ export function useAccountSettingsState({
       return;
     }
 
-    setConfirmingEmailVerificationCode(true);
-    const submit = async () => {
-      try {
-        await confirmEmailVerification(newEmail, verificationCode);
-        setEmailVerified(true);
-        setEmailVerificationDeadline(null);
-        setRemainingEmailVerificationSeconds(0);
-        showToast('인증이 완료되었습니다.');
-      } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast('이메일 인증에 실패했습니다.');
-        }
-        setEmailVerified(false);
-      } finally {
-        setConfirmingEmailVerificationCode(false);
-      }
-    };
-    void submit();
-  }, [emailNext, emailVerificationCode, emailVerificationSent, remainingEmailVerificationSeconds]);
+    void ev.confirmCode(newEmail, verificationCode);
+  }, [emailNext, emailVerificationCode, ev]);
 
   const handleSubmitEmailUpdate = useCallback(() => {
     const currentEmail = emailCurrent.trim();
@@ -241,7 +172,7 @@ export function useAccountSettingsState({
       showToast('올바른 이메일 형식이어야 합니다.');
       return;
     }
-    if (!emailVerified) {
+    if (!ev.verified) {
       showToast('변경 이메일 인증을 완료해야 합니다.');
       return;
     }
@@ -254,10 +185,7 @@ export function useAccountSettingsState({
         setEmailCurrent('');
         setEmailNext('');
         setEmailVerificationCode('');
-        setEmailVerificationSent(false);
-        setEmailVerified(false);
-        setEmailVerificationDeadline(null);
-        setRemainingEmailVerificationSeconds(0);
+        ev.reset();
       } catch (error) {
         if (!(error instanceof ApiError)) {
           showToast('이메일 변경에 실패했습니다.');
@@ -267,7 +195,7 @@ export function useAccountSettingsState({
       }
     };
     void submit();
-  }, [emailCurrent, emailNext, emailVerificationCode, emailVerified]);
+  }, [emailCurrent, emailNext, emailVerificationCode, ev]);
 
   const handleSubmitPasswordUpdate = useCallback(() => {
     const currentPassword = passwordCurrent.trim();
@@ -338,11 +266,8 @@ export function useAccountSettingsState({
 
   const resetEmailVerification = useCallback(() => {
     setEmailVerificationCode('');
-    setEmailVerificationSent(false);
-    setEmailVerified(false);
-    setEmailVerificationDeadline(null);
-    setRemainingEmailVerificationSeconds(0);
-  }, []);
+    ev.reset();
+  }, [ev]);
 
   const handleLogoutPress = useCallback(() => {
     if (submittingLogout) return;
@@ -380,12 +305,12 @@ export function useAccountSettingsState({
     setEmailNext,
     emailVerificationCode,
     setEmailVerificationCode,
-    emailVerificationSent,
-    emailVerified,
-    sendingEmailVerificationCode,
-    confirmingEmailVerificationCode,
-    remainingEmailVerificationSeconds,
-    emailVerificationRemainingText,
+    emailVerificationSent: ev.sent,
+    emailVerified: ev.verified,
+    sendingEmailVerificationCode: ev.sending,
+    confirmingEmailVerificationCode: ev.confirming,
+    remainingEmailVerificationSeconds: ev.remainingSeconds,
+    emailVerificationRemainingText: ev.remainingText,
     submittingEmailUpdate,
     passwordCurrent,
     setPasswordCurrent,
