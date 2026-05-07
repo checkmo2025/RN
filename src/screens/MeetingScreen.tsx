@@ -54,31 +54,19 @@ import { MyGroupsDropdownCard } from '../components/feature/groups/MyGroupsDropd
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { ApiError } from '../services/api/http';
 import { issueImageUploadUrl } from '../services/api/authApi';
+import { useMeetingDiscover } from './meeting/useMeetingDiscover';
+import { fetchClubWorkspaceData } from './meeting/workspaceLoader';
 import {
   checkClubNameDuplicate,
   createClub,
-  type ClubBookshelfItem,
-  fetchClubBookshelves,
-  fetchClubDetail,
-  fetchRecommendedClubs,
   fetchClubHome,
-  fetchClubLatestNotice,
-  fetchClubMyMembership,
-  fetchClubMembers,
-  fetchClubNotices,
-  fetchMyClubs,
   joinClub,
-  searchClubs,
-  type ClubDetailResult,
   type ClubCategoryCode,
   type ClubParticipantTypeCode,
-  type ClubSearchInputFilter,
-  type ClubSearchItem,
   type ClubSearchOutputFilter,
 } from '../services/api/clubApi';
 import { fetchMyProfile } from '../services/api/memberApi';
 import { triggerSelectionHaptic } from '../utils/haptics';
-import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { INPUT_LIMITS } from '../constants/inputLimits';
@@ -104,9 +92,6 @@ import {
   formatContactLabel,
   mapClubStatusToApplication,
   normalizeClubContacts,
-  resolveMeetingSearchErrorMessage,
-  resolveBookshelfActionErrorMessage,
-  toLabelList,
 } from './meeting/mappers';
 import { styles } from './meeting/meetingStyles';
 import { GroupNoticeView } from './meeting/GroupNoticeView';
@@ -146,20 +131,16 @@ import type {
   NoticePollOption,
   NoticePoll,
   NoticeDraft,
+  MeetingInputFilter,
 } from './meeting/types';
+import { inputFilters } from './meeting/types';
 import {
   buildBookshelfCreateDraft,
   buildNoticeDraft,
   resolveRegularMeetingId,
   toNoticeBookshelfAttachment,
-  sortNoticeItems,
   mapClubStatusToRole,
-  toEditDraft,
   logMeetingAction,
-  mapManagedClubDetailToGroup,
-  mapClubManagedMemberToJoinRequest,
-  mapClubManagedMemberToGroupMember,
-  mapApiBookshelfToItem,
   mapBookshelfDetailToItem,
   mapBookshelfTopicToPostItem,
   mapBookshelfReviewToPostItem,
@@ -172,12 +153,13 @@ import {
   formatAverageRating,
   getClubHomeTagTone,
   toNoticeTags,
-  mapNoticePreviewToNoticeItem,
   mergeNoticeDetail,
   mapNoticeCommentToUi,
   mapMeetingChatMessageToUi,
   mapMeetingToRegularMeetingInfo,
   ensureRegularMeetingInfo,
+  outputFilterOptions,
+  MEETING_SEARCH_KEYWORD_MAX_LENGTH,
 } from './meeting/helpers';
 
 
@@ -187,52 +169,12 @@ type MeetingRouteParams = {
 
 type LinkItem = { text: string; url: string };
 
-const inputFilters = ['모임별', '지역별'] as const;
-type MeetingInputFilter = (typeof inputFilters)[number];
-const outputFilterOptions: Array<{ label: string; value: ClubSearchOutputFilter }> = [
-  { label: '전체', value: 'ALL' },
-  { label: '대학생', value: 'STUDENT' },
-  { label: '직장인', value: 'WORKER' },
-  { label: '온라인', value: 'ONLINE' },
-  { label: '동아리', value: 'CLUB' },
-  { label: '모임', value: 'MEETING' },
-  { label: '대면', value: 'OFFLINE' },
-];
-const MEETING_SEARCH_KEYWORD_MAX_LENGTH = INPUT_LIMITS.CLUB_NAME;
 const BOOKSHELF_MEETING_TITLE_MAX_LENGTH = 12;
 const BOOKSHELF_MEETING_LOCATION_MAX_LENGTH = 12;
-const BOOKSHELF_CURSOR_LOOP_LIMIT = 100;
 const ISBN13_REGEX = /^\d{13}$/;
 const MAX_REGULAR_GROUP_COUNT = 10;
 const MEETING_TAB_DOUBLE_TAP_WINDOW_MS = 450;
 
-const categoryLabelByCode: Record<string, string> = {
-  FICTION_POETRY_DRAMA: '소설/시/희곡',
-  ESSAY: '에세이',
-  HUMANITIES: '인문학',
-  SOCIAL_SCIENCE: '사회과학',
-  POLITICS_DIPLOMACY_DEFENSE: '정치/외교/국방',
-  ECONOMY_MANAGEMENT: '경제/경영',
-  SELF_DEVELOPMENT: '자기계발',
-  HISTORY_CULTURE: '역사/문화',
-  SCIENCE: '과학',
-  COMPUTER_IT: '컴퓨터/IT',
-  ART_POP_CULTURE: '예술/대중문화',
-  TRAVEL: '여행',
-  FOREIGN_LANGUAGE: '외국어',
-  CHILDREN_BOOKS: '어린이/청소년',
-  RELIGION_PHILOSOPHY: '종교/철학',
-};
-
-
-const participantLabelByCode: Record<string, string> = {
-  STUDENT: '대학생',
-  WORKER: '직장인',
-  ONLINE: '온라인',
-  CLUB: '동아리',
-  MEETING: '모임',
-  OFFLINE: '오프라인',
-};
 
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
 const chatIconUri = Image.resolveAssetSource(
@@ -311,68 +253,6 @@ async function pickAndUploadImage(type: 'CLUB' | 'NOTICE'): Promise<string | nul
 }
 
 
-function mapMyClubToGroup(club: { clubId: number; clubName: string }): Group {
-  return {
-    id: `club-${club.clubId}`,
-    clubId: club.clubId,
-    name: club.clubName,
-    tags: [],
-    topic: '모임 대상 · 정보 없음',
-    region: '활동 지역 · 정보 없음',
-    applicationStatus: '가입 완료되었습니다',
-  };
-}
-
-
-function mapSearchClubToGroup(item: ClubSearchItem): Group {
-  const rawItem = item as unknown as Record<string, unknown>;
-  const clubCandidate =
-    rawItem.club && typeof rawItem.club === 'object' ? rawItem.club : rawItem;
-  const club = (clubCandidate as ClubDetailResult) ?? {};
-  const clubId = typeof club.clubId === 'number' ? club.clubId : undefined;
-  const tags = toLabelList(club.category, categoryLabelByCode).slice(0, 6);
-  const participants = toLabelList(club.participantTypes, participantLabelByCode);
-  const regionText = typeof club.region === 'string' && club.region.trim().length > 0
-    ? club.region.trim()
-    : '정보 없음';
-
-  return {
-    id: clubId ? `club-${clubId}` : `club-${club.name ?? Math.random().toString()}`,
-    clubId,
-    name: typeof club.name === 'string' && club.name.length > 0 ? club.name : '이름 없는 모임',
-    profileImageUrl: normalizeRemoteImageUrl(club.profileImageUrl ?? undefined),
-    links: normalizeClubContacts(club.links),
-    tags,
-    topic: participants.length > 0 ? `모임 대상 · ${participants.join(', ')}` : '모임 대상 · 정보 없음',
-    region: `활동 지역 · ${regionText}`,
-    applicationStatus: mapClubStatusToApplication(item.myStatus),
-    description: typeof club.description === 'string' ? club.description : undefined,
-    isPrivate: typeof club.open === 'boolean' ? !club.open : undefined,
-  };
-}
-
-function mapClubHomeDetailToGroup(detail: ClubDetailResult, prev: Group): Group {
-  const tags = toLabelList(detail.category, categoryLabelByCode).slice(0, 6);
-  const participants = toLabelList(detail.participantTypes, participantLabelByCode);
-  const links = normalizeClubContacts(detail.links);
-  const region = typeof detail.region === 'string' && detail.region.trim().length > 0
-    ? detail.region.trim()
-    : '정보 없음';
-
-  return {
-    ...prev,
-    clubId: typeof detail.clubId === 'number' ? detail.clubId : prev.clubId,
-    name: typeof detail.name === 'string' && detail.name.length > 0 ? detail.name : prev.name,
-    profileImageUrl:
-      normalizeRemoteImageUrl(detail.profileImageUrl ?? undefined) ?? prev.profileImageUrl,
-    links: Array.isArray(detail.links) ? links : prev.links,
-    tags: tags.length > 0 ? tags : prev.tags,
-    topic: participants.length > 0 ? `모임 대상 · ${participants.join(', ')}` : prev.topic,
-    region: `활동 지역 · ${region}`,
-    description: typeof detail.description === 'string' ? detail.description : prev.description,
-    isPrivate: typeof detail.open === 'boolean' ? !detail.open : prev.isPrivate,
-  };
-}
 
 function createPendingClubGroup(clubId: number): Group {
   return {
@@ -386,35 +266,6 @@ function createPendingClubGroup(clubId: number): Group {
 }
 
 
-async function fetchAllClubBookshelvesWithCursor(clubId: number): Promise<{
-  items: ClubBookshelfItem[];
-  isStaff: boolean;
-}> {
-  const mergedItems: ClubBookshelfItem[] = [];
-  const seenMeetingIds = new Set<number>();
-  const visitedCursors = new Set<number>();
-  let cursorId: number | undefined;
-  let isStaff = false;
-
-  for (let page = 0; page < BOOKSHELF_CURSOR_LOOP_LIMIT; page += 1) {
-    const response = await fetchClubBookshelves(clubId, cursorId);
-    if (response.isStaff) isStaff = true;
-
-    response.items.forEach((item) => {
-      if (seenMeetingIds.has(item.meetingId)) return;
-      seenMeetingIds.add(item.meetingId);
-      mergedItems.push(item);
-    });
-
-    if (!response.hasNext || typeof response.nextCursor !== 'number') break;
-    if (visitedCursors.has(response.nextCursor)) break;
-
-    visitedCursors.add(response.nextCursor);
-    cursorId = response.nextCursor;
-  }
-
-  return { items: mergedItems, isStaff };
-}
 
 export function MeetingScreen() {
   const meetingScrollRef = useRef<ScrollView>(null);
@@ -432,10 +283,6 @@ export function MeetingScreen() {
   const [applyOpenId, setApplyOpenId] = useState<string | null>(null);
   const [applyReasonById, setApplyReasonById] = useState<Record<string, string>>({});
   const [appliedById, setAppliedById] = useState<Record<string, string>>({});
-  const [myGroups, setMyGroups] = useState<Group[]>([]);
-  const [discoverGroups, setDiscoverGroups] = useState<Group[]>([]);
-  const [myGroupsLoading, setMyGroupsLoading] = useState(false);
-  const [discoverLoading, setDiscoverLoading] = useState(false);
   const [pendingOpenClubId, setPendingOpenClubId] = useState<number | null>(null);
   const [openingClubLoading, setOpeningClubLoading] = useState(false);
 
@@ -445,6 +292,14 @@ export function MeetingScreen() {
     useState<ClubSearchOutputFilter>('ALL');
   const [outputFilterOpen, setOutputFilterOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  const {
+    myGroups,
+    discoverGroups,
+    myGroupsLoading,
+    discoverLoading,
+    loadMyGroups,
+  } = useMeetingDiscover({ search, activeInputFilter, selectedOutputFilter, isLoggedIn });
 
   const showLeaveDraftAlert = useCallback((onClose: () => void) => {
     if (!(showCreate && createDraftDirty)) {
@@ -503,110 +358,6 @@ export function MeetingScreen() {
   const selectedOutputFilterLabel =
     outputFilterOptions.find((option) => option.value === selectedOutputFilter)?.label ?? '전체';
 
-  const loadMyGroups = useCallback(async () => {
-    if (!isLoggedIn) {
-      setMyGroups([]);
-      return;
-    }
-
-    setMyGroupsLoading(true);
-    try {
-      const result = await fetchMyClubs(undefined, { suppressErrorToast: true });
-      const mapped = result.items.map(mapMyClubToGroup);
-      setMyGroups(mapped);
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        setMyGroups([]);
-        return;
-      }
-      if (!(error instanceof ApiError)) {
-        showToast('내 모임 목록을 불러오지 못했습니다.');
-      }
-      setMyGroups([]);
-    } finally {
-      setMyGroupsLoading(false);
-    }
-  }, [isLoggedIn]);
-
-  const loadDiscoverGroups = useCallback(async () => {
-    const keyword = search.trim();
-    if (keyword.length > MEETING_SEARCH_KEYWORD_MAX_LENGTH) {
-      setDiscoverGroups([]);
-      showToast(`검색어는 ${MEETING_SEARCH_KEYWORD_MAX_LENGTH}자 이하여야 합니다.`);
-      return;
-    }
-
-    const shouldLoadRecommendations =
-      isLoggedIn &&
-      keyword.length === 0 &&
-      activeInputFilter === null &&
-      selectedOutputFilter === 'ALL';
-
-    const inputFilter: ClubSearchInputFilter | undefined =
-      activeInputFilter === '모임별'
-        ? 'NAME'
-        : activeInputFilter === '지역별'
-          ? 'REGION'
-          : undefined;
-
-    setDiscoverLoading(true);
-    try {
-      if (shouldLoadRecommendations) {
-        const result = await fetchRecommendedClubs({ suppressErrorToast: true });
-        setDiscoverGroups(result.items.map(mapSearchClubToGroup));
-      } else {
-        const mergedItems: ClubSearchItem[] = [];
-        const seenClubIds = new Set<number>();
-        const visitedCursors = new Set<number>();
-        let cursorId: number | undefined;
-
-        for (let page = 0; page < 100; page += 1) {
-          const response = await searchClubs({
-            keyword: keyword.length > 0 ? keyword : undefined,
-            inputFilter,
-            outputFilter: selectedOutputFilter,
-            cursorId,
-          });
-
-          response.items.forEach((item) => {
-            const clubId = item.club?.clubId;
-            if (typeof clubId === 'number') {
-              if (seenClubIds.has(clubId)) return;
-              seenClubIds.add(clubId);
-            }
-            mergedItems.push(item);
-          });
-
-          if (!response.hasNext || typeof response.nextCursor !== 'number') break;
-          if (visitedCursors.has(response.nextCursor)) break;
-
-          visitedCursors.add(response.nextCursor);
-          cursorId = response.nextCursor;
-        }
-
-        setDiscoverGroups(mergedItems.map(mapSearchClubToGroup));
-      }
-    } catch (error) {
-      setDiscoverGroups([]);
-      showToast(
-        resolveMeetingSearchErrorMessage(error, { recommendation: shouldLoadRecommendations }),
-      );
-    } finally {
-      setDiscoverLoading(false);
-    }
-  }, [activeInputFilter, isLoggedIn, search, selectedOutputFilter]);
-
-  useEffect(() => {
-    void loadMyGroups();
-  }, [loadMyGroups]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      void loadDiscoverGroups();
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [loadDiscoverGroups]);
 
   useEffect(() => {
     const value = route.params?.openClubId;
@@ -1524,99 +1275,25 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         isCancelled() || requestId !== clubWorkspaceRequestIdRef.current;
 
       try {
-        const [homeDetail, bookshelfList, noticeList, latestNotice, myMembership] = await Promise.all([
-          fetchClubHome(group.clubId),
-          fetchAllClubBookshelvesWithCursor(group.clubId),
-          (async () => {
-            const clubIdNum = group.clubId as number;
-            const first = await fetchClubNotices(clubIdNum, 1);
-            if (!first.hasNext) return first;
-            const allNormal = [...first.normalNotices];
-            for (let p = 2; p <= Math.min(first.totalPages, 20); p++) {
-              const more = await fetchClubNotices(clubIdNum, p);
-              allNormal.push(...more.normalNotices);
-              if (!more.hasNext) break;
-            }
-            return { ...first, normalNotices: allNormal };
-          })(),
-          fetchClubLatestNotice(group.clubId, { suppressErrorToast: true }),
-          isLoggedIn
-            ? fetchClubMyMembership(group.clubId, { suppressErrorToast: true }).catch((e: unknown) => {
-                if (e instanceof ApiError && (e.status === 404 || e.status === 403)) return null;
-                throw e;
-              })
-            : Promise.resolve(null),
-        ]);
-
+        const snapshot = await fetchClubWorkspaceData(group.clubId, group, isLoggedIn);
         if (isStale()) return;
-        setLatestNoticeId(typeof latestNotice?.id === 'number' ? latestNotice.id : null);
 
-        const nextCanManageClub =
-          myMembership?.myStatus === 'STAFF' ||
-          myMembership?.myStatus === 'OWNER' ||
-          myMembership?.staff === true ||
-          Boolean(bookshelfList.isStaff);
-        setCanManageClub(nextCanManageClub);
-
-        if (homeDetail) {
-          const nextGroup = mapManagedClubDetailToGroup(homeDetail, group);
-          setManagedGroup({
-            ...nextGroup,
-            notice: latestNotice?.title,
-            applicationStatus:
-              mapClubStatusToApplication(myMembership?.myStatus) ?? nextGroup.applicationStatus,
-          });
-          setEditDraft((prev) => ({ ...prev, ...toEditDraft(nextGroup) }));
-        }
-
-        const nextBookshelves = bookshelfList.items.map(mapApiBookshelfToItem);
-        if (nextBookshelves.length > 0) {
-          setBookshelfItems(nextBookshelves);
-        } else {
-          setBookshelfItems([]);
-        }
-
-        const nextNotices = [
-          ...noticeList.pinnedNotices.map(mapNoticePreviewToNoticeItem),
-          ...noticeList.normalNotices.map(mapNoticePreviewToNoticeItem),
-        ];
-        setNoticeItems(sortNoticeItems(nextNotices));
-        setSelectedNoticeId(prev =>
-          prev && nextNotices.some(n => n.id === prev) ? prev : null,
+        setLatestNoticeId(snapshot.latestNoticeId);
+        setCanManageClub(snapshot.canManageClub);
+        setManagedGroup(snapshot.managedGroup);
+        setEditDraft((prev) => ({ ...prev, ...snapshot.editDraftPatch }));
+        setBookshelfItems(snapshot.bookshelfItems);
+        setNoticeItems(snapshot.noticeItems);
+        setSelectedNoticeId((prev) =>
+          prev && snapshot.noticeItems.some((n) => n.id === prev) ? prev : null,
         );
         setNoticeCommentsById({});
         setNoticePollOptionsById({});
         setSelectedVoteOptionIdsByNotice({});
         setSubmittedVoteOptionIdsByNotice({});
         setVoteEditEnabledByNotice({});
-
-        if (!nextCanManageClub) {
-          setJoinRequests([]);
-          setMembers([]);
-          return;
-        }
-
-        const [detail, pendingMembers, activeMembers] = await Promise.all([
-          fetchClubDetail(group.clubId),
-          fetchClubMembers(group.clubId, 'PENDING'),
-          fetchClubMembers(group.clubId, 'ACTIVE'),
-        ]);
-
-        if (isStale()) return;
-
-        if (detail) {
-          const nextGroup = mapManagedClubDetailToGroup(detail, group);
-          setManagedGroup({
-            ...nextGroup,
-            notice: latestNotice?.title,
-            applicationStatus:
-              mapClubStatusToApplication(myMembership?.myStatus) ?? nextGroup.applicationStatus,
-          });
-          setEditDraft((prev) => ({ ...prev, ...toEditDraft(nextGroup) }));
-        }
-
-        setJoinRequests(pendingMembers.items.map(mapClubManagedMemberToJoinRequest));
-        setMembers(activeMembers.items.map(mapClubManagedMemberToGroupMember));
+        setJoinRequests(snapshot.joinRequests);
+        setMembers(snapshot.members);
       } catch (error) {
         if (isStale()) return;
         if (error instanceof ApiError) {

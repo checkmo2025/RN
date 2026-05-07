@@ -14,7 +14,10 @@ import type {
   ClubNoticeComment,
   ClubNoticeDetail,
   ClubNoticePreview,
+  ClubSearchItem,
+  ClubSearchOutputFilter,
 } from '../../services/api/clubApi';
+import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { normalizeRemoteImageUrl } from '../../utils/image';
 import { parseApiDateMillis } from '../../utils/date';
 import {
@@ -622,5 +625,57 @@ export function toNoticeBookshelfAttachment(book: BookshelfItem) {
     category: book.category,
     coverImage: book.coverImage,
     rating: book.rating,
+  };
+}
+
+export const MEETING_SEARCH_KEYWORD_MAX_LENGTH = INPUT_LIMITS.CLUB_NAME;
+
+export const outputFilterOptions: Array<{ label: string; value: ClubSearchOutputFilter }> = [
+  { label: '전체', value: 'ALL' },
+  { label: '대학생', value: 'STUDENT' },
+  { label: '직장인', value: 'WORKER' },
+  { label: '온라인', value: 'ONLINE' },
+  { label: '동아리', value: 'CLUB' },
+  { label: '모임', value: 'MEETING' },
+  { label: '대면', value: 'OFFLINE' },
+];
+
+export function mapMyClubToGroup(club: { clubId: number; clubName: string }): Group {
+  return {
+    id: `club-${club.clubId}`,
+    clubId: club.clubId,
+    name: club.clubName,
+    tags: [],
+    topic: '모임 대상 · 정보 없음',
+    region: '활동 지역 · 정보 없음',
+    applicationStatus: '가입 완료되었습니다',
+  };
+}
+
+export function mapSearchClubToGroup(item: ClubSearchItem): Group {
+  const rawItem = item as unknown as Record<string, unknown>;
+  const clubCandidate =
+    rawItem.club && typeof rawItem.club === 'object' ? rawItem.club : rawItem;
+  const club = (clubCandidate as ClubDetailResult) ?? {};
+  const clubId = typeof club.clubId === 'number' ? club.clubId : undefined;
+  const tags = toLabelList(club.category, categoryLabelByCode).slice(0, 6);
+  const participants = toLabelList(club.participantTypes, participantLabelByCode);
+  const regionText =
+    typeof club.region === 'string' && club.region.trim().length > 0
+      ? club.region.trim()
+      : '정보 없음';
+
+  return {
+    id: clubId ? `club-${clubId}` : `club-${club.name ?? Math.random().toString()}`,
+    clubId,
+    name: typeof club.name === 'string' && club.name.length > 0 ? club.name : '이름 없는 모임',
+    profileImageUrl: normalizeRemoteImageUrl(club.profileImageUrl ?? undefined),
+    links: normalizeClubContacts(club.links),
+    tags,
+    topic: participants.length > 0 ? `모임 대상 · ${participants.join(', ')}` : '모임 대상 · 정보 없음',
+    region: `활동 지역 · ${regionText}`,
+    applicationStatus: mapClubStatusToApplication(item.myStatus),
+    description: typeof club.description === 'string' ? club.description : undefined,
+    isPrivate: typeof club.open === 'boolean' ? !club.open : undefined,
   };
 }

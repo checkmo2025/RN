@@ -1752,3 +1752,10 @@ export const interactionOpacity = {
 ## 2026-05-07 | 23:30:00 KST
 
 - MEET-SPLIT 시리즈 완료 후 핸드오프 파일 삭제: `to-claude-2605062036.md`, `to-claude-2605072230.md`.
+
+## 2026-05-08 | 00:00:00 KST
+
+- `[ARCH-04]` 서버 상태 오케스트레이션 hook/service 계층 분리 완료.
+- `useMeetingDiscover.ts` 신규: myGroups/discoverGroups 상태 + 페이지네이션 루프(max 100회) 컨테이너에서 추출.
+- `workspaceLoader.ts` 신규: `fetchAllClubBookshelvesWithCursor` + `fetchClubWorkspaceData`(공지 다중 페이지, 병렬 fetch, 권한 분기) 추출.
+- `MeetingScreen.tsx` 중복 정의 제거 및 hook 연결. 3988→3665줄(-323줄). `tsc --noEmit` 통과.

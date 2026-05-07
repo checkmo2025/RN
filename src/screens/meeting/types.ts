@@ -247,3 +247,17 @@ export type NoticeDraft = {
 };
 
 export type StarIconName = keyof typeof MaterialIcons.glyphMap;
+
+export const inputFilters = ['모임별', '지역별'] as const;
+export type MeetingInputFilter = (typeof inputFilters)[number];
+
+export type WorkspaceSnapshot = {
+  managedGroup: Group;
+  canManageClub: boolean;
+  latestNoticeId: number | null;
+  bookshelfItems: BookshelfItem[];
+  noticeItems: NoticeItem[];
+  editDraftPatch: Partial<GroupEditDraft>;
+  joinRequests: GroupJoinRequestItem[];
+  members: GroupMemberItem[];
+};
