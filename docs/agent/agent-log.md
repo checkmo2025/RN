@@ -1768,6 +1768,12 @@ export const interactionOpacity = {
 - `helpers.ts` `logMeetingAction` 내 `console.info` 2건 → `meetingLog.info` 교체.
 - 도메인 코드 `console.*` 직접 호출 0건. `tsc --noEmit` 통과.
 
+## 2026-05-08 | 01:00:00 KST
+
+- `[STD-21]` 2차 완료: `logger.ts`에 `serializeError` 헬퍼 추가 — Error 객체 직렬화 규칙 통일(stack/__DEV__ 게이트).
+- `emit` 내부에서 args 중 Error 인스턴스 자동 직렬화 적용.
+- `(done)app-standardization-21-logging-observability-layer.md` 완료 표시.
+
 ## 2026-05-07 | 19:21:03 KST
 
 - `[ARCH-04]` 완료 확인 및 문서 처리 — `useMeetingDiscover.ts`, `workspaceLoader.ts` 분리 기완료.
