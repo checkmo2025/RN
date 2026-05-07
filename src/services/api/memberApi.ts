@@ -200,7 +200,7 @@ export async function fetchMyProfile(options?: {
 }): Promise<MyProfile | null> {
   const response = await requestJson<ApiEnvelope<DetailInfo>>('/members/me', {
     method: 'GET',
-    suppressErrorToast: options?.suppressErrorToast ?? false,
+    suppressErrorToast: options?.suppressErrorToast ?? true,
   });
   const result = unwrapResult(response);
 
@@ -346,7 +346,7 @@ export async function fetchRecommendedMembers(options?: {
 }): Promise<RecommendedMember[]> {
   const response = await requestJson<ApiEnvelope<RecommendedMemberResult>>('/members/me/recommend', {
     method: 'GET',
-    suppressErrorToast: options?.suppressErrorToast ?? false,
+    suppressErrorToast: options?.suppressErrorToast ?? true,
   });
   const result = unwrapResult(response) ?? {};
   const friends = Array.isArray(result.friends) ? result.friends : [];
@@ -373,6 +373,7 @@ export async function fetchRecommendedMembers(options?: {
 export async function updateMyProfile(payload: UpdateMyProfilePayload): Promise<MyProfile | null> {
   const response = await requestJson<ApiEnvelope<DetailInfo>>('/members/me', {
     method: 'PATCH',
+    suppressErrorToast: false,
     body: payload,
   });
   const result = unwrapResult(response);
@@ -394,6 +395,7 @@ export async function updateMyProfile(payload: UpdateMyProfilePayload): Promise<
 export async function updateMyEmail(payload: UpdateMyEmailPayload): Promise<void> {
   await requestJson<ApiEnvelope<string>>('/members/me/update-email', {
     method: 'PATCH',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -401,6 +403,7 @@ export async function updateMyEmail(payload: UpdateMyEmailPayload): Promise<void
 export async function updateMyPassword(payload: UpdateMyPasswordPayload): Promise<void> {
   await requestJson<ApiEnvelope<string>>('/members/me/update-password', {
     method: 'PATCH',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -408,6 +411,7 @@ export async function updateMyPassword(payload: UpdateMyPasswordPayload): Promis
 export async function reportMember(payload: ReportMemberPayload): Promise<void> {
   await requestJson<ApiEnvelope<number>>('/members/report', {
     method: 'POST',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -415,6 +419,7 @@ export async function reportMember(payload: ReportMemberPayload): Promise<void> 
 export async function withdrawMember(): Promise<void> {
   await requestJson<ApiEnvelope<void>>('/members/withdrawal', {
     method: 'POST',
+    suppressErrorToast: false,
   });
 }
 

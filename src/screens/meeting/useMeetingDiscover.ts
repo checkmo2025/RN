@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   fetchMyClubs,
   fetchRecommendedClubs,
@@ -31,6 +31,7 @@ export function useMeetingDiscover({
   const [discoverGroups, setDiscoverGroups] = useState<Group[]>([]);
   const [myGroupsLoading, setMyGroupsLoading] = useState(false);
   const [discoverLoading, setDiscoverLoading] = useState(false);
+  const discoverSeqRef = useRef(0);
 
   const loadMyGroups = useCallback(async () => {
     if (!isLoggedIn) {
@@ -58,6 +59,7 @@ export function useMeetingDiscover({
   }, [isLoggedIn]);
 
   const loadDiscoverGroups = useCallback(async () => {
+    const seq = (discoverSeqRef.current += 1);
     const keyword = search.trim();
     if (keyword.length > MEETING_SEARCH_KEYWORD_MAX_LENGTH) {
       setDiscoverGroups([]);
@@ -82,6 +84,7 @@ export function useMeetingDiscover({
     try {
       if (shouldLoadRecommendations) {
         const result = await fetchRecommendedClubs({ suppressErrorToast: true });
+        if (seq !== discoverSeqRef.current) return;
         setDiscoverGroups(result.items.map(mapSearchClubToGroup));
       } else {
         const mergedItems: Parameters<typeof mapSearchClubToGroup>[0][] = [];
@@ -113,15 +116,17 @@ export function useMeetingDiscover({
           cursorId = response.nextCursor;
         }
 
+        if (seq !== discoverSeqRef.current) return;
         setDiscoverGroups(mergedItems.map(mapSearchClubToGroup));
       }
     } catch (error) {
+      if (seq !== discoverSeqRef.current) return;
       setDiscoverGroups([]);
       showToast(
         resolveMeetingSearchErrorMessage(error, { recommendation: shouldLoadRecommendations }),
       );
     } finally {
-      setDiscoverLoading(false);
+      if (seq === discoverSeqRef.current) setDiscoverLoading(false);
     }
   }, [activeInputFilter, isLoggedIn, search, selectedOutputFilter]);
 

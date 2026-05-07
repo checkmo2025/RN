@@ -32,9 +32,9 @@ import {
   type EventArg,
   type NavigationAction,
   type NavigationProp,
-  type ParamListBase,
   type RouteProp,
 } from '@react-navigation/native';
+import type { TabParamList } from '../navigation/types';
 import * as ImagePicker from 'expo-image-picker';
 import { SvgUri } from 'react-native-svg';
 
@@ -163,9 +163,6 @@ import {
 } from './meeting/helpers';
 
 
-type MeetingRouteParams = {
-  openClubId?: number | string;
-};
 
 type LinkItem = { text: string; url: string };
 
@@ -270,8 +267,8 @@ function createPendingClubGroup(clubId: number): Group {
 export function MeetingScreen() {
   const meetingScrollRef = useRef<ScrollView>(null);
   useScrollToTop(meetingScrollRef);
-  const navigation = useNavigation<NavigationProp<ParamListBase>>();
-  const route = useRoute<RouteProp<{ Meeting: MeetingRouteParams }, 'Meeting'>>();
+  const navigation = useNavigation<NavigationProp<TabParamList, 'Meeting'>>();
+  const route = useRoute<RouteProp<TabParamList, 'Meeting'>>();
   const { requireAuth, isLoggedIn } = useAuthGate();
   const [showCreate, setShowCreate] = useState(false);
   const [createDraftDirty, setCreateDraftDirty] = useState(false);
@@ -382,9 +379,9 @@ export function MeetingScreen() {
   useEffect(() => {
     const tabNavigation =
       (navigation.getState().routeNames.includes('Meeting')
-        ? (navigation as NavigationProp<ParamListBase>)
+        ? (navigation as NavigationProp<TabParamList>)
         : navigation.getParent()) as
-        | (NavigationProp<ParamListBase> & {
+        | (NavigationProp<TabParamList> & {
             addListener: (
               eventName: 'tabPress',
               listener: (event: EventArg<'tabPress', true, undefined>) => void,
@@ -521,7 +518,7 @@ export function MeetingScreen() {
 
   useEffect(() => {
     const parent = navigation.getParent() as
-      | (NavigationProp<ParamListBase> & {
+      | (NavigationProp<TabParamList> & {
           addListener: (
             eventName: 'tabPress',
             listener: (event: EventArg<'tabPress', true, undefined>) => void,
@@ -904,7 +901,7 @@ const participantCodeByLabel: Record<string, ClubParticipantTypeCode> = {
 
 
 function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) {
-  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const navigation = useNavigation<NavigationProp<TabParamList>>();
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { requireAuth, isLoggedIn, logout } = useAuthGate();

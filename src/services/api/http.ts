@@ -86,7 +86,7 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
     body,
     headers = {},
     credentials = 'include',
-    suppressErrorToast = false,
+    suppressErrorToast = true,
     timeoutMs = DEFAULT_TIMEOUT_MS,
   } = options;
 
@@ -169,6 +169,13 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
   }
 
   return parsed as T;
+}
+
+export function resolveErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError && error.message?.trim()) {
+    return error.message.trim();
+  }
+  return fallback;
 }
 
 export function unwrapResult<T>(payload: ApiEnvelope<T> | T | null | undefined): T | undefined {

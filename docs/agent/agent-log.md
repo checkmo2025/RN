@@ -1766,6 +1766,13 @@ export const interactionOpacity = {
 - 완료 조건 3개 충족: 페이지네이션 루프 제거, hook/service 계층 이동, MeetingScreen 단순화.
 - `app-architecture-04-server-state-orchestration-in-ui.md` → `(done)` 처리.
 
+## 2026-05-07 | 19:50:18 KST
+
+- `[ARCH-05]` 검색 비동기 레이스 방지: `useMeetingDiscover`에 `discoverSeqRef` 추가, stale 응답 state 반영 차단.
+- `[ARCH-06]` 네트워크 계층 책임 분리: `requestJson` 기본값 `suppressErrorToast: true`로 전환, 쿼리 래퍼 6개 `?? true` 적용, 쓰기 함수 ~25개 명시적 `suppressErrorToast: false` 추가, `resolveErrorMessage` 유틸 export, 직접 fetch 예외 주석 추가.
+- `[ARCH-07]` API 타입 경계 강화: `parseUtils.ts` 신규 — `asRecord`, `toStringValue`, `toBooleanValue`, `toNumberValue`, `firstDefined`, `asStringArray` export. `clubApi.ts` private 중복 정의 제거 및 import 전환.
+- `[ARCH-08]` 네비게이션 타입 안전성: `navigation/types.ts` 신규 — `TabParamList`, `RootStackParamList` 정의. `navigateToHome.ts` 타입 적용. `MeetingScreen` `ParamListBase` → `TabParamList` 전환. `tsc --noEmit` 통과.
+
 ## 2026-05-07 | 19:17:33 KST
 
 - `[ARCH-03]` 도메인 로직이 표시 문자열에 결합된 이슈 수정 완료.

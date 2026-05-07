@@ -1,4 +1,5 @@
 import { API_BASE_URL, ApiEnvelope, ApiError, requestJson, unwrapResult } from './http';
+import { asRecord, toBooleanValue, toNumberValue, toStringValue, firstDefined } from './parseUtils';
 import { normalizeRemoteImageUrl } from '../../utils/image';
 
 export type ClubCategoryCode =
@@ -523,31 +524,6 @@ type ApiResponseMeetingInfo = ApiEnvelope<unknown>;
 type ApiResponseMeetingMemberList = ApiEnvelope<unknown>;
 type ApiResponseMeetingTeamTopics = ApiEnvelope<unknown>;
 type ApiResponseMeetingChatHistory = ApiEnvelope<unknown>;
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
-}
-
-function toStringValue(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined;
-}
-
-function toBooleanValue(value: unknown): boolean | undefined {
-  return typeof value === 'boolean' ? value : undefined;
-}
-
-function toNumberValue(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return undefined;
-}
-
-function firstDefined(...values: unknown[]): unknown {
-  return values.find((value) => value !== null && typeof value !== 'undefined');
-}
 
 function buildAbsoluteApiUrl(path: string): string {
   const normalizedPath = path.replace(/^\/+/, '').replace(/^api\//, '');
@@ -1203,6 +1179,7 @@ export async function checkClubNameDuplicate(clubName: string): Promise<boolean>
 export async function createClub(payload: ClubCreatePayload): Promise<void> {
   await requestJson<ApiResponseString>('/clubs', {
     method: 'POST',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -1216,7 +1193,7 @@ export async function fetchMemberClubs(
     query: {
       memberNickname,
     },
-    suppressErrorToast: options?.suppressErrorToast ?? false,
+    suppressErrorToast: options?.suppressErrorToast ?? true,
   });
 
   const result = asRecord(unwrapResult(response));
@@ -1236,7 +1213,7 @@ export async function fetchMyClubs(
     query: {
       cursorId,
     },
-    suppressErrorToast: options?.suppressErrorToast ?? false,
+    suppressErrorToast: options?.suppressErrorToast ?? true,
   });
 
   const result = unwrapResult(response) ?? {};
@@ -1280,7 +1257,7 @@ export async function fetchRecommendedClubs(options?: {
 }): Promise<ClubSearchList> {
   const response = await requestJson<ApiResponseClubList>('/clubs/recommendations', {
     method: 'GET',
-    suppressErrorToast: options?.suppressErrorToast ?? false,
+    suppressErrorToast: options?.suppressErrorToast ?? true,
   });
 
   const result = unwrapResult(response) ?? {};
@@ -1302,6 +1279,7 @@ export async function fetchRecommendedClubs(options?: {
 export async function joinClub(clubId: number, joinMessage: string): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/join`, {
     method: 'POST',
+    suppressErrorToast: false,
     body: {
       joinMessage,
     },
@@ -1311,6 +1289,7 @@ export async function joinClub(clubId: number, joinMessage: string): Promise<voi
 export async function leaveClub(clubId: number): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/leave`, {
     method: 'DELETE',
+    suppressErrorToast: false,
   });
 }
 
@@ -1342,7 +1321,7 @@ export async function fetchClubMyMembership(
 ): Promise<ClubMyMembership | null> {
   const response = await requestJson<ApiResponseClubMyMembership>(`/clubs/${clubId}/me`, {
     method: 'GET',
-    suppressErrorToast: options?.suppressErrorToast ?? false,
+    suppressErrorToast: options?.suppressErrorToast ?? true,
   });
 
   return normalizeClubMyMembership(unwrapResult(response));
@@ -1354,6 +1333,7 @@ export async function updateClub(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}`, {
     method: 'PUT',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -1390,6 +1370,7 @@ export async function updateClubMemberStatus(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/members/${clubMemberId}`, {
     method: 'PATCH',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -1461,6 +1442,7 @@ export async function createClubNotice(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/notices`, {
     method: 'POST',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -1472,6 +1454,7 @@ export async function updateClubNotice(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/notices/${noticeId}`, {
     method: 'PATCH',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -1479,6 +1462,7 @@ export async function updateClubNotice(
 export async function deleteClubNotice(clubId: number, noticeId: number): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/notices/${noticeId}`, {
     method: 'DELETE',
+    suppressErrorToast: false,
   });
 }
 
@@ -1516,6 +1500,7 @@ export async function createClubNoticeComment(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/notices/${noticeId}/comments`, {
     method: 'POST',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -1528,6 +1513,7 @@ export async function updateClubNoticeComment(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/notices/${noticeId}/comments/${commentId}`, {
     method: 'PATCH',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -1539,6 +1525,7 @@ export async function deleteClubNoticeComment(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/notices/${noticeId}/comments/${commentId}`, {
     method: 'DELETE',
+    suppressErrorToast: false,
   });
 }
 
@@ -1550,6 +1537,7 @@ export async function submitClubNoticeVote(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/notices/${noticeId}/votes/${voteId}`, {
     method: 'POST',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -1616,6 +1604,7 @@ export async function createClubBookshelf(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves`, {
     method: 'POST',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -1627,6 +1616,7 @@ export async function updateClubBookshelf(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves/${meetingId}`, {
     method: 'PATCH',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -1637,6 +1627,7 @@ export async function deleteClubBookshelf(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves/${meetingId}`, {
     method: 'DELETE',
+    suppressErrorToast: false,
   });
 }
 
@@ -1705,6 +1696,7 @@ export async function createClubBookshelfTopic(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves/${meetingId}/topics`, {
     method: 'POST',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -1716,6 +1708,7 @@ export async function createClubBookshelfReview(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves/${meetingId}/reviews`, {
     method: 'POST',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -1728,6 +1721,7 @@ export async function updateClubBookshelfTopic(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves/${meetingId}/topics/${topicId}`, {
     method: 'PATCH',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -1739,6 +1733,7 @@ export async function deleteClubBookshelfTopic(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves/${meetingId}/topics/${topicId}`, {
     method: 'DELETE',
+    suppressErrorToast: false,
   });
 }
 
@@ -1750,6 +1745,7 @@ export async function updateClubBookshelfReview(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves/${meetingId}/reviews/${reviewId}`, {
     method: 'PATCH',
+    suppressErrorToast: false,
     body: payload,
   });
 }
@@ -1761,6 +1757,7 @@ export async function deleteClubBookshelfReview(
 ): Promise<void> {
   await requestJson<ApiResponseString>(`/clubs/${clubId}/bookshelves/${meetingId}/reviews/${reviewId}`, {
     method: 'DELETE',
+    suppressErrorToast: false,
   });
 }
 
@@ -1880,6 +1877,7 @@ export async function fetchClubMeetingMembers(
   return normalizeMeetingMemberList(unwrapResult(response));
 }
 
+// redirect: 'manual' 처리가 필요해 requestJson 우회. Location 헤더 직접 추출 목적.
 export async function fetchClubNextMeetingRedirect(
   clubId: number,
 ): Promise<ClubNextMeetingRedirect | null> {
@@ -2038,6 +2036,7 @@ export async function sendClubMeetingTeamChatMessage(
     `/clubs/${clubId}/meetings/${meetingId}/teams/${teamId}/chat/messages`,
     {
       method: 'POST',
+      suppressErrorToast: false,
       body: {
         content: normalizedContent,
       },
