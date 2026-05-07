@@ -1748,3 +1748,7 @@ export const interactionOpacity = {
 - `src/screens/MeetingScreen.tsx`
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 2026-05-07 | 23:30:00 KST
+
+- MEET-SPLIT 시리즈 완료 후 핸드오프 파일 삭제: `to-claude-2605062036.md`, `to-claude-2605072230.md`.
