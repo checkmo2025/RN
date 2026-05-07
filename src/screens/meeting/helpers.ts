@@ -648,6 +648,7 @@ export function mapMyClubToGroup(club: { clubId: number; clubName: string }): Gr
     tags: [],
     topic: '모임 대상 · 정보 없음',
     region: '활동 지역 · 정보 없음',
+    membershipStatus: 'MEMBER',
     applicationStatus: '가입 완료되었습니다',
   };
 }
@@ -674,6 +675,7 @@ export function mapSearchClubToGroup(item: ClubSearchItem): Group {
     tags,
     topic: participants.length > 0 ? `모임 대상 · ${participants.join(', ')}` : '모임 대상 · 정보 없음',
     region: `활동 지역 · ${regionText}`,
+    membershipStatus: item.myStatus,
     applicationStatus: mapClubStatusToApplication(item.myStatus),
     description: typeof club.description === 'string' ? club.description : undefined,
     isPrivate: typeof club.open === 'boolean' ? !club.open : undefined,

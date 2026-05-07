@@ -1759,3 +1759,10 @@ export const interactionOpacity = {
 - `useMeetingDiscover.ts` 신규: myGroups/discoverGroups 상태 + 페이지네이션 루프(max 100회) 컨테이너에서 추출.
 - `workspaceLoader.ts` 신규: `fetchAllClubBookshelvesWithCursor` + `fetchClubWorkspaceData`(공지 다중 페이지, 병렬 fetch, 권한 분기) 추출.
 - `MeetingScreen.tsx` 중복 정의 제거 및 hook 연결. 3988→3665줄(-323줄). `tsc --noEmit` 통과.
+
+## 2026-05-07 | 19:17:33 KST
+
+- `[ARCH-03]` 도메인 로직이 표시 문자열에 결합된 이슈 수정 완료.
+- `Group` 타입에 `membershipStatus?: ClubMembershipStatus` 필드 추가 (enum 기반 도메인 판단용).
+- `helpers.ts`, `workspaceLoader.ts`에서 raw enum 저장하도록 수정.
+- `MeetingScreen.tsx` `isMember` 계산을 `=== '가입 완료되었습니다'` 문자열 비교에서 enum 비교로 전환.

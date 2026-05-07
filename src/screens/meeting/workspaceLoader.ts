@@ -100,6 +100,7 @@ export async function fetchClubWorkspaceData(
   managedGroup = {
     ...managedGroup,
     notice: latestNotice?.title,
+    membershipStatus: myMembership?.myStatus ?? managedGroup.membershipStatus,
     applicationStatus:
       mapClubStatusToApplication(myMembership?.myStatus) ?? managedGroup.applicationStatus,
   };
@@ -127,6 +128,7 @@ export async function fetchClubWorkspaceData(
       managedGroup = {
         ...refinedGroup,
         notice: latestNotice?.title,
+        membershipStatus: myMembership?.myStatus ?? refinedGroup.membershipStatus,
         applicationStatus:
           mapClubStatusToApplication(myMembership?.myStatus) ?? refinedGroup.applicationStatus,
       };

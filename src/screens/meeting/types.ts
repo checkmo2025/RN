@@ -1,5 +1,5 @@
 import type { MaterialIcons } from '@expo/vector-icons';
-import type { ClubContact } from '../../services/api/clubApi';
+import type { ClubContact, ClubMembershipStatus } from '../../services/api/clubApi';
 
 export type Group = {
   id: string;
@@ -10,6 +10,7 @@ export type Group = {
   tags: string[];
   topic: string;
   region: string;
+  membershipStatus?: ClubMembershipStatus;
   applicationStatus?: string;
   description?: string;
   notice?: string;

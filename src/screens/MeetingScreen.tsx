@@ -911,7 +911,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const isManagedClub = typeof group.clubId === 'number';
   const [managedGroup, setManagedGroup] = useState<Group>(group);
   const [canManageClub, setCanManageClub] = useState(false);
-  const isMember = managedGroup.applicationStatus === '가입 완료되었습니다' || canManageClub;
+  const isMember =
+    (managedGroup.membershipStatus === 'MEMBER' ||
+      managedGroup.membershipStatus === 'STAFF' ||
+      managedGroup.membershipStatus === 'OWNER') ||
+    canManageClub;
   const [activeTab, setActiveTab] = useState<'home' | 'notice' | 'bookshelf'>('home');
   const [currentMemberNickname, setCurrentMemberNickname] = useState('');
   const groupHomeScrollRef = useRef<ScrollView>(null);
