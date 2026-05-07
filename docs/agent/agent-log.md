@@ -1760,6 +1760,12 @@ export const interactionOpacity = {
 - `workspaceLoader.ts` 신규: `fetchAllClubBookshelvesWithCursor` + `fetchClubWorkspaceData`(공지 다중 페이지, 병렬 fetch, 권한 분기) 추출.
 - `MeetingScreen.tsx` 중복 정의 제거 및 hook 연결. 3988→3665줄(-323줄). `tsc --noEmit` 통과.
 
+## 2026-05-07 | 19:21:03 KST
+
+- `[ARCH-04]` 완료 확인 및 문서 처리 — `useMeetingDiscover.ts`, `workspaceLoader.ts` 분리 기완료.
+- 완료 조건 3개 충족: 페이지네이션 루프 제거, hook/service 계층 이동, MeetingScreen 단순화.
+- `app-architecture-04-server-state-orchestration-in-ui.md` → `(done)` 처리.
+
 ## 2026-05-07 | 19:17:33 KST
 
 - `[ARCH-03]` 도메인 로직이 표시 문자열에 결합된 이슈 수정 완료.
