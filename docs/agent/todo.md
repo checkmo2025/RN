@@ -100,6 +100,7 @@ TODO 수정 시 아래 규칙만 지킨다.
 | ✅ | **[STD-15] edge swipe back hook 공통화** | `src/hooks/useEdgeBackSwipe.ts` 신규 생성. `requireHorizontalDominance` 옵션 포함. StoryScreen·NewsScreen·UserProfileScreen 3곳의 PanResponder 보일러플레이트 제거. 참고: `docs/documents/(done)app-standardization-15-edge-swipe-hook.md` | 2026-05-07 | 2026-05-07 |
 | ✅ | **[STD-16] 네비게이션 파라미터 헬퍼** | `navigateToHome.ts`에 `parsePositiveIntParam` + `findNavigatorWithRoute` 추가. MeetingScreen·NewsScreen·StoryScreen·UserProfileScreen 4곳 인라인 파싱/nav chain 탐색 제거. 참고: `docs/documents/(done)app-standardization-16-navigation-param-helper.md` | 2026-05-07 | 2026-05-07 |
 | ✅ | **[STD-17] 품질 게이트 확장** | BottomTabs.tsx 데드코드(`Placeholder`, `labelsMap`, unused imports/styles) 제거. `package.json`에 `lint` 스크립트(`eslint src --ext .ts,.tsx --max-warnings 0`) 추가. 참고: `docs/documents/(done)app-standardization-17-quality-gate-expansion.md` | 2026-05-07 | 2026-05-07 |
+| ✅ | **[ARCH-10] 대형 화면 기능 경계 재정의** | `useNotificationState` + `useAccountSettingsState` 훅 신규 생성. `MyPageScreen` 알림/계정설정 도메인 추출(3567→3059줄). StoryScreen·AuthFlowScreen은 cross-domain coupling 과다로 스킵. `tsc --noEmit` 통과. 참고: `docs/documents/(done)app-architecture-10-screen-feature-composition-boundary.md` | 2026-05-07 | 2026-05-07 |
 | ✅ | **후속 표준화/아키텍처 문서 6건 작성** | 완료된 `(done)` 범위를 제외한 남은 구조 개선 과제를 문서화: `app-architecture-10`, `app-standardization-18~22` 신규 작성. 각 문서에 코드 근거/리스크/개선가이드/DoD 포함. | 2026-05-07 | 2026-05-07 |
 
 ---

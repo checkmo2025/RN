@@ -1819,3 +1819,10 @@ export const interactionOpacity = {
 ## 작업 파일
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 2026-05-07 | 21:36:00 KST
+
+- `[ARCH-10]` 대형 화면 기능 경계 재정의: `src/screens/mypage/useNotificationState.ts` + `useAccountSettingsState.ts` 신규 생성.
+- `MyPageScreen` 알림 도메인(state 5개·함수 6개) + 계정설정 도메인(state 20개·함수 8개·timer effect) 추출, 3567 → 3059줄(-508줄).
+- StoryScreen(compose/feed/detail 간 cross-setter 결합 과다)·AuthFlowScreen(선형 step machine)은 분리 시 복잡도 증가로 스킵 판단.
+- `tsc --noEmit` 0 errors 확인.

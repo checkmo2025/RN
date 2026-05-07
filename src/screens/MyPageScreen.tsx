@@ -35,12 +35,7 @@ import { DialogOverlay } from '../components/common/DialogOverlay';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { FormTextInput } from '../components/common/FormTextInput';
 import { useAuthGate } from '../contexts/AuthGateContext';
-import {
-  confirmEmailVerification,
-  issueProfileImageUploadUrl,
-  logoutSession,
-  requestEmailVerification,
-} from '../services/api/authApi';
+import { issueProfileImageUploadUrl } from '../services/api/authApi';
 import { ApiError } from '../services/api/http';
 import {
   fetchAllMyLikedBooks,
@@ -52,39 +47,28 @@ import { fetchMyClubs, leaveClub } from '../services/api/clubApi';
 import {
   deleteFollowerMember,
   fetchMyFollowCount,
-  fetchMyReports,
   fetchMyFollowers,
   fetchMyFollowing,
   fetchMyProfile,
   setFollowingMember,
-  updateMyEmail,
-  updateMyPassword,
   updateMyProfile,
-  withdrawMember,
-  type ReportItem,
 } from '../services/api/memberApi';
-import {
-  fetchNotifications,
-  fetchNotificationSettings,
-  markNotificationAsRead,
-  toggleNotificationSetting,
-  type NotificationItem,
-  type NotificationSettingInfo,
-  type NotificationSettingType,
-} from '../services/api/notificationApi';
 import { fetchMyNewsList, type RemoteNewsSummary } from '../services/api/newsApi';
-import { formatKstDateLabel, toKstTimeAgoLabel } from '../utils/date';
+import { formatKstDateLabel } from '../utils/date';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
-import { formatNotificationText, resolveNotificationTarget } from '../utils/notification';
 import { showToast } from '../utils/toast';
 import { pickAndUploadImage } from '../utils/imageUpload';
 import { collectAllCursorPages } from '../utils/pagination';
 import { resolveApiError } from '../utils/resolveApiError';
-import { navigateToHome } from '../navigation/navigateToHome';
 import { INPUT_LIMITS } from '../constants/inputLimits';
-import { emailRegex, passwordRegex } from '../constants/validation';
 import { BOOK_DEFAULT_IMAGE } from '../constants/defaultAssets';
+import {
+  useNotificationState,
+  notificationSettingRows,
+  type AlarmItem,
+} from './mypage/useNotificationState';
+import { useAccountSettingsState, type ReportHistoryItem } from './mypage/useAccountSettingsState';
 
 const tabs = ['내 책 이야기', '내 서재', '내 모임', '내 알림'] as const;
 type TabKey = (typeof tabs)[number];
@@ -128,30 +112,10 @@ type MyNewsItem = {
   thumbnailUrl?: string;
 };
 
-type AlarmItem = {
-  id: string;
-  notificationId: number;
-  notificationType: NotificationItem['notificationType'];
-  domainId?: number;
-  sourceId?: number;
-  displayName: string;
-  text: string;
-  time: string;
-  unread?: boolean;
-};
-
 type FollowUser = {
   nickname: string;
   profileImageUrl?: string;
   following: boolean;
-};
-
-type ReportHistoryItem = {
-  id: string;
-  reportType: string;
-  reportedMemberNickname: string;
-  content: string;
-  createdAtLabel: string;
 };
 
 const categoryLabelByCode: Record<string, string> = {
@@ -222,36 +186,6 @@ const defaultProfilePalette = [
 ];
 
 const fallbackBooks: BookCard[] = [];
-const EMAIL_VERIFICATION_COUNTDOWN_SECONDS = 10 * 60;
-
-const defaultNotificationSettings: NotificationSettingInfo = {
-  bookStoryLiked: true,
-  bookStoryComment: true,
-  clubNoticeCreated: true,
-  clubMeetingCreated: true,
-  newFollower: true,
-  joinClub: true,
-};
-
-const notificationSettingRows: Array<{
-  type: NotificationSettingType;
-  label: string;
-  key: keyof NotificationSettingInfo;
-}> = [
-  { type: 'BOOK_STORY_LIKED', label: '책 이야기 좋아요 알림', key: 'bookStoryLiked' },
-  { type: 'BOOK_STORY_COMMENT', label: '책 이야기 댓글 알림', key: 'bookStoryComment' },
-  { type: 'NEW_FOLLOWER', label: '구독자 알림', key: 'newFollower' },
-  { type: 'JOIN_CLUB', label: '독서 모임 가입 알림', key: 'joinClub' },
-  { type: 'CLUB_MEETING_CREATED', label: '모임 일정 알림', key: 'clubMeetingCreated' },
-  { type: 'CLUB_NOTICE_CREATED', label: '공지사항 알림', key: 'clubNoticeCreated' },
-];
-
-const reportTypeLabelByCode: Record<string, string> = {
-  GENERAL: '일반',
-  CLUB_MEETING: '독서 모임',
-  BOOK_STORY: '책 이야기',
-  COMMENT: '댓글',
-};
 
 type GroupMenuState = {
   group: GroupItem;
@@ -382,7 +316,6 @@ export function MyPageScreen() {
   const [selectedSetting, setSelectedSetting] = useState<string | null>(null);
   const [stories, setStories] = useState<StoryCard[]>([]);
   const [books, setBooks] = useState<BookCard[]>([]);
-  const [alarms, setAlarms] = useState<AlarmItem[]>([]);
   const [myNews, setMyNews] = useState<MyNewsItem[]>([]);
   const [groups, setGroups] = useState<GroupItem[]>([]);
   const [profileName, setProfileName] = useState('user_id');
@@ -403,17 +336,10 @@ export function MyPageScreen() {
   const [activeFollowTab, setActiveFollowTab] = useState<'FOLLOWER' | 'FOLLOWING'>('FOLLOWER');
   const [loadingStories, setLoadingStories] = useState(false);
   const [loadingBooks, setLoadingBooks] = useState(false);
-  const [loadingAlarms, setLoadingAlarms] = useState(false);
   const [loadingMyNews, setLoadingMyNews] = useState(false);
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [loadingFollowUsers, setLoadingFollowUsers] = useState(false);
-  const [notificationSettings, setNotificationSettings] = useState<NotificationSettingInfo>(
-    defaultNotificationSettings,
-  );
-  const [loadingNotificationSettings, setLoadingNotificationSettings] = useState(false);
-  const [togglingNotificationSetting, setTogglingNotificationSetting] =
-    useState<NotificationSettingType | null>(null);
   const [groupMenu, setGroupMenu] = useState<GroupMenuState | null>(null);
   const [profileEditDescription, setProfileEditDescription] = useState('');
   const [profileEditImageUrl, setProfileEditImageUrl] = useState('');
@@ -423,27 +349,68 @@ export function MyPageScreen() {
   const [showDefaultAvatarPicker, setShowDefaultAvatarPicker] = useState(false);
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   const [submittingProfileEdit, setSubmittingProfileEdit] = useState(false);
-  const [emailCurrent, setEmailCurrent] = useState('');
-  const [emailNext, setEmailNext] = useState('');
-  const [emailVerificationCode, setEmailVerificationCode] = useState('');
-  const [emailVerificationSent, setEmailVerificationSent] = useState(false);
-  const [emailVerified, setEmailVerified] = useState(false);
-  const [sendingEmailVerificationCode, setSendingEmailVerificationCode] = useState(false);
-  const [confirmingEmailVerificationCode, setConfirmingEmailVerificationCode] = useState(false);
-  const [emailVerificationDeadline, setEmailVerificationDeadline] = useState<number | null>(null);
-  const [remainingEmailVerificationSeconds, setRemainingEmailVerificationSeconds] = useState(0);
-  const [submittingEmailUpdate, setSubmittingEmailUpdate] = useState(false);
-  const [passwordCurrent, setPasswordCurrent] = useState('');
-  const [passwordNext, setPasswordNext] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [showPasswordCurrent, setShowPasswordCurrent] = useState(false);
-  const [showPasswordNext, setShowPasswordNext] = useState(false);
-  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
-  const [submittingPasswordUpdate, setSubmittingPasswordUpdate] = useState(false);
-  const [reportHistory, setReportHistory] = useState<ReportHistoryItem[]>([]);
-  const [loadingReportHistory, setLoadingReportHistory] = useState(false);
-  const [submittingWithdrawal, setSubmittingWithdrawal] = useState(false);
-  const [submittingLogout, setSubmittingLogout] = useState(false);
+
+  const {
+    alarms,
+    loadingAlarms,
+    notificationSettings,
+    loadingNotificationSettings,
+    togglingNotificationSetting,
+    loadAllNotifications,
+    loadNotificationSettingInfo,
+    handlePressAlarm,
+    handleToggleNotificationSetting,
+  } = useNotificationState({ isLoggedIn, navigation });
+
+  const {
+    emailCurrent,
+    setEmailCurrent,
+    emailNext,
+    setEmailNext,
+    emailVerificationCode,
+    setEmailVerificationCode,
+    emailVerificationSent,
+    emailVerified,
+    sendingEmailVerificationCode,
+    confirmingEmailVerificationCode,
+    remainingEmailVerificationSeconds,
+    emailVerificationRemainingText,
+    submittingEmailUpdate,
+    passwordCurrent,
+    setPasswordCurrent,
+    passwordNext,
+    setPasswordNext,
+    passwordConfirm,
+    setPasswordConfirm,
+    showPasswordCurrent,
+    setShowPasswordCurrent,
+    showPasswordNext,
+    setShowPasswordNext,
+    showPasswordConfirm,
+    setShowPasswordConfirm,
+    submittingPasswordUpdate,
+    reportHistory,
+    loadingReportHistory,
+    submittingWithdrawal,
+    submittingLogout,
+    loadReportHistory,
+    resetEmailVerification,
+    handleSendEmailVerificationCode,
+    handleConfirmEmailVerificationCode,
+    handleSubmitEmailUpdate,
+    handleSubmitPasswordUpdate,
+    handleWithdrawMember,
+    handleLogoutPress,
+  } = useAccountSettingsState({
+    isLoggedIn,
+    logout,
+    navigation,
+    onCloseSettings: () => {
+      setShowSettings(false);
+      setSelectedSetting(null);
+    },
+    selectedSetting,
+  });
 
   const settingIconUri = useMemo(
     () => Image.resolveAssetSource(require('../../assets/mypage/mypage-setting.svg')).uri,
@@ -469,12 +436,6 @@ export function MyPageScreen() {
     () => Image.resolveAssetSource(require('../../assets/book-story/bookstory-comment.svg')).uri,
     [],
   );
-  const emailVerificationRemainingText = useMemo(() => {
-    const minutes = Math.floor(remainingEmailVerificationSeconds / 60);
-    const seconds = remainingEmailVerificationSeconds % 60;
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  }, [remainingEmailVerificationSeconds]);
-
   const mapLikedBooksToCards = useCallback((items: MemberLikedBookItem[]): BookCard[] => {
     const mapped = items.map((book, index) => {
       const normalizedIsbn = book.isbn.trim();
@@ -513,28 +474,6 @@ export function MyPageScreen() {
     }));
   }, []);
 
-  const mapReportItems = useCallback((items: ReportItem[]): ReportHistoryItem[] => {
-    return items.map((item, index) => {
-      const reportId =
-        typeof item.reportId === 'number' ? `report-${item.reportId}` : `report-${index}`;
-      const reportTypeCode =
-        typeof item.reportType === 'string' ? item.reportType : 'GENERAL';
-      return {
-        id: reportId,
-        reportType: reportTypeLabelByCode[reportTypeCode] ?? reportTypeCode,
-        reportedMemberNickname:
-          typeof item.reportedMemberNickname === 'string' && item.reportedMemberNickname.trim()
-            ? item.reportedMemberNickname
-            : '알 수 없음',
-        content:
-          typeof item.content === 'string' && item.content.trim()
-            ? item.content
-            : '신고 사유가 입력되지 않았습니다.',
-        createdAtLabel: toDateLabel(item.reportDate ?? item.createdAt),
-      };
-    });
-  }, []);
-
   const loadLikedBooks = useCallback(async () => {
     setLoadingBooks(true);
     try {
@@ -549,7 +488,6 @@ export function MyPageScreen() {
     if (!isLoggedIn) {
       setStories([]);
       setBooks(fallbackBooks);
-      setAlarms([]);
       setMyNews([]);
       setGroups([]);
       setProfileName('로그인이 필요해요');
@@ -562,17 +500,12 @@ export function MyPageScreen() {
       setFollowingUsers([]);
       setFollowerCount(0);
       setFollowingCount(0);
-      setReportHistory([]);
-      setNotificationSettings(defaultNotificationSettings);
       setLoadingProfile(false);
       setLoadingStories(false);
       setLoadingBooks(false);
       setLoadingGroups(false);
-      setLoadingAlarms(false);
       setLoadingMyNews(false);
       setLoadingFollowUsers(false);
-      setLoadingNotificationSettings(false);
-      setLoadingReportHistory(false);
       return;
     }
 
@@ -696,64 +629,6 @@ export function MyPageScreen() {
     }
   }, [isLoggedIn]);
 
-  const navigateByNotification = useCallback(
-    (notification: NotificationItem) => {
-      const target = resolveNotificationTarget(notification);
-      navigation.navigate(target.screen, target.params);
-    },
-    [navigation],
-  );
-
-  const mapNotificationToAlarm = useCallback((item: NotificationItem): AlarmItem => {
-    return {
-      id: `alarm-${item.notificationId}`,
-      notificationId: item.notificationId,
-      notificationType: item.notificationType,
-      domainId: item.domainId,
-      sourceId: item.sourceId,
-      displayName: item.displayName,
-      text: formatNotificationText(item.notificationType, item.displayName),
-      time: toKstTimeAgoLabel(item.createdAt),
-      unread: !item.read,
-    };
-  }, []);
-
-  const loadAllNotifications = useCallback(async () => {
-    if (!isLoggedIn) {
-      setAlarms([]);
-      return;
-    }
-
-    setLoadingAlarms(true);
-    try {
-      const allItems: NotificationItem[] = [];
-      let cursorId: number | undefined;
-      const visitedCursors = new Set<number>();
-      const seenNotificationIds = new Set<number>();
-
-      for (let i = 0; i < 100; i += 1) {
-        const response = await fetchNotifications(cursorId);
-        response.items.forEach((item) => {
-          if (seenNotificationIds.has(item.notificationId)) return;
-          seenNotificationIds.add(item.notificationId);
-          allItems.push(item);
-        });
-        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
-        if (visitedCursors.has(response.nextCursor)) break;
-
-        visitedCursors.add(response.nextCursor);
-        cursorId = response.nextCursor;
-      }
-
-      setAlarms(allItems.map(mapNotificationToAlarm));
-    } catch (error) {
-      setAlarms([]);
-      showToast(resolveApiError(error, MY_PAGE_FETCH_ERROR_OVERRIDES, '알림 목록을 불러오지 못했습니다.'));
-    } finally {
-      setLoadingAlarms(false);
-    }
-  }, [isLoggedIn, mapNotificationToAlarm]);
-
   const loadMyNews = useCallback(async () => {
     if (!isLoggedIn) {
       setMyNews([]);
@@ -789,126 +664,6 @@ export function MyPageScreen() {
       setLoadingMyNews(false);
     }
   }, [isLoggedIn, mapMyNewsItems]);
-
-  const loadNotificationSettingInfo = useCallback(async () => {
-    if (!isLoggedIn) {
-      setNotificationSettings(defaultNotificationSettings);
-      return;
-    }
-
-    setLoadingNotificationSettings(true);
-    try {
-      const settingInfo = await fetchNotificationSettings();
-      setNotificationSettings(settingInfo);
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        setNotificationSettings(defaultNotificationSettings);
-        return;
-      }
-      if (!(error instanceof ApiError)) {
-        showToast('알림 설정을 불러오지 못했습니다.');
-      }
-    } finally {
-      setLoadingNotificationSettings(false);
-    }
-  }, [isLoggedIn]);
-
-  const handlePressAlarm = useCallback(
-    (alarm: AlarmItem) => {
-      const notification: NotificationItem = {
-        notificationId: alarm.notificationId,
-        notificationType: alarm.notificationType,
-        domainId: alarm.domainId,
-        sourceId: alarm.sourceId,
-        displayName: alarm.displayName,
-        read: !alarm.unread,
-        createdAt: '',
-      };
-
-      setAlarms((prev) =>
-        prev.map((item) =>
-          item.notificationId === alarm.notificationId ? { ...item, unread: false } : item,
-        ),
-      );
-      navigateByNotification(notification);
-
-      if (!alarm.unread) return;
-
-      const submit = async () => {
-        try {
-          await markNotificationAsRead(alarm.notificationId);
-        } catch {
-          setAlarms((prev) =>
-            prev.map((item) =>
-              item.notificationId === alarm.notificationId ? { ...item, unread: true } : item,
-            ),
-          );
-        }
-      };
-      void submit();
-    },
-    [navigateByNotification],
-  );
-
-  const handleToggleNotificationSetting = useCallback((settingType: NotificationSettingType) => {
-    const row = notificationSettingRows.find((item) => item.type === settingType);
-    if (!row) return;
-    const key = row.key;
-    const previous = notificationSettings[key];
-    const next = !previous;
-
-    setNotificationSettings((prev) => ({
-      ...prev,
-      [key]: next,
-    }));
-    setTogglingNotificationSetting(settingType);
-
-    const submit = async () => {
-      try {
-        await toggleNotificationSetting(settingType);
-      } catch (error) {
-        setNotificationSettings((prev) => ({
-          ...prev,
-          [key]: previous,
-        }));
-        if (!(error instanceof ApiError)) {
-          showToast('알림 설정을 변경하지 못했습니다.');
-        }
-      } finally {
-        setTogglingNotificationSetting((prevType) =>
-          prevType === settingType ? null : prevType,
-        );
-      }
-    };
-    void submit();
-  }, [notificationSettings]);
-
-  const loadReportHistory = useCallback(async () => {
-    if (!isLoggedIn) {
-      setReportHistory([]);
-      return;
-    }
-
-    setLoadingReportHistory(true);
-    try {
-      const reports = await fetchMyReports();
-      setReportHistory(mapReportItems(reports));
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        setReportHistory([]);
-        return;
-      }
-      if (error instanceof ApiError) {
-        setReportHistory([]);
-        return;
-      }
-      if (!(error instanceof ApiError)) {
-        showToast('신고 목록을 불러오지 못했습니다.');
-      }
-    } finally {
-      setLoadingReportHistory(false);
-    }
-  }, [isLoggedIn, mapReportItems]);
 
   const toggleProfileEditCategory = useCallback((code: string) => {
     setProfileEditCategoryCodes((prev) => {
@@ -1011,238 +766,6 @@ export function MyPageScreen() {
     profileEditUseDefaultAvatar,
     profilePhoneNumber,
   ]);
-
-  const handleSendEmailVerificationCode = useCallback(() => {
-    if (emailVerified) return;
-
-    const currentEmail = emailCurrent.trim();
-    const newEmail = emailNext.trim();
-
-    if (!currentEmail || !newEmail) {
-      showToast('기존 이메일과 변경 이메일을 입력해야 합니다.');
-      return;
-    }
-    if (!emailRegex.test(currentEmail) || !emailRegex.test(newEmail)) {
-      showToast('올바른 이메일 형식이어야 합니다.');
-      return;
-    }
-    if (currentEmail.localeCompare(newEmail, 'ko', { sensitivity: 'accent' }) === 0) {
-      showToast('기존 이메일과 다른 이메일을 입력해야 합니다.');
-      return;
-    }
-
-    setSendingEmailVerificationCode(true);
-    const submit = async () => {
-      try {
-        await requestEmailVerification(newEmail, 'UPDATE_EMAIL');
-        setEmailVerificationSent(true);
-        setEmailVerified(false);
-        setRemainingEmailVerificationSeconds(EMAIL_VERIFICATION_COUNTDOWN_SECONDS);
-        setEmailVerificationDeadline(Date.now() + EMAIL_VERIFICATION_COUNTDOWN_SECONDS * 1000);
-        showToast('인증번호를 발송했습니다.');
-      } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast('인증번호 발송에 실패했습니다.');
-        }
-      } finally {
-        setSendingEmailVerificationCode(false);
-      }
-    };
-    void submit();
-  }, [emailCurrent, emailNext, emailVerified]);
-
-  const handleConfirmEmailVerificationCode = useCallback(() => {
-    const newEmail = emailNext.trim();
-    const verificationCode = emailVerificationCode.trim();
-
-    if (!emailVerificationSent) {
-      showToast('먼저 인증번호를 발송해야 합니다.');
-      return;
-    }
-    if (remainingEmailVerificationSeconds <= 0) {
-      showToast('인증번호가 만료되었습니다. 인증번호를 다시 발송해야 합니다.');
-      return;
-    }
-    if (!verificationCode) {
-      showToast('인증번호를 입력해야 합니다.');
-      return;
-    }
-    if (!emailRegex.test(newEmail)) {
-      showToast('변경 이메일 형식이 올바르지 않습니다.');
-      return;
-    }
-
-    setConfirmingEmailVerificationCode(true);
-    const submit = async () => {
-      try {
-        await confirmEmailVerification(newEmail, verificationCode);
-        setEmailVerified(true);
-        setEmailVerificationDeadline(null);
-        setRemainingEmailVerificationSeconds(0);
-        showToast('인증이 완료되었습니다.');
-      } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast('이메일 인증에 실패했습니다.');
-        }
-        setEmailVerified(false);
-      } finally {
-        setConfirmingEmailVerificationCode(false);
-      }
-    };
-    void submit();
-  }, [
-    emailNext,
-    emailVerificationCode,
-    emailVerificationSent,
-    remainingEmailVerificationSeconds,
-  ]);
-
-  const handleSubmitEmailUpdate = useCallback(() => {
-    const currentEmail = emailCurrent.trim();
-    const newEmail = emailNext.trim();
-    const verificationCode = emailVerificationCode.trim();
-
-    if (!currentEmail || !newEmail || !verificationCode) {
-      showToast('이메일 변경 정보를 모두 입력해야 합니다.');
-      return;
-    }
-    if (!emailRegex.test(currentEmail) || !emailRegex.test(newEmail)) {
-      showToast('올바른 이메일 형식이어야 합니다.');
-      return;
-    }
-    if (!emailVerified) {
-      showToast('변경 이메일 인증을 완료해야 합니다.');
-      return;
-    }
-
-    setSubmittingEmailUpdate(true);
-    const submit = async () => {
-      try {
-        await updateMyEmail({
-          currentEmail,
-          newEmail,
-          verificationCode,
-        });
-        showToast('이메일이 변경되었습니다.');
-        setEmailCurrent('');
-        setEmailNext('');
-        setEmailVerificationCode('');
-        setEmailVerificationSent(false);
-        setEmailVerified(false);
-        setEmailVerificationDeadline(null);
-        setRemainingEmailVerificationSeconds(0);
-      } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast('이메일 변경에 실패했습니다.');
-        }
-      } finally {
-        setSubmittingEmailUpdate(false);
-      }
-    };
-    void submit();
-  }, [emailCurrent, emailNext, emailVerificationCode, emailVerified]);
-
-  const handleSubmitPasswordUpdate = useCallback(() => {
-    const currentPassword = passwordCurrent.trim();
-    const newPassword = passwordNext.trim();
-    const confirmPassword = passwordConfirm.trim();
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      showToast('비밀번호 정보를 모두 입력해야 합니다.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      showToast('비밀번호와 비밀번호 확인이 일치하지 않습니다.');
-      return;
-    }
-    if (!passwordRegex.test(newPassword)) {
-      showToast('비밀번호는 6~12자, 영어 1자 이상, 특수문자 1자 이상이어야 합니다.');
-      return;
-    }
-
-    setSubmittingPasswordUpdate(true);
-    const submit = async () => {
-      try {
-        await updateMyPassword({
-          currentPassword,
-          newPassword,
-          confirmPassword,
-        });
-        showToast('비밀번호가 변경되었습니다.');
-        setPasswordCurrent('');
-        setPasswordNext('');
-        setPasswordConfirm('');
-      } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast('비밀번호 변경에 실패했습니다.');
-        }
-      } finally {
-        setSubmittingPasswordUpdate(false);
-      }
-    };
-    void submit();
-  }, [passwordConfirm, passwordCurrent, passwordNext]);
-
-  const handleWithdrawMember = useCallback(() => {
-    if (submittingWithdrawal) return;
-
-    Alert.alert('회원 탈퇴', '정말 탈퇴하시겠습니까? 탈퇴 후에는 되돌릴 수 없습니다.', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '탈퇴하기',
-        style: 'destructive',
-        onPress: () => {
-          setSubmittingWithdrawal(true);
-          const submit = async () => {
-            try {
-              await withdrawMember();
-              showToast('탈퇴가 신청되었습니다.');
-              logout();
-              setShowSettings(false);
-              setSelectedSetting(null);
-            } catch (error) {
-              if (!(error instanceof ApiError)) {
-                showToast('회원 탈퇴에 실패했습니다.');
-              }
-            } finally {
-              setSubmittingWithdrawal(false);
-            }
-          };
-          void submit();
-        },
-      },
-    ]);
-  }, [logout, submittingWithdrawal]);
-
-  const handleLogoutPress = useCallback(() => {
-    if (submittingLogout) return;
-
-    Alert.alert('로그아웃', '로그아웃하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '로그아웃',
-        style: 'destructive',
-        onPress: () => {
-          setSubmittingLogout(true);
-          const submit = async () => {
-            try {
-              await logoutSession();
-            } catch {
-              // 서버 로그아웃 실패 시에도 로컬 세션은 초기화
-            } finally {
-              logout();
-              setShowSettings(false);
-              setSelectedSetting(null);
-              navigateToHome(navigation);
-              showToast('로그아웃되었습니다.');
-              setSubmittingLogout(false);
-            }
-          };
-          void submit();
-        },
-      },
-    ]);
-  }, [logout, navigation, submittingLogout]);
 
   const openFollowerList = useCallback(() => {
     if (!isLoggedIn) {
@@ -1812,33 +1335,6 @@ export function MyPageScreen() {
   }, [profileCategoryCodes, profileDefaultColor, profileDesc, profileImageUrl, selectedSetting]);
 
   useEffect(() => {
-    if (!emailVerificationDeadline || emailVerified) return;
-
-    const updateRemaining = () => {
-      const remain = Math.max(0, Math.ceil((emailVerificationDeadline - Date.now()) / 1000));
-      setRemainingEmailVerificationSeconds(remain);
-      if (remain <= 0) {
-        setEmailVerificationDeadline(null);
-      }
-    };
-
-    updateRemaining();
-    const interval = setInterval(updateRemaining, 1000);
-    return () => clearInterval(interval);
-  }, [emailVerificationDeadline, emailVerified]);
-
-  useEffect(() => {
-    if (selectedSetting === '이메일 변경') return;
-    setEmailCurrent('');
-    setEmailNext('');
-    setEmailVerificationCode('');
-    setEmailVerificationSent(false);
-    setEmailVerified(false);
-    setEmailVerificationDeadline(null);
-    setRemainingEmailVerificationSeconds(0);
-  }, [selectedSetting]);
-
-  useEffect(() => {
     const nextMyTab = route.params?.openMyTab;
     if (nextMyTab !== 'ALARM') return;
 
@@ -2375,11 +1871,7 @@ export function MyPageScreen() {
                 value={emailNext}
                 onChangeText={(value) => {
                   setEmailNext(value);
-                  setEmailVerificationCode('');
-                  setEmailVerificationSent(false);
-                  setEmailVerified(false);
-                  setEmailVerificationDeadline(null);
-                  setRemainingEmailVerificationSeconds(0);
+                  resetEmailVerification();
                 }}
                 placeholder="변경할 이메일을 입력해주세요"
                 placeholderTextColor={colors.gray3}
