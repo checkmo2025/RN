@@ -47,7 +47,7 @@ import {
   toggleBookLikeByIsbn,
   type MemberLikedBookItem,
 } from '../services/api/bookApi';
-import { fetchMyBookStories, type RemoteStoryItem } from '../services/api/bookStoryApi';
+import { fetchMyBookStories } from '../services/api/bookStoryApi';
 import { fetchMyClubs, leaveClub } from '../services/api/clubApi';
 import {
   deleteFollowerMember,
@@ -79,8 +79,12 @@ import { normalizeRemoteImageUrl } from '../utils/image';
 import { formatNotificationText, resolveNotificationTarget } from '../utils/notification';
 import { showToast } from '../utils/toast';
 import { pickAndUploadImage } from '../utils/imageUpload';
+import { collectAllCursorPages } from '../utils/pagination';
+import { resolveApiError } from '../utils/resolveApiError';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { INPUT_LIMITS } from '../constants/inputLimits';
+import { emailRegex, passwordRegex } from '../constants/validation';
+import { BOOK_DEFAULT_IMAGE } from '../constants/defaultAssets';
 
 const tabs = ['내 책 이야기', '내 서재', '내 모임', '내 알림'] as const;
 type TabKey = (typeof tabs)[number];
@@ -218,9 +222,6 @@ const defaultProfilePalette = [
 ];
 
 const fallbackBooks: BookCard[] = [];
-const BOOK_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/book-default.png')).uri;
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[!@#$%^&*]).{6,12}$/;
 const EMAIL_VERIFICATION_COUNTDOWN_SECONDS = 10 * 60;
 
 const defaultNotificationSettings: NotificationSettingInfo = {
@@ -308,28 +309,8 @@ async function fetchAllFollowUsers(
   return Array.from(uniqueByNickname.values());
 }
 
-function resolveStoryFeedErrorMessage(error: unknown, fallback: string): string {
-  if (!(error instanceof ApiError)) return fallback;
-
-  if (error.status === 401) return '로그인 상태를 확인해 주십시오.';
-  if (error.status === 403) return '접근 권한이 없습니다.';
-  if (error.status === 404) return '요청한 책이야기를 찾을 수 없습니다.';
-
-  const normalized = error.message?.trim();
-  return normalized || fallback;
-}
-
-function resolveMyPageFetchErrorMessage(error: unknown, fallback: string): string {
-  if (!(error instanceof ApiError)) return fallback;
-
-  if (error.status === 400) return '요청 정보를 다시 확인해야 합니다.';
-  if (error.status === 401) return '로그인 상태를 확인해 주십시오.';
-  if (error.status === 403) return '접근 권한이 없습니다.';
-  if (error.status === 404) return '요청한 정보를 찾을 수 없습니다.';
-
-  const normalized = error.message?.trim();
-  return normalized || fallback;
-}
+const STORY_FEED_ERROR_OVERRIDES = { 401: '로그인 상태를 확인해 주십시오.', 403: '접근 권한이 없습니다.', 404: '요청한 책이야기를 찾을 수 없습니다.' } as const;
+const MY_PAGE_FETCH_ERROR_OVERRIDES = { 400: '요청 정보를 다시 확인해야 합니다.', 401: '로그인 상태를 확인해 주십시오.', 403: '접근 권한이 없습니다.', 404: '요청한 정보를 찾을 수 없습니다.' } as const;
 
 function NotificationToggle({
   enabled,
@@ -638,25 +619,10 @@ export function MyPageScreen() {
 
     setLoadingStories(true);
     try {
-      let cursorId: number | undefined;
-      const visitedCursors = new Set<number>();
-      const seenStoryIds = new Set<number>();
-      const allStories: RemoteStoryItem[] = [];
-
-      for (let page = 0; page < 100; page += 1) {
-        const response = await fetchMyBookStories(cursorId);
-        response.items.forEach((item) => {
-          if (seenStoryIds.has(item.id)) return;
-          seenStoryIds.add(item.id);
-          allStories.push(item);
-        });
-
-        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
-        if (visitedCursors.has(response.nextCursor)) break;
-
-        visitedCursors.add(response.nextCursor);
-        cursorId = response.nextCursor;
-      }
+      const allStories = await collectAllCursorPages({
+        fetchPage: (cursor) => fetchMyBookStories(cursor),
+        dedupeId: (item) => item.id,
+      });
 
       const mapped: StoryCard[] = allStories.map((item) => ({
         id: `s-${item.id}`,
@@ -669,7 +635,7 @@ export function MyPageScreen() {
       }));
       setStories(mapped);
     } catch (error) {
-      showToast(resolveStoryFeedErrorMessage(error, '내 책이야기를 불러오지 못했습니다.'));
+      showToast(resolveApiError(error, STORY_FEED_ERROR_OVERRIDES, '내 책이야기를 불러오지 못했습니다.'));
     } finally {
       setLoadingStories(false);
     }
@@ -782,7 +748,7 @@ export function MyPageScreen() {
       setAlarms(allItems.map(mapNotificationToAlarm));
     } catch (error) {
       setAlarms([]);
-      showToast(resolveMyPageFetchErrorMessage(error, '알림 목록을 불러오지 못했습니다.'));
+      showToast(resolveApiError(error, MY_PAGE_FETCH_ERROR_OVERRIDES, '알림 목록을 불러오지 못했습니다.'));
     } finally {
       setLoadingAlarms(false);
     }
@@ -818,7 +784,7 @@ export function MyPageScreen() {
       setMyNews(mapMyNewsItems(allItems));
     } catch (error) {
       setMyNews([]);
-      showToast(resolveMyPageFetchErrorMessage(error, '내 소식을 불러오지 못했습니다.'));
+      showToast(resolveApiError(error, MY_PAGE_FETCH_ERROR_OVERRIDES, '내 소식을 불러오지 못했습니다.'));
     } finally {
       setLoadingMyNews(false);
     }

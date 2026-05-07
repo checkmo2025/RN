@@ -1,6 +1,26 @@
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import type { RootStackParamList } from './types';
 
+export function parsePositiveIntParam(value: number | string | null | undefined): number | null {
+  const n = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+export function findNavigatorWithRoute(
+  navigation: NavigationProp<ParamListBase>,
+  routeName: string,
+): NavigationProp<ParamListBase> | null {
+  const visited = new Set<NavigationProp<ParamListBase>>();
+  let current: NavigationProp<ParamListBase> | undefined = navigation;
+  while (current && !visited.has(current)) {
+    visited.add(current);
+    const routeNames: string[] = current.getState()?.routeNames ?? [];
+    if (routeNames.includes(routeName)) return current;
+    current = current.getParent() as NavigationProp<ParamListBase> | undefined;
+  }
+  return null;
+}
+
 type AnyNavigation = NavigationProp<ParamListBase>;
 type RootNavigation = NavigationProp<RootStackParamList>;
 

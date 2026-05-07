@@ -5,8 +5,6 @@ import {
   Image,
   ImageBackground,
   LayoutAnimation,
-  PanResponder,
-  PanResponderGestureState,
   Platform,
   ScrollView,
   RefreshControl,
@@ -30,7 +28,8 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
-import { colors, motion, radius, spacing, typography } from '../theme';
+import { NEWS_DEFAULT_IMAGE } from '../constants/defaultAssets';
+import { colors, radius, spacing, typography } from '../theme';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { LeftFocalCoverImage } from '../components/common/LeftFocalCoverImage';
 import { ScreenLayout } from '../components/common/ScreenLayout';
@@ -49,6 +48,10 @@ import { fetchRecommendedBooks, type BookItem } from '../services/api/bookApi';
 import { ApiError } from '../services/api/http';
 import { formatKstDateLabel } from '../utils/date';
 import { showToast } from '../utils/toast';
+import { collectAllCursorPages } from '../utils/pagination';
+import { resolveApiError } from '../utils/resolveApiError';
+import { useEdgeBackSwipe } from '../hooks/useEdgeBackSwipe';
+import { parsePositiveIntParam, findNavigatorWithRoute } from '../navigation/navigateToHome';
 
 type NewsItem = {
   id: string;
@@ -74,7 +77,6 @@ const DETAIL_BACK_ACTIVATE_DISTANCE = 14;
 const DETAIL_BACK_TRIGGER_DISTANCE = 72;
 const DETAIL_BACK_ACTIVATE_MAX_DY = 16;
 const DETAIL_BACK_TRIGGER_MAX_DY = 60;
-const NEWS_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/news-default.png')).uri;
 const fallbackPromotions: NewsItem[] = [
   {
     id: 'promo-fallback-1',
@@ -119,16 +121,7 @@ function toDateLabel(value?: string): string {
   return formatKstDateLabel(value, '-');
 }
 
-function resolveNewsErrorMessage(error: unknown, fallback: string): string {
-  if (!(error instanceof ApiError)) return fallback;
-
-  if (error.status === 401) return '로그인 상태를 확인해 주십시오.';
-  if (error.status === 403) return '접근 권한이 없습니다.';
-  if (error.status === 404) return '요청한 소식을 찾을 수 없습니다.';
-
-  const normalized = error.message?.trim();
-  return normalized || fallback;
-}
+const NEWS_ERROR_OVERRIDES = { 401: '로그인 상태를 확인해 주십시오.', 403: '접근 권한이 없습니다.', 404: '요청한 소식을 찾을 수 없습니다.' } as const;
 
 function toNewsItem(
   item: RemoteNewsSummary,
@@ -208,26 +201,10 @@ export function NewsScreen() {
   const loadNews = useCallback(async () => {
     setLoadingNews(true);
     try {
-      const allItems: RemoteNewsSummary[] = [];
-      const seenNewsIds = new Set<number>();
-      const visitedCursors = new Set<number>();
-      let cursorId: number | undefined;
-
-      for (let page = 0; page < 100; page += 1) {
-        const response = await fetchNewsList(cursorId);
-
-        response.items.forEach((item) => {
-          if (seenNewsIds.has(item.id)) return;
-          seenNewsIds.add(item.id);
-          allItems.push(item);
-        });
-
-        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
-        if (visitedCursors.has(response.nextCursor)) break;
-
-        visitedCursors.add(response.nextCursor);
-        cursorId = response.nextCursor;
-      }
+      const allItems = await collectAllCursorPages({
+        fetchPage: (cursor) => fetchNewsList(cursor),
+        dedupeId: (item) => item.id,
+      });
 
       const promotions = allItems.filter((item) => item.carousel === 'PROMOTION');
       const mappedPromotions = promotions.map((item, index) => toNewsItem(item, index, 'promo'));
@@ -237,7 +214,7 @@ export function NewsScreen() {
       setPromotions(mappedPromotions.length > 0 ? mappedPromotions : fallbackPromotions);
     } catch (error) {
       setPromotions(fallbackPromotions);
-      showToast(resolveNewsErrorMessage(error, '소식을 불러오지 못했습니다.'));
+      showToast(resolveApiError(error, NEWS_ERROR_OVERRIDES, '소식을 불러오지 못했습니다.'));
     } finally {
       setLoadingNews(false);
     }
@@ -296,7 +273,7 @@ export function NewsScreen() {
             return applyDetail(prev, detail);
           });
         } catch (error) {
-          showToast(resolveNewsErrorMessage(error, '소식 상세를 불러오지 못했습니다.'));
+          showToast(resolveApiError(error, NEWS_ERROR_OVERRIDES, '소식 상세를 불러오지 못했습니다.'));
         } finally {
           setLoadingDetail(false);
         }
@@ -335,7 +312,7 @@ export function NewsScreen() {
           setSelected(toStandaloneNewsItem(detail));
         } catch (error) {
           setSelected(null);
-          showToast(resolveNewsErrorMessage(error, '소식 상세를 불러오지 못했습니다.'));
+          showToast(resolveApiError(error, NEWS_ERROR_OVERRIDES, '소식 상세를 불러오지 못했습니다.'));
         } finally {
           setLoadingDetail(false);
         }
@@ -360,43 +337,18 @@ export function NewsScreen() {
         },
       };
 
-      const chain: Array<NavigationProp<ParamListBase>> = [];
-      const visited = new Set<NavigationProp<ParamListBase>>();
-      let current: NavigationProp<ParamListBase> | undefined = navigation;
-
-      while (current && !visited.has(current)) {
-        chain.push(current);
-        visited.add(current);
-        current = current.getParent();
-      }
-
-      for (const nav of chain) {
-        const routeNames: string[] = nav?.getState?.()?.routeNames ?? [];
-        if (routeNames.includes('Home')) {
-          nav.navigate('Home', params);
-          return;
-        }
-        if (routeNames.includes('Tabs')) {
-          nav.navigate('Tabs', { screen: 'Home', params });
-          return;
-        }
-      }
-
+      const homeNav = findNavigatorWithRoute(navigation, 'Home');
+      if (homeNav) { homeNav.navigate('Home', params); return; }
+      const tabsNav = findNavigatorWithRoute(navigation, 'Tabs');
+      if (tabsNav) { tabsNav.navigate('Tabs', { screen: 'Home', params }); return; }
       navigation.navigate('Home', params);
     },
     [navigation],
   );
 
   useEffect(() => {
-    const value = route.params?.openNewsId;
-    const newsId =
-      typeof value === 'number'
-        ? value
-        : typeof value === 'string'
-          ? Number(value)
-          : NaN;
-    if (!Number.isInteger(newsId) || newsId <= 0) return;
-
+    const newsId = parsePositiveIntParam(route.params?.openNewsId);
+    if (newsId === null) return;
     navigation.setParams({ openNewsId: undefined });
     openNewsDetailById(newsId);
   }, [navigation, openNewsDetailById, route.params?.openNewsId]);
@@ -467,15 +419,6 @@ export function NewsScreen() {
     }, [detailTranslateX]),
   );
 
-  const isDetailBackSwipe = useCallback((gestureState: PanResponderGestureState) => {
-    if (!selected) return false;
-    return (
-      gestureState.x0 <= DETAIL_BACK_EDGE_WIDTH
-      && gestureState.dx > DETAIL_BACK_ACTIVATE_DISTANCE
-      && Math.abs(gestureState.dy) < DETAIL_BACK_ACTIVATE_MAX_DY
-    );
-  }, [selected]);
-
   const promotionCarouselItems = useMemo<NewsPromotionCarouselItem[]>(
     () =>
       promotions.map((promo) => ({
@@ -487,49 +430,17 @@ export function NewsScreen() {
     [promotions],
   );
 
-  const detailBackSwipeResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponder: (_, gestureState) => isDetailBackSwipe(gestureState),
-        onMoveShouldSetPanResponderCapture: (_, gestureState) => isDetailBackSwipe(gestureState),
-        onPanResponderMove: (_, gestureState) => {
-          detailTranslateX.setValue(Math.max(0, Math.min(gestureState.dx, width)));
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          const dragDistance = Math.max(0, gestureState.dx);
-          const shouldClose =
-            dragDistance >= DETAIL_BACK_TRIGGER_DISTANCE
-            && Math.abs(gestureState.dy) <= DETAIL_BACK_TRIGGER_MAX_DY;
-          if (shouldClose) {
-            Animated.timing(detailTranslateX, {
-              toValue: width,
-              duration: motion.duration.normal,
-              useNativeDriver: true,
-            }).start(({ finished }) => {
-              if (!finished) return;
-              closeSelectedDetail();
-            });
-            return;
-          }
-          Animated.spring(detailTranslateX, {
-            toValue: 0,
-            speed: 22,
-            bounciness: 0,
-            useNativeDriver: true,
-          }).start();
-        },
-        onPanResponderTerminate: () => {
-          Animated.spring(detailTranslateX, {
-            toValue: 0,
-            speed: 22,
-            bounciness: 0,
-            useNativeDriver: true,
-          }).start();
-        },
-      }),
-    [closeSelectedDetail, detailTranslateX, isDetailBackSwipe, width],
-  );
+  const detailBackSwipeResponder = useEdgeBackSwipe({
+    isActive: !!selected,
+    translateX: detailTranslateX,
+    screenWidth: width,
+    onClose: closeSelectedDetail,
+    edgeWidth: DETAIL_BACK_EDGE_WIDTH,
+    activateDistance: DETAIL_BACK_ACTIVATE_DISTANCE,
+    activateMaxDy: DETAIL_BACK_ACTIVATE_MAX_DY,
+    triggerDistance: DETAIL_BACK_TRIGGER_DISTANCE,
+    triggerMaxDy: DETAIL_BACK_TRIGGER_MAX_DY,
+  });
 
   const renderDetail = (item: NewsItem) => (
     <Animated.View

@@ -1,4 +1,3 @@
-import { Image } from 'react-native';
 import type { MaterialIcons } from '@expo/vector-icons';
 import type {
   ClubBookshelfDetail,
@@ -18,6 +17,7 @@ import type {
   ClubSearchOutputFilter,
 } from '../../services/api/clubApi';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
+import { BOOK_DEFAULT_IMAGE } from '../../constants/defaultAssets';
 import { normalizeRemoteImageUrl } from '../../utils/image';
 import { parseApiDateMillis } from '../../utils/date';
 import {
@@ -49,9 +49,6 @@ import type {
   StarIconName,
 } from './types';
 
-const BOOK_DEFAULT_IMAGE = Image.resolveAssetSource(
-  require('../../../assets/images/book-default.png'),
-).uri;
 
 const categoryLabelByCode: Record<string, string> = {
   FICTION_POETRY_DRAMA: '소설/시/희곡',

@@ -3,8 +3,6 @@ import {
   Alert,
   Animated,
   Image,
-  PanResponder,
-  type PanResponderGestureState,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -22,8 +20,8 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
-import { colors, interactionOpacity, motion, radius, spacing, typography } from '../theme';
-import { navigateToHome } from '../navigation/navigateToHome';
+import { colors, interactionOpacity, radius, spacing, typography } from '../theme';
+import { navigateToHome, findNavigatorWithRoute } from '../navigation/navigateToHome';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { ScreenLayout } from '../components/common/ScreenLayout';
@@ -31,6 +29,8 @@ import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { triggerSelectionHaptic } from '../utils/haptics';
+import { BOOK_DEFAULT_IMAGE } from '../constants/defaultAssets';
+import { useEdgeBackSwipe } from '../hooks/useEdgeBackSwipe';
 import { showToast } from '../utils/toast';
 import { ApiError } from '../services/api/http';
 import { fetchAllMemberLikedBooks, type MemberLikedBookItem } from '../services/api/bookApi';
@@ -86,7 +86,6 @@ type FollowUser = {
 };
 
 const tabs: TabKey[] = ['책 이야기', '서재', '모임'];
-const BOOK_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/book-default.png')).uri;
 const likeIconUri = Image.resolveAssetSource(
   require('../../assets/book-story/bookstory-like.svg'),
 ).uri;
@@ -596,36 +595,20 @@ export function UserProfileScreen() {
         return;
       }
 
-      const chain: Array<NavigationProp<ParamListBase>> = [];
-      const visited = new Set<NavigationProp<ParamListBase>>();
-      let current: NavigationProp<ParamListBase> | undefined = navigation;
-
-      while (current && !visited.has(current)) {
-        chain.push(current);
-        visited.add(current);
-        current = current.getParent();
+      const storyNav = findNavigatorWithRoute(navigation, 'Story');
+      if (storyNav) {
+        storyNav.navigate('Story', { openStoryId: story.remoteId });
+        return;
       }
 
-      for (const nav of chain) {
-        const routeNames: string[] = nav?.getState?.()?.routeNames ?? [];
-
-        if (routeNames.includes('Tabs')) {
-          nav.navigate('Tabs', { screen: 'Story' });
-
-          // Ensure detail params are applied after switching from the stack screen to tabs.
-          setTimeout(() => {
-            nav.navigate('Tabs', {
-              screen: 'Story',
-              params: { openStoryId: story.remoteId },
-            });
-          }, 0);
-          return;
-        }
-
-        if (routeNames.includes('Story')) {
-          nav.navigate('Story', { openStoryId: story.remoteId });
-          return;
-        }
+      const tabsNav = findNavigatorWithRoute(navigation, 'Tabs');
+      if (tabsNav) {
+        tabsNav.navigate('Tabs', { screen: 'Story' });
+        // Ensure detail params are applied after switching from the stack screen to tabs.
+        setTimeout(() => {
+          tabsNav.navigate('Tabs', { screen: 'Story', params: { openStoryId: story.remoteId } });
+        }, 0);
+        return;
       }
 
       showToast('책이야기 화면으로 이동하지 못했습니다.');
@@ -840,60 +823,17 @@ export function UserProfileScreen() {
     </View>
   );
 
-  const isBackSwipe = useCallback((gestureState: PanResponderGestureState) => {
-    return (
-      gestureState.x0 <= PROFILE_BACK_EDGE_WIDTH
-      && gestureState.dx > PROFILE_BACK_ACTIVATE_DISTANCE
-      && Math.abs(gestureState.dy) < PROFILE_BACK_ACTIVATE_MAX_DY
-    );
-  }, []);
-
-  const backSwipeResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponder: (_, gestureState) => isBackSwipe(gestureState),
-        onMoveShouldSetPanResponderCapture: (_, gestureState) => isBackSwipe(gestureState),
-        onPanResponderMove: (_, gestureState) => {
-          translateX.setValue(Math.max(0, Math.min(gestureState.dx, screenWidth)));
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          const dragDistance = Math.max(0, gestureState.dx);
-          const shouldGoBack =
-            dragDistance >= PROFILE_BACK_TRIGGER_DISTANCE
-            && Math.abs(gestureState.dy) <= PROFILE_BACK_TRIGGER_MAX_DY;
-
-          if (shouldGoBack) {
-            Animated.timing(translateX, {
-              toValue: screenWidth,
-              duration: motion.duration.normal,
-              useNativeDriver: true,
-            }).start(({ finished }) => {
-              if (!finished) return;
-              translateX.setValue(0);
-              handleGoBack();
-            });
-            return;
-          }
-
-          Animated.spring(translateX, {
-            toValue: 0,
-            speed: 22,
-            bounciness: 0,
-            useNativeDriver: true,
-          }).start();
-        },
-        onPanResponderTerminate: () => {
-          Animated.spring(translateX, {
-            toValue: 0,
-            speed: 22,
-            bounciness: 0,
-            useNativeDriver: true,
-          }).start();
-        },
-      }),
-    [handleGoBack, isBackSwipe, screenWidth, translateX],
-  );
+  const backSwipeResponder = useEdgeBackSwipe({
+    isActive: true,
+    translateX,
+    screenWidth,
+    onClose: useCallback(() => { translateX.setValue(0); handleGoBack(); }, [handleGoBack, translateX]),
+    edgeWidth: PROFILE_BACK_EDGE_WIDTH,
+    activateDistance: PROFILE_BACK_ACTIVATE_DISTANCE,
+    activateMaxDy: PROFILE_BACK_ACTIVATE_MAX_DY,
+    triggerDistance: PROFILE_BACK_TRIGGER_DISTANCE,
+    triggerMaxDy: PROFILE_BACK_TRIGGER_MAX_DY,
+  });
 
   return (
     <ScreenLayout title="다른사람 프로필">

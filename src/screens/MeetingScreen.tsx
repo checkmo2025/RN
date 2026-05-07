@@ -38,7 +38,7 @@ import type { TabParamList } from '../navigation/types';
 import { SvgUri } from 'react-native-svg';
 
 import { buttonSize, colors, interactionOpacity, layers, motion, radius, spacing, typography } from '../theme';
-import { navigateToHome } from '../navigation/navigateToHome';
+import { navigateToHome, parsePositiveIntParam } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
@@ -70,6 +70,7 @@ import { showToast } from '../utils/toast';
 import { pickAndUploadImage as pickAndUploadImageUtil } from '../utils/imageUpload';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { INPUT_LIMITS } from '../constants/inputLimits';
+import { CLUB_DEFAULT_IMAGE } from '../constants/defaultAssets';
 import {
   buildCalendarDays,
   formatCalendarMonthLabel,
@@ -176,7 +177,6 @@ const MIN_BOOK_FLIP_LOADING_MS = 1000;
 const chatIconUri = Image.resolveAssetSource(
   require('../../assets/icons/Chat.svg'),
 ).uri;
-const CLUB_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/club-default.png')).uri;
 function ClubDefaultProfileArtwork({
   variant = 'detail',
 }: {
@@ -322,14 +322,8 @@ export function MeetingScreen() {
 
 
   useEffect(() => {
-    const value = route.params?.openClubId;
-    const clubId =
-      typeof value === 'number'
-        ? value
-        : typeof value === 'string'
-          ? Number(value)
-          : NaN;
-    if (!Number.isInteger(clubId) || clubId <= 0) return;
+    const clubId = parsePositiveIntParam(route.params?.openClubId);
+    if (clubId === null) return;
     setPendingOpenClubId(clubId);
     navigation.setParams({ openClubId: undefined });
   }, [navigation, route.params?.openClubId]);

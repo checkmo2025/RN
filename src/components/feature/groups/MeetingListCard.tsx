@@ -4,10 +4,9 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../../theme';
 import { INPUT_LIMITS } from '../../../constants/inputLimits';
+import { CLUB_DEFAULT_IMAGE } from '../../../constants/defaultAssets';
 import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 import { FormTextInput } from '../../common/FormTextInput';
-
-const CLUB_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../../../assets/images/club-default.png')).uri;
 
 type Props = {
   name: string;

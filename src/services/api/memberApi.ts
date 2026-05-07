@@ -1,5 +1,6 @@
 import { ApiEnvelope, requestJson, unwrapResult } from './http';
 import { normalizeRemoteImageUrl } from '../../utils/image';
+import { collectAllCursorPages } from '../../utils/pagination';
 
 type FollowInfo = {
   nickname?: string;
@@ -424,40 +425,20 @@ export async function withdrawMember(): Promise<void> {
 }
 
 export async function fetchMyReports(): Promise<ReportItem[]> {
-  let cursorId: number | undefined;
-  const allReports: ReportItem[] = [];
-  const seenKeys = new Set<string>();
-  const visitedCursors = new Set<number>();
-
-  for (let page = 0; page < 100; page += 1) {
-    const response = await requestJson<ApiEnvelope<ReportListPayload>>('/members/me/reports', {
-      method: 'GET',
-      query: {
-        cursorId,
-      },
-    });
-
-    const result = normalizeReportListPage(unwrapResult(response));
-    result.items.forEach((item, index) => {
-      const key = [
-        typeof item.reportId === 'number' ? `id:${item.reportId}` : `idx:${index}`,
-        item.reportedMemberNickname ?? '',
-        item.reportType ?? '',
-        item.reportDate ?? item.createdAt ?? '',
-        item.content ?? '',
-      ].join('|');
-
-      if (seenKeys.has(key)) return;
-      seenKeys.add(key);
-      allReports.push(item);
-    });
-
-    if (!result.hasNext || typeof result.nextCursor !== 'number') break;
-    if (visitedCursors.has(result.nextCursor)) break;
-
-    visitedCursors.add(result.nextCursor);
-    cursorId = result.nextCursor;
-  }
-
-  return allReports;
+  return collectAllCursorPages({
+    fetchPage: async (cursor) => {
+      const response = await requestJson<ApiEnvelope<ReportListPayload>>('/members/me/reports', {
+        method: 'GET',
+        query: { cursorId: cursor },
+      });
+      return normalizeReportListPage(unwrapResult(response));
+    },
+    dedupeId: (item) => [
+      typeof item.reportId === 'number' ? `id:${item.reportId}` : 'no-id',
+      item.reportedMemberNickname ?? '',
+      item.reportType ?? '',
+      item.reportDate ?? item.createdAt ?? '',
+      item.content ?? '',
+    ].join('|'),
+  });
 }

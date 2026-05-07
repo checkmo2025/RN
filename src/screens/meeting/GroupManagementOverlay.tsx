@@ -18,6 +18,7 @@ import { DefaultProfileAvatar } from '../../components/common/DefaultProfileAvat
 import { FeedbackPressable as Pressable } from '../../components/common/FeedbackPressable';
 import { FormTextInput } from '../../components/common/FormTextInput';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
+import { CLUB_DEFAULT_IMAGE } from '../../constants/defaultAssets';
 import {
   formatCalendarMonthLabel,
   formatGenerationLabel,
@@ -46,8 +47,6 @@ const categoryCodeLabels = [
 const participantCodeLabels = [
   '대학생', '직장인', '온라인', '동아리', '모임', '오프라인',
 ];
-
-const CLUB_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../../assets/images/club-default.png')).uri;
 
 function ClubDefaultProfileArtworkPreview() {
   return (

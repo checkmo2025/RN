@@ -12,6 +12,7 @@
     "check:spacing": "bash scripts/check-spacing-hardcode.sh",
     "check:spacing:staged": "bash scripts/check-spacing-hardcode.sh --staged",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx --max-warnings 0",
     "doctor": "npx expo-doctor",
     "check": "npm run check:typography && npm run check:spacing && npm run typecheck && npm run doctor"
   },

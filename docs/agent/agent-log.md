@@ -1786,3 +1786,10 @@ export const interactionOpacity = {
 - `MeetingScreen`, `MyPageScreen` 중복 업로드 로직 제거 후 shared util 사용으로 전환; `AuthFlowScreen` 중복 `inferMimeType` 제거.
 - `[STD-10]` 데드코드 `src/utils/input.ts` 삭제; `GroupNoticeView` 댓글 입력 raw `TextInput` → `FormTextInput` 교체.
 - `[STD-11]` `MeetingListCard`, `MyGroupsDropdownCard` raw `Pressable` → `FeedbackPressable` 교체; `HomeScreen` 미사용 `Pressable` import 제거.
+
+## 2026-05-07 | 20:38:11 KST
+
+- `[STD-12]` 도메인 상수 중앙화: `src/constants/validation.ts` (regex 4종) + `src/constants/defaultAssets.ts` (이미지 URI 3종) 신규 생성; 9개 파일 중복 선언 제거.
+- `[STD-13~14]` 커서 페이지네이션 + 에러 리졸버 공통화: `src/utils/pagination.ts` (`collectAllCursorPages`) + `src/utils/resolveApiError.ts` 신규 생성; for-loop 4곳·resolve 함수 4곳 교체.
+- `[STD-15~16]` 제스처/네비 헬퍼 공통화: `src/hooks/useEdgeBackSwipe.ts` (`requireHorizontalDominance` 옵션 포함) + `navigateToHome.ts`에 `parsePositiveIntParam`·`findNavigatorWithRoute` 추가; 7개 파일 PanResponder·파라미터 파싱 보일러플레이트 제거.
+- `[STD-17]` 품질 게이트 확장: `BottomTabs.tsx` 데드코드 제거, `package.json` `lint` 스크립트 추가. `tsc --noEmit` 0 errors 확인.

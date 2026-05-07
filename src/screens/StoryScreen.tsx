@@ -6,8 +6,6 @@ import {
   GestureResponderEvent,
   KeyboardAvoidingView,
   LayoutChangeEvent,
-  PanResponder,
-  PanResponderGestureState,
   ScrollView,
   RefreshControl,
   StyleSheet,
@@ -37,8 +35,8 @@ import * as Clipboard from 'expo-clipboard';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import { INPUT_LIMITS } from '../constants/inputLimits';
-import { colors, interactionOpacity, layers, motion, radius, spacing, typography } from '../theme';
-import { navigateToHome } from '../navigation/navigateToHome';
+import { colors, interactionOpacity, layers, radius, spacing, typography } from '../theme';
+import { navigateToHome, parsePositiveIntParam } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
@@ -83,6 +81,8 @@ import { toKstTimeAgoLabel } from '../utils/date';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
+import { resolveApiError } from '../utils/resolveApiError';
+import { useEdgeBackSwipe } from '../hooks/useEdgeBackSwipe';
 
 type Book = {
   id: string;
@@ -243,16 +243,7 @@ function mapBookItemToBook(item: BookItem): Book {
   };
 }
 
-function resolveStoryFeedErrorMessage(error: unknown, fallback: string): string {
-  if (!(error instanceof ApiError)) return fallback;
-
-  if (error.status === 401) return '로그인 상태를 확인해 주십시오.';
-  if (error.status === 403) return '접근 권한이 없습니다.';
-  if (error.status === 404) return '요청한 책이야기를 찾을 수 없습니다.';
-
-  const normalized = error.message?.trim();
-  return normalized || fallback;
-}
+const STORY_FEED_ERROR_OVERRIDES = { 401: '로그인 상태를 확인해 주십시오.', 403: '접근 권한이 없습니다.', 404: '요청한 책이야기를 찾을 수 없습니다.' } as const;
 
 export function StoryScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -355,59 +346,18 @@ export function StoryScreen() {
     [scrollToCommentSection],
   );
 
-  const isDetailBackSwipe = useCallback((gestureState: PanResponderGestureState) => {
-    if (!selectedStory) return false;
-    return (
-      gestureState.x0 <= DETAIL_BACK_EDGE_WIDTH
-      && gestureState.dx > DETAIL_BACK_ACTIVATE_DISTANCE
-      && Math.abs(gestureState.dy) < DETAIL_BACK_ACTIVATE_MAX_DY
-      && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.4
-    );
-  }, [selectedStory]);
-
-  const detailBackSwipeResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponder: (_, gestureState) => isDetailBackSwipe(gestureState),
-        onMoveShouldSetPanResponderCapture: (_, gestureState) => isDetailBackSwipe(gestureState),
-        onPanResponderMove: (_, gestureState) => {
-          detailTranslateX.setValue(Math.max(0, Math.min(gestureState.dx, screenWidth)));
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          const dragDistance = Math.max(0, gestureState.dx);
-          const shouldClose =
-            dragDistance >= DETAIL_BACK_TRIGGER_DISTANCE
-            && Math.abs(gestureState.dy) <= DETAIL_BACK_TRIGGER_MAX_DY;
-          if (shouldClose) {
-            Animated.timing(detailTranslateX, {
-              toValue: screenWidth,
-              duration: motion.duration.normal,
-              useNativeDriver: true,
-            }).start(({ finished }) => {
-              if (!finished) return;
-              closeStoryDetail();
-            });
-            return;
-          }
-          Animated.spring(detailTranslateX, {
-            toValue: 0,
-            speed: 22,
-            bounciness: 0,
-            useNativeDriver: true,
-          }).start();
-        },
-        onPanResponderTerminate: () => {
-          Animated.spring(detailTranslateX, {
-            toValue: 0,
-            speed: 22,
-            bounciness: 0,
-            useNativeDriver: true,
-          }).start();
-        },
-      }),
-    [closeStoryDetail, detailTranslateX, isDetailBackSwipe, screenWidth],
-  );
+  const detailBackSwipeResponder = useEdgeBackSwipe({
+    isActive: !!selectedStory,
+    translateX: detailTranslateX,
+    screenWidth,
+    onClose: closeStoryDetail,
+    edgeWidth: DETAIL_BACK_EDGE_WIDTH,
+    activateDistance: DETAIL_BACK_ACTIVATE_DISTANCE,
+    activateMaxDy: DETAIL_BACK_ACTIVATE_MAX_DY,
+    triggerDistance: DETAIL_BACK_TRIGGER_DISTANCE,
+    triggerMaxDy: DETAIL_BACK_TRIGGER_MAX_DY,
+    requireHorizontalDominance: true,
+  });
 
   const runBookSearch = useCallback(async (keyword: string) => {
     const trimmed = keyword.trim();
@@ -758,7 +708,7 @@ export function StoryScreen() {
         setHasNext(feed.hasNext);
         setNextCursor(feed.nextCursor);
       } catch (error) {
-        showToast(resolveStoryFeedErrorMessage(error, '책이야기 목록을 불러오지 못했습니다.'));
+        showToast(resolveApiError(error, STORY_FEED_ERROR_OVERRIDES, '책이야기 목록을 불러오지 못했습니다.'));
       } finally {
         if (!reset) {
           setIsLoadingMore(false);
@@ -1547,19 +1497,10 @@ export function StoryScreen() {
   }, [navigation, openCompose, route.params?.composeBook, route.params?.openCompose]);
 
   useEffect(() => {
-    const value = route.params?.openStoryId;
-    const focus = route.params?.openStoryFocus;
-    const shouldFocusComments = focus === 'comments';
-    const remoteId =
-      typeof value === 'number'
-        ? value
-        : typeof value === 'string'
-          ? Number(value)
-          : NaN;
-    if (!Number.isInteger(remoteId) || remoteId <= 0) return;
-
+    const remoteId = parsePositiveIntParam(route.params?.openStoryId);
+    if (remoteId === null) return;
+    const shouldFocusComments = route.params?.openStoryFocus === 'comments';
     void openStoryDetailByRemoteId(remoteId, { focusComments: shouldFocusComments });
-
     navigation.setParams({ openStoryId: undefined, openStoryFocus: undefined });
   }, [navigation, openStoryDetailByRemoteId, route.params?.openStoryFocus, route.params?.openStoryId]);
 

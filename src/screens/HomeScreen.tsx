@@ -6,7 +6,6 @@ import {
   Text,
   View,
   useWindowDimensions,
-  Image,
 } from 'react-native';
 import { useNavigation, useScrollToTop, type NavigationProp, type ParamListBase } from '@react-navigation/native';
 
@@ -17,6 +16,7 @@ import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
 import { NewsPromotionCarousel, type NewsPromotionCarouselItem } from '../components/feature/news/NewsPromotionCarousel';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { resolveHomeAccessPolicy } from '../constants/homeAccessPolicy';
+import { NEWS_DEFAULT_IMAGE } from '../constants/defaultAssets';
 import {
   fetchGuestAllBookStories,
   fetchBookStories,
@@ -30,12 +30,14 @@ import {
   fetchRecommendedMembers,
   setFollowingMember,
 } from '../services/api/memberApi';
-import { fetchNewsList, type RemoteNewsSummary } from '../services/api/newsApi';
+import { fetchNewsList } from '../services/api/newsApi';
 import { ApiError } from '../services/api/http';
 import { toKstTimeAgoLabel } from '../utils/date';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
+import { resolveApiError } from '../utils/resolveApiError';
+import { collectAllCursorPages } from '../utils/pagination';
 
 type Post = {
   id: string;
@@ -65,8 +67,6 @@ type HomePromotionItem = NewsPromotionCarouselItem & {
   newsId?: number;
 };
 
-const NEWS_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/news-default.png')).uri;
-
 const defaultPromotions: HomePromotionItem[] = [
   {
     id: 'p1',
@@ -87,17 +87,6 @@ const defaultPromotions: HomePromotionItem[] = [
     imageUri: NEWS_DEFAULT_IMAGE,
   },
 ].slice(0, 5);
-
-function resolveNewsErrorMessage(error: unknown, fallback: string): string {
-  if (!(error instanceof ApiError)) return fallback;
-
-  if (error.status === 401) return '로그인 상태를 확인해 주십시오.';
-  if (error.status === 403) return '접근 권한이 없습니다.';
-  if (error.status === 404) return '요청한 소식을 찾을 수 없습니다.';
-
-  const normalized = error.message?.trim();
-  return normalized || fallback;
-}
 
 export function HomeScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -203,25 +192,10 @@ export function HomeScreen() {
 
   const loadPromotions = useCallback(async () => {
     try {
-      const allNews: RemoteNewsSummary[] = [];
-      const seenNewsIds = new Set<number>();
-      const visitedCursors = new Set<number>();
-      let cursorId: number | undefined;
-
-      for (let page = 0; page < 100; page += 1) {
-        const response = await fetchNewsList(cursorId);
-        response.items.forEach((item) => {
-          if (seenNewsIds.has(item.id)) return;
-          seenNewsIds.add(item.id);
-          allNews.push(item);
-        });
-
-        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
-        if (visitedCursors.has(response.nextCursor)) break;
-
-        visitedCursors.add(response.nextCursor);
-        cursorId = response.nextCursor;
-      }
+      const allNews = await collectAllCursorPages({
+        fetchPage: (cursor) => fetchNewsList(cursor),
+        dedupeId: (item) => item.id,
+      });
 
       const promotions = allNews.filter((item) => item.carousel === 'PROMOTION');
       if (promotions.length === 0) {
@@ -240,7 +214,7 @@ export function HomeScreen() {
         })),
       );
     } catch (error) {
-      showToast(resolveNewsErrorMessage(error, '소식을 불러오지 못했습니다.'));
+      showToast(resolveApiError(error, { 401: '로그인 상태를 확인해 주십시오.', 403: '접근 권한이 없습니다.', 404: '요청한 소식을 찾을 수 없습니다.' }, '소식을 불러오지 못했습니다.'));
       setPromotions(defaultPromotions);
     }
   }, []);

@@ -15,6 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { inferMimeType } from '../utils/imageUpload';
 import { termsDocuments, type TermsAgreementKey } from '../constants/termsDocuments';
 import { INPUT_LIMITS } from '../constants/inputLimits';
+import { emailRegex, passwordRegex, phoneRegex, nicknameRegex } from '../constants/validation';
 import { colors, interactionOpacity, radius, spacing, typography } from '../theme';
 import { AppButton } from '../components/common/PrimaryButton';
 import { DialogOverlay } from '../components/common/DialogOverlay';
@@ -84,10 +85,6 @@ const topLogoUri = Image.resolveAssetSource(
   require('../../assets/mobile-header-logo.svg'),
 ).uri;
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[!@#$%^&*]).{6,12}$/;
-const phoneRegex = /^01(?:0|1|[6-9])-(?:\d{3}|\d{4})-\d{4}$/;
-const nicknameRegex = /^[a-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]*$/;
 const VERIFICATION_COUNTDOWN_SECONDS = 10 * 60;
 
 function formatPhoneNumberInput(value: string): string {

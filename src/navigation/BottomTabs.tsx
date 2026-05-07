@@ -1,8 +1,8 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing } from '../theme';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { HomeScreen } from '../screens/HomeScreen';
 import { StoryScreen } from '../screens/StoryScreen';
@@ -72,12 +72,6 @@ const labels = {
   news: '\uC18C\uC2DD',
   my: '\uB9C8\uC774\uD398\uC774\uC9C0',
 };
-
-const Placeholder = ({ label }: { label: string }) => (
-  <View style={styles.screen}>
-    <Text style={[typography.subhead3, styles.screenTitle]}>{label}</Text>
-  </View>
-);
 
 export default function BottomTabs() {
   const { isLoggedIn, requireAuth } = useAuthGate();
@@ -156,24 +150,7 @@ export default function BottomTabs() {
   );
 }
 
-const labelsMap: Record<string, string> = {
-  Home: labels.home,
-  Meeting: labels.meeting,
-  Story: labels.story,
-  News: labels.news,
-  My: labels.my,
-};
-
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  screenTitle: {
-    color: colors.gray6,
-  },
   tabBar: {
     backgroundColor: colors.white,
     borderTopColor: colors.background,
