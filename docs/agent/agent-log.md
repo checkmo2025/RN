@@ -1793,3 +1793,18 @@ export const interactionOpacity = {
 - `[STD-13~14]` 커서 페이지네이션 + 에러 리졸버 공통화: `src/utils/pagination.ts` (`collectAllCursorPages`) + `src/utils/resolveApiError.ts` 신규 생성; for-loop 4곳·resolve 함수 4곳 교체.
 - `[STD-15~16]` 제스처/네비 헬퍼 공통화: `src/hooks/useEdgeBackSwipe.ts` (`requireHorizontalDominance` 옵션 포함) + `navigateToHome.ts`에 `parsePositiveIntParam`·`findNavigatorWithRoute` 추가; 7개 파일 PanResponder·파라미터 파싱 보일러플레이트 제거.
 - `[STD-17]` 품질 게이트 확장: `BottomTabs.tsx` 데드코드 제거, `package.json` `lint` 스크립트 추가. `tsc --noEmit` 0 errors 확인.
+
+## 2026-05-07 | 21:19:34 KST
+
+- `docs/documents`에 표준화/아키텍처 후속 문서 6건 신규 추가.
+- 완료 처리된 `(done)` 범위를 제외하고 남은 개선 과제를 구조 기준으로 문서화.
+- 각 문서에 문제 요약, 코드 근거, 리스크, 개선 가이드, 완료 조건(DoD)까지 포함.
+
+## 작업 파일
+- `docs/documents/app-architecture-10-screen-feature-composition-boundary.md` (신규)
+- `docs/documents/app-standardization-18-domain-label-dictionary-centralization.md` (신규)
+- `docs/documents/app-standardization-19-route-param-consume-reset-hook.md` (신규)
+- `docs/documents/app-standardization-20-email-verification-flow-shared-hook.md` (신규)
+- `docs/documents/app-standardization-21-logging-observability-layer.md` (신규)
+- `docs/documents/app-standardization-22-ci-quality-gate-pipeline.md` (신규)
+- `docs/agent/agent-log.md`
