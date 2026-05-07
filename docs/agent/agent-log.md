@@ -1912,3 +1912,41 @@ export const interactionOpacity = {
 - `assets/icons/naverLogo.svg` (삭제)
 - `src/services/api/authApi.ts`
 - `docs/agent/agent-log.md`
+
+## 2026-05-07 | 22:56:46 KST
+
+- 앱 아이콘/스플래시/웹 파비콘 파일명을 `checkmo-*` 규칙으로 리네이밍하고 `app.json` 경로를 갱신함.
+- `src/constants/iconMap.ts`를 추가해 RN 내 SVG asset 경로를 단일 맵으로 중앙화하고, 화면/공통 컴포넌트의 하드코딩 `require(...svg)`를 제거함.
+- 미사용 화살표 SVG 9개(`Arrow*`)를 `assets/icons`에서 삭제하고 RN 화살표는 MaterialIcons 사용으로 통일 유지함.
+- `docs/agent/todo.md` 에셋 섹션을 최신 정책/파일명 기준으로 갱신하고 `npm run typecheck` 검증을 통과함.
+
+## 작업 파일
+- `app.json`
+- `assets/checkmo-app-icon.png` (신규)
+- `assets/checkmo-splash.png` (신규)
+- `assets/checkmo-favicon.png` (신규)
+- `assets/icon-checkmo.png` (삭제)
+- `assets/splash-icon.png` (삭제)
+- `assets/favicon-checkmo.png` (삭제)
+- `assets/icons/Arrow-Right2.svg` (삭제)
+- `assets/icons/ArrowDown.svg` (삭제)
+- `assets/icons/ArrowLeft.svg` (삭제)
+- `assets/icons/ArrowLeft2.svg` (삭제)
+- `assets/icons/ArrowRight.svg` (삭제)
+- `assets/icons/ArrowRight2.svg` (삭제)
+- `assets/icons/ArrowThickLeft.svg` (삭제)
+- `assets/icons/ArrowThickRight.svg` (삭제)
+- `assets/icons/ArrowTop.svg` (삭제)
+- `src/constants/iconMap.ts` (신규)
+- `src/navigation/BottomTabs.tsx`
+- `src/components/common/AppHeader.tsx`
+- `src/screens/AuthFlowScreen.tsx`
+- `src/screens/StoryScreen.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/components/feature/bookstory/BookStoryCard.tsx`
+- `src/screens/UserProfileScreen.tsx`
+- `src/screens/MyPageScreen.tsx`
+- `src/components/common/DefaultProfileAvatar.tsx`
+- `src/components/common/BookFlipLoadingScreen.tsx`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`

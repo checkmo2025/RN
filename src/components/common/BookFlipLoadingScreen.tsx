@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 
+import { LOGO_PRIMARY_URI } from '../../constants/iconMap';
 import { colors, motion, spacing, typography } from '../../theme';
 
 const LOGO_WIDTH = 100;
 const LOGO_HEIGHT = 60;
 
-const logoUri = Image.resolveAssetSource(require('../../../assets/icons/logo_primary.svg')).uri;
+const logoUri = LOGO_PRIMARY_URI;
 
 type Props = {
   detailTitle?: string;

@@ -25,6 +25,14 @@ import {
   type RouteProp,
 } from '@react-navigation/native';
 import { PUBLIC_ENV } from '../constants/publicEnv';
+import {
+  BOOKSTORY_COMMENT_URI,
+  BOOKSTORY_LIKE_URI,
+  MYPAGE_SETTING_OTHER_URI,
+  MYPAGE_SETTING_PROFILE_URI,
+  MYPAGE_SETTING_SERVICE_URI,
+  MYPAGE_SETTING_URI,
+} from '../constants/iconMap';
 import { termsDocumentOrder, termsDocuments } from '../constants/termsDocuments';
 import { buttonSize, colors, interactionOpacity, motion, radius, spacing, typography, scaleSize } from '../theme';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
@@ -379,30 +387,12 @@ export function MyPageScreen() {
     selectedSetting,
   });
 
-  const settingIconUri = useMemo(
-    () => Image.resolveAssetSource(require('../../assets/mypage/mypage-setting.svg')).uri,
-    [],
-  );
-  const settingProfileUri = useMemo(
-    () => Image.resolveAssetSource(require('../../assets/mypage/setting-profile.svg')).uri,
-    [],
-  );
-  const settingServiceUri = useMemo(
-    () => Image.resolveAssetSource(require('../../assets/mypage/setting-service.svg')).uri,
-    [],
-  );
-  const settingOtherUri = useMemo(
-    () => Image.resolveAssetSource(require('../../assets/mypage/setting-other.svg')).uri,
-    [],
-  );
-  const likeIconUri = useMemo(
-    () => Image.resolveAssetSource(require('../../assets/book-story/bookstory-like.svg')).uri,
-    [],
-  );
-  const commentIconUri = useMemo(
-    () => Image.resolveAssetSource(require('../../assets/book-story/bookstory-comment.svg')).uri,
-    [],
-  );
+  const settingIconUri = MYPAGE_SETTING_URI;
+  const settingProfileUri = MYPAGE_SETTING_PROFILE_URI;
+  const settingServiceUri = MYPAGE_SETTING_SERVICE_URI;
+  const settingOtherUri = MYPAGE_SETTING_OTHER_URI;
+  const likeIconUri = BOOKSTORY_LIKE_URI;
+  const commentIconUri = BOOKSTORY_COMMENT_URI;
   const mapLikedBooksToCards = useCallback((items: MemberLikedBookItem[]): BookCard[] => {
     const mapped = items.map((book, index) => {
       const normalizedIsbn = book.isbn.trim();

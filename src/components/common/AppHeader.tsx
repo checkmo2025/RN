@@ -24,6 +24,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
 import { PUBLIC_ENV } from '../../constants/publicEnv';
+import {
+  HEADER_ALARM_URI,
+  HEADER_SEARCH_URI,
+  MOBILE_HEADER_LOGO_URI,
+  PENCIL_ICON_URI,
+  SEARCH_DARK_URI,
+} from '../../constants/iconMap';
 import { colors, interactionOpacity, layers, motion, radius, scaleSize, spacing, typography } from '../../theme';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
 import { IconButton, IconName } from './IconButton';
@@ -54,21 +61,11 @@ import { showToast } from '../../utils/toast';
 import { useConsumeRouteParam } from '../../hooks/useConsumeRouteParam';
 import BookStoryFeedCard from '../feature/bookstory/BookStoryFeedCard';
 
-const logoUri = Image.resolveAssetSource(
-  require('../../../assets/mobile-header-logo.svg'),
-).uri;
-const searchUri = Image.resolveAssetSource(
-  require('../../../assets/header/header-search.svg'),
-).uri;
-const searchDarkUri = Image.resolveAssetSource(
-  require('../../../assets/icons/search.svg'),
-).uri;
-const alarmUri = Image.resolveAssetSource(
-  require('../../../assets/header/header-alarm.svg'),
-).uri;
-const writeIconUri = Image.resolveAssetSource(
-  require('../../../assets/icons/pencil_icon.svg'),
-).uri;
+const logoUri = MOBILE_HEADER_LOGO_URI;
+const searchUri = HEADER_SEARCH_URI;
+const searchDarkUri = SEARCH_DARK_URI;
+const alarmUri = HEADER_ALARM_URI;
+const writeIconUri = PENCIL_ICON_URI;
 const ALADIN_RANKING_URL = PUBLIC_ENV.ALADIN_RANKING_URL;
 const ALADIN_HOME_URL = PUBLIC_ENV.ALADIN_HOME_URL;
 

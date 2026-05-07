@@ -5,11 +5,11 @@
     "version": "1.0.0",
     "scheme": "checkmo",
     "orientation": "portrait",
-    "icon": "./assets/icon-checkmo.png",
+    "icon": "./assets/checkmo-app-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/checkmo-splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -24,7 +24,7 @@
     "android": {
       "package": "kr.co.checkmo.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon-checkmo.png",
+        "foregroundImage": "./assets/checkmo-app-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -34,7 +34,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon-checkmo.png"
+      "favicon": "./assets/checkmo-favicon.png"
     },
     "plugins": [
       [

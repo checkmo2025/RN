@@ -34,6 +34,7 @@ import { SvgUri } from 'react-native-svg';
 import * as Clipboard from 'expo-clipboard';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
+import { PENCIL_ICON_URI } from '../constants/iconMap';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import { colors, interactionOpacity, layers, radius, spacing, typography } from '../theme';
 import { navigateToHome, parsePositiveIntParam } from '../navigation/navigateToHome';
@@ -298,7 +299,7 @@ export function StoryScreen() {
   const inlineReplyInputRef = useRef<TextInput>(null);
   const commentSectionYRef = useRef(0);
   const pendingDetailFocusRef = useRef<'comments' | null>(null);
-  const writeIconUri = Image.resolveAssetSource(require('../../assets/icons/pencil_icon.svg')).uri;
+  const writeIconUri = PENCIL_ICON_URI;
   const detailTranslateX = useRef(new Animated.Value(0)).current;
 
   const animateTransition = useCallback(() => {

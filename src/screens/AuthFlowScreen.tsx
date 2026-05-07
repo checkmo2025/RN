@@ -15,6 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { inferMimeType } from '../utils/imageUpload';
 import { termsDocuments, type TermsAgreementKey } from '../constants/termsDocuments';
 import { INPUT_LIMITS } from '../constants/inputLimits';
+import { LOGO_PRIMARY_URI, MOBILE_HEADER_LOGO_URI } from '../constants/iconMap';
 import { emailRegex, passwordRegex, phoneRegex, nicknameRegex } from '../constants/validation';
 import { colors, interactionOpacity, radius, spacing, typography } from '../theme';
 import { AppButton } from '../components/common/PrimaryButton';
@@ -58,12 +59,8 @@ type LocalProfileImage = {
   mimeType?: string;
 };
 
-const logoUri = Image.resolveAssetSource(
-  require('../../assets/icons/logo_primary.svg'),
-).uri;
-const topLogoUri = Image.resolveAssetSource(
-  require('../../assets/mobile-header-logo.svg'),
-).uri;
+const logoUri = LOGO_PRIMARY_URI;
+const topLogoUri = MOBILE_HEADER_LOGO_URI;
 
 
 function formatPhoneNumberInput(value: string): string {

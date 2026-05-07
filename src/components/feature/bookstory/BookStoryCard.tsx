@@ -10,6 +10,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
+import { BOOKSTORY_COMMENT_URI } from '../../../constants/iconMap';
 import { colors, interactionOpacity, radius, spacing, typography } from '../../../theme';
 import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../../common/DefaultProfileAvatar';
@@ -32,9 +33,7 @@ type Props = {
   onPressComment?: (e?: GestureResponderEvent) => void;
 };
 
-const commentIconUri = Image.resolveAssetSource(
-  require('../../../../assets/book-story/bookstory-comment.svg'),
-).uri;
+const commentIconUri = BOOKSTORY_COMMENT_URI;
 
 export function BookStoryCard({
   author,

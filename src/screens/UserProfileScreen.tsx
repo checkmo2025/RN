@@ -20,6 +20,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
+import { BOOKSTORY_COMMENT_URI, BOOKSTORY_LIKE_URI } from '../constants/iconMap';
 import { colors, interactionOpacity, radius, spacing, typography } from '../theme';
 import { navigateToHome, findNavigatorWithRoute } from '../navigation/navigateToHome';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
@@ -87,12 +88,8 @@ type FollowUser = {
 };
 
 const tabs: TabKey[] = ['책 이야기', '서재', '모임'];
-const likeIconUri = Image.resolveAssetSource(
-  require('../../assets/book-story/bookstory-like.svg'),
-).uri;
-const commentIconUri = Image.resolveAssetSource(
-  require('../../assets/book-story/bookstory-comment.svg'),
-).uri;
+const likeIconUri = BOOKSTORY_LIKE_URI;
+const commentIconUri = BOOKSTORY_COMMENT_URI;
 const PROFILE_BACK_EDGE_WIDTH = 32;
 const PROFILE_BACK_ACTIVATE_DISTANCE = 12;
 const PROFILE_BACK_ACTIVATE_MAX_DY = 18;

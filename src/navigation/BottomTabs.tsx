@@ -1,7 +1,8 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Image, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 
+import { TAB_ICON_URIS } from '../constants/iconMap';
 import { colors, spacing } from '../theme';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { HomeScreen } from '../screens/HomeScreen';
@@ -13,53 +14,10 @@ import { useAuthGate } from '../contexts/AuthGateContext';
 
 const TAB_ICON_SIZE = 44;
 
-const iconSources = {
-  Home: {
-    focused: Image.resolveAssetSource(
-      require('../../assets/icons/after_home.svg'),
-    ).uri,
-    unfocused: Image.resolveAssetSource(
-      require('../../assets/icons/before_home.svg'),
-    ).uri,
-  },
-  Meeting: {
-    focused: Image.resolveAssetSource(
-      require('../../assets/icons/after_group.svg'),
-    ).uri,
-    unfocused: Image.resolveAssetSource(
-      require('../../assets/icons/before_group.svg'),
-    ).uri,
-  },
-  Story: {
-    focused: Image.resolveAssetSource(
-      require('../../assets/icons/after_story.svg'),
-    ).uri,
-    unfocused: Image.resolveAssetSource(
-      require('../../assets/icons/before_story.svg'),
-    ).uri,
-  },
-  News: {
-    focused: Image.resolveAssetSource(
-      require('../../assets/icons/after_news.svg'),
-    ).uri,
-    unfocused: Image.resolveAssetSource(
-      require('../../assets/icons/before_news.svg'),
-    ).uri,
-  },
-  My: {
-    focused: Image.resolveAssetSource(
-      require('../../assets/icons/after_my.svg'),
-    ).uri,
-    unfocused: Image.resolveAssetSource(
-      require('../../assets/icons/before_my.svg'),
-    ).uri,
-  },
-};
-
-const TabIcon = ({ routeName, focused }: { routeName: keyof typeof iconSources; focused: boolean }) => {
+const TabIcon = ({ routeName, focused }: { routeName: keyof typeof TAB_ICON_URIS; focused: boolean }) => {
   const uri = focused
-    ? iconSources[routeName].focused
-    : iconSources[routeName].unfocused;
+    ? TAB_ICON_URIS[routeName].focused
+    : TAB_ICON_URIS[routeName].unfocused;
   return <SvgUri uri={uri} width={TAB_ICON_SIZE} height={TAB_ICON_SIZE} />;
 };
 

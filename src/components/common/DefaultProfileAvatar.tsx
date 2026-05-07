@@ -1,9 +1,7 @@
-import { Image } from 'react-native';
 import { SvgUri } from 'react-native-svg';
+import { DEFAULT_PROFILE_IMAGE_URI } from '../../constants/iconMap';
 
-const defaultProfileImageUri = Image.resolveAssetSource(
-  require('../../../assets/mypage/image_profile1.svg'),
-).uri;
+const defaultProfileImageUri = DEFAULT_PROFILE_IMAGE_URI;
 
 type Props = {
   size: number;
@@ -12,4 +10,3 @@ type Props = {
 export function DefaultProfileAvatar({ size }: Props) {
   return <SvgUri uri={defaultProfileImageUri} width={size} height={size} />;
 }
-

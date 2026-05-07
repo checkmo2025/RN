@@ -37,6 +37,7 @@ import {
 import type { TabParamList } from '../navigation/types';
 import { SvgUri } from 'react-native-svg';
 
+import { CHAT_ICON_URI } from '../constants/iconMap';
 import { buttonSize, colors, interactionOpacity, layers, motion, radius, spacing, typography } from '../theme';
 import { navigateToHome, parsePositiveIntParam } from '../navigation/navigateToHome';
 import { useConsumeRouteParam } from '../hooks/useConsumeRouteParam';
@@ -177,9 +178,7 @@ const MEETING_TAB_DOUBLE_TAP_WINDOW_MS = 450;
 
 
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
-const chatIconUri = Image.resolveAssetSource(
-  require('../../assets/icons/Chat.svg'),
-).uri;
+const chatIconUri = CHAT_ICON_URI;
 function ClubDefaultProfileArtwork({
   variant = 'detail',
 }: {
