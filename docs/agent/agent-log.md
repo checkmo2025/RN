@@ -1693,3 +1693,18 @@ export const interactionOpacity = {
 - `src/screens/meeting/useBookshelfState.ts`
 - `to-claude-2605062036.md`
 - `docs/agent/agent-log.md`
+
+---
+
+## 2026-05-07 | 22:00:00 KST
+
+- `GroupManagementOverlay.tsx` 신규 생성: MeetingScreen.tsx의 관리 Modal(7635~8729, 1095줄)을 컴포넌트로 추출. props 계약 타입으로 고정, `PanResponderInstance` 타입 사용.
+- notice 탭 JSX 블록(6221~6619, 399줄) → `<GroupNoticeView>` 컴포넌트 교체, bookshelf 탭 JSX 블록(6621~7217, 597줄) → `<GroupBookshelfView>` 교체.
+- 미사용 파생 변수 정리: `calendarWeekdayLabels`, `currentNoticeCommentPageState`, `currentSelectedVoteOptionIds`, `totalNoticePages`, `currentNoticePage`, `visibleNotices`, `visiblePageNumbers` 제거.
+- `MeetingScreen.tsx`: 10091줄 → 8099줄 (-1992줄). `tsc --noEmit` 통과. `MEET-SPLIT-04` ✅ 완료.
+
+## 작업 파일
+- `src/screens/meeting/GroupManagementOverlay.tsx` (신규)
+- `src/screens/MeetingScreen.tsx`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
