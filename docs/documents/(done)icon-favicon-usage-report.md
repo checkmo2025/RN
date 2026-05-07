@@ -5,6 +5,13 @@
 - 대상: `assets/icons/*`, `assets/*icon*|*favicon*`, `ios AppIcon`, `android ic_launcher*`
 - 매칭 방식: 정적 문자열 검색(`/<파일명>` + 플랫폼 리소스명 fallback)
 
+## Update Note (2026-05-07)
+
+- 본 문서는 2026-04-27 스냅샷이며, 이후 에셋 정리 반영 전 기준입니다.
+- 웹 파비콘 경로는 `app.json` 기준 `assets/favicon-checkmo.png`로 변경되었고, 기존 `assets/favicon.png`는 삭제되었습니다.
+- `assets/navigation/navi-*.svg`와 `assets/write-floating.svg`는 삭제되었습니다.
+- `assets/icons/*`는 추후 유지보수를 위해 삭제하지 않고 유지합니다.
+
 ## Summary
 
 - 전체 대상 파일: **150**

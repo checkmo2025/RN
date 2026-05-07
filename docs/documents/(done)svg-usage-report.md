@@ -5,6 +5,13 @@
 - 참조 검색 대상: `src/**`, `App.tsx`, `index.ts`, `app.json`, `eas.json`, `package.json`, `tsconfig.json`
 - 매칭 기준: 코드 내 `/<파일명>.svg` 문자열
 
+## Update Note (2026-05-07)
+
+- 본 문서는 2026-04-27 스냅샷이며, 이후 에셋 정리 반영 전 기준입니다.
+- `assets/navigation/navi-*.svg` 10개와 `assets/write-floating.svg`는 현재 저장소에서 삭제되었습니다.
+- 하단 탭 아이콘은 `assets/icons/before_*.svg`, `assets/icons/after_*.svg`를 사용 중입니다.
+- `assets/icons/*`는 추후 유지보수를 위해 삭제하지 않고 유지합니다.
+
 ## Summary
 
 - 전체 SVG: **146**

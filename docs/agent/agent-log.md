@@ -1848,3 +1848,30 @@ export const interactionOpacity = {
 - `AuthFlowScreen`: 인증 상태 7개·useMemo·타이머 useEffect·두 핸들러 제거 → `useEmailVerificationFlow` 적용. `confirmEmailVerification`·`requestEmailVerification` 직접 import 제거.
 - `useAccountSettingsState`: 동일 패턴 전면 교체. `EMAIL_VERIFICATION_COUNTDOWN_SECONDS` 상수·상태 8개·useMemo·타이머 useEffect 제거. 반환 API는 기존 이름 유지(MyPageScreen 변경 없음).
 - `tsc --noEmit` 0 errors 확인.
+
+## 2026-05-07 | 22:31:24 KST
+
+- 웹 파비콘 경로를 `assets/favicon-checkmo.png`(64x64)로 교체하고 기존 `assets/favicon.png`를 삭제함.
+- 미사용 에셋 `assets/navigation/navi-*.svg` 10개와 `assets/write-floating.svg`를 삭제함.
+- `assets/icons/*`는 추후 유지보수를 위해 삭제하지 않고 유지하는 정책을 문서에 명시함.
+- 관련 문서(`docs/agent/todo.md`, `docs/documents/(done)svg-usage-report.md`, `docs/documents/(done)icon-favicon-usage-report.md`)에 최신 상태 반영.
+
+## 작업 파일
+- `app.json`
+- `assets/favicon-checkmo.png` (신규)
+- `assets/favicon.png` (삭제)
+- `assets/navigation/navi-bookstory-focus.svg` (삭제)
+- `assets/navigation/navi-bookstory-unfocus.svg` (삭제)
+- `assets/navigation/navi-home-focus.svg` (삭제)
+- `assets/navigation/navi-home-unfocus.svg` (삭제)
+- `assets/navigation/navi-moim-focus.svg` (삭제)
+- `assets/navigation/navi-moim-unfocus.svg` (삭제)
+- `assets/navigation/navi-mypage-focus.svg` (삭제)
+- `assets/navigation/navi-mypage-unfocus.svg` (삭제)
+- `assets/navigation/navi-news-focus.svg` (삭제)
+- `assets/navigation/navi-news-unfocus.svg` (삭제)
+- `assets/write-floating.svg` (삭제)
+- `docs/agent/todo.md`
+- `docs/documents/(done)svg-usage-report.md`
+- `docs/documents/(done)icon-favicon-usage-report.md`
+- `docs/agent/agent-log.md`
