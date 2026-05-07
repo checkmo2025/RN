@@ -3,7 +3,6 @@ import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
 import {
   LayoutAnimation,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   UIManager,
@@ -11,7 +10,8 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-import { colors, interactionOpacity, radius, spacing, typography } from '../../../theme';
+import { colors, radius, spacing, typography } from '../../../theme';
+import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 
 export type MyGroupSummary = {
   id: string;
@@ -55,7 +55,7 @@ export function MyGroupsDropdownCard<T extends MyGroupSummary>({
       {visibleGroups.map((group) => (
         <Pressable
           key={group.id}
-          style={({ pressed }) => [styles.row, rowStyle, pressed && styles.pressed]}
+          style={[styles.row, rowStyle]}
           onPress={() => onPressGroup?.(group)}
         >
           <Text style={[styles.name, rowTextStyle]} numberOfLines={1}>
@@ -66,7 +66,7 @@ export function MyGroupsDropdownCard<T extends MyGroupSummary>({
 
       {showToggle ? (
         <Pressable
-          style={({ pressed }) => [styles.toggleButton, pressed && styles.pressed]}
+          style={styles.toggleButton}
           onPress={() => {
             LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             setExpanded((prev) => !prev);
@@ -111,8 +111,5 @@ const styles = StyleSheet.create({
   toggleText: {
     ...typography.body2_2,
     color: colors.gray6,
-  },
-  pressed: {
-    opacity: interactionOpacity.pressed,
   },
 });

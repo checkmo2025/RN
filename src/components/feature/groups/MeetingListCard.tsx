@@ -1,9 +1,10 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-import { colors, interactionOpacity, radius, spacing, typography } from '../../../theme';
+import { colors, radius, spacing, typography } from '../../../theme';
 import { INPUT_LIMITS } from '../../../constants/inputLimits';
+import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 import { FormTextInput } from '../../common/FormTextInput';
 
 const CLUB_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../../../assets/images/club-default.png')).uri;
@@ -127,11 +128,7 @@ export function MeetingListCard({
             {(applyReason ?? '').length}/{INPUT_LIMITS.APPLY_REASON}
           </Text>
           <Pressable
-            style={({ pressed }) => [
-              styles.applySubmitButton,
-              !canSubmit ? styles.applySubmitDisabled : null,
-              pressed && canSubmit ? styles.pressed : null,
-            ]}
+            style={[styles.applySubmitButton, !canSubmit && styles.applySubmitDisabled]}
             disabled={!canSubmit}
             onPress={onSubmitApply}
           >
@@ -141,11 +138,7 @@ export function MeetingListCard({
       ) : (
         <View style={styles.actions}>
           <Pressable
-            style={({ pressed }) => [
-              styles.applyButton,
-              applicationStatus ? styles.applyButtonDisabled : null,
-              pressed && !applicationStatus ? styles.pressed : null,
-            ]}
+            style={[styles.applyButton, applicationStatus && styles.applyButtonDisabled]}
             disabled={Boolean(applicationStatus)}
             onPress={onPressApply}
           >
@@ -158,7 +151,7 @@ export function MeetingListCard({
               {applicationStatus ? '신청완료' : '가입신청하기'}
             </Text>
           </Pressable>
-          <Pressable style={({ pressed }) => [styles.visitButton, pressed && styles.pressed]} onPress={onPressVisit}>
+          <Pressable style={styles.visitButton} onPress={onPressVisit}>
             <Text style={styles.visitButtonText}>방문하기</Text>
           </Pressable>
         </View>
@@ -326,8 +319,5 @@ const styles = StyleSheet.create({
   applySubmitText: {
     ...typography.body1_2,
     color: colors.white,
-  },
-  pressed: {
-    opacity: interactionOpacity.pressed,
   },
 });

@@ -1779,3 +1779,10 @@ export const interactionOpacity = {
 - `Group` 타입에 `membershipStatus?: ClubMembershipStatus` 필드 추가 (enum 기반 도메인 판단용).
 - `helpers.ts`, `workspaceLoader.ts`에서 raw enum 저장하도록 수정.
 - `MeetingScreen.tsx` `isMember` 계산을 `=== '가입 완료되었습니다'` 문자열 비교에서 enum 비교로 전환.
+
+## 2026-05-07 | 20:06:34 KST
+
+- `[ARCH-09]` 이미지 업로드 파이프라인 공통화: `src/utils/imageUpload.ts` 생성 (`inferMimeType`, `uploadImageFromUri`, `pickAndUploadImage` 공유).
+- `MeetingScreen`, `MyPageScreen` 중복 업로드 로직 제거 후 shared util 사용으로 전환; `AuthFlowScreen` 중복 `inferMimeType` 제거.
+- `[STD-10]` 데드코드 `src/utils/input.ts` 삭제; `GroupNoticeView` 댓글 입력 raw `TextInput` → `FormTextInput` 교체.
+- `[STD-11]` `MeetingListCard`, `MyGroupsDropdownCard` raw `Pressable` → `FeedbackPressable` 교체; `HomeScreen` 미사용 `Pressable` import 제거.

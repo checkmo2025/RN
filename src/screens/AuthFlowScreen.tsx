@@ -12,7 +12,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
-
+import { inferMimeType } from '../utils/imageUpload';
 import { termsDocuments, type TermsAgreementKey } from '../constants/termsDocuments';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import { colors, interactionOpacity, radius, spacing, typography } from '../theme';
@@ -96,16 +96,6 @@ function formatPhoneNumberInput(value: string): string {
   if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
   if (digits.length <= 10) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
   return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-}
-
-function inferMimeType(fileName?: string, fallback?: string): string {
-  if (typeof fallback === 'string' && fallback.startsWith('image/')) return fallback;
-  const lower = (fileName ?? '').toLowerCase();
-  if (lower.endsWith('.png')) return 'image/png';
-  if (lower.endsWith('.webp')) return 'image/webp';
-  if (lower.endsWith('.heic')) return 'image/heic';
-  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-  return 'image/jpeg';
 }
 
 function normalizeDisplayImageUri(uri?: string): string | undefined {

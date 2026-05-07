@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
-import { Image, Text, TextInput, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import type { GestureResponderEvent } from 'react-native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../theme';
 import { DefaultProfileAvatar } from '../../components/common/DefaultProfileAvatar';
 import { FeedbackPressable as Pressable } from '../../components/common/FeedbackPressable';
+import { FormTextInput } from '../../components/common/FormTextInput';
 import { styles } from './meetingStyles';
 import {
   formatAverageRating,
@@ -392,7 +393,7 @@ export function GroupNoticeView({
         <View style={styles.noticeCommentSection}>
           <Text style={styles.noticeCommentHeader}>댓글</Text>
           <View style={styles.noticeCommentInputRow}>
-            <TextInput
+            <FormTextInput
               value={noticeCommentInput}
               onChangeText={setNoticeCommentInput}
               placeholder="댓글 내용"

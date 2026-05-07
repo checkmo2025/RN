@@ -35,7 +35,6 @@ import {
   type RouteProp,
 } from '@react-navigation/native';
 import type { TabParamList } from '../navigation/types';
-import * as ImagePicker from 'expo-image-picker';
 import { SvgUri } from 'react-native-svg';
 
 import { buttonSize, colors, interactionOpacity, layers, motion, radius, spacing, typography } from '../theme';
@@ -68,6 +67,7 @@ import {
 import { fetchMyProfile } from '../services/api/memberApi';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { showToast } from '../utils/toast';
+import { pickAndUploadImage as pickAndUploadImageUtil } from '../utils/imageUpload';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import {
@@ -79,7 +79,6 @@ import {
   formatGenerationLabel,
   formatRegularGroupLabel,
   getTeamManageTargetKey,
-  inferMimeType,
   parseDotDate,
   parseGenerationNumber,
   sanitizeGenerationInput,
@@ -208,45 +207,11 @@ async function waitForMinimumLoading(startedAt: number, minimumMs = MIN_BOOK_FLI
 }
 
 
-async function pickAndUploadImage(type: 'CLUB' | 'NOTICE'): Promise<string | null> {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    showToast('사진 접근 권한이 필요합니다.');
-    return null;
-  }
-
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
-    allowsEditing: true,
-    quality: 0.9,
-  });
-
-  if (result.canceled || !result.assets?.length) return null;
-  const asset = result.assets[0];
-  const fileName = asset.fileName ?? `${type.toLowerCase()}_${Date.now()}.jpg`;
-  const contentType = inferMimeType(fileName, asset.mimeType);
-  const uploadMeta = await issueImageUploadUrl(type, fileName, contentType);
-  if (!uploadMeta?.presignedUrl || !uploadMeta.imageUrl) {
-    showToast('이미지 업로드 준비에 실패했습니다.');
-    return null;
-  }
-
-  const fileResponse = await fetch(asset.uri);
-  const blob = await fileResponse.blob();
-  const uploadResponse = await fetch(uploadMeta.presignedUrl, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': contentType,
-    },
-    body: blob,
-  });
-
-  if (!uploadResponse.ok) {
-    showToast('이미지 업로드에 실패했습니다.');
-    return null;
-  }
-
-  return uploadMeta.imageUrl;
+function pickAndUploadImage(type: 'CLUB' | 'NOTICE'): Promise<string | null> {
+  return pickAndUploadImageUtil(
+    (fileName, contentType) => issueImageUploadUrl(type, fileName, contentType),
+    type.toLowerCase(),
+  );
 }
 
 

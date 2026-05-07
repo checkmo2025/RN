@@ -24,8 +24,6 @@ import {
   type ParamListBase,
   type RouteProp,
 } from '@react-navigation/native';
-import * as ImagePicker from 'expo-image-picker';
-
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import { termsDocumentOrder, termsDocuments } from '../constants/termsDocuments';
 import { buttonSize, colors, interactionOpacity, motion, radius, spacing, typography, scaleSize } from '../theme';
@@ -80,6 +78,7 @@ import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { formatNotificationText, resolveNotificationTarget } from '../utils/notification';
 import { showToast } from '../utils/toast';
+import { pickAndUploadImage } from '../utils/imageUpload';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 
@@ -261,16 +260,6 @@ type GroupMenuState = {
 
 function normalizeImageUrl(url?: string): string | undefined {
   return normalizeRemoteImageUrl(url);
-}
-
-function inferMimeType(fileName?: string, fallback?: string): string {
-  if (typeof fallback === 'string' && fallback.startsWith('image/')) return fallback;
-  const lower = (fileName ?? '').toLowerCase();
-  if (lower.endsWith('.png')) return 'image/png';
-  if (lower.endsWith('.webp')) return 'image/webp';
-  if (lower.endsWith('.heic')) return 'image/heic';
-  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-  return 'image/jpeg';
 }
 
 function toDateLabel(value?: string): string {
@@ -970,48 +959,11 @@ export function MyPageScreen() {
     if (uploadingProfileImage) return;
 
     const submit = async () => {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        showToast('사진 접근 권한이 필요합니다.');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        quality: 0.9,
-      });
-
-      if (result.canceled || !result.assets?.length) return;
-      const asset = result.assets[0];
-      const fileName = asset.fileName ?? `profile_${Date.now()}.jpg`;
-      const contentType = inferMimeType(fileName, asset.mimeType);
-
       setUploadingProfileImage(true);
       try {
-        const uploadMeta = await issueProfileImageUploadUrl(fileName, contentType);
-        if (!uploadMeta?.presignedUrl || !uploadMeta.imageUrl) {
-          showToast('이미지 업로드 준비에 실패했습니다.');
-          return;
-        }
-
-        const fileResponse = await fetch(asset.uri);
-        const blob = await fileResponse.blob();
-
-        const uploadResponse = await fetch(uploadMeta.presignedUrl, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': contentType,
-          },
-          body: blob,
-        });
-
-        if (!uploadResponse.ok) {
-          showToast('이미지 업로드에 실패했습니다.');
-          return;
-        }
-
-        setProfileEditImageUrl(uploadMeta.imageUrl);
+        const imageUrl = await pickAndUploadImage(issueProfileImageUploadUrl, 'profile');
+        if (!imageUrl) return;
+        setProfileEditImageUrl(imageUrl);
         setProfileEditUseDefaultAvatar(false);
         showToast('프로필 이미지를 적용했습니다.');
       } catch (error) {
