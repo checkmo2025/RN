@@ -283,12 +283,12 @@ export function AppHeader(props: Props) {
   const handleToggleBookLike = useCallback(
     (book: BookItem) => {
       if (!isLoggedIn) {
-        requireAuth(() => executeBookLikeToggle(book));
+        showToast('로그인이 필요합니다.');
         return;
       }
       executeBookLikeToggle(book);
     },
-    [isLoggedIn, requireAuth, executeBookLikeToggle],
+    [isLoggedIn, executeBookLikeToggle],
   );
 
   const hideDropdownImmediately = useCallback(() => {

@@ -2009,3 +2009,13 @@ export const interactionOpacity = {
 - `docs/documents/(done)app-standardization-20-email-verification-flow-shared-hook.md`
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
+- 검색 드롭다운에서 책 좋아요 누를 때 로그인 화면과 검색 오버레이가 겹치는 문제 수정.
+- `handleToggleBookLike`: 비로그인 시 `requireAuth` 네비게이션 → 토스트('로그인이 필요합니다.') 예외 처리로 변경.
+- `tsc --noEmit` 통과.
+
+## 작업 파일
+- `src/components/common/AppHeader.tsx`
+- `docs/agent/agent-log.md`
