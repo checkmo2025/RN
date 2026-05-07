@@ -34,6 +34,7 @@ import {
 } from '../services/api/authApi';
 import { ApiError } from '../services/api/http';
 import { showToast } from '../utils/toast';
+import { CATEGORY_OPTIONS } from '../constants/domain/category';
 
 type Step =
   | 'login'
@@ -50,26 +51,6 @@ type Step =
 type Props = {
   onClose?: () => void;
   onLoginSuccess?: () => void;
-};
-
-type CategoryOption = {
-  label: string;
-  code:
-    | 'FICTION_POETRY_DRAMA'
-    | 'ESSAY'
-    | 'HUMANITIES'
-    | 'SOCIAL_SCIENCE'
-    | 'POLITICS_DIPLOMACY_DEFENSE'
-    | 'ECONOMY_MANAGEMENT'
-    | 'SELF_DEVELOPMENT'
-    | 'HISTORY_CULTURE'
-    | 'SCIENCE'
-    | 'COMPUTER_IT'
-    | 'ART_POP_CULTURE'
-    | 'TRAVEL'
-    | 'FOREIGN_LANGUAGE'
-    | 'CHILDREN_BOOKS'
-    | 'RELIGION_PHILOSOPHY';
 };
 
 type LocalProfileImage = {
@@ -103,23 +84,6 @@ function normalizeDisplayImageUri(uri?: string): string | undefined {
   return trimmed;
 }
 
-const categories: CategoryOption[] = [
-  { label: '소설/시/희곡', code: 'FICTION_POETRY_DRAMA' },
-  { label: '에세이', code: 'ESSAY' },
-  { label: '인문학', code: 'HUMANITIES' },
-  { label: '사회과학', code: 'SOCIAL_SCIENCE' },
-  { label: '정치/외교/국방', code: 'POLITICS_DIPLOMACY_DEFENSE' },
-  { label: '경제/경영', code: 'ECONOMY_MANAGEMENT' },
-  { label: '자기계발', code: 'SELF_DEVELOPMENT' },
-  { label: '역사/문화', code: 'HISTORY_CULTURE' },
-  { label: '과학', code: 'SCIENCE' },
-  { label: '컴퓨터/IT', code: 'COMPUTER_IT' },
-  { label: '예술/대중문화', code: 'ART_POP_CULTURE' },
-  { label: '여행', code: 'TRAVEL' },
-  { label: '외국어', code: 'FOREIGN_LANGUAGE' },
-  { label: '어린이/청소년', code: 'CHILDREN_BOOKS' },
-  { label: '종교/철학', code: 'RELIGION_PHILOSOPHY' },
-];
 
 const defaultProfilePalette = [
   colors.subbrown3,
@@ -1162,7 +1126,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
         <Text style={styles.label}>관심 카테고리 (최소 1개, 최대 6개 선택)</Text>
         <View style={styles.chipGrid}>
-          {categories.map((category) => {
+          {CATEGORY_OPTIONS.map((category) => {
             const active = selectedCategories.includes(category.code);
             return (
               <Pressable

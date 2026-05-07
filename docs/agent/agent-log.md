@@ -1826,3 +1826,10 @@ export const interactionOpacity = {
 - `MyPageScreen` 알림 도메인(state 5개·함수 6개) + 계정설정 도메인(state 20개·함수 8개·timer effect) 추출, 3567 → 3059줄(-508줄).
 - StoryScreen(compose/feed/detail 간 cross-setter 결합 과다)·AuthFlowScreen(선형 step machine)은 분리 시 복잡도 증가로 스킵 판단.
 - `tsc --noEmit` 0 errors 확인.
+
+## 2026-05-07 | 22:15:00 KST
+
+- `[STD-18]` 도메인 레이블 딕셔너리 중앙화: `src/constants/domain/category.ts` + `participant.ts` 신규 생성.
+- `MyPageScreen`·`UserProfileScreen`·`AuthFlowScreen`·`meeting/helpers.ts`·`MeetingScreen`·`useManagementState.ts` 6개 파일에서 인라인 Record(카테고리 15종·참가자 6종) 제거.
+- `CATEGORY_CODE_TO_LABEL` / `CATEGORY_CHIP_COLOR` / `CATEGORY_LABEL_TO_CODE` / `PARTICIPANT_CODE_TO_LABEL` / `PARTICIPANT_LABEL_TO_CODE` 중앙 상수로 전환.
+- `tsc --noEmit` 0 errors 확인.

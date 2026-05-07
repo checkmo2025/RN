@@ -64,6 +64,8 @@ import {
   type ClubParticipantTypeCode,
   type ClubSearchOutputFilter,
 } from '../services/api/clubApi';
+import { CATEGORY_LABEL_TO_CODE } from '../constants/domain/category';
+import { PARTICIPANT_LABEL_TO_CODE } from '../constants/domain/participant';
 import { fetchMyProfile } from '../services/api/memberApi';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { showToast } from '../utils/toast';
@@ -828,34 +830,6 @@ export function MeetingScreen() {
   );
 }
 
-
-
-const categoryCodeByLabel: Record<string, ClubCategoryCode> = {
-  '소설/시/희곡': 'FICTION_POETRY_DRAMA',
-  '에세이': 'ESSAY',
-  '인문학': 'HUMANITIES',
-  '사회과학': 'SOCIAL_SCIENCE',
-  '정치/외교/국방': 'POLITICS_DIPLOMACY_DEFENSE',
-  '경제/경영': 'ECONOMY_MANAGEMENT',
-  '자기계발': 'SELF_DEVELOPMENT',
-  '역사/문화': 'HISTORY_CULTURE',
-  '과학': 'SCIENCE',
-  '컴퓨터/IT': 'COMPUTER_IT',
-  '예술/대중문화': 'ART_POP_CULTURE',
-  '여행': 'TRAVEL',
-  '외국어': 'FOREIGN_LANGUAGE',
-  '어린이/청소년': 'CHILDREN_BOOKS',
-  '종교/철학': 'RELIGION_PHILOSOPHY',
-};
-
-const participantCodeByLabel: Record<string, ClubParticipantTypeCode> = {
-  '대학생': 'STUDENT',
-  '직장인': 'WORKER',
-  '온라인': 'ONLINE',
-  '동아리': 'CLUB',
-  '모임': 'MEETING',
-  '오프라인': 'OFFLINE',
-};
 
 
 
@@ -3044,10 +3018,10 @@ function MeetingCreateFlow({
   const [creating, setCreating] = useState(false);
 
   const categoryOptions = useMemo(
-    () => Object.keys(categoryCodeByLabel),
+    () => Object.keys(CATEGORY_LABEL_TO_CODE),
     [],
   );
-  const targetOptions = useMemo(() => Object.keys(participantCodeByLabel), []);
+  const targetOptions = useMemo(() => Object.keys(PARTICIPANT_LABEL_TO_CODE), []);
 
   const canNext =
     step === 1
@@ -3145,11 +3119,11 @@ function MeetingCreateFlow({
     if (creating) return;
 
     const categoryCodes = categories
-      .map((label) => categoryCodeByLabel[label])
+      .map((label) => CATEGORY_LABEL_TO_CODE[label])
       .filter((code): code is ClubCategoryCode => Boolean(code));
 
     const participantCodes = targets
-      .map((label) => participantCodeByLabel[label])
+      .map((label) => PARTICIPANT_LABEL_TO_CODE[label])
       .filter((code): code is ClubParticipantTypeCode => Boolean(code));
 
     if (categoryCodes.length === 0 || participantCodes.length === 0) {

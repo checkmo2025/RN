@@ -14,6 +14,8 @@ import {
   type ClubCategoryCode,
   type ClubParticipantTypeCode,
 } from '../../services/api/clubApi';
+import { CATEGORY_LABEL_TO_CODE } from '../../constants/domain/category';
+import { PARTICIPANT_LABEL_TO_CODE } from '../../constants/domain/participant';
 import { showToast } from '../../utils/toast';
 import { motion } from '../../theme';
 import type {
@@ -37,32 +39,6 @@ import {
   toOpenableContactLink,
 } from './formatters';
 
-const categoryCodeByLabel: Record<string, ClubCategoryCode> = {
-  '소설/시/희곡': 'FICTION_POETRY_DRAMA',
-  '에세이': 'ESSAY',
-  '인문학': 'HUMANITIES',
-  '사회과학': 'SOCIAL_SCIENCE',
-  '정치/외교/국방': 'POLITICS_DIPLOMACY_DEFENSE',
-  '경제/경영': 'ECONOMY_MANAGEMENT',
-  '자기계발': 'SELF_DEVELOPMENT',
-  '역사/문화': 'HISTORY_CULTURE',
-  '과학': 'SCIENCE',
-  '컴퓨터/IT': 'COMPUTER_IT',
-  '예술/대중문화': 'ART_POP_CULTURE',
-  '여행': 'TRAVEL',
-  '외국어': 'FOREIGN_LANGUAGE',
-  '어린이/청소년': 'CHILDREN_BOOKS',
-  '종교/철학': 'RELIGION_PHILOSOPHY',
-};
-
-const participantCodeByLabel: Record<string, ClubParticipantTypeCode> = {
-  '대학생': 'STUDENT',
-  '직장인': 'WORKER',
-  '온라인': 'ONLINE',
-  '동아리': 'CLUB',
-  '모임': 'MEETING',
-  '오프라인': 'OFFLINE',
-};
 
 const MGMT_SHEET_DRAG_START = 6;
 const MGMT_SHEET_DISMISS_DISTANCE = 100;
@@ -398,10 +374,10 @@ export function useManagementState({
           description,
           region,
           category: tags
-            .map((tag) => categoryCodeByLabel[tag])
+            .map((tag) => CATEGORY_LABEL_TO_CODE[tag])
             .filter((tag): tag is ClubCategoryCode => Boolean(tag)),
           participantTypes: targets
-            .map((target) => participantCodeByLabel[target])
+            .map((target) => PARTICIPANT_LABEL_TO_CODE[target])
             .filter((target): target is ClubParticipantTypeCode => Boolean(target)),
           open: !editDraft.isPrivate,
           profileImageUrl: editDraft.imageUrl || undefined,

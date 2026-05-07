@@ -34,7 +34,8 @@ import { useEdgeBackSwipe } from '../hooks/useEdgeBackSwipe';
 import { showToast } from '../utils/toast';
 import { ApiError } from '../services/api/http';
 import { fetchAllMemberLikedBooks, type MemberLikedBookItem } from '../services/api/bookApi';
-import { fetchMemberClubs } from '../services/api/clubApi';
+import { fetchMemberClubs, type ClubCategoryCode } from '../services/api/clubApi';
+import { CATEGORY_CODE_TO_LABEL } from '../constants/domain/category';
 import {
   fetchMemberFollowers,
   fetchMemberFollowings,
@@ -97,23 +98,6 @@ const PROFILE_BACK_ACTIVATE_DISTANCE = 12;
 const PROFILE_BACK_ACTIVATE_MAX_DY = 18;
 const PROFILE_BACK_TRIGGER_DISTANCE = 96;
 const PROFILE_BACK_TRIGGER_MAX_DY = 72;
-const categoryLabelByCode: Record<string, string> = {
-  FICTION_POETRY_DRAMA: '소설/시/희곡',
-  ESSAY: '에세이',
-  HUMANITIES: '인문학',
-  SOCIAL_SCIENCE: '사회과학',
-  POLITICS_DIPLOMACY_DEFENSE: '정치/외교/국방',
-  ECONOMY_MANAGEMENT: '경제/경영',
-  SELF_DEVELOPMENT: '자기계발',
-  HISTORY_CULTURE: '역사/문화',
-  SCIENCE: '과학',
-  COMPUTER_IT: '컴퓨터/IT',
-  ART_POP_CULTURE: '예술/대중문화',
-  TRAVEL: '여행',
-  FOREIGN_LANGUAGE: '외국어',
-  CHILDREN_BOOKS: '어린이/청소년',
-  RELIGION_PHILOSOPHY: '종교/철학',
-};
 
 function mapRemoteStoryToCard(item: RemoteStoryItem): StoryCard {
   return {
@@ -433,7 +417,7 @@ export function UserProfileScreen() {
     '소개글이 없습니다.';
   const profileCategories = useMemo(
     () =>
-      (profile?.categories ?? []).map((code) => categoryLabelByCode[code] ?? code),
+      (profile?.categories ?? []).map((code) => CATEGORY_CODE_TO_LABEL[code as ClubCategoryCode] ?? code),
     [profile?.categories],
   );
   const followerCount = profile?.followerCount ?? followerUsers.length;

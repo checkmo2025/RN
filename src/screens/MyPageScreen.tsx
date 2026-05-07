@@ -43,7 +43,8 @@ import {
   type MemberLikedBookItem,
 } from '../services/api/bookApi';
 import { fetchMyBookStories } from '../services/api/bookStoryApi';
-import { fetchMyClubs, leaveClub } from '../services/api/clubApi';
+import { fetchMyClubs, leaveClub, type ClubCategoryCode } from '../services/api/clubApi';
+import { CATEGORY_CODE_TO_LABEL, CATEGORY_CHIP_COLOR } from '../constants/domain/category';
 import {
   deleteFollowerMember,
   fetchMyFollowCount,
@@ -118,24 +119,6 @@ type FollowUser = {
   following: boolean;
 };
 
-const categoryLabelByCode: Record<string, string> = {
-  FICTION_POETRY_DRAMA: '소설/시/희곡',
-  ESSAY: '에세이',
-  HUMANITIES: '인문학',
-  SOCIAL_SCIENCE: '사회과학',
-  POLITICS_DIPLOMACY_DEFENSE: '정치/외교/국방',
-  ECONOMY_MANAGEMENT: '경제/경영',
-  SELF_DEVELOPMENT: '자기계발',
-  HISTORY_CULTURE: '역사/문화',
-  SCIENCE: '과학',
-  COMPUTER_IT: '컴퓨터/IT',
-  ART_POP_CULTURE: '예술/대중문화',
-  TRAVEL: '여행',
-  FOREIGN_LANGUAGE: '외국어',
-  CHILDREN_BOOKS: '어린이/청소년',
-  RELIGION_PHILOSOPHY: '종교/철학',
-};
-
 const profileEditCategoryOrder = [
   'TRAVEL',
   'FOREIGN_LANGUAGE',
@@ -154,23 +137,6 @@ const profileEditCategoryOrder = [
   'ART_POP_CULTURE',
 ] as const;
 
-const categoryChipColorByCode: Record<string, string> = {
-  TRAVEL: colors.secondary2,
-  FOREIGN_LANGUAGE: colors.secondary2,
-  CHILDREN_BOOKS: colors.secondary2,
-  RELIGION_PHILOSOPHY: colors.secondary2,
-  FICTION_POETRY_DRAMA: colors.secondary1,
-  ESSAY: colors.secondary1,
-  HUMANITIES: colors.secondary1,
-  SCIENCE: colors.secondary3,
-  COMPUTER_IT: colors.secondary3,
-  ECONOMY_MANAGEMENT: colors.secondary3,
-  SELF_DEVELOPMENT: colors.secondary3,
-  SOCIAL_SCIENCE: colors.secondary4,
-  POLITICS_DIPLOMACY_DEFENSE: colors.secondary4,
-  HISTORY_CULTURE: colors.secondary4,
-  ART_POP_CULTURE: colors.secondary4,
-};
 
 const defaultProfilePalette = [
   colors.subbrown3,
@@ -520,7 +486,7 @@ export function MyPageScreen() {
         setProfileCategoryCodes(profile.categories);
         setProfileCategories(
           profile.categories
-            .map((code) => categoryLabelByCode[code] ?? code)
+            .map((code) => CATEGORY_CODE_TO_LABEL[code as ClubCategoryCode] ?? code)
             .filter((label) => label.length > 0),
         );
       } else {
@@ -741,7 +707,7 @@ export function MyPageScreen() {
         setProfileCategoryCodes(nextCategoryCodes);
         setProfileCategories(
           nextCategoryCodes
-            .map((code) => categoryLabelByCode[code] ?? code)
+            .map((code) => CATEGORY_CODE_TO_LABEL[code as ClubCategoryCode] ?? code)
             .filter((label) => label.length > 0),
         );
         if (profileEditUseDefaultAvatar) {
@@ -1539,7 +1505,7 @@ export function MyPageScreen() {
             <View style={styles.categoryPickerWrap}>
               {profileEditCategoryOrder.map((code) => {
                 const selected = selectedCategorySet.has(code);
-                const color = categoryChipColorByCode[code] ?? colors.secondary3;
+                const color = CATEGORY_CHIP_COLOR[code as ClubCategoryCode] ?? colors.secondary3;
                 return (
                   <Pressable
                     key={code}
@@ -1557,7 +1523,7 @@ export function MyPageScreen() {
                         selected ? null : styles.categoryChipTextUnselected,
                       ]}
                     >
-                      {categoryLabelByCode[code] ?? code}
+                      {CATEGORY_CODE_TO_LABEL[code as ClubCategoryCode] ?? code}
                     </Text>
                   </Pressable>
                 );

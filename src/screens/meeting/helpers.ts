@@ -3,6 +3,7 @@ import type {
   ClubBookshelfDetail,
   ClubBookshelfReview,
   ClubBookshelfTopic,
+  ClubCategoryCode,
   ClubDetailResult,
   ClubManagedMember,
   ClubMeetingChatHistory,
@@ -13,9 +14,12 @@ import type {
   ClubNoticeComment,
   ClubNoticeDetail,
   ClubNoticePreview,
+  ClubParticipantTypeCode,
   ClubSearchItem,
   ClubSearchOutputFilter,
 } from '../../services/api/clubApi';
+import { CATEGORY_CODE_TO_LABEL } from '../../constants/domain/category';
+import { PARTICIPANT_CODE_TO_LABEL } from '../../constants/domain/participant';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { BOOK_DEFAULT_IMAGE } from '../../constants/defaultAssets';
 import { normalizeRemoteImageUrl } from '../../utils/image';
@@ -50,32 +54,6 @@ import type {
 } from './types';
 
 
-const categoryLabelByCode: Record<string, string> = {
-  FICTION_POETRY_DRAMA: '소설/시/희곡',
-  ESSAY: '에세이',
-  HUMANITIES: '인문학',
-  SOCIAL_SCIENCE: '사회과학',
-  POLITICS_DIPLOMACY_DEFENSE: '정치/외교/국방',
-  ECONOMY_MANAGEMENT: '경제/경영',
-  SELF_DEVELOPMENT: '자기계발',
-  HISTORY_CULTURE: '역사/문화',
-  SCIENCE: '과학',
-  COMPUTER_IT: '컴퓨터/IT',
-  ART_POP_CULTURE: '예술/대중문화',
-  TRAVEL: '여행',
-  FOREIGN_LANGUAGE: '외국어',
-  CHILDREN_BOOKS: '어린이/청소년',
-  RELIGION_PHILOSOPHY: '종교/철학',
-};
-
-const participantLabelByCode: Record<string, string> = {
-  STUDENT: '대학생',
-  WORKER: '직장인',
-  ONLINE: '온라인',
-  CLUB: '동아리',
-  MEETING: '모임',
-  OFFLINE: '오프라인',
-};
 
 const clubHomeTagToneByLabel: Record<string, 'amber' | 'coral' | 'sky' | 'violet'> = {
   여행: 'amber',
@@ -166,8 +144,8 @@ export function logMeetingAction(key: string, payload?: Record<string, unknown>)
 }
 
 export function mapManagedClubDetailToGroup(detail: ClubDetailResult, prev: Group): Group {
-  const tags = toLabelList(detail.category, categoryLabelByCode).slice(0, 6);
-  const participants = toLabelList(detail.participantTypes, participantLabelByCode);
+  const tags = toLabelList(detail.category, CATEGORY_CODE_TO_LABEL).slice(0, 6);
+  const participants = toLabelList(detail.participantTypes, PARTICIPANT_CODE_TO_LABEL);
   const links = normalizeClubContacts(detail.links);
   const region =
     typeof detail.region === 'string' && detail.region.trim().length > 0
@@ -656,8 +634,8 @@ export function mapSearchClubToGroup(item: ClubSearchItem): Group {
     rawItem.club && typeof rawItem.club === 'object' ? rawItem.club : rawItem;
   const club = (clubCandidate as ClubDetailResult) ?? {};
   const clubId = typeof club.clubId === 'number' ? club.clubId : undefined;
-  const tags = toLabelList(club.category, categoryLabelByCode).slice(0, 6);
-  const participants = toLabelList(club.participantTypes, participantLabelByCode);
+  const tags = toLabelList(club.category, CATEGORY_CODE_TO_LABEL).slice(0, 6);
+  const participants = toLabelList(club.participantTypes, PARTICIPANT_CODE_TO_LABEL);
   const regionText =
     typeof club.region === 'string' && club.region.trim().length > 0
       ? club.region.trim()
