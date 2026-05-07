@@ -1,4 +1,7 @@
 import type { MaterialIcons } from '@expo/vector-icons';
+import { createLogger } from '../../utils/logger';
+
+const meetingLog = createLogger('meeting');
 import type {
   ClubBookshelfDetail,
   ClubBookshelfReview,
@@ -135,12 +138,11 @@ export function toEditDraft(group: Group): GroupEditDraft {
 }
 
 export function logMeetingAction(key: string, payload?: Record<string, unknown>) {
-  if (!__DEV__) return;
   if (payload) {
-    console.info(`[meeting] ${key}`, payload);
-    return;
+    meetingLog.info(key, payload);
+  } else {
+    meetingLog.info(key);
   }
-  console.info(`[meeting] ${key}`);
 }
 
 export function mapManagedClubDetailToGroup(detail: ClubDetailResult, prev: Group): Group {

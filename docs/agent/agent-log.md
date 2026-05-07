@@ -1760,6 +1760,14 @@ export const interactionOpacity = {
 - `workspaceLoader.ts` 신규: `fetchAllClubBookshelvesWithCursor` + `fetchClubWorkspaceData`(공지 다중 페이지, 병렬 fetch, 권한 분기) 추출.
 - `MeetingScreen.tsx` 중복 정의 제거 및 hook 연결. 3988→3665줄(-323줄). `tsc --noEmit` 통과.
 
+## 2026-05-08 | 00:30:00 KST
+
+- `[STD-21]` 로깅/관측 레이어 통일 완료.
+- `src/utils/logger.ts` 신규: `createLogger(domain)` — 레벨별(`debug/info/warn/error`) + `__DEV__` 게이트 + 도메인 prefix.
+- `useMeetingChatStomp.ts` 직접 `console.*` 11건 → `chatLog`/`stompLog` 교체.
+- `helpers.ts` `logMeetingAction` 내 `console.info` 2건 → `meetingLog.info` 교체.
+- 도메인 코드 `console.*` 직접 호출 0건. `tsc --noEmit` 통과.
+
 ## 2026-05-07 | 19:21:03 KST
 
 - `[ARCH-04]` 완료 확인 및 문서 처리 — `useMeetingDiscover.ts`, `workspaceLoader.ts` 분리 기완료.
