@@ -1735,3 +1735,16 @@ export const interactionOpacity = {
 ## 작업 파일
 - `to-claude-2605072230.md` (신규)
 - `docs/agent/agent-log.md`
+
+---
+
+## 2026-05-07 | 23:00:00 KST
+
+- 중복 타입/함수 정의 781줄 제거: `./meeting/types`, `./meeting/helpers`에서 import로 교체.
+- 미사용 API import 정리: clubApi 대폭 축소(35→20항목), bookApi 전체 제거, useMeetingChatStomp/date utils/memberApi 일부 제거.
+- `tsc --noEmit` 통과. MeetingScreen.tsx: 10091줄 → 3988줄 (원본 대비 -60%). `MEET-SPLIT-05` ✅ 완료.
+
+## 작업 파일
+- `src/screens/MeetingScreen.tsx`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`

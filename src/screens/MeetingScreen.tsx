@@ -39,7 +39,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { SvgUri } from 'react-native-svg';
 
 import { buttonSize, colors, interactionOpacity, layers, motion, radius, spacing, typography } from '../theme';
-import { useMeetingChatStomp } from '../hooks/useMeetingChatStomp';
 import { navigateToHome } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
@@ -58,78 +57,26 @@ import { issueImageUploadUrl } from '../services/api/authApi';
 import {
   checkClubNameDuplicate,
   createClub,
-  createClubBookshelf,
-  createClubBookshelfReview,
-  createClubBookshelfTopic,
-  createClubNotice,
-  createClubNoticeComment,
-  deleteClub,
-  deleteClubBookshelf,
-  deleteClubBookshelfReview,
-  deleteClubBookshelfTopic,
-  deleteClubNoticeComment,
-  deleteClubNotice,
-  type ClubBookshelfDetail,
   type ClubBookshelfItem,
-  type ClubBookshelfReview,
-  type ClubBookshelfTopic,
-  fetchClubBookshelfDetail,
-  fetchClubBookshelfEditInfo,
-  fetchClubBookshelfReviews,
-  fetchClubBookshelfTopics,
   fetchClubBookshelves,
   fetchClubDetail,
   fetchRecommendedClubs,
   fetchClubHome,
   fetchClubLatestNotice,
-  fetchClubMeeting,
-  fetchClubMeetingMembers,
-  fetchClubMeetingTeamChatMessages,
   fetchClubMyMembership,
-  fetchClubNextMeetingRedirect,
-  fetchClubMeetingTeamTopics,
   fetchClubMembers,
-  fetchClubNoticeComments,
-  fetchClubNoticeDetail,
   fetchClubNotices,
   fetchMyClubs,
   joinClub,
-  manageClubMeetingTeams,
   searchClubs,
-  submitClubNoticeVote,
-  updateClub,
-  updateClubBookshelf,
-  updateClubBookshelfReview,
-  updateClubBookshelfTopic,
-  updateClubMemberStatus,
-  updateClubNoticeComment,
-  updateClubNotice,
   type ClubDetailResult,
   type ClubCategoryCode,
-  type ClubContact,
-  type ClubManagedMember,
-  type ClubMeetingChatHistory,
-  type ClubMeetingChatMessage,
-  type ClubMeetingInfo,
-  type ClubMeetingMemberList,
-  type ClubMeetingTeamTopics,
-  type ClubMembershipStatus,
-  type ClubNoticeComment,
-  type ClubNoticeDetail,
-  type ClubNoticePreview,
   type ClubParticipantTypeCode,
   type ClubSearchInputFilter,
   type ClubSearchItem,
   type ClubSearchOutputFilter,
 } from '../services/api/clubApi';
-import { searchBooks, type BookItem } from '../services/api/bookApi';
-import { fetchMyProfile, reportMember, type MemberReportType } from '../services/api/memberApi';
-import {
-  getCurrentKstApiDateTime,
-  getCurrentKstDateLabel,
-  getCurrentKstYearMonth,
-  parseApiDateMillis,
-} from '../utils/date';
+import { fetchMyProfile } from '../services/api/memberApi';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
@@ -168,22 +115,71 @@ import { GroupManagementOverlay } from './meeting/GroupManagementOverlay';
 import { useNoticeState } from './meeting/useNoticeState';
 import { useBookshelfState } from './meeting/useBookshelfState';
 import { useManagementState } from './meeting/useManagementState';
+import type {
+  Group,
+  CreateStep,
+  NoticeTag,
+  NoticeBookshelfAttachment,
+  NoticeItem,
+  NoticeComment,
+  CursorPageState,
+  BookshelfItem,
+  BookshelfDetailTab,
+  BookshelfViewMode,
+  BookshelfPostItem,
+  NoticeCommentMenuState,
+  BookshelfPostMenuState,
+  RegularGroupPostItem,
+  RegularGroupMemberItem,
+  RegularGroupChatMessage,
+  RegularMeetingGroupItem,
+  RegularMeetingInfo,
+  TeamManageMemberItem,
+  TeamManageTeamItem,
+  GroupManagementScreen,
+  GroupJoinRequestItem,
+  GroupMemberRole,
+  GroupMemberItem,
+  GroupEditDraft,
+  BookshelfCreateDraft,
+  ClubProfileMode,
+  NoticePollOption,
+  NoticePoll,
+  NoticeDraft,
+} from './meeting/types';
+import {
+  buildBookshelfCreateDraft,
+  buildNoticeDraft,
+  resolveRegularMeetingId,
+  toNoticeBookshelfAttachment,
+  sortNoticeItems,
+  mapClubStatusToRole,
+  toEditDraft,
+  logMeetingAction,
+  mapManagedClubDetailToGroup,
+  mapClubManagedMemberToJoinRequest,
+  mapClubManagedMemberToGroupMember,
+  mapApiBookshelfToItem,
+  mapBookshelfDetailToItem,
+  mapBookshelfTopicToPostItem,
+  mapBookshelfReviewToPostItem,
+  sortBookshelfPostsByLatest,
+  areRegularGroupPostsEqual,
+  areRegularGroupChatMessagesEqual,
+  getStarIconName,
+  formatRatingLabel,
+  normalizeAverageRating,
+  formatAverageRating,
+  getClubHomeTagTone,
+  toNoticeTags,
+  mapNoticePreviewToNoticeItem,
+  mergeNoticeDetail,
+  mapNoticeCommentToUi,
+  mapMeetingChatMessageToUi,
+  mapMeetingToRegularMeetingInfo,
+  ensureRegularMeetingInfo,
+} from './meeting/helpers';
 
-type Group = {
-  id: string;
-  clubId?: number;
-  name: string;
-  profileImageUrl?: string;
-  links?: ClubContact[];
-  tags: string[];
-  topic: string;
-  region: string;
-  applicationStatus?: string;
-  description?: string;
-  notice?: string;
-  nextSession?: string;
-  isPrivate?: boolean;
-};
 
 type MeetingRouteParams = {
   openClubId?: number | string;
@@ -228,23 +224,6 @@ const categoryLabelByCode: Record<string, string> = {
   RELIGION_PHILOSOPHY: '종교/철학',
 };
 
-const clubHomeTagToneByLabel: Record<string, 'amber' | 'coral' | 'sky' | 'violet'> = {
-  여행: 'amber',
-  외국어: 'amber',
-  '어린이/청소년': 'amber',
-  '종교/철학': 'amber',
-  '소설/시/희곡': 'coral',
-  에세이: 'coral',
-  인문학: 'coral',
-  과학: 'sky',
-  '컴퓨터/IT': 'sky',
-  '경제/경영': 'sky',
-  자기계발: 'sky',
-  사회과학: 'violet',
-  '정치/외교/국방': 'violet',
-  '역사/문화': 'violet',
-  '예술/대중문화': 'violet',
-};
 
 const participantLabelByCode: Record<string, string> = {
   STUDENT: '대학생',
@@ -260,7 +239,6 @@ const chatIconUri = Image.resolveAssetSource(
   require('../../assets/icons/Chat.svg'),
 ).uri;
 const CLUB_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/club-default.png')).uri;
-const BOOK_DEFAULT_IMAGE = Image.resolveAssetSource(require('../../assets/images/book-default.png')).uri;
 function ClubDefaultProfileArtwork({
   variant = 'detail',
 }: {
@@ -1144,7 +1122,6 @@ export function MeetingScreen() {
 }
 
 
-type CreateStep = 1 | 2 | 3 | 4;
 
 const categoryCodeByLabel: Record<string, ClubCategoryCode> = {
   '소설/시/희곡': 'FICTION_POETRY_DRAMA',
@@ -1174,753 +1151,6 @@ const participantCodeByLabel: Record<string, ClubParticipantTypeCode> = {
 };
 
 
-type NoticeTag = 'PIN' | 'VOTE' | 'MEETING';
-
-type NoticeBookshelfAttachment = {
-  id: string;
-  remoteMeetingId?: number;
-  session: string;
-  title: string;
-  author: string;
-  category: string;
-  coverImage: string;
-  rating: number;
-};
-
-type NoticeItem = {
-  id: string;
-  remoteId?: number;
-  title: string;
-  date: string;
-  tags: NoticeTag[];
-  category: '일반' | '모임' | '투표';
-  content: string;
-  authorNickname?: string;
-  authorProfileImageUrl?: string;
-  bookshelf?: NoticeBookshelfAttachment;
-  poll?: NoticePoll;
-  photos?: string[];
-  isPinned?: boolean;
-};
-
-type NoticeComment = {
-  id: string;
-  remoteId?: number;
-  author: string;
-  authorProfileImageUrl?: string;
-  date: string;
-  content: string;
-  mine?: boolean;
-  isAuthor?: boolean;
-};
-
-type CursorPageState = {
-  hasNext: boolean;
-  nextCursor: number | null;
-  loadingMore: boolean;
-};
-
-type BookshelfItem = {
-  id: string;
-  remoteMeetingId?: number;
-  regularMeetingId?: number;
-  bookId?: string;
-  generation?: number;
-  session: string;
-  title: string;
-  author: string;
-  category: string;
-  coverImage: string;
-  rating: number;
-  regularMeetingName?: string;
-  meetingLocation?: string;
-  meetingDate?: string;
-};
-
-type BookshelfDetailTab = 'TOPIC' | 'REVIEW' | 'REGULAR';
-type BookshelfViewMode = 'GRID' | 'DETAIL' | 'REGULAR_GROUP';
-
-type BookshelfPostItem = {
-  id: string;
-  remoteId: number;
-  type: 'TOPIC' | 'REVIEW';
-  author: string;
-  content: string;
-  rating?: number;
-  createdAt?: string;
-  authorProfileImageUrl?: string;
-  isAuthor?: boolean;
-};
-
-type NoticeCommentMenuState = {
-  comment: NoticeComment;
-  pageX: number;
-  pageY: number;
-};
-
-type BookshelfPostMenuState = {
-  post: BookshelfPostItem;
-  pageX: number;
-  pageY: number;
-};
-
-type RegularGroupPostItem = {
-  id: string;
-  remoteTopicId?: number;
-  author: string;
-  authorProfileImageUrl?: string;
-  content: string;
-  completed: boolean;
-};
-
-type RegularGroupMemberItem = {
-  id: string;
-  nickname: string;
-  profileImageUrl?: string;
-};
-
-type RegularGroupChatMessage = {
-  id: string;
-  author: string;
-  content: string;
-  time: string;
-  mine?: boolean;
-};
-
-type RegularMeetingGroupItem = {
-  id: string;
-  teamId?: number;
-  label: string;
-  memberCount: number;
-  members: RegularGroupMemberItem[];
-  posts: RegularGroupPostItem[];
-  chatMessages: RegularGroupChatMessage[];
-};
-
-type RegularMeetingInfo = {
-  id: string;
-  name: string;
-  date: string;
-  location: string;
-  groups: RegularMeetingGroupItem[];
-};
-
-type TeamManageMemberItem = {
-  clubMemberId: number;
-  nickname: string;
-  profileImageUrl?: string;
-};
-
-type TeamManageTeamItem = {
-  teamNumber: number;
-  memberIds: number[];
-};
-
-type GroupManagementScreen = 'JOIN_REQUESTS' | 'MEMBERS' | 'EDIT' | 'BOOKSHELF_CREATE';
-
-type GroupJoinRequestItem = {
-  id: string;
-  clubMemberId?: number;
-  nickname: string;
-  profileImageUrl?: string;
-  name: string;
-  email: string;
-  appliedAt: string;
-  message: string;
-};
-
-type GroupMemberRole = '개설자' | '운영진' | '회원';
-
-type GroupMemberItem = {
-  id: string;
-  clubMemberId?: number;
-  nickname: string;
-  profileImageUrl?: string;
-  name: string;
-  email: string;
-  joinedAt: string;
-  role: GroupMemberRole;
-};
-
-type GroupEditDraft = {
-  name: string;
-  description: string;
-  region: string;
-  categories: string[];
-  targets: string[];
-  isPrivate: boolean;
-  imageUrl: string;
-};
-
-type BookshelfCreateDraft = {
-  sourceBook: {
-    isbn: string;
-    title: string;
-    author: string;
-    coverImage?: string;
-    publisher?: string;
-    description?: string;
-  } | null;
-  session: string;
-  categories: string[];
-  regularMeetingName: string;
-  meetingLocation: string;
-  meetingDate: string;
-};
-
-type ClubProfileMode = 'empty' | 'default' | 'uploaded';
-
-function buildBookshelfCreateDraft(defaultSession = '7'): BookshelfCreateDraft {
-  return {
-    sourceBook: null,
-    session: defaultSession,
-    categories: [],
-    regularMeetingName: '',
-    meetingLocation: '',
-    meetingDate: '',
-  };
-}
-
-
-type NoticePollOption = {
-  id: string;
-  label: string;
-  voters: string[];
-};
-
-type NoticePoll = {
-  startsAt: string;
-  endsAt: string;
-  endsAtMillis: number | null;
-  allowDuplicate: boolean;
-  anonymous: boolean;
-  closed?: boolean;
-  options: NoticePollOption[];
-};
-
-type NoticeDraft = {
-  title: string;
-  content: string;
-  isPinned: boolean;
-  bookshelfEnabled: boolean;
-  bookshelfId: string | null;
-  pollEnabled: boolean;
-  pollAnonymous: boolean;
-  pollAllowDuplicate: boolean;
-  pollStartsAt: string;
-  pollEndsAt: string;
-  pollOptions: string[];
-  photos: string[];
-};
-
-function toNoticeBookshelfAttachment(book: BookshelfItem): NoticeBookshelfAttachment {
-  return {
-    id: book.id,
-    remoteMeetingId: book.remoteMeetingId,
-    session: book.session,
-    title: book.title,
-    author: book.author,
-    category: book.category,
-    coverImage: book.coverImage,
-    rating: book.rating,
-  };
-}
-
-function resolveRegularMeetingId(
-  book: Pick<BookshelfItem, 'remoteMeetingId' | 'regularMeetingId'> | null | undefined,
-): number | undefined {
-  if (!book) return undefined;
-  if (typeof book.regularMeetingId === 'number') return book.regularMeetingId;
-  if (typeof book.remoteMeetingId === 'number') return book.remoteMeetingId;
-  return undefined;
-}
-
-function buildNoticeDraft(): NoticeDraft {
-  return {
-    title: '',
-    content: '',
-    isPinned: false,
-    bookshelfEnabled: false,
-    bookshelfId: null,
-    pollEnabled: false,
-    pollAnonymous: true,
-    pollAllowDuplicate: false,
-    pollStartsAt: '2026.03.01 10:00',
-    pollEndsAt: '2026.03.08 22:00',
-    pollOptions: ['', '', ''],
-    photos: [],
-  };
-}
-
-
-function sortNoticeItems(items: NoticeItem[]): NoticeItem[] {
-  return [...items].sort((left, right) => Number(Boolean(right.isPinned)) - Number(Boolean(left.isPinned)));
-}
-
-function mapClubStatusToRole(status?: ClubMembershipStatus): GroupMemberRole {
-  if (status === 'OWNER') return '개설자';
-  if (status === 'STAFF') return '운영진';
-  return '회원';
-}
-
-
-function toEditDraft(group: Group): GroupEditDraft {
-  return {
-    name: group.name,
-    description: group.description ?? '',
-    region: group.region.replace(/^활동 지역 · /, ''),
-    categories: group.tags,
-    targets: toGroupTargets(group.topic),
-    isPrivate: group.isPrivate ?? false,
-    imageUrl: group.profileImageUrl ?? '',
-  };
-}
-
-function logMeetingAction(key: string, payload?: Record<string, unknown>) {
-  if (!__DEV__) return;
-  if (payload) {
-    console.info(`[meeting] ${key}`, payload);
-    return;
-  }
-  console.info(`[meeting] ${key}`);
-}
-
-function mapManagedClubDetailToGroup(detail: ClubDetailResult, prev: Group): Group {
-  const tags = toLabelList(detail.category, categoryLabelByCode).slice(0, 6);
-  const participants = toLabelList(detail.participantTypes, participantLabelByCode);
-  const links = normalizeClubContacts(detail.links);
-  const region = typeof detail.region === 'string' && detail.region.trim().length > 0
-    ? detail.region.trim()
-    : prev.region.replace(/^활동 지역 · /, '');
-
-  return {
-    ...prev,
-    name: typeof detail.name === 'string' && detail.name.length > 0 ? detail.name : prev.name,
-    profileImageUrl:
-      normalizeRemoteImageUrl(detail.profileImageUrl ?? undefined) ?? prev.profileImageUrl,
-    links: Array.isArray(detail.links) ? links : prev.links,
-    description: typeof detail.description === 'string' ? detail.description : prev.description,
-    tags: tags.length > 0 ? tags : prev.tags,
-    topic: participants.length > 0 ? `모임 대상 · ${participants.join(', ')}` : prev.topic,
-    region: `활동 지역 · ${region}`,
-    isPrivate: typeof detail.open === 'boolean' ? !detail.open : prev.isPrivate,
-  };
-}
-
-function mapClubManagedMemberToJoinRequest(item: ClubManagedMember): GroupJoinRequestItem {
-  return {
-    id: `club-member-pending-${item.clubMemberId}`,
-    clubMemberId: item.clubMemberId,
-    nickname: item.nickname,
-    profileImageUrl: item.profileImageUrl,
-    name: item.name ?? item.nickname,
-    email: item.email ?? '',
-    appliedAt: formatDotDate(item.appliedAt),
-    message: item.joinMessage?.trim() || '가입 메시지가 없습니다.',
-  };
-}
-
-function mapClubManagedMemberToGroupMember(item: ClubManagedMember): GroupMemberItem {
-  return {
-    id: `club-member-${item.clubMemberId}`,
-    clubMemberId: item.clubMemberId,
-    nickname: item.nickname,
-    profileImageUrl: item.profileImageUrl,
-    name: item.name ?? item.nickname,
-    email: item.email ?? '',
-    joinedAt: formatDotDate(item.joinedAt),
-    role: mapClubStatusToRole(item.clubMemberStatus),
-  };
-}
-
-function mapApiBookshelfToItem(book: {
-  meetingId: number;
-  generation?: number;
-  tag?: string;
-  averageRate?: number;
-  bookId?: string;
-  title?: string;
-  author?: string;
-  imgUrl?: string;
-}): BookshelfItem {
-  return {
-    id: `bookshelf-${book.meetingId}`,
-    remoteMeetingId: book.meetingId,
-    bookId: book.bookId,
-    generation: book.generation,
-    session: formatGenerationLabel(book.generation),
-    title: book.title ?? '책 제목',
-    author: book.author ?? '작가 미상',
-    category: book.tag?.trim() || '기본 태그',
-    coverImage: book.imgUrl ?? BOOK_DEFAULT_IMAGE,
-    rating: normalizeAverageRating(book.averageRate),
-  };
-}
-
-function mapBookshelfDetailToItem(
-  detail: ClubBookshelfDetail,
-  bookshelfMeetingId?: number,
-): BookshelfItem {
-  const normalizedBookshelfMeetingId =
-    typeof bookshelfMeetingId === 'number' ? bookshelfMeetingId : detail.meetingId;
-  return {
-    id: `bookshelf-${normalizedBookshelfMeetingId}`,
-    remoteMeetingId: normalizedBookshelfMeetingId,
-    regularMeetingId: detail.meetingId,
-    bookId: detail.book.bookId,
-    generation: detail.generation,
-    session: formatGenerationLabel(detail.generation),
-    title: detail.book.title ?? detail.title ?? '책 제목',
-    author: detail.book.author ?? '작가 미상',
-    category: detail.tag?.trim() || '기본 태그',
-    coverImage: detail.book.imgUrl ?? BOOK_DEFAULT_IMAGE,
-    rating: normalizeAverageRating(detail.averageRate),
-    regularMeetingName: detail.title,
-    meetingLocation: detail.location,
-    meetingDate: formatDotDate(detail.meetingTime),
-  };
-}
-
-function mapBookshelfTopicToPostItem(item: ClubBookshelfTopic): BookshelfPostItem {
-  return {
-    id: `bookshelf-topic-${item.topicId}`,
-    remoteId: item.topicId,
-    type: 'TOPIC',
-    author: item.authorNickname,
-    content: item.content,
-    createdAt: item.createdAt,
-    authorProfileImageUrl: item.authorProfileImageUrl,
-    isAuthor: item.isAuthor,
-  };
-}
-
-function mapBookshelfReviewToPostItem(item: ClubBookshelfReview): BookshelfPostItem {
-  return {
-    id: `bookshelf-review-${item.bookReviewId}`,
-    remoteId: item.bookReviewId,
-    type: 'REVIEW',
-    author: item.authorNickname,
-    content: item.description,
-    rating: item.rate,
-    createdAt: item.createdAt,
-    authorProfileImageUrl: item.authorProfileImageUrl,
-    isAuthor: item.isAuthor,
-  };
-}
-
-function sortBookshelfPostsByLatest(items: BookshelfPostItem[]): BookshelfPostItem[] {
-  return [...items].sort((left, right) => {
-    const rightTime = right.createdAt ? Date.parse(right.createdAt) : NaN;
-    const leftTime = left.createdAt ? Date.parse(left.createdAt) : NaN;
-
-    if (Number.isFinite(rightTime) && Number.isFinite(leftTime) && rightTime !== leftTime) {
-      return rightTime - leftTime;
-    }
-
-    if (right.remoteId !== left.remoteId) {
-      return right.remoteId - left.remoteId;
-    }
-
-    return right.id.localeCompare(left.id, 'ko', { numeric: true });
-  });
-}
-
-function areRegularGroupPostsEqual(
-  left: RegularGroupPostItem[],
-  right: RegularGroupPostItem[],
-) {
-  if (left.length !== right.length) return false;
-
-  for (let index = 0; index < left.length; index += 1) {
-    const leftItem = left[index];
-    const rightItem = right[index];
-
-    if (
-      leftItem.id !== rightItem.id ||
-      leftItem.remoteTopicId !== rightItem.remoteTopicId ||
-      leftItem.author !== rightItem.author ||
-      leftItem.authorProfileImageUrl !== rightItem.authorProfileImageUrl ||
-      leftItem.content !== rightItem.content ||
-      leftItem.completed !== rightItem.completed
-    ) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function areRegularGroupChatMessagesEqual(
-  left: RegularGroupChatMessage[],
-  right: RegularGroupChatMessage[],
-) {
-  if (left.length !== right.length) return false;
-
-  for (let index = 0; index < left.length; index += 1) {
-    const leftItem = left[index];
-    const rightItem = right[index];
-
-    if (
-      leftItem.id !== rightItem.id ||
-      leftItem.author !== rightItem.author ||
-      leftItem.content !== rightItem.content ||
-      leftItem.time !== rightItem.time ||
-      leftItem.mine !== rightItem.mine
-    ) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function getStarIconName(rating: number, index: number): keyof typeof MaterialIcons.glyphMap {
-  const nearestHalfRating = Math.max(0, Math.min(5, Math.round(rating * 2) / 2));
-  const fillAmount = nearestHalfRating - index;
-  if (fillAmount >= 1) return 'star';
-  if (fillAmount >= 0.5) return 'star-half';
-  return 'star-border';
-}
-
-function formatRatingLabel(rating: number) {
-  return Number.isInteger(rating) ? `${rating}점` : `${rating.toFixed(1)}점`;
-}
-
-function normalizeAverageRating(rating?: number) {
-  return Math.max(0, Math.min(5, rating ?? 0));
-}
-
-function formatAverageRating(rating: number) {
-  return normalizeAverageRating(rating).toFixed(2);
-}
-
-function getClubHomeTagTone(tag: string): 'amber' | 'coral' | 'sky' | 'violet' {
-  return clubHomeTagToneByLabel[tag] ?? 'amber';
-}
-
-function toNoticeTags(options: {
-  tagCode?: string;
-  hasPoll?: boolean;
-  hasMeeting?: boolean;
-}): NoticeTag[] {
-  const tags: NoticeTag[] = [];
-  const hasVoteTag = options.hasPoll ?? options.tagCode === 'VOTE';
-  const hasMeetingTag = options.hasMeeting ?? options.tagCode === 'MEETING';
-  if (hasVoteTag) tags.push('VOTE');
-  if (hasMeetingTag) tags.push('MEETING');
-  return tags;
-}
-
-function mapNoticePreviewToNoticeItem(item: ClubNoticePreview): NoticeItem {
-  const tags = toNoticeTags({ tagCode: item.tagCode });
-  return {
-    id: `notice-${item.id}`,
-    remoteId: item.id,
-    title: item.title,
-    date: formatDotDate(item.createdAt),
-    tags,
-    category: item.tagCode === 'VOTE' ? '투표' : item.tagCode === 'MEETING' ? '모임' : '일반',
-    content: '',
-    authorNickname: item.authorNickname,
-    authorProfileImageUrl: item.authorProfileImageUrl,
-    isPinned: item.isPinned,
-  };
-}
-
-function mergeNoticeDetail(
-  baseNotice: NoticeItem | null,
-  detail: ClubNoticeDetail,
-): NoticeItem {
-  const bookshelfAttachment =
-    detail.meetingDetail?.meetingId && detail.meetingDetail.bookInfo
-      ? {
-          id: `bookshelf-${detail.meetingDetail.meetingId}`,
-          remoteMeetingId: detail.meetingDetail.meetingId,
-          session: formatGenerationLabel(detail.meetingDetail.generation),
-          title: detail.meetingDetail.bookInfo.title ?? detail.meetingDetail.title ?? '책 제목',
-          author: detail.meetingDetail.bookInfo.author ?? '작가 미상',
-          category: detail.meetingDetail.tag?.trim() || '기본 태그',
-          coverImage: detail.meetingDetail.bookInfo.imgUrl ?? BOOK_DEFAULT_IMAGE,
-          rating: 0,
-        }
-      : undefined;
-
-  return {
-    id: `notice-${detail.id}`,
-    remoteId: detail.id,
-    title: detail.title,
-    date: formatDotDate(detail.createdAt),
-    tags: toNoticeTags({
-      tagCode: detail.tagCode,
-      hasPoll: Boolean(detail.voteDetail),
-      hasMeeting: Boolean(detail.meetingDetail),
-    }),
-    category: detail.voteDetail ? '투표' : detail.meetingDetail ? '모임' : '일반',
-    content: detail.content,
-    authorNickname: detail.authorNickname ?? baseNotice?.authorNickname,
-    authorProfileImageUrl:
-      detail.authorProfileImageUrl ?? baseNotice?.authorProfileImageUrl,
-    bookshelf: bookshelfAttachment,
-    poll: detail.voteDetail
-      ? {
-          startsAt: formatDotDateTime(detail.voteDetail.startTime),
-          endsAt: formatDotDateTime(detail.voteDetail.deadline),
-          endsAtMillis: parseApiDateMillis(detail.voteDetail.deadline) ?? null,
-          allowDuplicate: detail.voteDetail.duplication,
-          anonymous: detail.voteDetail.anonymity,
-          options: detail.voteDetail.items.map((option) => ({
-            id: `notice-${detail.id}-vote-${option.itemNumber}`,
-            label: option.item,
-            voters: option.votedMembers.map((member) => member.nickname),
-          })),
-        }
-      : undefined,
-    photos: detail.imageUrls,
-    isPinned: detail.isPinned,
-  };
-}
-
-function mapNoticeCommentToUi(item: ClubNoticeComment, currentNickname?: string): NoticeComment {
-  const normalizedCurrentNickname = currentNickname?.trim();
-  const normalizedAuthor = item.nickname.trim();
-
-  return {
-    id: `notice-comment-${item.commentId}`,
-    remoteId: item.commentId,
-    author: item.nickname,
-    authorProfileImageUrl: item.profileImageUrl,
-    date: formatDotDate(item.updatedAt ?? item.createdAt),
-    content: item.content,
-    mine:
-      Boolean(normalizedCurrentNickname) &&
-      normalizedAuthor.localeCompare(normalizedCurrentNickname ?? '', 'ko', {
-        sensitivity: 'accent',
-      }) === 0,
-  };
-}
-
-function mapMeetingChatMessageToUi(
-  item: ClubMeetingChatMessage,
-  currentNickname?: string,
-): RegularGroupChatMessage {
-  const normalizedCurrentNickname = currentNickname?.trim();
-  const normalizedAuthor = item.senderNickname.trim();
-
-  return {
-    id: `meeting-chat-${item.messageId}`,
-    author: item.senderNickname,
-    content: item.content,
-    time: formatDotDateTime(item.sendAt),
-    mine:
-      Boolean(normalizedCurrentNickname) &&
-      normalizedAuthor.localeCompare(normalizedCurrentNickname ?? '', 'ko', {
-        sensitivity: 'accent',
-      }) === 0,
-  };
-}
-
-function mapMeetingToRegularMeetingInfo(
-  book: BookshelfItem | null,
-  meeting: ClubMeetingInfo,
-  topicsByTeamId: Record<number, ClubMeetingTeamTopics>,
-  chatsByTeamId: Record<number, ClubMeetingChatHistory>,
-  currentNickname?: string,
-): RegularMeetingInfo | null {
-  if (!book) return null;
-
-  const fallbackTeamsFromMembers = Array.from(
-    new Set(
-      meeting.members
-        .map((member) => member.teamNumber)
-        .filter((teamNumber): teamNumber is number => typeof teamNumber === 'number' && teamNumber > 0),
-    ),
-  )
-    .sort((left, right) => left - right)
-    .map((teamNumber) => ({ teamNumber }));
-
-  const normalizedTeams: Array<{ teamId?: number; teamNumber: number }> =
-    meeting.teams.length > 0
-      ? meeting.teams
-          .filter((team) => typeof team.teamNumber === 'number' && team.teamNumber > 0)
-          .map((team) => ({ teamId: team.teamId, teamNumber: team.teamNumber }))
-      : fallbackTeamsFromMembers;
-
-  const groups: RegularMeetingGroupItem[] = normalizedTeams.map((team) => {
-    const teamMembers = meeting.members.filter((member) => {
-      if (typeof team.teamId === 'number' && typeof member.teamId === 'number') {
-        return member.teamId === team.teamId;
-      }
-      return member.teamNumber === team.teamNumber;
-    });
-    const teamTopics =
-      typeof team.teamId === 'number' ? topicsByTeamId[team.teamId]?.topics ?? [] : [];
-    const teamChats =
-      typeof team.teamId === 'number' ? chatsByTeamId[team.teamId]?.chats ?? [] : [];
-    const label = toTeamLabel(team.teamNumber);
-    const groupId =
-      typeof team.teamId === 'number'
-        ? `${book.id}-regular-group-${team.teamId}`
-        : `${book.id}-regular-group-team-number-${team.teamNumber}`;
-    const members = teamMembers.map((member) => ({
-      id: `${groupId}-member-${member.clubMemberId}`,
-      nickname: member.nickname,
-      profileImageUrl: member.profileImageUrl,
-    }));
-
-    return {
-      id: groupId,
-      teamId: typeof team.teamId === 'number' ? team.teamId : undefined,
-      label,
-      memberCount: members.length,
-      members,
-      posts: teamTopics.map((topic) => ({
-        id: `${groupId}-topic-${topic.topicId}`,
-        remoteTopicId: topic.topicId,
-        author: topic.authorNickname,
-        authorProfileImageUrl: topic.authorProfileImageUrl,
-        content: topic.content,
-        completed: topic.isSelected,
-      })),
-      chatMessages: teamChats.map((chat) => mapMeetingChatMessageToUi(chat, currentNickname)),
-    };
-  });
-
-  return {
-    id: `${book.id}-regular`,
-    name: meeting.title?.trim() || `${book.title} 정기모임`,
-    date: formatDotDate(meeting.meetingTime),
-    location: meeting.location?.trim() || '장소 미정',
-    groups,
-  };
-}
-
-function ensureRegularMeetingInfo(
-  info: RegularMeetingInfo | null,
-  book: BookshelfItem,
-  detail?: ClubBookshelfDetail | null,
-): RegularMeetingInfo {
-  const preferredName = book.regularMeetingName?.trim() || detail?.title?.trim();
-  const preferredDate = book.meetingDate?.trim() || formatDotDate(detail?.meetingTime);
-  const preferredLocation = book.meetingLocation?.trim() || detail?.location?.trim();
-
-  if (!info) {
-    return {
-      id: `${book.id}-regular`,
-      name: preferredName || `${book.title} 정기모임`,
-      date: preferredDate || '날짜 미정',
-      location: preferredLocation || '장소 미정',
-      groups: [],
-    };
-  }
-
-  return {
-    ...info,
-    // Bookshelf edit values should win over meeting fallback values.
-    name: preferredName || info.name?.trim() || `${book.title} 정기모임`,
-    date: preferredDate || info.date?.trim() || '날짜 미정',
-    location: preferredLocation || info.location?.trim() || '장소 미정',
-  };
-}
 
 function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
