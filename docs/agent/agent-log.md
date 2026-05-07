@@ -1975,3 +1975,16 @@ export const interactionOpacity = {
 ## 작업 파일
 - `package-lock.json`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
+- [STD-22] `.github/workflows/ci.yml` 신규 생성 — PR/push(main·develop) 트리거로 lint → typecheck → check:typography → check:spacing 자동 실행.
+- `expo-doctor`는 CI 환경 부적합으로 제외, 개별 스크립트 방식으로 구성.
+- `docs/documents/app-standardization-22-ci-quality-gate-pipeline.md` → `(done)` 접두사로 rename.
+- `docs/agent/todo.md` STD-22 완료(✅) 항목 추가.
+
+## 작업 파일
+- `.github/workflows/ci.yml`
+- `docs/documents/(done)app-standardization-22-ci-quality-gate-pipeline.md`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
