@@ -180,6 +180,7 @@ export function AppHeader(props: Props) {
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
 
   const [showNoti, setShowNoti] = useState(false);
+  const [notiModalOpen, setNotiModalOpen] = useState(false);
   const [notificationPreview, setNotificationPreview] = useState<NotificationItem[]>([]);
   const [notificationPreviewLoading, setNotificationPreviewLoading] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
@@ -209,6 +210,34 @@ export function AppHeader(props: Props) {
   const notiAnim = useRef(new Animated.Value(0)).current;
   const dropdownOpenGuardUntil = useRef(0);
   const activeBookRequestId = useRef(0);
+
+  const openNoti = useCallback(() => {
+    setShowNoti(true);
+    setNotiModalOpen(true);
+    notiAnim.setValue(0);
+    Animated.timing(notiAnim, {
+      toValue: 1,
+      duration: motion.duration.normal,
+      useNativeDriver: true,
+    }).start();
+  }, [notiAnim]);
+
+  const closeNoti = useCallback(() => {
+    setShowNoti(false);
+    Animated.timing(notiAnim, {
+      toValue: 0,
+      duration: motion.duration.normal,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) setNotiModalOpen(false);
+    });
+  }, [notiAnim]);
+
+  const closeNotiImmediate = useCallback(() => {
+    setShowNoti(false);
+    setNotiModalOpen(false);
+    notiAnim.setValue(0);
+  }, [notiAnim]);
 
   const openAladinUrl = useCallback(async (url: string) => {
     try {
@@ -311,13 +340,13 @@ export function AppHeader(props: Props) {
 
   const openSearchDropdown = useCallback(() => {
     dropdownOpenGuardUntil.current = Date.now() + 220;
-    setShowNoti(false);
+    closeNotiImmediate();
     setShowSearchPage(false);
     setSearchStage('results');
     setSelectedBook(null);
     setBookStories([]);
     setShowSearchDropdown(true);
-  }, []);
+  }, [closeNotiImmediate]);
 
   const closeSearchPage = useCallback(() => {
     activeBookRequestId.current += 1;
@@ -399,7 +428,7 @@ export function AppHeader(props: Props) {
           item.notificationId === notification.notificationId ? nextNotification : item,
         ),
       );
-      setShowNoti(false);
+      closeNotiImmediate();
       navigateByNotification(nextNotification);
 
       const submit = async () => {
@@ -420,7 +449,7 @@ export function AppHeader(props: Props) {
       };
       void submit();
     },
-    [navigateByNotification, refreshUnreadBadge],
+    [closeNotiImmediate, navigateByNotification, refreshUnreadBadge],
   );
 
   const loadRecommendedBooks = useCallback(async () => {
@@ -607,7 +636,7 @@ export function AppHeader(props: Props) {
     toBookItemFromRouteParam,
     (routeBook) => {
       hideDropdownImmediately();
-      setShowNoti(false);
+      closeNotiImmediate();
       setShowSearchPage(true);
       setSearchStage('detail');
       setQuery(routeBook.title);
@@ -696,7 +725,7 @@ export function AppHeader(props: Props) {
 
   const handleLogoPress = useCallback(() => {
     triggerSelectionHaptic();
-    setShowNoti(false);
+    closeNotiImmediate();
     hideDropdownImmediately();
     closeSearchPage();
 
@@ -706,7 +735,7 @@ export function AppHeader(props: Props) {
     }
 
     navigateToHome(navigation);
-  }, [closeSearchPage, hideDropdownImmediately, navigation, onPressLogo]);
+  }, [closeNotiImmediate, closeSearchPage, hideDropdownImmediately, navigation, onPressLogo]);
 
   useEffect(() => {
     if (!showSearchDropdown) return;
@@ -738,30 +767,16 @@ export function AppHeader(props: Props) {
     }).start();
   }, [dropdownAnim, showSearchDropdown]);
 
-  useEffect(() => {
-    if (!showNoti) {
-      notiAnim.setValue(0);
-      return;
-    }
-
-    notiAnim.setValue(0);
-    Animated.timing(notiAnim, {
-      toValue: 1,
-      duration: motion.duration.normal,
-      useNativeDriver: true,
-    }).start();
-  }, [notiAnim, showNoti]);
-
   useFocusEffect(
     useCallback(() => {
       return () => {
-        setShowNoti(false);
+        closeNotiImmediate();
         setShowSearchDropdown(false);
         setShowSearchPage(false);
         setSearchStage('results');
         setNotificationPreview([]);
       };
-    }, []),
+    }, [closeNotiImmediate]),
   );
 
   const derivedActions: HeaderAction[] =
@@ -809,7 +824,7 @@ export function AppHeader(props: Props) {
                 if (action.icon === 'notifications-none') {
                   if (!isLoggedIn) {
                     requireAuth(() => {
-                      setShowNoti(true);
+                      openNoti();
                       hideDropdownImmediately();
                       closeSearchPage();
                       void loadNotificationPreview();
@@ -818,13 +833,14 @@ export function AppHeader(props: Props) {
                     return;
                   }
 
-                  const nextVisible = !showNoti;
-                  setShowNoti(nextVisible);
-                  hideDropdownImmediately();
-                  closeSearchPage();
-                  if (nextVisible) {
+                  if (showNoti) {
+                    closeNoti();
+                  } else {
+                    openNoti();
                     void loadNotificationPreview();
                   }
+                  hideDropdownImmediately();
+                  closeSearchPage();
                   onPressBell?.();
                   return;
                 }
@@ -861,14 +877,14 @@ export function AppHeader(props: Props) {
       </View>
 
       <Modal
-        visible={showNoti}
+        visible={notiModalOpen}
         transparent
         animationType="none"
-        onRequestClose={() => setShowNoti(false)}
+        onRequestClose={closeNoti}
       >
         <Pressable
           style={styles.notiBackdrop}
-          onPress={() => setShowNoti(false)}
+          onPress={closeNoti}
           disableFeedback
         >
           <View style={[styles.notiPositioner, { paddingTop: top + HEADER_HEIGHT }]}>
@@ -922,7 +938,7 @@ export function AppHeader(props: Props) {
               <Pressable
                 style={({ pressed }) => [styles.notiAllButton, pressed && styles.notiRowPressed]}
                 onPress={() => {
-                  setShowNoti(false);
+                  closeNoti();
                   navigateToMyAlarms(navigation);
                 }}
               >

@@ -2164,3 +2164,11 @@ export const interactionOpacity = {
 - `src/screens/mypage/useAccountSettingsState.ts`
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
+- 헤더 알림 패널 닫힘 애니메이션 추가: `openNoti` / `closeNoti` / `closeNotiImmediate` 세 함수로 분리. 사용자 토글·백드롭·전체보기 클릭 시 fade-out + translateY 애니메이션 후 Modal 숨김. 시스템 닫힘(화면 전환, 로고 클릭 등)은 즉시 닫힘 유지.
+
+## 작업 파일
+- `src/components/common/AppHeader.tsx`
+- `docs/agent/agent-log.md`
