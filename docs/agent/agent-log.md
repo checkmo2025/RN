@@ -2051,3 +2051,12 @@ export const interactionOpacity = {
 ## 작업 파일
 - `src/components/common/AppHeader.tsx`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 09:44:35 KST
+
+- 직접 테스트 필요 항목 4건을 완료 처리.
+- 로그인 필요 전환, 간격 통일, 책이야기 구독 버튼, 내 페이지 카테고리 칩 QA 확인일을 `2026-05-08`로 기록.
+
+## 작업 파일
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
