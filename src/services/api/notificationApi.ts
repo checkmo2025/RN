@@ -8,7 +8,8 @@ export type NotificationType =
   | 'FOLLOW'
   | 'JOIN_CLUB'
   | 'CLUB_MEETING_CREATED'
-  | 'CLUB_NOTICE_CREATED';
+  | 'CLUB_NOTICE_CREATED'
+  | (string & Record<never, never>);
 
 export type NotificationItem = {
   notificationId: number;
@@ -115,7 +116,9 @@ function normalizeNotificationItem(raw: unknown): NotificationItem | null {
   if (!record) return null;
 
   const notificationId = toNumber(record.notificationId);
-  const notificationType = toNotificationType(record.notificationType);
+  const notificationType =
+    toNotificationType(record.notificationType) ??
+    (toStringValue(record.notificationType) as NotificationType | undefined);
   if (typeof notificationId !== 'number' || !notificationType) return null;
 
   const domainId =

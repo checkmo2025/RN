@@ -2172,3 +2172,11 @@ export const interactionOpacity = {
 ## 작업 파일
 - `src/components/common/AppHeader.tsx`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
+- 알림 미표시 버그 수정: `normalizeNotificationItem`이 알 수 없는 `notificationType` 값을 null로 필터링해 최대 1개만 표시되는 문제. `NotificationType`에 open string 허용 + 파싱 시 unknown 타입도 통과하도록 수정. 기존 타입은 열거형 자동완성 유지, 미지 타입은 `formatNotificationText` default 케이스로 처리.
+
+## 작업 파일
+- `src/services/api/notificationApi.ts`
+- `docs/agent/agent-log.md`
