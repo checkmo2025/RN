@@ -2105,3 +2105,12 @@ export const interactionOpacity = {
 ## 작업 파일
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
+- 헤더 알림 패널 애니메이션 추가: `notiAnim` Animated.Value 신규, `showNoti` 변화 시 fade + translateY(-14→0) 진입 효과 적용. 검색 드롭다운과 동일 패턴.
+
+## 작업 파일
+- `src/components/common/AppHeader.tsx`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`

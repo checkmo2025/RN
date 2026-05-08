@@ -75,7 +75,7 @@ TODO 수정 시 아래 규칙만 지킨다.
 | 상태 | 항목 | 설명 | 생성일자 | 최종 편집일자 |
 | ------ | ------ | ------ | ------ | ------ |
 | ⬜ | **비밀번호 변경 후 자동 로그아웃** | `useAccountSettingsState.handleSubmitPasswordUpdate` 성공 시 `logout()` 호출 추가. 토스트 문구: "비밀번호가 변경되었습니다. 다시 로그인해 주세요." 완료 기준(DoD): 비밀번호 변경 성공 → 로그아웃 → 로그인 화면 진입. | 2026-05-08 | 2026-05-08 |
-| ⬜ | **헤더 알림 클릭 시 리스트 표출 효과 수정** | `AppHeader` 알림 아이콘 클릭 시 알림 리스트가 열리는 전환 효과/노출 타이밍을 자연스럽게 조정. 완료 기준(DoD): 클릭 직후 리스트가 튀거나 겹치지 않고 일관된 애니메이션으로 표시됨. | 2026-05-08 | - |
+| ✅ | **헤더 알림 클릭 시 리스트 표출 효과 수정** | `AppHeader` 알림 아이콘 클릭 시 알림 리스트가 열리는 전환 효과/노출 타이밍을 자연스럽게 조정. `notiAnim` Animated.Value 추가, fade + translateY(-14→0) 애니메이션 적용(검색 드롭다운과 동일 패턴). 완료 기준(DoD): 클릭 직후 리스트가 튀거나 겹치지 않고 일관된 애니메이션으로 표시됨. | 2026-05-08 | 2026-05-08 |
 | ⬜ | **모임 방문하기 토스트 메시지 수정** | 모임 방문하기 액션에서 노출되는 토스트 문구를 상황에 맞게 정리. 완료 기준(DoD): 방문 성공/제한 상황의 문구가 사용자에게 명확하게 보임. | 2026-05-08 | - |
 | ✅ | **[MEET-SPLIT-01] MeetingScreen 분해 설계/경계 정의** | `src/screens/MeetingScreen.tsx`의 도메인 경계 + 목표 파일 구조 + 단계별 계획을 `docs/agent/meet-split-design.md`에 확정. search/home/notice/bookshelf/regularMeeting/management 6개 도메인 정의. | 2026-05-06 | 2026-05-06 |
 | ✅ | **[MEET-SPLIT-02] mapper/formatter 순수 함수 분리** | `src/screens/meeting/formatters.ts` (16개) + `src/screens/meeting/mappers.ts` (6개) 신규 생성. MeetingScreen.tsx에서 함수 본체 제거 → import로 교체. tsc 타입 에러 0건 확인. | 2026-05-06 | 2026-05-06 |

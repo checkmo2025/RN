@@ -206,6 +206,7 @@ export function AppHeader(props: Props) {
   const [likedBookIds, setLikedBookIds] = useState<Set<string>>(new Set());
 
   const dropdownAnim = useRef(new Animated.Value(0)).current;
+  const notiAnim = useRef(new Animated.Value(0)).current;
   const dropdownOpenGuardUntil = useRef(0);
   const activeBookRequestId = useRef(0);
 
@@ -737,6 +738,20 @@ export function AppHeader(props: Props) {
     }).start();
   }, [dropdownAnim, showSearchDropdown]);
 
+  useEffect(() => {
+    if (!showNoti) {
+      notiAnim.setValue(0);
+      return;
+    }
+
+    notiAnim.setValue(0);
+    Animated.timing(notiAnim, {
+      toValue: 1,
+      duration: motion.duration.normal,
+      useNativeDriver: true,
+    }).start();
+  }, [notiAnim, showNoti]);
+
   useFocusEffect(
     useCallback(() => {
       return () => {
@@ -857,6 +872,19 @@ export function AppHeader(props: Props) {
           disableFeedback
         >
           <View style={[styles.notiPositioner, { paddingTop: top + HEADER_HEIGHT }]}>
+            <Animated.View
+              style={{
+                opacity: notiAnim,
+                transform: [
+                  {
+                    translateY: notiAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-14, 0],
+                    }),
+                  },
+                ],
+              }}
+            >
             <Pressable
               style={[styles.notiCard, { width: notiCardWidth }]}
               onPress={(event) => event.stopPropagation()}
@@ -901,6 +929,7 @@ export function AppHeader(props: Props) {
                 <Text style={styles.notiAllButtonText}>알림 전체보기</Text>
               </Pressable>
             </Pressable>
+            </Animated.View>
           </View>
         </Pressable>
       </Modal>
