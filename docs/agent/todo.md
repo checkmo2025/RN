@@ -74,6 +74,7 @@ TODO 수정 시 아래 규칙만 지킨다.
 
 | 상태 | 항목 | 설명 | 생성일자 | 최종 편집일자 |
 | ------ | ------ | ------ | ------ | ------ |
+| ⬜ | **비밀번호 변경 후 자동 로그아웃** | `useAccountSettingsState.handleSubmitPasswordUpdate` 성공 시 `logout()` 호출 추가. 토스트 문구: "비밀번호가 변경되었습니다. 다시 로그인해 주세요." 완료 기준(DoD): 비밀번호 변경 성공 → 로그아웃 → 로그인 화면 진입. | 2026-05-08 | 2026-05-08 |
 | ✅ | **[MEET-SPLIT-01] MeetingScreen 분해 설계/경계 정의** | `src/screens/MeetingScreen.tsx`의 도메인 경계 + 목표 파일 구조 + 단계별 계획을 `docs/agent/meet-split-design.md`에 확정. search/home/notice/bookshelf/regularMeeting/management 6개 도메인 정의. | 2026-05-06 | 2026-05-06 |
 | ✅ | **[MEET-SPLIT-02] mapper/formatter 순수 함수 분리** | `src/screens/meeting/formatters.ts` (16개) + `src/screens/meeting/mappers.ts` (6개) 신규 생성. MeetingScreen.tsx에서 함수 본체 제거 → import로 교체. tsc 타입 에러 0건 확인. | 2026-05-06 | 2026-05-06 |
 | ✅ | **[MEET-SPLIT-03] 공지/책장/채팅/관리 도메인 hook 분리** | `useNoticeState.ts`, `useBookshelfState.ts`, `useManagementState.ts` 신규 생성 완료. `GroupHomeView`에서 3개 hook 조립 완료. 중복 state/effect/handler 제거 완료(8099→4475줄). proxy ref 패턴으로 circular dependency 해결. `tsc --noEmit` 통과. | 2026-05-06 | 2026-05-07 |

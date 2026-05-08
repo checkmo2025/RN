@@ -2015,6 +2015,14 @@ export const interactionOpacity = {
 
 ## 2026-05-08 | KST
 
+- 비밀번호 변경 후 자동 로그아웃 TODO 추가.
+
+## 작업 파일
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
 - STD-18/19 문서 파일명 `done-` → `(done)` 접두사 형식으로 rename.
 - `docs/agent/todo.md` 파일 경로 참조 2건 동기화.
 
