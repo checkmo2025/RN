@@ -2007,6 +2007,14 @@ export const interactionOpacity = {
 
 ## 2026-05-08 | KST
 
+- 로그인 화면 "문의하기" → "고객센터/문의하기"로 문구 수정.
+
+## 작업 파일
+- `src/screens/AuthFlowScreen.tsx`
+- `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
 - STD-18/19 문서 파일명 `done-` → `(done)` 접두사 형식으로 rename.
 - `docs/agent/todo.md` 파일 경로 참조 2건 동기화.
 
