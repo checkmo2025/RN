@@ -2143,3 +2143,14 @@ export const interactionOpacity = {
 ## 작업 파일
 - `src/screens/StoryScreen.tsx`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
+- autoFocus UX 감사 문서 신규 작성: 앱 전체 TextInput/FormTextInput 34개 필드 대상으로 autoFocus 적용 여부·권장 여부 정리 (`docs/documents/ux-autofocus-audit.md`).
+- 권장(13개): 로그인 첫 필드, 이메일 인증, 비밀번호 설정, 닉네임, 아이디찾기, 비밀번호찾기, 비밀번호변경 현재pw, 이메일변경 새이메일, 모임이름, 공지제목, 모임신청사유, 검색 드롭다운·페이지, 댓글·답글·공지댓글.
+- 중립(5개): 인증코드, 프로필소개, 현재이메일, 이메일인증코드, 신고내용 — 상황에 따라 판단.
+- 이미 적용 완료: StoryScreen 제목·본문·책검색.
+
+## 작업 파일
+- `docs/documents/ux-autofocus-audit.md` (신규)
+- `docs/agent/agent-log.md`
