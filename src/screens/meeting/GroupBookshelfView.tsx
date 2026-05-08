@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 import { Image, ScrollView, Text, View } from 'react-native';
 import type { GestureResponderEvent } from 'react-native';
@@ -105,6 +106,18 @@ export function GroupBookshelfView({
   handleOpenBookshelfEdit,
   handlePressManageRegularGroups,
 }: GroupBookshelfViewProps) {
+  const detailSectionYRef = useRef(0);
+
+  useEffect(() => {
+    if (bookshelfViewMode !== 'REGULAR_GROUP') return;
+    requestAnimationFrame(() => {
+      groupHomeScrollRef.current?.scrollTo({
+        y: Math.max(0, detailSectionYRef.current - spacing.sm),
+        animated: true,
+      });
+    });
+  }, [bookshelfViewMode, groupHomeScrollRef]);
+
   if (!isMember) {
     return (
       <View style={styles.managementEmptyCard}>
@@ -224,9 +237,10 @@ export function GroupBookshelfView({
     <View
       style={styles.bookshelfDetailSection}
       onLayout={(e) => {
+        const y = e.nativeEvent.layout.y;
+        detailSectionYRef.current = y;
         if (!shouldScrollToBookshelfDetailRef.current) return;
         shouldScrollToBookshelfDetailRef.current = false;
-        const y = e.nativeEvent.layout.y;
         requestAnimationFrame(() => {
           groupHomeScrollRef.current?.scrollTo({ y: Math.max(0, y - spacing.sm), animated: true });
         });

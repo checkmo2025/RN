@@ -1359,6 +1359,16 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     [focusGroupTitle, isLoggedIn, requireAuth],
   );
 
+  const handleSelectNoticeId = useCallback(
+    (id: string | null) => {
+      setSelectedNoticeId(id);
+      if (id !== null) {
+        focusGroupTitle(true);
+      }
+    },
+    [focusGroupTitle, setSelectedNoticeId],
+  );
+
   const noticeCommentMenuItems = useMemo<ActionMenuItem[]>(() => {
     if (!noticeCommentMenu) return [];
     if (noticeCommentMenu.comment.mine) {
@@ -1707,7 +1717,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           selectedVoteOptionIdsByNotice={selectedVoteOptionIdsByNotice}
           submittedVoteOptionIdsByNotice={submittedVoteOptionIdsByNotice}
           voteEditEnabledByNotice={voteEditEnabledByNotice}
-          setSelectedNoticeId={setSelectedNoticeId}
+          setSelectedNoticeId={handleSelectNoticeId}
           setNoticeCommentInput={setNoticeCommentInput}
           setEditingNoticeCommentId={setEditingNoticeCommentId}
           setNoticeMenuVisible={setNoticeMenuVisible}

@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl * 2,
   },
   headerWrap: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   carouselFullBleed: {
     marginHorizontal: -spacing.md,

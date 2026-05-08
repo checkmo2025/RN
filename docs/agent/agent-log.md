@@ -2123,3 +2123,15 @@ export const interactionOpacity = {
 ## 작업 파일
 - `src/screens/MyPageScreen.tsx`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
+- NewsScreen 섹션 간격 통일: `headerWrap.marginBottom` spacing.md → spacing.sm ("소식" 제목 → 카드 간격을 HomeScreen 패턴과 일치).
+- 공지사항 상세 진입 시 포커싱 추가: `handleSelectNoticeId` 래퍼(setSelectedNoticeId + focusGroupTitle) 신규, GroupNoticeView에 연결.
+- 책장 정기모임 진입 시 포커싱 추가: GroupBookshelfView에 `detailSectionYRef` + `useEffect(bookshelfViewMode === 'REGULAR_GROUP')` → 빵부스러기(breadcrumb) 위치로 스크롤.
+
+## 작업 파일
+- `src/screens/NewsScreen.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `src/screens/meeting/GroupBookshelfView.tsx`
+- `docs/agent/agent-log.md`
