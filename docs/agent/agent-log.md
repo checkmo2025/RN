@@ -2097,3 +2097,11 @@ export const interactionOpacity = {
 - `src/screens/MeetingScreen.tsx`
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
+- 신고 유형 칩 모양 QA 완료: StoryScreen/MyPageScreen 신고 칩 radius.sm 동일 확인 → todo ✅ 처리.
+
+## 작업 파일
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`
