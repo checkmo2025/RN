@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { inferMimeType } from '../utils/imageUpload';
+import { PUBLIC_ENV } from '../constants/publicEnv';
 import { termsDocuments, type TermsAgreementKey } from '../constants/termsDocuments';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import { LOGO_PRIMARY_URI, MOBILE_HEADER_LOGO_URI } from '../constants/iconMap';
@@ -1285,6 +1287,9 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       />
       <Pressable onPress={startSignUp}>
         <Text style={styles.linkText}>아직 회원이 아니신가요? 회원가입하러가기</Text>
+      </Pressable>
+      <Pressable onPress={() => Linking.openURL(PUBLIC_ENV.SUPPORT_FORM_URL).catch(() => null)}>
+        <Text style={styles.linkText}>문의하기</Text>
       </Pressable>
     </>,
   );

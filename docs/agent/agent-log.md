@@ -1991,6 +1991,22 @@ export const interactionOpacity = {
 
 ## 2026-05-08 | KST
 
+- 홈화면 "책이야기" 섹션 타이틀 → 리스트 간격 `spacing.sm` 통일 (`marginBottom: spacing.sm` 추가).
+- 검색 드롭다운 책 좋아요 비로그인 시 `requireAuth` 네비게이션 → 토스트 예외 처리.
+- `ToastHost`를 `AppRoutes` 안 모든 오버레이 뒤로 이동 + `layers.toast: 60 → 9999`로 상향.
+  - auth 오버레이(zIndex 900~2000) 뒤에 가려지던 토스트 문제 해결.
+- 로그인 화면 "회원가입하러가기" 아래에 "문의하기" 링크 추가 (`PUBLIC_ENV.SUPPORT_FORM_URL`).
+
+## 작업 파일
+- `src/screens/HomeScreen.tsx`
+- `src/components/common/AppHeader.tsx`
+- `App.tsx`
+- `src/theme/layers.ts`
+- `src/screens/AuthFlowScreen.tsx`
+- `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
 - STD-18/19 문서 파일명 `done-` → `(done)` 접두사 형식으로 rename.
 - `docs/agent/todo.md` 파일 경로 참조 2건 동기화.
 

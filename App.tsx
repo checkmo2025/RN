@@ -52,6 +52,8 @@ function AppRoutes() {
           <BookFlipLoadingScreen />
         </View>
       ) : null}
+
+      <ToastHost />
     </View>
   );
 }
@@ -62,7 +64,6 @@ export default function App() {
       <NavigationContainer>
         <AuthGateProvider>
           <AppRoutes />
-          <ToastHost />
           <StatusBar style="dark" backgroundColor={colors.background} />
         </AuthGateProvider>
       </NavigationContainer>

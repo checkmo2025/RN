@@ -490,7 +490,7 @@ export function HomeScreen() {
         </View>
       ) : null}
 
-      <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset, marginTop: spacing.xxs }]}>
+      <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset, marginTop: spacing.xxs, marginBottom: spacing.sm }]}>
         <Text style={styles.sectionTitle}>책이야기</Text>
       </View>
     </View>
