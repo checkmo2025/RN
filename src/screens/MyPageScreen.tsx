@@ -2,6 +2,7 @@ import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import {
   Alert,
   Animated,
+  BackHandler,
   Easing,
   ScrollView,
   StyleSheet,
@@ -724,6 +725,51 @@ export function MyPageScreen() {
     profilePhoneNumber,
   ]);
 
+  const handleProfileEditBack = useCallback(() => {
+    const originalDesc = profileDesc === '소개글이 없습니다.' ? '' : profileDesc;
+    const originalCodes = [...profileCategoryCodes].sort().join(',');
+    const currentCodes = [...profileEditCategoryCodes].sort().join(',');
+    const isDirty =
+      profileEditDescription !== originalDesc ||
+      profileEditImageUrl !== (profileImageUrl ?? '') ||
+      profileEditUseDefaultAvatar !== !profileImageUrl ||
+      profileEditDefaultColor !== profileDefaultColor ||
+      currentCodes !== originalCodes;
+
+    if (!isDirty) {
+      setSelectedSetting(null);
+      return;
+    }
+
+    Alert.alert(
+      '변경사항',
+      '변경된 내용이 저장되지 않습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        { text: '나가기', style: 'destructive', onPress: () => setSelectedSetting(null) },
+      ],
+    );
+  }, [
+    profileDesc,
+    profileCategoryCodes,
+    profileEditCategoryCodes,
+    profileEditDescription,
+    profileEditImageUrl,
+    profileImageUrl,
+    profileEditUseDefaultAvatar,
+    profileEditDefaultColor,
+    profileDefaultColor,
+  ]);
+
+  useEffect(() => {
+    if (selectedSetting !== '프로필 편집') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleProfileEditBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [handleProfileEditBack, selectedSetting]);
+
   const openFollowerList = useCallback(() => {
     if (!isLoggedIn) {
       requireAuth(() => {
@@ -1437,9 +1483,18 @@ export function MyPageScreen() {
 
     if (selectedSetting === '프로필 편집') {
       const selectedCategorySet = new Set(profileEditCategoryCodes);
+      const profileEditBack = (
+        <Pressable
+          style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
+          onPress={handleProfileEditBack}
+        >
+          <MaterialIcons name="chevron-left" size={18} color={colors.gray4} />
+          <Text style={styles.breadcrumbText}>뒤로가기</Text>
+        </Pressable>
+      );
       return (
         <View style={styles.settingsDetailWrap}>
-          {back}
+          {profileEditBack}
           <Text style={styles.detailTitle}>프로필 편집</Text>
           <Text style={styles.detailDivider} />
           <View style={styles.formBlock}>

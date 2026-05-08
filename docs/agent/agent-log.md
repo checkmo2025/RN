@@ -2114,3 +2114,12 @@ export const interactionOpacity = {
 - `src/components/common/AppHeader.tsx`
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
+- MyPageScreen 프로필 편집 뒤로가기 경고 추가: `handleProfileEditBack` 신규(dirty 감지 → Alert "변경된 내용이 저장되지 않습니다."). BackHandler(Android 하드웨어 백 버튼) effect 추가. 프로필 편집 섹션 전용 back 버튼 적용.
+- 기본 프로필 색상 10개 선택 UI 코드 확인: AuthFlowScreen·MyPageScreen 모두 `defaultProfilePalette`(10색) 정상 구현. 백엔드 API에 색상 필드 없어 서버 저장은 불가(세션 내 유지).
+
+## 작업 파일
+- `src/screens/MyPageScreen.tsx`
+- `docs/agent/agent-log.md`
