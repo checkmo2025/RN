@@ -2154,3 +2154,13 @@ export const interactionOpacity = {
 ## 작업 파일
 - `docs/documents/ux-autofocus-audit.md` (신규)
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
+- 비밀번호 변경 후 자동 로그아웃 추가: `handleSubmitPasswordUpdate` 성공 시 토스트 "비밀번호가 변경되었습니다. 다시 로그인해 주세요." 후 `logout()` 호출.
+- todo QA 항목 ✅ 처리: 앱 처음 켤 때 로딩 화면, 모임 책장 세션·그룹 필터 칩 QA.
+
+## 작업 파일
+- `src/screens/mypage/useAccountSettingsState.ts`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`

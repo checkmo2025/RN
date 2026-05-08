@@ -219,10 +219,8 @@ export function useAccountSettingsState({
     const submit = async () => {
       try {
         await updateMyPassword({ currentPassword, newPassword, confirmPassword });
-        showToast('비밀번호가 변경되었습니다.');
-        setPasswordCurrent('');
-        setPasswordNext('');
-        setPasswordConfirm('');
+        showToast('비밀번호가 변경되었습니다. 다시 로그인해 주세요.');
+        logout();
       } catch (error) {
         if (!(error instanceof ApiError)) {
           showToast('비밀번호 변경에 실패했습니다.');
