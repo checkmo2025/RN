@@ -2087,3 +2087,13 @@ export const interactionOpacity = {
 ## 작업 파일
 - `src/screens/MeetingScreen.tsx`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
+- 모임 생성 폼 키보드 UX 개선: `KeyboardAvoidingView` Android `behavior` `undefined` → `'height'`로 변경하여 입력 필드가 키보드 위에 올바르게 위치하도록 수정.
+- 입력 한도 토스트 todo 항목 전수 코드 확인 완료 및 ✅ 처리.
+
+## 작업 파일
+- `src/screens/MeetingScreen.tsx`
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`

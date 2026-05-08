@@ -3190,7 +3190,7 @@ function MeetingCreateFlow({
   return (
     <KeyboardAvoidingView
       style={styles.createContainer}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
         style={styles.createContainer}
