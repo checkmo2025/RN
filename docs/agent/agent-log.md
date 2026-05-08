@@ -2060,3 +2060,13 @@ export const interactionOpacity = {
 ## 작업 파일
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 12:11:32 KST
+
+- TODO에 헤더 알림 리스트 표출 효과 수정 항목 추가.
+- TODO에 모임 방문하기 토스트 메시지 수정 항목 추가.
+- 직접 테스트 필요 항목에 기본 프로필 색상 적용 QA 추가.
+
+## 작업 파일
+- `docs/agent/todo.md`
+- `docs/agent/agent-log.md`

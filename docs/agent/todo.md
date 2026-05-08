@@ -75,6 +75,8 @@ TODO 수정 시 아래 규칙만 지킨다.
 | 상태 | 항목 | 설명 | 생성일자 | 최종 편집일자 |
 | ------ | ------ | ------ | ------ | ------ |
 | ⬜ | **비밀번호 변경 후 자동 로그아웃** | `useAccountSettingsState.handleSubmitPasswordUpdate` 성공 시 `logout()` 호출 추가. 토스트 문구: "비밀번호가 변경되었습니다. 다시 로그인해 주세요." 완료 기준(DoD): 비밀번호 변경 성공 → 로그아웃 → 로그인 화면 진입. | 2026-05-08 | 2026-05-08 |
+| ⬜ | **헤더 알림 클릭 시 리스트 표출 효과 수정** | `AppHeader` 알림 아이콘 클릭 시 알림 리스트가 열리는 전환 효과/노출 타이밍을 자연스럽게 조정. 완료 기준(DoD): 클릭 직후 리스트가 튀거나 겹치지 않고 일관된 애니메이션으로 표시됨. | 2026-05-08 | - |
+| ⬜ | **모임 방문하기 토스트 메시지 수정** | 모임 방문하기 액션에서 노출되는 토스트 문구를 상황에 맞게 정리. 완료 기준(DoD): 방문 성공/제한 상황의 문구가 사용자에게 명확하게 보임. | 2026-05-08 | - |
 | ✅ | **[MEET-SPLIT-01] MeetingScreen 분해 설계/경계 정의** | `src/screens/MeetingScreen.tsx`의 도메인 경계 + 목표 파일 구조 + 단계별 계획을 `docs/agent/meet-split-design.md`에 확정. search/home/notice/bookshelf/regularMeeting/management 6개 도메인 정의. | 2026-05-06 | 2026-05-06 |
 | ✅ | **[MEET-SPLIT-02] mapper/formatter 순수 함수 분리** | `src/screens/meeting/formatters.ts` (16개) + `src/screens/meeting/mappers.ts` (6개) 신규 생성. MeetingScreen.tsx에서 함수 본체 제거 → import로 교체. tsc 타입 에러 0건 확인. | 2026-05-06 | 2026-05-06 |
 | ✅ | **[MEET-SPLIT-03] 공지/책장/채팅/관리 도메인 hook 분리** | `useNoticeState.ts`, `useBookshelfState.ts`, `useManagementState.ts` 신규 생성 완료. `GroupHomeView`에서 3개 hook 조립 완료. 중복 state/effect/handler 제거 완료(8099→4475줄). proxy ref 패턴으로 circular dependency 해결. `tsc --noEmit` 통과. | 2026-05-06 | 2026-05-07 |
@@ -134,6 +136,7 @@ TODO 수정 시 아래 규칙만 지킨다.
 | ⬜ | **신고 유형 칩 모양 QA** | 책이야기 상세 → 신고 / 내 페이지 → 신고 | StoryScreen `reportTypeButton`(radius.sm)과 MyPageScreen `reportTypeChip`(radius.sm으로 변경)이 동일하게 직각에 가까운 칩 모양으로 보이는지 확인. | - | - |
 | ✅ | **책이야기 구독 버튼 모양 QA** | 책이야기 카드(BookStoryCard) 탭 탐색 | `subscribeChip` radius.lg→sm 변경으로 FeedCard의 subButton과 동일한 덜 둥근 모양인지 확인. | - | 2026-05-08 |
 | ✅ | **내 페이지 카테고리 칩 모양 QA** | 내 페이지 → 프로필 편집 → 독서 취향 | `categoryChip` radius.sm→lg 변경으로 AuthFlowScreen 회원가입 장르 선택칩과 동일하게 둥근 chip 모양인지 확인. | - | 2026-05-08 |
+| ⬜ | **기본 프로필 색상 적용 QA** | 기본 프로필이 보이는 화면 전반 | 기본 프로필 이미지/아바타가 여러 사용자·상태에서 다른 색상으로 정상 적용되는지 확인. | 2026-05-08 | - |
 | ⬜ | **모임 책장 세션·그룹 필터 칩 QA** | 모임 → 책장 탭 | `bookshelfSessionChip`(radius.md→sm)과 `bookshelfGroupChip`(radius.sm) 두 필터가 동일한 모양인지 확인. | - | - |
 | 🔄 | **책이야기 피드 스크롤 끝까지 (데이터 쌓이고 확인 필요)** | 책이야기 탭에서 맨 아래까지 스크롤 | 현재 데이터량 부족으로 실기기 확인 보류. 데이터가 충분히 쌓인 뒤, 다음 페이지 불러올 때 맨 아래에 "불러오는 중..." 텍스트가 잠깐 보이는지 확인. | - | - |
 | 🔄 | **입력 한도 토스트** | 닉네임·이름·소개·모임이름·소개·지역·링크·신청사유·신고내용 각 필드에서 한도 초과 입력 시도 | `maxLength` 초과 입력이 차단되고 `"입력 가능한 길이를 초과했습니다."` 토스트가 노출되는지 확인. (모임 가입 신청 사유 1차 확인 완료, 나머지 필드 실기기 확인 필요) | - | - |
