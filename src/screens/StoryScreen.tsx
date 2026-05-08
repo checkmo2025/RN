@@ -2029,6 +2029,7 @@ export function StoryScreen() {
               style={[styles.titleInput, isEditingStory && styles.titleInputReadOnly]}
               editable={!isEditingStory}
               selectTextOnFocus={!isEditingStory}
+              autoFocus={!isEditingStory}
             />
             <FormTextInput
               value={body}
@@ -2039,6 +2040,7 @@ export function StoryScreen() {
               multiline
               textAlignVertical="top"
               maxLength={INPUT_LIMITS.BOOK_STORY_CONTENT}
+              autoFocus={isEditingStory}
             />
             <Text style={styles.bodyCounterText}>
               {body.length}/{INPUT_LIMITS.BOOK_STORY_CONTENT}

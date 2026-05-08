@@ -2135,3 +2135,11 @@ export const interactionOpacity = {
 - `src/screens/MeetingScreen.tsx`
 - `src/screens/meeting/GroupBookshelfView.tsx`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
+- 책이야기 작성 폼 autoFocus 추가: 신규 작성 시 제목 TextInput에 `autoFocus={!isEditingStory}`, 수정 모드 시 본문 FormTextInput에 `autoFocus={isEditingStory}` 적용.
+
+## 작업 파일
+- `src/screens/StoryScreen.tsx`
+- `docs/agent/agent-log.md`
