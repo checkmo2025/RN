@@ -2079,3 +2079,11 @@ export const interactionOpacity = {
 ## 작업 파일
 - `src/components/common/ReportMemberModal.tsx`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
+- 모임 방문 시 비회원 403 토스트 문구 변경: "모임 멤버만 열람할 수 있습니다." → "공지사항 및 책장 정보는 모임 회원만 조회 가능합니다. 모임 가입 신청을 완료해주세요."
+
+## 작업 파일
+- `src/screens/MeetingScreen.tsx`
+- `docs/agent/agent-log.md`

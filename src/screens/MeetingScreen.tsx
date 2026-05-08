@@ -1235,7 +1235,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           if (error.status === 401) {
             handleAuthExpired({ suppressToast: options?.suppressErrorToast });
           } else if (error.status === 403 && !options?.suppressErrorToast) {
-            showToast('모임 멤버만 열람할 수 있습니다.');
+            showToast('공지사항 및 책장 정보는 모임 회원만 조회 가능합니다. 모임 가입 신청을 완료해주세요.');
           } else if (error.status !== 401 && !options?.suppressErrorToast) {
             showToast(error.message || '모임 데이터를 불러오지 못했습니다.');
           }
