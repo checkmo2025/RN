@@ -2070,3 +2070,12 @@ export const interactionOpacity = {
 ## 작업 파일
 - `docs/agent/todo.md`
 - `docs/agent/agent-log.md`
+
+## 2026-05-08 | KST
+
+- 신고 모달 키보드 UX 개선: 카드 내부 탭 시 `Keyboard.dismiss()` 추가, `KeyboardAvoidingView` 적용으로 입력창이 키보드 위에 위치하도록 수정.
+- `tsc --noEmit` 통과.
+
+## 작업 파일
+- `src/components/common/ReportMemberModal.tsx`
+- `docs/agent/agent-log.md`

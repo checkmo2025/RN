@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Image,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -96,11 +99,15 @@ export function ReportMemberModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
       <Pressable style={styles.backdrop} onPress={onClose} disableFeedback>
         {target ? (
           <Pressable
             style={styles.card}
-            onPress={(event) => event.stopPropagation()}
+            onPress={(event) => { event.stopPropagation(); Keyboard.dismiss(); }}
             disableFeedback
           >
             <View style={styles.header}>
@@ -169,11 +176,15 @@ export function ReportMemberModal({
           </Pressable>
         ) : null}
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardView: {
+    flex: 1,
+  },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.24)',
