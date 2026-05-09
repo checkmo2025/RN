@@ -275,9 +275,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       showToast('로그인에 성공했습니다.');
       completeAuthFlow();
     } catch (error) {
-      if (!(error instanceof ApiError)) {
-        showToast('로그인에 실패했습니다.');
-      }
+      showToast(error instanceof ApiError ? error.message : '로그인에 실패했습니다.');
     } finally {
       setLoginSubmitting(false);
     }

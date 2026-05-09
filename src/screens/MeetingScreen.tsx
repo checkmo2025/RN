@@ -1362,12 +1362,15 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const handleSelectNoticeId = useCallback(
     (id: string | null) => {
       setSelectedNoticeId(id);
-      if (id !== null) {
-        focusGroupTitle(true);
-      }
     },
-    [focusGroupTitle, setSelectedNoticeId],
+    [setSelectedNoticeId],
   );
+
+  useEffect(() => {
+    if (selectedNoticeId !== null) {
+      focusGroupTitle(true);
+    }
+  }, [selectedNoticeId, focusGroupTitle]);
 
   const noticeCommentMenuItems = useMemo<ActionMenuItem[]>(() => {
     if (!noticeCommentMenu) return [];

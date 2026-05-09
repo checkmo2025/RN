@@ -2188,3 +2188,13 @@ export const interactionOpacity = {
 ## 작업 파일
 - `src/services/api/notificationApi.ts`
 - `docs/agent/agent-log.md`
+
+## 2026-05-09 | 17:08:59 KST
+
+- 로그인 실패 시 토스트 미표시 버그 수정: `ApiError` 조건 누락으로 catch 블록에서 토스트가 억제되던 문제. `error instanceof ApiError`이면 서버 메시지, 그 외엔 기본 메시지 표시하도록 수정 (`AuthFlowScreen.tsx`).
+- 공지사항 상세 진입 시 스크롤 포커스 미동작 버그 수정: `handleSelectNoticeId`에서 `focusGroupTitle`을 상태 업데이트와 동시에 호출해 렌더 전 스크롤이 콘텐츠 크기 변화에 묻히는 타이밍 문제. `useEffect`로 `selectedNoticeId` 변경 후 스크롤 호출하도록 수정 (`MeetingScreen.tsx`).
+
+## 작업 파일
+- `src/screens/AuthFlowScreen.tsx`
+- `src/screens/MeetingScreen.tsx`
+- `docs/agent/agent-log.md`
