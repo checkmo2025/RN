@@ -2198,3 +2198,14 @@ export const interactionOpacity = {
 - `src/screens/AuthFlowScreen.tsx`
 - `src/screens/MeetingScreen.tsx`
 - `docs/agent/agent-log.md`
+
+## 2026-05-20 | 23:21:44 KST
+
+- `docs/agent/todo.md` 업데이트: `🔜 구현 예정`에 "사용자 차단 화면 API 연결", "책이야기 임시저장 API 연결" TODO 2건 추가 및 마지막 업데이트 날짜 갱신.
+- Swagger(`https://api.checkmo.co.kr/v3/api-docs`) 기준 차단/임시저장 경로 확인 결과를 별도 문서로 정리: `docs/documents/block-and-bookstory-draft-api-connection.md` 신규 작성.
+- 차단 API(`GET /api/members/me/blocks`, `POST/DELETE /api/members/{memberNickname}/block`)와 책이야기 임시저장 방식(`status: DRAFT`)을 RN 연동 체크리스트까지 포함해 문서화.
+
+## 작업 파일
+- `docs/agent/todo.md`
+- `docs/documents/block-and-bookstory-draft-api-connection.md` (신규)
+- `docs/agent/agent-log.md`
