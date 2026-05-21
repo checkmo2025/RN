@@ -43,6 +43,8 @@ import {
   fetchMemberProfile,
   reportMember,
   setFollowingMember,
+  blockMember,
+  unblockMember,
   type MemberReportType,
   type MemberProfile,
 } from '../services/api/memberApi';
@@ -171,6 +173,7 @@ export function UserProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [submittingFollow, setSubmittingFollow] = useState(false);
   const [submittingReport, setSubmittingReport] = useState(false);
+  const [blockingMember, setBlockingMember] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [stories, setStories] = useState<StoryCard[]>([]);
@@ -509,8 +512,33 @@ export function UserProfileScreen() {
   }, [profile?.profileImageUrl, profileName]);
 
   const handleConfirmBlockMember = useCallback(() => {
-    Alert.alert('차단 기능 준비 중', '현재 차단 기능은 준비 중입니다. 신고하기를 이용해 주십시오.');
-  }, []);
+    Alert.alert(
+      '차단하기',
+      `${profileName} 님을 차단하시겠습니까?\n차단하면 상대방이 내 게시글과 프로필을 볼 수 없으며, 팔로우 관계가 해제됩니다.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '차단',
+          style: 'destructive',
+          onPress: () => {
+            const submit = async () => {
+              setBlockingMember(true);
+              try {
+                await blockMember(memberNickname);
+                showToast('차단되었습니다.');
+                navigation.goBack();
+              } catch {
+                showToast('차단에 실패했습니다. 다시 시도해 주세요.');
+              } finally {
+                setBlockingMember(false);
+              }
+            };
+            void submit();
+          },
+        },
+      ],
+    );
+  }, [memberNickname, profileName, navigation]);
 
   const handleOpenGroupMenu = useCallback((pageX: number, pageY: number) => {
     setGroupMenuAnchor({ pageX, pageY });
@@ -529,7 +557,7 @@ export function UserProfileScreen() {
       },
       {
         key: 'block',
-        label: '차단하기 (준비 중)',
+        label: '차단하기',
         destructive: true,
         onPress: handleConfirmBlockMember,
       },

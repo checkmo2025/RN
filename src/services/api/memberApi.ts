@@ -442,3 +442,60 @@ export async function fetchMyReports(): Promise<ReportItem[]> {
     ].join('|'),
   });
 }
+
+export type BlockedMember = {
+  memberId: number;
+  nickname: string;
+  profileImageUrl?: string;
+};
+
+type BlockListPayload = {
+  blocks?: unknown[];
+  hasNext?: boolean;
+  nextCursor?: number | null;
+};
+
+function normalizeBlockedMember(raw: unknown): BlockedMember | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const memberId = typeof r.memberId === 'number' ? r.memberId : 0;
+  const nickname = typeof r.nickname === 'string' ? r.nickname : '';
+  if (!nickname) return null;
+  return {
+    memberId,
+    nickname,
+    profileImageUrl: normalizeRemoteImageUrl(typeof r.profileImageUrl === 'string' ? r.profileImageUrl : undefined),
+  };
+}
+
+export async function fetchBlockedMembers(cursorId?: number): Promise<{
+  items: BlockedMember[];
+  hasNext: boolean;
+  nextCursor: number | null;
+}> {
+  const response = await requestJson<ApiEnvelope<BlockListPayload>>('/members/me/blocks', {
+    method: 'GET',
+    query: { cursorId },
+  });
+  const result = unwrapResult(response) as BlockListPayload ?? {};
+  const raw = Array.isArray(result.blocks) ? result.blocks : [];
+  return {
+    items: raw.map(normalizeBlockedMember).filter((x): x is BlockedMember => x !== null),
+    hasNext: result.hasNext ?? false,
+    nextCursor: result.nextCursor ?? null,
+  };
+}
+
+export async function blockMember(nickname: string): Promise<void> {
+  await requestJson<ApiEnvelope<void>>(`/members/${encodeURIComponent(nickname)}/block`, {
+    method: 'POST',
+    suppressErrorToast: false,
+  });
+}
+
+export async function unblockMember(nickname: string): Promise<void> {
+  await requestJson<ApiEnvelope<void>>(`/members/${encodeURIComponent(nickname)}/block`, {
+    method: 'DELETE',
+    suppressErrorToast: false,
+  });
+}

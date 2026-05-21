@@ -62,6 +62,9 @@ import {
   fetchMyProfile,
   setFollowingMember,
   updateMyProfile,
+  fetchBlockedMembers,
+  unblockMember,
+  type BlockedMember,
 } from '../services/api/memberApi';
 import { fetchMyNewsList, type RemoteNewsSummary } from '../services/api/newsApi';
 import { formatKstDateLabel } from '../utils/date';
@@ -298,6 +301,8 @@ export function MyPageScreen() {
   const [showSettings, setShowSettings] = useState(false);
   const [selectedSetting, setSelectedSetting] = useState<string | null>(null);
   const [stories, setStories] = useState<StoryCard[]>([]);
+  const [blockedMembers, setBlockedMembers] = useState<BlockedMember[]>([]);
+  const [loadingBlockedMembers, setLoadingBlockedMembers] = useState(false);
   const [books, setBooks] = useState<BookCard[]>([]);
   const [myNews, setMyNews] = useState<MyNewsItem[]>([]);
   const [groups, setGroups] = useState<GroupItem[]>([]);
@@ -1351,6 +1356,41 @@ export function MyPageScreen() {
     void loadReportHistory();
   }, [loadReportHistory, selectedSetting]);
 
+  const loadBlockedMembers = useCallback(async () => {
+    setLoadingBlockedMembers(true);
+    try {
+      const result = await fetchBlockedMembers();
+      setBlockedMembers(result.items);
+    } catch {
+      showToast('차단 목록을 불러오지 못했습니다.');
+    } finally {
+      setLoadingBlockedMembers(false);
+    }
+  }, []);
+
+  const handleUnblockMember = useCallback((nickname: string) => {
+    Alert.alert('차단 해제', `${nickname} 님의 차단을 해제하시겠습니까?`, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '해제',
+        onPress: async () => {
+          try {
+            await unblockMember(nickname);
+            setBlockedMembers((prev) => prev.filter((m) => m.nickname !== nickname));
+            showToast('차단이 해제되었습니다.');
+          } catch {
+            showToast('차단 해제에 실패했습니다.');
+          }
+        },
+      },
+    ]);
+  }, []);
+
+  useEffect(() => {
+    if (selectedSetting !== '차단 관리') return;
+    void loadBlockedMembers();
+  }, [loadBlockedMembers, selectedSetting]);
+
   useEffect(() => {
     if (selectedSetting !== '프로필 편집') return;
     setProfileEditDescription(profileDesc === '소개글이 없습니다.' ? '' : profileDesc);
@@ -1472,7 +1512,7 @@ export function MyPageScreen() {
     {
       title: '서비스',
       iconUri: settingServiceUri,
-      items: ['내 소식 관리', '신고 관리', '알림 관리'],
+      items: ['내 소식 관리', '신고 관리', '차단 관리', '알림 관리'],
     },
     {
       title: '기타',
@@ -1820,6 +1860,37 @@ export function MyPageScreen() {
                   ) : null}
                 </View>
                 <Text style={styles.reportText}>{report.content}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      );
+    }
+
+    if (selectedSetting === '차단 관리') {
+      return (
+        <View style={styles.settingsDetailWrap}>
+          {back}
+          <Text style={styles.detailTitle}>차단 관리</Text>
+          <Text style={styles.detailDivider} />
+          {loadingBlockedMembers ? (
+            <Text style={styles.loadingText}>차단 목록을 불러오는 중...</Text>
+          ) : null}
+          {!loadingBlockedMembers && blockedMembers.length === 0 ? (
+            <Text style={styles.emptyText}>차단한 사용자가 없습니다.</Text>
+          ) : null}
+          <View style={styles.reportList}>
+            {blockedMembers.map((member) => (
+              <View key={member.memberId} style={styles.reportCard}>
+                <View style={styles.reportHeader}>
+                  <Text style={styles.reportUser}>{member.nickname}</Text>
+                  <Pressable
+                    style={({ pressed }) => [pressed && styles.pressed]}
+                    onPress={() => handleUnblockMember(member.nickname)}
+                  >
+                    <Text style={styles.unblockButton}>차단 해제</Text>
+                  </Pressable>
+                </View>
               </View>
             ))}
           </View>
@@ -3104,5 +3175,14 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
+  },
+  unblockButton: {
+    ...typography.body2_3,
+    color: colors.secondary1,
+    borderWidth: 1,
+    borderColor: colors.secondary1,
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
 });

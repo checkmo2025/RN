@@ -2230,3 +2230,13 @@ export const interactionOpacity = {
 - `bookStoryApi.ts`: `BookStoryStatus('DRAFT'|'PUBLISHED')` 타입 추가, `createBookStory` 반환값 `Promise<number>`로 변경, `updateBookStory`에 `title/isbn/status` 파라미터 추가
 - `StoryScreen.tsx`: 임시저장 버튼 실제 로직 연결 (`handleSaveDraft`), 드래프트 재진입 라우트 파라미터 처리, 임시저장 성공 시 마이페이지 "내 책 이야기" 탭으로 redirect
 - `MyPageScreen.tsx`: 내 책 이야기 목록에 DRAFT/PUBLISHED 통합 표시, DRAFT 항목에 "임시저장" 배지 노출, 탭 시 작성 화면 복원
+
+---
+
+# 2026-05-21
+
+## 사용자 차단 API 연결
+
+- `memberApi.ts`: `fetchBlockedMembers`, `blockMember`, `unblockMember` 함수 추가
+- `UserProfileScreen.tsx`: 차단하기 "준비 중" → 실제 확인 Alert + API 연동, 차단 성공 시 goBack
+- `MyPageScreen.tsx`: 설정 > 서비스에 "차단 관리" 추가, 차단 목록 조회 + 해제 UI 구현
