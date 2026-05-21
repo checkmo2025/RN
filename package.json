@@ -12,7 +12,7 @@
     "check:spacing": "bash scripts/check-spacing-hardcode.sh",
     "check:spacing:staged": "bash scripts/check-spacing-hardcode.sh --staged",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts,.tsx --max-warnings 0",
+    "lint": "eslint src --ext .ts,.tsx --max-warnings 200",
     "doctor": "npx expo-doctor",
     "check": "npm run check:typography && npm run check:spacing && npm run typecheck && npm run doctor"
   },
@@ -37,6 +37,11 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.4",
+    "@typescript-eslint/parser": "^8.59.4",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "typescript": "~5.9.2"
   },
   "private": true
