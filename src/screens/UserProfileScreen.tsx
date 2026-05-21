@@ -25,6 +25,7 @@ import { colors, interactionOpacity, radius, spacing, typography } from '../them
 import { navigateToHome, findNavigatorWithRoute } from '../navigation/navigateToHome';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
+import { DialogOverlay } from '../components/common/DialogOverlay';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
@@ -188,6 +189,8 @@ export function UserProfileScreen() {
   const [loadingFollowUsers, setLoadingFollowUsers] = useState(false);
   const [togglingFollowNickname, setTogglingFollowNickname] = useState<string | null>(null);
   const [reportModal, setReportModal] = useState<ReportMemberModalState | null>(null);
+  const [showBlockReportModal, setShowBlockReportModal] = useState(false);
+  const [showBlockConfirmModal, setShowBlockConfirmModal] = useState(false);
   const [groupMenuAnchor, setGroupMenuAnchor] = useState<{ pageX: number; pageY: number } | null>(null);
   const memberNickname =
     typeof route.params?.memberNickname === 'string' && route.params.memberNickname.trim().length > 0
@@ -503,6 +506,7 @@ export function UserProfileScreen() {
   );
 
   const handleOpenReportModal = useCallback(() => {
+    setShowBlockReportModal(false);
     setReportModal({
       nickname: profileName,
       profileImageUrl: profile?.profileImageUrl,
@@ -512,33 +516,26 @@ export function UserProfileScreen() {
   }, [profile?.profileImageUrl, profileName]);
 
   const handleConfirmBlockMember = useCallback(() => {
-    Alert.alert(
-      '차단하기',
-      `${profileName} 님을 차단하시겠습니까?\n차단하면 상대방이 내 게시글과 프로필을 볼 수 없으며, 팔로우 관계가 해제됩니다.`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '차단',
-          style: 'destructive',
-          onPress: () => {
-            const submit = async () => {
-              setBlockingMember(true);
-              try {
-                await blockMember(memberNickname);
-                showToast('차단되었습니다.');
-                navigation.goBack();
-              } catch {
-                showToast('차단에 실패했습니다. 다시 시도해 주세요.');
-              } finally {
-                setBlockingMember(false);
-              }
-            };
-            void submit();
-          },
-        },
-      ],
-    );
-  }, [memberNickname, profileName, navigation]);
+    setShowBlockReportModal(false);
+    setShowBlockConfirmModal(true);
+  }, []);
+
+  const handleExecuteBlock = useCallback(() => {
+    const submit = async () => {
+      setBlockingMember(true);
+      setShowBlockConfirmModal(false);
+      try {
+        await blockMember(memberNickname);
+        showToast('차단되었습니다.');
+        navigation.goBack();
+      } catch {
+        showToast('차단에 실패했습니다. 다시 시도해 주세요.');
+      } finally {
+        setBlockingMember(false);
+      }
+    };
+    void submit();
+  }, [memberNickname, navigation]);
 
   const handleOpenGroupMenu = useCallback((pageX: number, pageY: number) => {
     setGroupMenuAnchor({ pageX, pageY });
@@ -918,9 +915,9 @@ export function UserProfileScreen() {
                 </Pressable>
                 <Pressable
                   style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-                  onPress={handleOpenReportModal}
+                  onPress={() => setShowBlockReportModal(true)}
                 >
-                  <Text style={styles.secondaryButtonText}>신고하기</Text>
+                  <Text style={styles.secondaryButtonText}>신고/차단</Text>
                 </Pressable>
               </View>
 
@@ -966,6 +963,80 @@ export function UserProfileScreen() {
         onClose={handleCloseReportModal}
         onSubmit={handleSubmitReport}
       />
+      <DialogOverlay
+        visible={showBlockReportModal}
+        onClose={() => setShowBlockReportModal(false)}
+        overlayStyle={styles.modalOverlay}
+        cardStyle={styles.modalCard}
+      >
+        <View style={styles.modalProfileSection}>
+          {profile?.profileImageUrl ? (
+            <Image source={{ uri: profile.profileImageUrl }} style={styles.modalAvatar} />
+          ) : (
+            <DefaultProfileAvatar size={52} />
+          )}
+          <Text style={styles.modalNickname}>{profileName}</Text>
+        </View>
+        <View style={styles.modalDivider} />
+        <View style={styles.modalActions}>
+          <Pressable
+            style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]}
+            onPress={() => setShowBlockReportModal(false)}
+          >
+            <Text style={styles.modalActionText}>취소</Text>
+          </Pressable>
+          <View style={styles.modalActionDivider} />
+          <Pressable
+            style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]}
+            onPress={handleOpenReportModal}
+          >
+            <Text style={styles.modalActionText}>신고하기</Text>
+          </Pressable>
+          <View style={styles.modalActionDivider} />
+          <Pressable
+            style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]}
+            onPress={handleConfirmBlockMember}
+          >
+            <Text style={[styles.modalActionText, styles.modalActionDestructive]}>차단하기</Text>
+          </Pressable>
+        </View>
+      </DialogOverlay>
+
+      <DialogOverlay
+        visible={showBlockConfirmModal}
+        onClose={() => setShowBlockConfirmModal(false)}
+        overlayStyle={styles.modalOverlay}
+        cardStyle={styles.modalCard}
+      >
+        <View style={styles.modalProfileSection}>
+          <MaterialIcons name="warning-amber" size={32} color={colors.secondary1} />
+          <Text style={styles.modalConfirmTitle}>정말 차단하시겠습니까?</Text>
+          <Text style={styles.modalConfirmDesc}>
+            차단하면 해당 사용자의 책이야기와 프로필이 더 이상 보이지 않습니다.
+          </Text>
+        </View>
+        <View style={styles.modalDivider} />
+        <View style={styles.modalActions}>
+          <Pressable
+            style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]}
+            onPress={handleExecuteBlock}
+            disabled={blockingMember}
+          >
+            <Text style={[styles.modalActionText, styles.modalActionDestructive]}>
+              {blockingMember ? '처리 중...' : '차단'}
+            </Text>
+          </Pressable>
+          <View style={styles.modalActionDivider} />
+          <Pressable
+            style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]}
+            onPress={() => setShowBlockConfirmModal(false)}
+            disabled={blockingMember}
+          >
+            <Text style={styles.modalActionText}>취소</Text>
+          </Pressable>
+        </View>
+      </DialogOverlay>
+
       <ActionMenu
         visible={Boolean(groupMenuAnchor)}
         anchor={groupMenuAnchor}
@@ -1361,5 +1432,66 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: interactionOpacity.pressed,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: radius.lg,
+    backgroundColor: colors.white,
+  },
+  modalProfileSection: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+  },
+  modalAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+  },
+  modalNickname: {
+    ...typography.body1,
+    color: colors.gray6,
+  },
+  modalConfirmTitle: {
+    ...typography.body1,
+    color: colors.gray6,
+  },
+  modalConfirmDesc: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textAlign: 'center',
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: colors.gray1,
+  },
+  modalActions: {
+    flexDirection: 'row',
+  },
+  modalActionButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalActionText: {
+    ...typography.body2,
+    color: colors.gray5,
+  },
+  modalActionDestructive: {
+    color: colors.secondary1,
+  },
+  modalActionDivider: {
+    width: 1,
+    backgroundColor: colors.gray1,
   },
 });

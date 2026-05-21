@@ -2240,3 +2240,14 @@ export const interactionOpacity = {
 - `memberApi.ts`: `fetchBlockedMembers`, `blockMember`, `unblockMember` 함수 추가
 - `UserProfileScreen.tsx`: 차단하기 "준비 중" → 실제 확인 Alert + API 연동, 차단 성공 시 goBack
 - `MyPageScreen.tsx`: 설정 > 서비스에 "차단 관리" 추가, 차단 목록 조회 + 해제 UI 구현
+
+---
+
+# 2026-05-21
+
+## 신고/차단 모달 UI 구현
+
+- `UserProfileScreen.tsx`: "신고하기" 버튼 → "신고/차단"으로 변경
+- 1단계 모달: 프로필 + 취소/신고하기/차단하기 선택
+- 2단계 모달: 차단 확인 (경고 아이콘 + 차단/취소), 기존 Alert → DialogOverlay로 교체
+- 기존 디자인 토큰(colors, spacing, radius, typography) 및 DialogOverlay 컴포넌트 패턴 통일
