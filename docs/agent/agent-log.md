@@ -2220,3 +2220,13 @@ export const interactionOpacity = {
 - eslint + @typescript-eslint + eslint-plugin-react/react-hooks devDependencies에 추가
 - `eslint.config.js` 신규 생성 (ESLint v9 flat config 형식, RN 환경에 맞게 no-require-imports 비활성화)
 - `--max-warnings 0` → `--max-warnings 200` 으로 완화 (첫 lint 도입 단계)
+
+---
+
+# 2026-05-21
+
+## 책이야기 임시저장 API 연결 구현
+
+- `bookStoryApi.ts`: `BookStoryStatus('DRAFT'|'PUBLISHED')` 타입 추가, `createBookStory` 반환값 `Promise<number>`로 변경, `updateBookStory`에 `title/isbn/status` 파라미터 추가
+- `StoryScreen.tsx`: 임시저장 버튼 실제 로직 연결 (`handleSaveDraft`), 드래프트 재진입 라우트 파라미터 처리, 임시저장 성공 시 마이페이지 "내 책 이야기" 탭으로 redirect
+- `MyPageScreen.tsx`: 내 책 이야기 목록에 DRAFT/PUBLISHED 통합 표시, DRAFT 항목에 "임시저장" 배지 노출, 탭 시 작성 화면 복원

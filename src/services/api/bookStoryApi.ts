@@ -19,6 +19,8 @@ type BookStoryListResult = {
 type BookStoryListResponse = ApiEnvelope<BookStoryListResult | unknown[]>;
 type BookStoryDetailResponse = ApiEnvelope<unknown>;
 
+export type BookStoryStatus = 'DRAFT' | 'PUBLISHED';
+
 export type StoryScope = 'ALL' | 'FOLLOWING';
 
 export type StoryBookInfo = {
@@ -55,6 +57,7 @@ export type RemoteStoryItem = {
   following: boolean;
   mine?: boolean;
   bookInfo?: StoryBookInfo;
+  status?: BookStoryStatus;
 };
 
 export type RemoteStoryDetail = RemoteStoryItem & {
@@ -237,6 +240,7 @@ function normalizeStoryItem(raw: unknown): RemoteStoryItem | null {
       ) ??
       undefined,
     bookInfo: extractStoryBookInfo(record),
+    status: (toStringValue(firstDefined(record.status)) as BookStoryStatus) ?? undefined,
   };
 }
 
@@ -542,27 +546,37 @@ export async function createBookStory(payload: {
   isbn: string;
   title: string;
   description: string;
-}): Promise<void> {
-  await requestJson<unknown>('/book-stories', {
+  status?: BookStoryStatus;
+}): Promise<number> {
+  const response = await requestJson<ApiEnvelope<unknown>>('/book-stories', {
     method: 'POST',
     body: {
       isbn: payload.isbn,
       title: payload.title,
       description: payload.description,
+      status: payload.status ?? 'PUBLISHED',
     },
   });
+  const result = unwrapResult(response);
+  return typeof result === 'number' ? result : 0;
 }
 
 export async function updateBookStory(
   bookStoryId: number,
   payload: {
     description: string;
+    title?: string;
+    isbn?: string;
+    status?: BookStoryStatus;
   },
 ): Promise<void> {
   await requestJson<unknown>(`/book-stories/${bookStoryId}`, {
     method: 'PATCH',
     body: {
       description: payload.description,
+      ...(payload.title !== undefined && { title: payload.title }),
+      ...(payload.isbn !== undefined && { isbn: payload.isbn }),
+      ...(payload.status !== undefined && { status: payload.status }),
     },
   });
 }

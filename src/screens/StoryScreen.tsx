@@ -61,6 +61,7 @@ import {
   fetchClubBookStories,
   fetchBookStoryDetail,
   mergeGuestAllBookStoriesCache,
+  type BookStoryStatus,
   type RemoteStoryComment,
   type RemoteStoryDetail,
   type RemoteStoryItem,
@@ -169,6 +170,10 @@ type StoryRouteParams = {
   composeBook?: unknown;
   openStoryId?: number | string;
   openStoryFocus?: 'comments';
+  openDraftId?: number;
+  openDraftTitle?: string;
+  openDraftBody?: string;
+  openDraftBook?: unknown;
 };
 
 const ALL_STORY_TAB: StoryFilterTab = {
@@ -275,6 +280,7 @@ export function StoryScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [editingStoryId, setEditingStoryId] = useState<number | null>(null);
+  const [draftStoryId, setDraftStoryId] = useState<number | null>(null);
   const isEditingStory = editingStoryId !== null;
   const [refreshing, setRefreshing] = useState(false);
   const [detailRefreshing, setDetailRefreshing] = useState(false);
@@ -386,15 +392,16 @@ export function StoryScreen() {
     }
   }, []);
 
-  const openCompose = useCallback((initialBook?: Book) => {
+  const openCompose = useCallback((initialBook?: Book, draft?: { id: number; title: string; body: string }) => {
     requireAuth(() => {
       setSelectedStory(null);
       setEditingStoryId(null);
-      setTitle('');
-      setBody('');
+      setDraftStoryId(draft?.id ?? null);
+      setTitle(draft?.title ?? '');
+      setBody(draft?.body ?? '');
       setSelectedBook(initialBook ?? null);
       setShowBookPicker(false);
-      setBookSearchQuery(initialBook?.title ?? '');
+      setBookSearchQuery(initialBook?.title ?? draft?.title ?? '');
       setBookSearchResults([]);
       setBookSearchLoading(false);
       setBookSearchSearched(false);
@@ -411,6 +418,7 @@ export function StoryScreen() {
     animateTransition();
     setIsComposing(false);
     setEditingStoryId(null);
+    setDraftStoryId(null);
     setShowBookPicker(false);
     setReplyTarget(null);
     setCommentMenu(null);
@@ -1138,6 +1146,57 @@ export function StoryScreen() {
     setShowBookPicker(false);
   }, []);
 
+  const handleSaveDraft = useCallback(() => {
+    requireAuth(() => {
+      const nextTitle = title.trim();
+      const nextBody = body.trim();
+
+      if (!nextTitle && !nextBody && !selectedBook) {
+        showToast('제목, 내용 또는 책을 입력해야 합니다.');
+        return;
+      }
+
+      const save = async () => {
+        setSubmittingStory(true);
+        try {
+          if (draftStoryId !== null) {
+            await updateBookStory(draftStoryId, {
+              description: nextBody,
+              title: nextTitle || undefined,
+              status: 'DRAFT' as BookStoryStatus,
+            });
+          } else {
+            if (!selectedBook) {
+              showToast('책을 선택해야 임시저장할 수 있습니다.');
+              return;
+            }
+            const isbn = selectedBook.id.trim();
+            if (!ISBN13_REGEX.test(isbn)) {
+              showToast('책 정보 형식이 올바르지 않습니다.');
+              return;
+            }
+            const newId = await createBookStory({
+              isbn,
+              title: nextTitle || '임시저장',
+              description: nextBody,
+              status: 'DRAFT' as BookStoryStatus,
+            });
+            if (newId > 0) setDraftStoryId(newId);
+          }
+          showToast('임시저장되었습니다.');
+          closeCompose();
+          navigation.navigate('My', { openMyTab: '내 책 이야기' });
+        } catch {
+          showToast('임시저장에 실패했습니다.');
+        } finally {
+          setSubmittingStory(false);
+        }
+      };
+
+      void save();
+    });
+  }, [requireAuth, title, body, selectedBook, draftStoryId, navigation]);
+
   const handleSubmit = () => {
     const nextTitle = title.trim();
     const nextDescription = body.trim();
@@ -1162,6 +1221,15 @@ export function StoryScreen() {
           if (editingStoryId) {
             await updateBookStory(editingStoryId, { description: nextDescription });
             showToast('책이야기를 수정했습니다.');
+          } else if (draftStoryId !== null) {
+            // 임시저장 → 발행
+            await updateBookStory(draftStoryId, {
+              title: nextTitle,
+              description: nextDescription,
+              status: 'PUBLISHED' as BookStoryStatus,
+            });
+            showToast('책이야기를 등록했습니다.');
+            setDraftStoryId(null);
           } else {
             if (!selectedBook) {
               showToast('책을 선택해야 합니다.');
@@ -1176,6 +1244,7 @@ export function StoryScreen() {
               isbn,
               title: nextTitle,
               description: nextDescription,
+              status: 'PUBLISHED' as BookStoryStatus,
             });
             showToast('책이야기를 등록했습니다.');
           }
@@ -1496,6 +1565,23 @@ export function StoryScreen() {
     openCompose(initialBook ?? undefined);
     navigation.setParams({ openCompose: false, composeBook: undefined });
   }, [navigation, openCompose, route.params?.composeBook, route.params?.openCompose]);
+
+  useEffect(() => {
+    const draftId = route.params?.openDraftId;
+    if (!draftId) return;
+    const draftBook = toComposeBook(route.params?.openDraftBook);
+    openCompose(draftBook ?? undefined, {
+      id: draftId,
+      title: route.params?.openDraftTitle ?? '',
+      body: route.params?.openDraftBody ?? '',
+    });
+    navigation.setParams({
+      openDraftId: undefined,
+      openDraftTitle: undefined,
+      openDraftBody: undefined,
+      openDraftBook: undefined,
+    });
+  }, [navigation, openCompose, route.params?.openDraftId, route.params?.openDraftTitle, route.params?.openDraftBody, route.params?.openDraftBook]);
 
   useEffect(() => {
     const remoteId = parsePositiveIntParam(route.params?.openStoryId);
@@ -2055,7 +2141,7 @@ export function StoryScreen() {
               {!editingStoryId && (
                 <Pressable
                   style={styles.draftButton}
-                  onPress={() => showToast('임시저장 기능 구현전')}
+                  onPress={handleSaveDraft}
                 >
                   <Text style={styles.draftButtonText}>임시저장</Text>
                 </Pressable>

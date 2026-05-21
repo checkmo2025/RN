@@ -96,6 +96,13 @@ type StoryCard = {
   imageUrl?: string;
   likes: number;
   comments: number;
+  status?: 'DRAFT' | 'PUBLISHED';
+  bookInfo?: {
+    isbn?: string;
+    title?: string;
+    author?: string;
+    imgUrl?: string;
+  };
 };
 
 type BookCard = {
@@ -523,6 +530,8 @@ export function MyPageScreen() {
         imageUrl: normalizeImageUrl(item.bookInfo?.imgUrl),
         likes: item.likeCount ?? 0,
         comments: item.commentCount ?? 0,
+        status: item.status,
+        bookInfo: item.bookInfo,
       }));
       setStories(mapped);
     } catch (error) {
@@ -975,7 +984,16 @@ export function MyPageScreen() {
               showToast('해당 책이야기를 찾을 수 없습니다.');
               return;
             }
-            navigation.navigate('Story', { openStoryId: item.remoteId });
+            if (item.status === 'DRAFT') {
+              navigation.navigate('Story', {
+                openDraftId: item.remoteId,
+                openDraftTitle: item.title,
+                openDraftBody: item.excerpt,
+                openDraftBook: item.bookInfo,
+              });
+            } else {
+              navigation.navigate('Story', { openStoryId: item.remoteId });
+            }
           }}
         >
           <View style={styles.storyThumb}>
@@ -992,15 +1010,21 @@ export function MyPageScreen() {
             </Text>
           </View>
           <View style={styles.storyActions}>
-            <View style={styles.inlineAction}>
-              <SvgUri uri={likeIconUri} width={18} height={18} />
-              <Text style={styles.inlineText}>{item.likes}</Text>
-            </View>
-            <View style={styles.actionDivider} />
-            <View style={styles.inlineAction}>
-              <SvgUri uri={commentIconUri} width={18} height={18} />
-              <Text style={styles.inlineText}>{item.comments}</Text>
-            </View>
+            {item.status === 'DRAFT' ? (
+              <Text style={styles.draftBadge}>임시저장</Text>
+            ) : (
+              <>
+                <View style={styles.inlineAction}>
+                  <SvgUri uri={likeIconUri} width={18} height={18} />
+                  <Text style={styles.inlineText}>{item.likes}</Text>
+                </View>
+                <View style={styles.actionDivider} />
+                <View style={styles.inlineAction}>
+                  <SvgUri uri={commentIconUri} width={18} height={18} />
+                  <Text style={styles.inlineText}>{item.comments}</Text>
+                </View>
+              </>
+            )}
           </View>
         </Pressable>
       ))}
@@ -3071,5 +3095,14 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: interactionOpacity.pressed,
+  },
+  draftBadge: {
+    ...typography.body2_3,
+    color: colors.secondary2,
+    borderWidth: 1,
+    borderColor: colors.secondary2,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
 });
