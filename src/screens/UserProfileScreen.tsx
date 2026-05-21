@@ -190,7 +190,6 @@ export function UserProfileScreen() {
   const [togglingFollowNickname, setTogglingFollowNickname] = useState<string | null>(null);
   const [reportModal, setReportModal] = useState<ReportMemberModalState | null>(null);
   const [showBlockReportModal, setShowBlockReportModal] = useState(false);
-  const [showBlockConfirmModal, setShowBlockConfirmModal] = useState(false);
   const [groupMenuAnchor, setGroupMenuAnchor] = useState<{ pageX: number; pageY: number } | null>(null);
   const memberNickname =
     typeof route.params?.memberNickname === 'string' && route.params.memberNickname.trim().length > 0
@@ -517,25 +516,33 @@ export function UserProfileScreen() {
 
   const handleConfirmBlockMember = useCallback(() => {
     setShowBlockReportModal(false);
-    setShowBlockConfirmModal(true);
-  }, []);
-
-  const handleExecuteBlock = useCallback(() => {
-    const submit = async () => {
-      setBlockingMember(true);
-      setShowBlockConfirmModal(false);
-      try {
-        await blockMember(memberNickname);
-        showToast('차단되었습니다.');
-        navigation.goBack();
-      } catch {
-        showToast('차단에 실패했습니다. 다시 시도해 주세요.');
-      } finally {
-        setBlockingMember(false);
-      }
-    };
-    void submit();
-  }, [memberNickname, navigation]);
+    Alert.alert(
+      '차단하기',
+      `${profileName} 님의 차단을 하시겠습니까?`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '차단',
+          style: 'destructive',
+          onPress: () => {
+            const submit = async () => {
+              setBlockingMember(true);
+              try {
+                await blockMember(memberNickname);
+                showToast('차단되었습니다.');
+                navigation.goBack();
+              } catch {
+                showToast('차단에 실패했습니다. 다시 시도해 주세요.');
+              } finally {
+                setBlockingMember(false);
+              }
+            };
+            void submit();
+          },
+        },
+      ],
+    );
+  }, [memberNickname, profileName, navigation]);
 
   const handleOpenGroupMenu = useCallback((pageX: number, pageY: number) => {
     setGroupMenuAnchor({ pageX, pageY });
@@ -1002,41 +1009,6 @@ export function UserProfileScreen() {
         </View>
       </DialogOverlay>
 
-      <DialogOverlay
-        visible={showBlockConfirmModal}
-        onClose={() => setShowBlockConfirmModal(false)}
-        overlayStyle={styles.modalOverlay}
-        cardStyle={styles.modalCard}
-      >
-        <View style={styles.modalProfileSection}>
-          <MaterialIcons name="warning-amber" size={32} color={colors.secondary1} />
-          <Text style={styles.modalConfirmTitle}>정말 차단하시겠습니까?</Text>
-          <Text style={styles.modalConfirmDesc}>
-            차단하면 해당 사용자의 책이야기와 프로필이 더 이상 보이지 않습니다.
-          </Text>
-        </View>
-        <View style={styles.modalDivider} />
-        <View style={styles.modalActions}>
-          <Pressable
-            style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]}
-            onPress={handleExecuteBlock}
-            disabled={blockingMember}
-          >
-            <Text style={[styles.modalActionText, styles.modalActionDestructive]}>
-              {blockingMember ? '처리 중...' : '차단'}
-            </Text>
-          </Pressable>
-          <View style={styles.modalActionDivider} />
-          <Pressable
-            style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]}
-            onPress={() => setShowBlockConfirmModal(false)}
-            disabled={blockingMember}
-          >
-            <Text style={styles.modalActionText}>취소</Text>
-          </Pressable>
-        </View>
-      </DialogOverlay>
-
       <ActionMenu
         visible={Boolean(groupMenuAnchor)}
         anchor={groupMenuAnchor}
@@ -1461,16 +1433,7 @@ const styles = StyleSheet.create({
     ...typography.body1,
     color: colors.gray6,
   },
-  modalConfirmTitle: {
-    ...typography.body1,
-    color: colors.gray6,
-  },
-  modalConfirmDesc: {
-    ...typography.body2_3,
-    color: colors.gray4,
-    textAlign: 'center',
-  },
-  modalDivider: {
+modalDivider: {
     height: 1,
     backgroundColor: colors.gray1,
   },

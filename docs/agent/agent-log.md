@@ -2251,3 +2251,13 @@ export const interactionOpacity = {
 - 1단계 모달: 프로필 + 취소/신고하기/차단하기 선택
 - 2단계 모달: 차단 확인 (경고 아이콘 + 차단/취소), 기존 Alert → DialogOverlay로 교체
 - 기존 디자인 토큰(colors, spacing, radius, typography) 및 DialogOverlay 컴포넌트 패턴 통일
+
+---
+
+# 2026-05-21
+
+## 차단 확인 모달 Alert으로 통일
+
+- `UserProfileScreen.tsx`: 차단 확인 2단계 DialogOverlay → 시스템 Alert.alert()으로 교체
+- 차단 해제(MyPageScreen)와 동일한 패턴으로 통일
+- 미사용 showBlockConfirmModal state 및 관련 스타일 제거
