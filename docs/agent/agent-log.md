@@ -2261,3 +2261,12 @@ export const interactionOpacity = {
 - `UserProfileScreen.tsx`: 차단 확인 2단계 DialogOverlay → 시스템 Alert.alert()으로 교체
 - 차단 해제(MyPageScreen)와 동일한 패턴으로 통일
 - 미사용 showBlockConfirmModal state 및 관련 스타일 제거
+
+---
+
+# 2026-05-21
+
+## TODO 상태 업데이트
+
+- `MEM-09` 사용자 차단 기능 → ✅ 완료
+- 책이야기 임시저장 API 연결 → ✅ 완료
