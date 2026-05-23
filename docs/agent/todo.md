@@ -46,6 +46,7 @@ TODO 수정 시 아래 규칙만 지킨다.
 | ✅ | **RN** | **아이콘 경로 중앙화(icon map) + 화살표 정리** | `src/constants/iconMap.ts` 신규 생성. RN 내 SVG 경로 하드코딩을 `iconMap` 단일 소스로 통합(AppHeader/AuthFlow/MyPage/Story/Meeting/BottomTabs/BookStoryCard/UserProfile/DefaultProfileAvatar/BookFlipLoadingScreen). 미사용 화살표 SVG 9개 삭제, RN 화살표는 MaterialIcons 사용으로 유지. | 2026-05-07 | 2026-05-07 |
 | ✅ | **RN** | **글씨 크기 통일 확인** | `fontSize`/`lineHeight`/`letterSpacing` 하드코딩 제거 완료(0건). `typography` 토큰 승격(15/16 포함), 재발 방지 스크립트(`npm run check:typography`) 적용 완료. | - | - |
 | ✅ | **RN** | **로딩 화면 전수 점검 문서화** | `../documents/(done)loading-screen.md` 작성 완료. `BookFlipLoadingScreen` 사용처, 인라인 로딩 문구, 버튼 상태형 로딩, `RefreshControl` 위치를 전수 정리. | - | - |
+| 🧪 | **Android** | **앱 아이콘 로고 크기 조정** | Android adaptive icon 원형 마스크에서 로고가 잘리는 문제로 55% 축소 적용. 실기기/에뮬레이터에서 시각적으로 적절한지 확인 필요. 추가 조정 시 Python 스크립트로 재처리. | 2026-05-23 | 2026-05-23 |
 | ✅ | **RN** | **로딩 UX 통일/안정화** | (1) 문구 표기: `동사 + 중...` 공백+말줄임표 통일 완료. (2) 부팅 로더: 1500ms 고정 타이머 → `AuthGate.isReady` 이벤트 기반 전환 완료. (3) 인라인 피드백: 텍스트 방식으로 통일, 스피너 없음 정책 확정. (4) `RefreshControl`: 시스템 기본 색상 사용으로 확정. `../documents/(done)loading-screen.md` 최신화 완료. | - | - |
 
 ---

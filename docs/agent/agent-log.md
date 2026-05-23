@@ -2284,3 +2284,9 @@ export const interactionOpacity = {
 # 2026-05-23 16:14:39 KST
 
 - Android 앱 아이콘 로고 크기 축소 (55%로 조정, adaptive icon 원형 마스크 대응)
+
+---
+
+# 2026-05-23 16:15:42 KST
+
+- todo.md에 Android 앱 아이콘 로고 크기 조정 항목 추가 (🧪 테스트 필요)
