@@ -2278,3 +2278,9 @@ export const interactionOpacity = {
 - Android UI 대응: `edgeToEdgeEnabled` 환경에서 StatusBar `backgroundColor` → `transparent + translucent` 처리
 - 탭바 높이 고정값(84) → `84 + insets.bottom` 동적 계산으로 Android 하단 내비게이션 바 대응
 - `KeyboardAvoidingView` Android `behavior` `undefined` → `'height'` 통일 (`DialogOverlay`, `AuthFlowScreen`, `GroupManagementOverlay`)
+
+---
+
+# 2026-05-23 16:14:39 KST
+
+- Android 앱 아이콘 로고 크기 축소 (55%로 조정, adaptive icon 원형 마스크 대응)
