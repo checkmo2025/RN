@@ -1,5 +1,6 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgUri } from 'react-native-svg';
 
 import { TAB_ICON_URIS } from '../constants/iconMap';
@@ -33,6 +34,7 @@ const labels = {
 
 export default function BottomTabs() {
   const { isLoggedIn, requireAuth } = useAuthGate();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
@@ -45,7 +47,7 @@ export default function BottomTabs() {
         tabBarActiveTintColor: colors.primary1,
         tabBarInactiveTintColor: colors.gray4,
         tabBarShowLabel: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, { height: 84 + insets.bottom, paddingBottom: insets.bottom + spacing.xs }],
         tabBarItemStyle: styles.tabItem,
         headerShown: false,
       }}
@@ -118,9 +120,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: -2 },
     elevation: 10,
-    height: 84,
     paddingTop: spacing.xs,
-    paddingBottom: spacing.xs,
     paddingHorizontal: 10,
     marginBottom: 0,
   },

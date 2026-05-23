@@ -2270,3 +2270,11 @@ export const interactionOpacity = {
 
 - `MEM-09` 사용자 차단 기능 → ✅ 완료
 - 책이야기 임시저장 API 연결 → ✅ 완료
+
+---
+
+# 2026-05-23 15:44:31 KST
+
+- Android UI 대응: `edgeToEdgeEnabled` 환경에서 StatusBar `backgroundColor` → `transparent + translucent` 처리
+- 탭바 높이 고정값(84) → `84 + insets.bottom` 동적 계산으로 Android 하단 내비게이션 바 대응
+- `KeyboardAvoidingView` Android `behavior` `undefined` → `'height'` 통일 (`DialogOverlay`, `AuthFlowScreen`, `GroupManagementOverlay`)

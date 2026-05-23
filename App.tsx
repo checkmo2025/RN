@@ -4,7 +4,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import RootNavigator from './src/navigation/RootNavigator';
-import { colors } from './src/theme';
 import { AuthGateProvider, useAuthGate } from './src/contexts/AuthGateContext';
 import { AuthFlowScreen } from './src/screens/AuthFlowScreen';
 import { ToastHost } from './src/components/common/ToastHost';
@@ -64,7 +63,7 @@ export default function App() {
       <NavigationContainer>
         <AuthGateProvider>
           <AppRoutes />
-          <StatusBar style="dark" backgroundColor={colors.background} />
+          <StatusBar style="dark" backgroundColor="transparent" translucent />
         </AuthGateProvider>
       </NavigationContainer>
     </SafeAreaProvider>

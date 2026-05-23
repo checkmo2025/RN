@@ -208,7 +208,7 @@ export function GroupManagementOverlay({
       {bookshelfBookSelectorVisible ? (
         <KeyboardAvoidingView
           style={styles.managementScreen}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={[styles.managementScreenHeader, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
             <Pressable onPress={closeBookshelfBookSelector} hitSlop={8}>
@@ -313,7 +313,7 @@ export function GroupManagementOverlay({
       ) : activeManagementScreen ? (
         <KeyboardAvoidingView
           style={styles.managementScreen}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={[styles.managementScreenHeader, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
             <Pressable onPress={handleCloseManagementScreen} hitSlop={8}>
