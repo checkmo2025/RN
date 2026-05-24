@@ -2298,3 +2298,10 @@ export const interactionOpacity = {
 - Android/iOS 아이콘 파일 분리 (checkmo-app-icon-ios.png, checkmo-app-icon-android.png)
 - app.json Android foregroundImage를 android 전용 파일로 분리
 - Android 아이콘 로고 50% 축소 (adaptive icon safe zone 대응)
+
+---
+
+# 2026-05-24 17:49:41 KST
+
+- Android 앱 아이콘 로고 크기 최종 확정 (65%, adaptive icon safe zone 대응)
+- todo.md 아이콘 항목 ✅ 완료 처리
