@@ -2290,3 +2290,11 @@ export const interactionOpacity = {
 # 2026-05-23 16:15:42 KST
 
 - todo.md에 Android 앱 아이콘 로고 크기 조정 항목 추가 (🧪 테스트 필요)
+
+---
+
+# 2026-05-24 17:42:13 KST
+
+- Android/iOS 아이콘 파일 분리 (checkmo-app-icon-ios.png, checkmo-app-icon-android.png)
+- app.json Android foregroundImage를 android 전용 파일로 분리
+- Android 아이콘 로고 50% 축소 (adaptive icon safe zone 대응)
