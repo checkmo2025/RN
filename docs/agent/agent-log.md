@@ -2309,3 +2309,11 @@ export const interactionOpacity = {
 # 2026-06-01 작업
 
 - todo.md: 사용자 차단 화면 API 연결 항목 ✅ 완료 처리
+
+# 2026-06-01 채팅 기능 제거
+
+- 모임 채팅 기능 제거 결정 반영
+- `useMeetingChatStomp.ts` 삭제
+- `useBookshelfState`, `MeetingScreen`, `helpers`, `clubApi`, `types`, `iconMap`, `meetingStyles`에서 채팅 관련 코드 전면 제거
+- todo.md 채팅 항목 ✅ 완료 처리
+- tsc --noEmit 통과

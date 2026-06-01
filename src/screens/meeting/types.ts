@@ -125,14 +125,6 @@ export type RegularGroupMemberItem = {
   profileImageUrl?: string;
 };
 
-export type RegularGroupChatMessage = {
-  id: string;
-  author: string;
-  content: string;
-  time: string;
-  mine?: boolean;
-};
-
 export type RegularMeetingGroupItem = {
   id: string;
   teamId?: number;
@@ -140,7 +132,6 @@ export type RegularMeetingGroupItem = {
   memberCount: number;
   members: RegularGroupMemberItem[];
   posts: RegularGroupPostItem[];
-  chatMessages: RegularGroupChatMessage[];
 };
 
 export type RegularMeetingInfo = {

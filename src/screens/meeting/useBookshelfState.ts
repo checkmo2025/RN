@@ -17,7 +17,6 @@ import {
   fetchClubBookshelves,
   fetchClubMeeting,
   fetchClubMeetingMembers,
-  fetchClubMeetingTeamChatMessages,
   fetchClubMeetingTeamTopics,
   fetchClubNextMeetingRedirect,
   manageClubMeetingTeams,
@@ -27,15 +26,12 @@ import {
 } from '../../services/api/clubApi';
 import type {
   ClubBookshelfReview,
-  ClubMeetingChatHistory,
-  ClubMeetingChatMessage,
   ClubMeetingTeamTopics,
 } from '../../services/api/clubApi';
 import { searchBooks, type BookItem } from '../../services/api/bookApi';
 import { getCurrentKstDateLabel, getCurrentKstYearMonth } from '../../utils/date';
 import { showToast } from '../../utils/toast';
 import { triggerSelectionHaptic } from '../../utils/haptics';
-import { useMeetingChatStomp } from '../../hooks/useMeetingChatStomp';
 import type {
   BookshelfCreateDraft,
   BookshelfDetailTab,
@@ -52,7 +48,6 @@ import type {
   TeamManageTeamItem,
 } from './types';
 import {
-  areRegularGroupChatMessagesEqual,
   areRegularGroupPostsEqual,
   buildBookshelfCreateDraft,
   ensureRegularMeetingInfo,
@@ -61,7 +56,6 @@ import {
   mapBookshelfDetailToItem,
   mapBookshelfReviewToPostItem,
   mapBookshelfTopicToPostItem,
-  mapMeetingChatMessageToUi,
   mapMeetingToRegularMeetingInfo,
   normalizeAverageRating,
   resolveRegularMeetingId,
@@ -156,14 +150,7 @@ export function useBookshelfState({
   const [regularGroupPostsById, setRegularGroupPostsById] = useState<
     Record<string, Array<{ id: string; remoteTopicId?: number; author: string; authorProfileImageUrl?: string; content: string; completed: boolean }>>
   >({});
-  const [regularGroupChatMessagesById, setRegularGroupChatMessagesById] = useState<
-    Record<string, Array<{ id: string; author: string; content: string; time: string; mine?: boolean }>>
-  >({});
   const [regularGroupMembersVisible, setRegularGroupMembersVisible] = useState(false);
-  const [regularChatPickerVisible, setRegularChatPickerVisible] = useState(false);
-  const [activeRegularChatGroupId, setActiveRegularChatGroupId] = useState<string | null>(null);
-  const [regularChatInput, setRegularChatInput] = useState('');
-  const [submittingRegularChat, setSubmittingRegularChat] = useState(false);
   const [creatingBookshelf, setCreatingBookshelf] = useState(false);
   const [updatingBookshelf, setUpdatingBookshelf] = useState(false);
   const [deletingBookshelf, setDeletingBookshelf] = useState(false);
@@ -218,7 +205,6 @@ export function useBookshelfState({
     return new Date(year, month - 1, 1);
   });
 
-  const chatScrollRef = useRef<import('react-native').ScrollView>(null);
   const shouldScrollToBookshelfDetailRef = useRef(false);
   const bookshelfMeetingDetailRequestIdRef = useRef<Record<number, number>>({});
   const teamManageDropRefs = useRef<Record<string, View | null>>({});
@@ -234,12 +220,8 @@ export function useBookshelfState({
   const teamManageScrollBoundsRef = useRef<{ top: number; bottom: number } | null>(null);
   const dragAutoScrollFrameRef = useRef<number | null>(null);
   const dragCurrentPageYRef = useRef(0);
-  const activeRegularChatGroupIdRef = useRef(activeRegularChatGroupId);
   const currentMemberNicknameRef = useRef(currentMemberNickname);
 
-  useEffect(() => {
-    activeRegularChatGroupIdRef.current = activeRegularChatGroupId;
-  });
   useEffect(() => {
     currentMemberNicknameRef.current = currentMemberNickname;
   });
@@ -339,23 +321,6 @@ export function useBookshelfState({
       return changed ? next : prev;
     });
 
-    setRegularGroupChatMessagesById((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      baseRegularMeetingInfo.groups.forEach((groupItem) => {
-        const currentMessages = next[groupItem.id];
-        if (!currentMessages) {
-          next[groupItem.id] = groupItem.chatMessages;
-          changed = true;
-          return;
-        }
-        if (!areRegularGroupChatMessagesEqual(currentMessages, groupItem.chatMessages)) {
-          next[groupItem.id] = groupItem.chatMessages;
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
   }, [baseRegularMeetingInfo]);
 
   const regularMeetingInfo = useMemo<RegularMeetingInfo | null>(() => {
@@ -365,20 +330,14 @@ export function useBookshelfState({
       groups: baseRegularMeetingInfo.groups.map((groupItem) => ({
         ...groupItem,
         posts: regularGroupPostsById[groupItem.id] ?? groupItem.posts,
-        chatMessages: regularGroupChatMessagesById[groupItem.id] ?? groupItem.chatMessages,
       })),
     };
-  }, [baseRegularMeetingInfo, regularGroupChatMessagesById, regularGroupPostsById]);
+  }, [baseRegularMeetingInfo, regularGroupPostsById]);
 
   const selectedRegularGroup = useMemo(() => {
     if (!regularMeetingInfo || !selectedRegularGroupId) return null;
     return regularMeetingInfo.groups.find((g) => g.id === selectedRegularGroupId) ?? null;
   }, [regularMeetingInfo, selectedRegularGroupId]);
-
-  const activeRegularChatGroup = useMemo(() => {
-    if (!regularMeetingInfo || !activeRegularChatGroupId) return null;
-    return regularMeetingInfo.groups.find((g) => g.id === activeRegularChatGroupId) ?? null;
-  }, [activeRegularChatGroupId, regularMeetingInfo]);
 
   const teamManageMemberById = useMemo(
     () =>
@@ -395,32 +354,6 @@ export function useBookshelfState({
     () => teamManageMembers.filter((member) => !teamManageAssignedMemberIds.has(member.clubMemberId)),
     [teamManageAssignedMemberIds, teamManageMembers],
   );
-
-  const { isConnected: isChatConnected, publish: publishChatToStomp } = useMeetingChatStomp({
-    clubId: group.clubId,
-    meetingId: selectedRegularMeetingId,
-    teamId: activeRegularChatGroup?.teamId,
-    enabled: Boolean(activeRegularChatGroup),
-    onMessage: (event) => {
-      const groupId = activeRegularChatGroupIdRef.current;
-      if (!groupId) return;
-      const message = mapMeetingChatMessageToUi(
-        {
-          messageId: event.messageId,
-          content: event.content,
-          sendAt: event.sendAt,
-          senderNickname: event.senderNickname,
-          senderProfileImageUrl: event.senderProfileImageUrl ?? undefined,
-        },
-        currentMemberNicknameRef.current,
-      );
-      setRegularGroupChatMessagesById((prev) => {
-        const currentMessages = prev[groupId] ?? [];
-        if (currentMessages.some((item) => item.id === message.id)) return prev;
-        return { ...prev, [groupId]: [...currentMessages, message] };
-      });
-    },
-  });
 
   useEffect(() => {
     if (bookshelfSessions.length === 0) return;
@@ -457,12 +390,6 @@ export function useBookshelfState({
   useEffect(() => {
     setRegularGroupMembersVisible(false);
   }, [bookshelfViewMode, selectedRegularGroupId]);
-
-  useEffect(() => {
-    if (activeRegularChatGroupId) {
-      setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: false }), 50);
-    }
-  }, [activeRegularChatGroupId, activeRegularChatGroup?.chatMessages]);
 
   useEffect(() => {
     if (!teamManageVisible) return;
@@ -532,50 +459,6 @@ export function useBookshelfState({
         return { existingTeams: [], requestedTeam: undefined, topics: [], hasNext: false, nextCursor: null };
       }
       return { existingTeams: latestMeta.existingTeams, requestedTeam: latestMeta.requestedTeam, topics: mergedTopics, hasNext: false, nextCursor: null };
-    },
-    [],
-  );
-
-  const fetchAllMeetingTeamChats = useCallback(
-    async (
-      clubId: number,
-      meetingId: number,
-      teamId: number,
-      options?: { suppressErrorToast?: boolean },
-    ): Promise<ClubMeetingChatHistory> => {
-      const mergedChats: ClubMeetingChatMessage[] = [];
-      const seenMessageIds = new Set<number>();
-      const visitedCursors = new Set<number>();
-      let cursorId: number | undefined;
-      let latestMeta: ClubMeetingChatHistory | null = null;
-
-      for (let page = 0; page < BOOKSHELF_CURSOR_LOOP_LIMIT; page += 1) {
-        const response = await fetchClubMeetingTeamChatMessages(clubId, meetingId, teamId, cursorId, {
-          suppressErrorToast: options?.suppressErrorToast,
-        });
-        latestMeta = response;
-        response.chats.forEach((item) => {
-          if (seenMessageIds.has(item.messageId)) return;
-          seenMessageIds.add(item.messageId);
-          mergedChats.push(item);
-        });
-        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
-        if (visitedCursors.has(response.nextCursor)) break;
-        visitedCursors.add(response.nextCursor);
-        cursorId = response.nextCursor;
-      }
-
-      const sortedChats = [...mergedChats].sort((left, right) => {
-        const leftTime = left.sendAt ? Date.parse(left.sendAt) : NaN;
-        const rightTime = right.sendAt ? Date.parse(right.sendAt) : NaN;
-        if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
-          return leftTime - rightTime;
-        }
-        return left.messageId - right.messageId;
-      });
-
-      if (!latestMeta) return { chats: sortedChats, hasNext: false, nextCursor: null };
-      return { chats: sortedChats, hasNext: false, nextCursor: null };
     },
     [],
   );
@@ -718,24 +601,14 @@ export function useBookshelfState({
                 }
               : meeting;
 
-          const [topicSettled, chatSettled] = await Promise.all([
-            Promise.allSettled(
-              effectiveMeeting.teams.map(async (team) => [
-                team.teamId,
-                await fetchAllMeetingTeamTopics(clubId, regularMeetingId, team.teamId, {
-                  suppressErrorToast: options?.suppressErrorToast,
-                }),
-              ] as const),
-            ),
-            Promise.allSettled(
-              effectiveMeeting.teams.map(async (team) => [
-                team.teamId,
-                await fetchAllMeetingTeamChats(clubId, regularMeetingId, team.teamId, {
-                  suppressErrorToast: options?.suppressErrorToast,
-                }),
-              ] as const),
-            ),
-          ]);
+          const topicSettled = await Promise.allSettled(
+            effectiveMeeting.teams.map(async (team) => [
+              team.teamId,
+              await fetchAllMeetingTeamTopics(clubId, regularMeetingId, team.teamId, {
+                suppressErrorToast: options?.suppressErrorToast,
+              }),
+            ] as const),
+          );
 
           if (isStale()) return;
 
@@ -745,16 +618,9 @@ export function useBookshelfState({
             return [team.teamId, { existingTeams: effectiveMeeting.teams, requestedTeam: team, topics: [], hasNext: false, nextCursor: null }] as [number, ClubMeetingTeamTopics];
           });
 
-          const chatEntries = effectiveMeeting.teams.map((team, index) => {
-            const settled = chatSettled[index];
-            if (settled?.status === 'fulfilled') return settled.value as [number, ClubMeetingChatHistory];
-            return [team.teamId, { chats: [], hasNext: false, nextCursor: null }] as [number, ClubMeetingChatHistory];
-          });
-
           const topicsByTeamId = Object.fromEntries(topicEntries);
-          const chatsByTeamId = Object.fromEntries(chatEntries);
           regularInfo = mapMeetingToRegularMeetingInfo(
-            book, effectiveMeeting, topicsByTeamId, chatsByTeamId, currentMemberNicknameRef.current,
+            book, effectiveMeeting, topicsByTeamId, currentMemberNicknameRef.current,
           );
         }
 
@@ -772,7 +638,7 @@ export function useBookshelfState({
               members: meetingMembersResponse.members.length > 0 ? meetingMembersResponse.members : meeting?.members ?? [],
               isStaff: meeting?.isStaff ?? canManageClub,
             };
-            const fallbackInfo = mapMeetingToRegularMeetingInfo(book, fallbackMeeting, {}, {}, currentMemberNicknameRef.current);
+            const fallbackInfo = mapMeetingToRegularMeetingInfo(book, fallbackMeeting, {}, currentMemberNicknameRef.current);
             if (fallbackInfo && fallbackInfo.groups.length > 0) {
               regularInfo = fallbackInfo;
             }
@@ -799,7 +665,6 @@ export function useBookshelfState({
     [
       canManageClub,
       fetchAllBookshelfReviewsForMeeting,
-      fetchAllMeetingTeamChats,
       fetchAllMeetingTeamTopics,
       group.clubId,
     ],
@@ -1249,106 +1114,6 @@ export function useBookshelfState({
       };
     });
   }, []);
-
-  const refreshRegularChatGroupMessages = useCallback(
-    async (groupItem: RegularMeetingGroupItem, options?: { suppressErrorToast?: boolean }) => {
-      const clubId = group.clubId;
-      const meetingId = selectedRegularMeetingId;
-      const teamId = groupItem.teamId;
-      if (typeof clubId !== 'number' || typeof meetingId !== 'number' || typeof teamId !== 'number') return;
-
-      const history = await fetchAllMeetingTeamChats(clubId, meetingId, teamId, {
-        suppressErrorToast: options?.suppressErrorToast,
-      });
-      const nextMessages = history.chats.map((item) =>
-        mapMeetingChatMessageToUi(item, currentMemberNicknameRef.current),
-      );
-
-      setRegularGroupChatMessagesById((prev) => {
-        const currentMessages = prev[groupItem.id] ?? [];
-        if (areRegularGroupChatMessagesEqual(currentMessages, nextMessages)) return prev;
-        return { ...prev, [groupItem.id]: nextMessages };
-      });
-    },
-    [fetchAllMeetingTeamChats, group.clubId, selectedRegularMeetingId],
-  );
-
-  const handleOpenRegularChatPicker = useCallback(() => {
-    setRegularChatPickerVisible(true);
-    setActiveRegularChatGroupId(null);
-    setRegularChatInput('');
-  }, []);
-
-  const handleSelectRegularChatGroup = useCallback(
-    (groupId: string) => {
-      const groupItem = regularMeetingInfo?.groups.find((item) => item.id === groupId);
-      triggerSelectionHaptic();
-      setActiveRegularChatGroupId(groupId);
-      setRegularChatPickerVisible(false);
-      setRegularChatInput('');
-      if (groupItem) {
-        void refreshRegularChatGroupMessages(groupItem, { suppressErrorToast: true });
-      }
-    },
-    [refreshRegularChatGroupMessages, regularMeetingInfo],
-  );
-
-  const handleBackToRegularChatPicker = useCallback(() => {
-    setActiveRegularChatGroupId(null);
-    setRegularChatPickerVisible(true);
-    setRegularChatInput('');
-  }, []);
-
-  const handleCloseRegularChat = useCallback(() => {
-    setRegularChatPickerVisible(false);
-    setActiveRegularChatGroupId(null);
-    setRegularChatInput('');
-  }, []);
-
-  const handleCloseRegularChatRef = useRef(handleCloseRegularChat);
-  useEffect(() => {
-    handleCloseRegularChatRef.current = handleCloseRegularChat;
-  });
-
-  const CHAT_SWIPE_START_X = 30;
-  const CHAT_SWIPE_START_DX = 8;
-  const CHAT_SWIPE_DISMISS_DISTANCE = 60;
-  const CHAT_SWIPE_DISMISS_VELOCITY = 0.5;
-  const chatSwipePanResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (evt, gestureState) =>
-        evt.nativeEvent.pageX < CHAT_SWIPE_START_X &&
-        gestureState.dx > CHAT_SWIPE_START_DX &&
-        Math.abs(gestureState.dy) < Math.abs(gestureState.dx),
-      onPanResponderRelease: (_evt, gestureState) => {
-        if (
-          gestureState.dx > CHAT_SWIPE_DISMISS_DISTANCE ||
-          gestureState.vx > CHAT_SWIPE_DISMISS_VELOCITY
-        ) {
-          handleCloseRegularChatRef.current();
-        }
-      },
-    }),
-  ).current;
-
-  const handleSubmitRegularChat = useCallback(() => {
-    const content = regularChatInput.trim();
-    if (!activeRegularChatGroup || !content || submittingRegularChat) return;
-    if (!isChatConnected) {
-      showToast('채팅 서버에 연결 중입니다. 잠시 후 다시 시도해 주십시오.');
-      return;
-    }
-    triggerSelectionHaptic();
-    setSubmittingRegularChat(true);
-    try {
-      publishChatToStomp(content);
-      setRegularChatInput('');
-    } catch {
-      showToast('채팅 전송에 실패했습니다.');
-    } finally {
-      setSubmittingRegularChat(false);
-    }
-  }, [activeRegularChatGroup, isChatConnected, publishChatToStomp, regularChatInput, submittingRegularChat]);
 
   // Team management
   const stopDragAutoScroll = useCallback(() => {
@@ -1988,9 +1753,6 @@ export function useBookshelfState({
     setBookshelfDetailTab('TOPIC');
     setSelectedBookshelfBookId(null);
     setSelectedRegularGroupId(null);
-    setRegularChatPickerVisible(false);
-    setActiveRegularChatGroupId(null);
-    setRegularChatInput('');
   }, []);
 
   return {
@@ -2001,12 +1763,7 @@ export function useBookshelfState({
     bookshelfItems, setBookshelfItems,
     selectedRegularGroupId, setSelectedRegularGroupId,
     regularGroupPostsById, setRegularGroupPostsById,
-    regularGroupChatMessagesById, setRegularGroupChatMessagesById,
     regularGroupMembersVisible,
-    regularChatPickerVisible,
-    activeRegularChatGroupId, setActiveRegularChatGroupId,
-    regularChatInput, setRegularChatInput,
-    submittingRegularChat,
     creatingBookshelf,
     updatingBookshelf,
     deletingBookshelf,
@@ -2053,12 +1810,9 @@ export function useBookshelfState({
     canSubmitBookshelfComposer,
     regularMeetingInfo,
     selectedRegularGroup,
-    activeRegularChatGroup,
     teamManageMemberById,
     teamManageAssignedMemberIds,
     teamManageUnassignedMembers,
-    isChatConnected,
-    chatScrollRef,
     shouldScrollToBookshelfDetailRef,
     bookshelfMeetingDetailRequestIdRef,
     teamManageDropRefs,
@@ -2066,7 +1820,6 @@ export function useBookshelfState({
     teamManageScrollViewRef,
     teamManageScrollOffsetRef,
     teamManageScrollBoundsRef,
-    chatSwipePanResponder,
     reloadBookshelfMeetingDetail,
     loadMoreBookshelfTopics,
     closeBookshelfBookSelector,
@@ -2090,12 +1843,6 @@ export function useBookshelfState({
     handleToggleRegularGroupMembers,
     handleToggleRegularGroupPost,
     handleSortRegularGroupPosts,
-    refreshRegularChatGroupMessages,
-    handleOpenRegularChatPicker,
-    handleSelectRegularChatGroup,
-    handleBackToRegularChatPicker,
-    handleCloseRegularChat,
-    handleSubmitRegularChat,
     closeTeamManage,
     refreshTeamManageDropLayouts,
     handlePressManageRegularGroups,

@@ -9,8 +9,6 @@ import type {
   ClubCategoryCode,
   ClubDetailResult,
   ClubManagedMember,
-  ClubMeetingChatHistory,
-  ClubMeetingChatMessage,
   ClubMeetingInfo,
   ClubMeetingTeamTopics,
   ClubMembershipStatus,
@@ -49,7 +47,6 @@ import type {
   NoticeItem,
   NoticeComment,
   NoticePoll,
-  RegularGroupChatMessage,
   RegularMeetingGroupItem,
   RegularMeetingInfo,
   RegularGroupPostItem,
@@ -311,29 +308,6 @@ export function areRegularGroupPostsEqual(
   return true;
 }
 
-export function areRegularGroupChatMessagesEqual(
-  left: RegularGroupChatMessage[],
-  right: RegularGroupChatMessage[],
-) {
-  if (left.length !== right.length) return false;
-
-  for (let index = 0; index < left.length; index += 1) {
-    const leftItem = left[index];
-    const rightItem = right[index];
-
-    if (
-      leftItem.id !== rightItem.id ||
-      leftItem.author !== rightItem.author ||
-      leftItem.content !== rightItem.content ||
-      leftItem.time !== rightItem.time ||
-      leftItem.mine !== rightItem.mine
-    ) {
-      return false;
-    }
-  }
-
-  return true;
-}
 
 export function getStarIconName(
   rating: number,
@@ -467,31 +441,10 @@ export function mapNoticeCommentToUi(
   };
 }
 
-export function mapMeetingChatMessageToUi(
-  item: ClubMeetingChatMessage,
-  currentNickname?: string,
-): RegularGroupChatMessage {
-  const normalizedCurrentNickname = currentNickname?.trim();
-  const normalizedAuthor = item.senderNickname.trim();
-
-  return {
-    id: `meeting-chat-${item.messageId}`,
-    author: item.senderNickname,
-    content: item.content,
-    time: formatDotDateTime(item.sendAt),
-    mine:
-      Boolean(normalizedCurrentNickname) &&
-      normalizedAuthor.localeCompare(normalizedCurrentNickname ?? '', 'ko', {
-        sensitivity: 'accent',
-      }) === 0,
-  };
-}
-
 export function mapMeetingToRegularMeetingInfo(
   book: BookshelfItem | null,
   meeting: ClubMeetingInfo,
   topicsByTeamId: Record<number, ClubMeetingTeamTopics>,
-  chatsByTeamId: Record<number, ClubMeetingChatHistory>,
   currentNickname?: string,
 ): RegularMeetingInfo | null {
   if (!book) return null;
@@ -525,8 +478,6 @@ export function mapMeetingToRegularMeetingInfo(
     });
     const teamTopics =
       typeof team.teamId === 'number' ? topicsByTeamId[team.teamId]?.topics ?? [] : [];
-    const teamChats =
-      typeof team.teamId === 'number' ? chatsByTeamId[team.teamId]?.chats ?? [] : [];
     const label = toTeamLabel(team.teamNumber);
     const groupId =
       typeof team.teamId === 'number'
@@ -552,7 +503,6 @@ export function mapMeetingToRegularMeetingInfo(
         content: topic.content,
         completed: topic.isSelected,
       })),
-      chatMessages: teamChats.map((chat) => mapMeetingChatMessageToUi(chat, currentNickname)),
     };
   });
 

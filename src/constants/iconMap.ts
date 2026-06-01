@@ -45,9 +45,6 @@ export const DEFAULT_PROFILE_IMAGE_URI = resolveSvgUri(
   require('../../assets/mypage/image_profile1.svg'),
 );
 
-export const CHAT_ICON_URI = resolveSvgUri(
-  require('../../assets/icons/Chat.svg'),
-);
 
 export const TAB_ICON_URIS = {
   Home: {

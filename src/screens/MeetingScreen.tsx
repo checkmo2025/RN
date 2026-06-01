@@ -35,16 +35,14 @@ import {
   type RouteProp,
 } from '@react-navigation/native';
 import type { TabParamList } from '../navigation/types';
-import { SvgUri } from 'react-native-svg';
 
-import { CHAT_ICON_URI } from '../constants/iconMap';
+
 import { buttonSize, colors, interactionOpacity, layers, motion, radius, spacing, typography } from '../theme';
 import { navigateToHome, parsePositiveIntParam } from '../navigation/navigateToHome';
 import { useConsumeRouteParam } from '../hooks/useConsumeRouteParam';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
-import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
 import { DialogOverlay } from '../components/common/DialogOverlay';
@@ -120,7 +118,6 @@ import type {
   BookshelfPostMenuState,
   RegularGroupPostItem,
   RegularGroupMemberItem,
-  RegularGroupChatMessage,
   RegularMeetingGroupItem,
   RegularMeetingInfo,
   TeamManageMemberItem,
@@ -150,7 +147,6 @@ import {
   mapBookshelfReviewToPostItem,
   sortBookshelfPostsByLatest,
   areRegularGroupPostsEqual,
-  areRegularGroupChatMessagesEqual,
   getStarIconName,
   formatRatingLabel,
   normalizeAverageRating,
@@ -159,7 +155,6 @@ import {
   toNoticeTags,
   mergeNoticeDetail,
   mapNoticeCommentToUi,
-  mapMeetingChatMessageToUi,
   mapMeetingToRegularMeetingInfo,
   ensureRegularMeetingInfo,
   outputFilterOptions,
@@ -178,7 +173,6 @@ const MEETING_TAB_DOUBLE_TAP_WINDOW_MS = 450;
 
 
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
-const chatIconUri = CHAT_ICON_URI;
 function ClubDefaultProfileArtwork({
   variant = 'detail',
 }: {
@@ -925,12 +919,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     bookshelfItems, setBookshelfItems,
     selectedRegularGroupId, setSelectedRegularGroupId,
     regularGroupPostsById, setRegularGroupPostsById,
-    regularGroupChatMessagesById, setRegularGroupChatMessagesById,
     regularGroupMembersVisible,
-    regularChatPickerVisible,
-    activeRegularChatGroupId, setActiveRegularChatGroupId,
-    regularChatInput, setRegularChatInput,
-    submittingRegularChat,
     creatingBookshelf,
     updatingBookshelf,
     deletingBookshelf,
@@ -977,12 +966,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     canSubmitBookshelfComposer,
     regularMeetingInfo,
     selectedRegularGroup,
-    activeRegularChatGroup,
     teamManageMemberById,
     teamManageAssignedMemberIds,
     teamManageUnassignedMembers,
-    isChatConnected,
-    chatScrollRef,
     shouldScrollToBookshelfDetailRef,
     bookshelfMeetingDetailRequestIdRef,
     teamManageDropRefs,
@@ -990,7 +976,6 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     teamManageScrollViewRef,
     teamManageScrollOffsetRef,
     teamManageScrollBoundsRef,
-    chatSwipePanResponder,
     reloadBookshelfMeetingDetail,
     loadMoreBookshelfTopics,
     closeBookshelfBookSelector,
@@ -1014,12 +999,6 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     handleToggleRegularGroupMembers,
     handleToggleRegularGroupPost,
     handleSortRegularGroupPosts,
-    refreshRegularChatGroupMessages,
-    handleOpenRegularChatPicker,
-    handleSelectRegularChatGroup,
-    handleBackToRegularChatPicker,
-    handleCloseRegularChat,
-    handleSubmitRegularChat,
     closeTeamManage,
     refreshTeamManageDropLayouts,
     handlePressManageRegularGroups,
@@ -2746,13 +2725,6 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           ) : null}
         </Pressable>
       </Modal>
-      {activeTab === 'bookshelf' &&
-      bookshelfViewMode === 'REGULAR_GROUP' &&
-      selectedRegularGroup ? (
-        <FloatingActionButton onPress={handleOpenRegularChatPicker} accessibilityLabel="채팅 조 선택">
-          <SvgUri uri={chatIconUri} width={24} height={24} />
-        </FloatingActionButton>
-      ) : null}
       <DialogOverlay
         visible={contactModalVisible}
         onClose={closeContactModal}
@@ -2796,136 +2768,6 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               </View>
             )}
       </DialogOverlay>
-      <DialogOverlay
-        visible={regularChatPickerVisible}
-        onClose={handleCloseRegularChat}
-        overlayStyle={styles.regularChatModalOverlay}
-        cardStyle={styles.regularChatPickerCard}
-      >
-            <View style={styles.regularChatHeader}>
-              <Text style={styles.regularChatTitle}>채팅 조 선택</Text>
-              <Pressable onPress={handleCloseRegularChat} hitSlop={8}>
-                <MaterialIcons name="close" size={20} color={colors.gray6} />
-              </Pressable>
-            </View>
-            <View style={styles.regularChatGroupList}>
-              {(regularMeetingInfo?.groups ?? []).map((groupItem) => (
-                <Pressable
-                  key={`chat-picker-${groupItem.id}`}
-                  style={({ pressed }) => [
-                    styles.regularChatGroupItem,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() => handleSelectRegularChatGroup(groupItem.id)}
-                >
-                  <Text style={styles.regularChatGroupItemText}>{groupItem.label}</Text>
-                  <MaterialIcons name="chevron-right" size={20} color={colors.gray5} />
-                </Pressable>
-              ))}
-            </View>
-      </DialogOverlay>
-      <Modal
-        visible={Boolean(activeRegularChatGroup)}
-        animationType="slide"
-        onRequestClose={handleCloseRegularChat}
-      >
-        <KeyboardAvoidingView
-          style={styles.regularChatScreen}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          {...chatSwipePanResponder.panHandlers}
-        >
-          {activeRegularChatGroup ? (
-            <>
-              <View style={[styles.regularChatHeader, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
-                <View style={styles.regularChatHeaderLeft}>
-                  <Pressable onPress={handleBackToRegularChatPicker} hitSlop={8}>
-                    <MaterialIcons name="chevron-left" size={20} color={colors.gray6} />
-                  </Pressable>
-                  <Text style={styles.regularChatTitle}>{activeRegularChatGroup.label}</Text>
-                  <View style={[styles.regularChatConnDot, isChatConnected ? styles.regularChatConnDotOn : styles.regularChatConnDotOff]} />
-                </View>
-                <Pressable onPress={handleCloseRegularChat} hitSlop={8}>
-                  <MaterialIcons name="close" size={20} color={colors.gray6} />
-                </Pressable>
-              </View>
-              <ScrollView
-                ref={chatScrollRef}
-                style={styles.regularChatMessages}
-                contentContainerStyle={styles.regularChatMessagesContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              >
-                {activeRegularChatGroup.chatMessages.map((message) => (
-                  <View
-                    key={message.id}
-                    style={[
-                      styles.regularChatMessageRow,
-                      message.mine && styles.regularChatMessageRowMine,
-                    ]}
-                  >
-                    {!message.mine ? (
-                      <View style={styles.regularChatMessageMeta}>
-                        <View style={styles.bookshelfPostAvatar}>
-                          <DefaultProfileAvatar size={16} />
-                        </View>
-                        <Text style={styles.regularChatAuthor}>{message.author}</Text>
-                      </View>
-                    ) : null}
-                    <View
-                      style={[
-                        styles.regularChatBubble,
-                        message.mine ? styles.regularChatBubbleMine : styles.regularChatBubbleOther,
-                      ]}
-                    >
-                      <Text style={styles.regularChatBubbleText}>{message.content}</Text>
-                    </View>
-                    <Text style={styles.regularChatTime}>{message.time}</Text>
-                  </View>
-                ))}
-                {activeRegularChatGroup.chatMessages.length === 0 ? (
-                  <View style={styles.managementEmptyCard}>
-                    <Text style={styles.managementEmptyText}>표시할 채팅 내역이 없습니다.</Text>
-                  </View>
-                ) : null}
-              </ScrollView>
-              <View style={[styles.regularChatInputRow, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
-                <TextInput
-                  style={styles.regularChatInput}
-                  placeholder="채팅 입력"
-                  placeholderTextColor={colors.gray3}
-                  value={regularChatInput}
-                  onChangeText={setRegularChatInput}
-                  editable={!submittingRegularChat}
-                  onSubmitEditing={handleSubmitRegularChat}
-                  returnKeyType="send"
-                />
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.regularChatSendButton,
-                    (submittingRegularChat || regularChatInput.trim().length === 0) &&
-                      styles.regularChatSendButtonDisabled,
-                    pressed &&
-                      !(submittingRegularChat || regularChatInput.trim().length === 0) &&
-                      styles.pressed,
-                  ]}
-                  onPress={handleSubmitRegularChat}
-                  disabled={submittingRegularChat || regularChatInput.trim().length === 0}
-                >
-                  <MaterialIcons
-                    name="send"
-                    size={18}
-                    color={
-                      submittingRegularChat || regularChatInput.trim().length === 0
-                        ? colors.gray3
-                        : colors.gray4
-                    }
-                  />
-                </Pressable>
-              </View>
-            </>
-          ) : null}
-        </KeyboardAvoidingView>
-      </Modal>
       <DialogOverlay
         visible={Boolean(voteVotersModal)}
         onClose={() => setVoteVotersModal(null)}
