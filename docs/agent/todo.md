@@ -76,7 +76,7 @@ TODO 수정 시 아래 규칙만 지킨다.
 | 상태 | 항목 | 설명 | 생성일자 | 최종 편집일자 |
 | ------ | ------ | ------ | ------ | ------ |
 | ⬜ | **채팅 기능 제거 여부 검토** | 모임 채팅 기능을 앱에서 제외할지 집에서 추가 검토. 완료 기준(DoD): 채팅 유지/제거 정책 확정 후 RN 화면·hook·API 함수·TODO 이슈(`CHAT-*`) 정리 범위 결정. | 2026-05-08 | - |
-| ⬜ | **사용자 차단 화면 API 연결** | 차단 목록/차단/차단해제 화면을 실제 API와 연결. 기준 경로: `GET /api/members/me/blocks`, `POST /api/members/{memberNickname}/block`, `DELETE /api/members/{memberNickname}/block`. 완료 기준(DoD): 차단 목록 조회, 차단/해제 액션, 페이징(cursor) 반영 및 에러 처리 UX 확인. | 2026-05-20 | - |
+| ✅ | **사용자 차단 화면 API 연결** | 차단 목록/차단/차단해제 화면을 실제 API와 연결. `fetchBlockedMembers`, `blockMember`, `unblockMember` 구현 완료. MyPageScreen(차단 목록/해제), UserProfileScreen(차단) 연결 완료. | 2026-05-20 | 2026-05-24 |
 | ✅ | **책이야기 임시저장 API 연결** | 책이야기 저장 플로우에서 임시저장을 `status: DRAFT`로 연동. 기준 경로: `POST /api/book-stories`, `PATCH /api/book-stories/{bookStoryId}`. 완료 기준(DoD): 임시저장 생성/수정, 재진입 시 DRAFT 이어쓰기, 발행 시 `PUBLISHED` 전환까지 확인. | 2026-05-20 | 2026-05-21 |
 | ✅ | **비밀번호 변경 후 자동 로그아웃** | `useAccountSettingsState.handleSubmitPasswordUpdate` 성공 시 `logout()` 호출 추가. 토스트 문구: "비밀번호가 변경되었습니다. 다시 로그인해 주세요." 완료 기준(DoD): 비밀번호 변경 성공 → 로그아웃 → 로그인 화면 진입. | 2026-05-08 | 2026-05-08 |
 | ✅ | **헤더 알림 클릭 시 리스트 표출 효과 수정** | `AppHeader` 알림 아이콘 클릭 시 알림 리스트가 열리는 전환 효과/노출 타이밍을 자연스럽게 조정. `notiAnim` Animated.Value 추가, fade + translateY(-14→0) 애니메이션 적용(검색 드롭다운과 동일 패턴). 완료 기준(DoD): 클릭 직후 리스트가 튀거나 겹치지 않고 일관된 애니메이션으로 표시됨. | 2026-05-08 | 2026-05-08 |

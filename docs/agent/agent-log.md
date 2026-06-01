@@ -2305,3 +2305,7 @@ export const interactionOpacity = {
 
 - Android 앱 아이콘 로고 크기 최종 확정 (65%, adaptive icon safe zone 대응)
 - todo.md 아이콘 항목 ✅ 완료 처리
+
+# 2026-06-01 작업
+
+- todo.md: 사용자 차단 화면 API 연결 항목 ✅ 완료 처리
