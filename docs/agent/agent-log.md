@@ -2358,3 +2358,7 @@ export const interactionOpacity = {
 
 - Swagger 확인: POST /api/members/find-email 단일 경로 확정
 - RN 코드 일치, MEM-04 ✅ 처리
+
+# 2026-06-04 01:27:52 KST AUTH-01 todo 정리
+
+- AUTH-01 ✅ 처리: 3단계 분리 회원가입은 의도된 설계, N/A
