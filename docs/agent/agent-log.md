@@ -2349,3 +2349,7 @@ export const interactionOpacity = {
 
 - `handleOpenNextMeeting`에 `requireAuth` 래핑 추가
 - 비로그인 상태에서 "이번 모임 바로가기" 클릭 시 로그인 화면으로 이동
+
+# 2026-06-04 01:23:00 KST todo 정리
+
+- MYPAGE-02 ✅ 처리: 기본 프로필 색상 선택 제거로 고정 1개 정책 확정, N/A
