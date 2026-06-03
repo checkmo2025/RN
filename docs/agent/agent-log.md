@@ -2362,3 +2362,9 @@ export const interactionOpacity = {
 # 2026-06-04 01:27:52 KST AUTH-01 todo 정리
 
 - AUTH-01 ✅ 처리: 3단계 분리 회원가입은 의도된 설계, N/A
+
+# 2026-06-04 01:31:25 KST MEET-MGMT-04 링크 필드 보존
+
+- Swagger PUT 방식 확인: 미전송 시 links 초기화 가능성
+- updateClub 호출 시 `links: group.links` 추가하여 기존 링크 보존
+- MEET-MGMT-04 ✅ 처리

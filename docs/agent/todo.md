@@ -179,7 +179,7 @@ TODO 수정 시 아래 규칙만 지킨다.
 | 상태 | 역할 | ID | 항목 | 현황 / 남은 작업 | 생성일자 | 최종 편집일자 |
 | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
 | ✅ | **공동** | `MEET-HOME-03` | 이번 모임 바로가기 권한/응답 불일치 | RN: `handleOpenNextMeeting`에 `requireAuth` 래핑 추가 — 비로그인 시 로그인 화면으로 이동. | - | 2026-06-04 |
-| ⬜ | **공동** | `MEET-MGMT-04` | 모임 수정 요청에서 링크 필드 미전송 | BE의 "미전송 필드 처리 정책" 확정 후 앱 수정 화면 링크 편집/전송 정리. | - | - |
+| ✅ | **공동** | `MEET-MGMT-04` | 모임 수정 요청에서 링크 필드 미전송 | Swagger 확인: PUT 방식으로 미전송 시 초기화. RN 수정: updateClub 호출 시 `links: group.links` 포함하여 기존 링크 보존. | - | 2026-06-04 |
 | ✅ | **공동** | `CHAT-02` | REST 채팅 전송 함수가 스펙/실사용과 불일치 | 채팅 기능 전면 제거로 `sendClubMeetingTeamChatMessage` 및 관련 코드 모두 삭제 완료. | - | 2026-06-01 |
 | ✅ | **공동** | `REPORT-01` | 신고 대상 엔티티 식별자 미전달 | BE: `POST /api/reports` (`targetType`/`targetId`/`reason`) 확장 완료. RN: `createReport` 함수 신설, 전체 신고 호출 교체, reason 옵션(일반/욕설/음란/도배) 업데이트 완료. | - | 2026-06-04 |
 | ✅ | **공동** | `MEM-04` | find-email GET fallback | Swagger 확인 결과 `POST /api/members/find-email` 단일 경로 확정. RN 코드 일치. | - | 2026-06-04 |

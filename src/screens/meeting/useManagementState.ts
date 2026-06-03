@@ -381,6 +381,7 @@ export function useManagementState({
             .filter((target): target is ClubParticipantTypeCode => Boolean(target)),
           open: !editDraft.isPrivate,
           profileImageUrl: editDraft.imageUrl || undefined,
+          links: group.links,
         });
         const detail = await fetchClubDetail(group.clubId as number);
         if (detail) {
