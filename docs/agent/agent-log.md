@@ -2349,8 +2349,3 @@ export const interactionOpacity = {
 
 - `handleOpenNextMeeting`에 `requireAuth` 래핑 추가
 - 비로그인 상태에서 "이번 모임 바로가기" 클릭 시 로그인 화면으로 이동
-
-# 2026-06-04 MEET-HOME-03 비로그인 차단 UX
-
-- handleOpenNextMeeting에 requireAuth 래핑 추가
-- 비로그인 상태에서 "이번 모임 바로가기" 클릭 시 로그인 화면으로 이동
