@@ -2344,3 +2344,13 @@ export const interactionOpacity = {
 - MyPageScreen.tsx:3091 `paddingHorizontal: 8` → `spacing.xs` (check:spacing 통과)
 - app.json Android `RECORD_AUDIO` 권한 제거
 - app.json expo-image-picker `microphonePermission` 제거
+
+# 2026-06-04 MEET-HOME-03 비로그인 차단 UX
+
+- `handleOpenNextMeeting`에 `requireAuth` 래핑 추가
+- 비로그인 상태에서 "이번 모임 바로가기" 클릭 시 로그인 화면으로 이동
+
+# 2026-06-04 MEET-HOME-03 비로그인 차단 UX
+
+- handleOpenNextMeeting에 requireAuth 래핑 추가
+- 비로그인 상태에서 "이번 모임 바로가기" 클릭 시 로그인 화면으로 이동

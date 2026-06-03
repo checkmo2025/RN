@@ -1016,33 +1016,35 @@ export function useBookshelfState({
     const clubId = group.clubId;
     if (typeof clubId !== 'number' || openingNextMeeting) return;
 
-    const open = async () => {
-      setOpeningNextMeeting(true);
-      try {
-        const nextMeeting = await fetchClubNextMeetingRedirect(clubId);
-        const meetingId = nextMeeting?.meetingId;
-        if (typeof meetingId !== 'number') {
-          showToast('예정된 정기모임이 없습니다.');
-          return;
-        }
-        const opened = await openBookshelfTopicByMeetingId(meetingId);
-        if (!opened) showToast('이번 모임 정보를 찾을 수 없습니다.');
-      } catch (error) {
-        if (error instanceof ApiError) {
-          if (error.status === 404) {
+    requireAuth(() => {
+      const open = async () => {
+        setOpeningNextMeeting(true);
+        try {
+          const nextMeeting = await fetchClubNextMeetingRedirect(clubId);
+          const meetingId = nextMeeting?.meetingId;
+          if (typeof meetingId !== 'number') {
             showToast('예정된 정기모임이 없습니다.');
             return;
           }
-          showToast(error.message);
-          return;
+          const opened = await openBookshelfTopicByMeetingId(meetingId);
+          if (!opened) showToast('이번 모임 정보를 찾을 수 없습니다.');
+        } catch (error) {
+          if (error instanceof ApiError) {
+            if (error.status === 404) {
+              showToast('예정된 정기모임이 없습니다.');
+              return;
+            }
+            showToast(error.message);
+            return;
+          }
+          showToast('이번 모임을 열지 못했습니다.');
+        } finally {
+          setOpeningNextMeeting(false);
         }
-        showToast('이번 모임을 열지 못했습니다.');
-      } finally {
-        setOpeningNextMeeting(false);
-      }
-    };
-    void open();
-  }, [group.clubId, openBookshelfTopicByMeetingId, openingNextMeeting]);
+      };
+      void open();
+    });
+  }, [group.clubId, openBookshelfTopicByMeetingId, openingNextMeeting, requireAuth]);
 
   const handleBackToBookshelfGrid = useCallback(() => {
     setBookshelfViewMode('GRID');
