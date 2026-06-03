@@ -2338,3 +2338,9 @@ export const interactionOpacity = {
 - StoryScreen, UserProfileScreen, useManagementState, useNoticeState, useBookshelfState 전체 신고 호출 교체
 - `fetchMyReports` → `GET /reports/me` 엔드포인트 교체, 신고 내역 레이블 매핑 업데이트
 - tsc --noEmit 통과
+
+# 2026-06-04 spacing 수정 및 마이크 권한 제거
+
+- MyPageScreen.tsx:3091 `paddingHorizontal: 8` → `spacing.xs` (check:spacing 통과)
+- app.json Android `RECORD_AUDIO` 권한 제거
+- app.json expo-image-picker `microphonePermission` 제거

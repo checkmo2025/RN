@@ -3088,7 +3088,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.secondary1,
     borderRadius: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.xs,
     paddingVertical: 3,
   },
 });
