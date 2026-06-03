@@ -2325,3 +2325,7 @@ export const interactionOpacity = {
 - `defaultProfilePalette`, 관련 state/handler/DialogOverlay/스타일 전면 제거
 - CHAT-02 todo ✅ 처리 (채팅 제거로 완료)
 - tsc --noEmit 통과
+
+# 2026-06-04 CHAT-03 todo 정리
+
+- CHAT-03 채팅 히스토리 API 문서 항목 ✅ 처리 (채팅 제거로 N/A)
