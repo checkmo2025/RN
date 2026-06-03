@@ -16,11 +16,11 @@ import { navigateToHome } from '../../navigation/navigateToHome';
 import { emailRegex, passwordRegex } from '../../constants/validation';
 import { useEmailVerificationFlow } from '../../hooks/useEmailVerificationFlow';
 
-const reportTypeLabelByCode: Record<string, string> = {
+const reasonLabelByCode: Record<string, string> = {
   GENERAL: '일반',
-  CLUB_MEETING: '독서 모임',
-  BOOK_STORY: '책 이야기',
-  COMMENT: '댓글',
+  INSULT: '욕설/비방',
+  INAPPROPRIATE_CONTENT: '음란/부적절',
+  SPAM: '홍보/도배',
 };
 
 export type ReportHistoryItem = {
@@ -75,19 +75,16 @@ export function useAccountSettingsState({
     return items.map((item, index) => {
       const reportId =
         typeof item.reportId === 'number' ? `report-${item.reportId}` : `report-${index}`;
-      const reportTypeCode = typeof item.reportType === 'string' ? item.reportType : 'GENERAL';
+      const reasonCode = item.reason ?? 'GENERAL';
       return {
         id: reportId,
-        reportType: reportTypeLabelByCode[reportTypeCode] ?? reportTypeCode,
-        reportedMemberNickname:
-          typeof item.reportedMemberNickname === 'string' && item.reportedMemberNickname.trim()
-            ? item.reportedMemberNickname
-            : '알 수 없음',
+        reportType: item.reasonDescription ?? reasonLabelByCode[reasonCode] ?? reasonCode,
+        reportedMemberNickname: item.displayName ?? item.targetId ?? '알 수 없음',
         content:
           typeof item.content === 'string' && item.content.trim()
             ? item.content
             : '신고 사유가 입력되지 않았습니다.',
-        createdAtLabel: formatKstDateLabel(item.reportDate ?? item.createdAt),
+        createdAtLabel: formatKstDateLabel(item.reportedAt),
       };
     });
   }, []);

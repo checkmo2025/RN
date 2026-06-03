@@ -958,11 +958,7 @@ export function useBookshelfState({
       setBookshelfPostMenu(null);
 
       if (action === 'report') {
-        setReportModal({
-          nickname: post.author,
-          initialType: 'CLUB_MEETING',
-          allowedTypes: ['CLUB_MEETING'],
-        });
+        setReportModal({ nickname: post.author });
         return;
       }
 

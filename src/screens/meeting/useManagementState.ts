@@ -4,7 +4,7 @@ import { Alert, Animated, Linking, PanResponder } from 'react-native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import type { ReportMemberModalState } from '../../components/common/ReportMemberModal';
 import { ApiError } from '../../services/api/http';
-import { reportMember, type MemberReportType } from '../../services/api/memberApi';
+import { createReport, type ReportReason } from '../../services/api/memberApi';
 import {
   deleteClub,
   fetchClubDetail,
@@ -494,15 +494,16 @@ export function useManagementState({
   );
 
   const handleSubmitReport = useCallback(
-    (payload: { reportType: MemberReportType; content?: string }) => {
+    (payload: { reason: ReportReason; content?: string }) => {
       if (!reportModal?.nickname) return;
       requireAuth(() => {
         const submit = async () => {
           setSubmittingReport(true);
           try {
-            await reportMember({
-              reportedMemberNickname: reportModal.nickname,
-              reportType: payload.reportType,
+            await createReport({
+              targetType: 'MEMBER',
+              targetId: reportModal.nickname,
+              reason: payload.reason,
               content: payload.content,
             });
             setReportModal(null);

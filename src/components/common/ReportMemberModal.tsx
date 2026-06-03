@@ -16,20 +16,18 @@ import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
 import { DefaultProfileAvatar } from './DefaultProfileAvatar';
 import { FormTextInput } from './FormTextInput';
-import type { MemberReportType } from '../../services/api/memberApi';
+import type { ReportReason } from '../../services/api/memberApi';
 
 export type ReportMemberModalState = {
   nickname: string;
   profileImageUrl?: string;
-  initialType?: MemberReportType;
-  allowedTypes?: MemberReportType[];
 };
 
-const reportTypeOptions: Array<{ type: MemberReportType; label: string }> = [
+const reasonOptions: Array<{ type: ReportReason; label: string }> = [
   { type: 'GENERAL', label: '일반' },
-  { type: 'BOOK_STORY', label: '책이야기' },
-  { type: 'COMMENT', label: '책이야기(댓글)' },
-  { type: 'CLUB_MEETING', label: '모임 내부' },
+  { type: 'INSULT', label: '욕설/비방' },
+  { type: 'INAPPROPRIATE_CONTENT', label: '음란/부적절' },
+  { type: 'SPAM', label: '홍보/도배' },
 ];
 
 type Props = {
@@ -38,7 +36,7 @@ type Props = {
   submitting?: boolean;
   onPressTarget?: (nickname: string) => void;
   onClose: () => void;
-  onSubmit: (payload: { reportType: MemberReportType; content?: string }) => void;
+  onSubmit: (payload: { reason: ReportReason; content?: string }) => void;
 };
 
 export function ReportMemberModal({
@@ -49,36 +47,18 @@ export function ReportMemberModal({
   onClose,
   onSubmit,
 }: Props) {
-  const [reportType, setReportType] = useState<MemberReportType>('GENERAL');
+  const [reason, setReason] = useState<ReportReason>('GENERAL');
   const [content, setContent] = useState('');
-  const availableTypeOptions = useMemo(() => {
-    const allowed = target?.allowedTypes;
-    if (!Array.isArray(allowed) || allowed.length === 0) {
-      return reportTypeOptions;
-    }
-
-    const allowedSet = new Set<MemberReportType>(allowed);
-    const filtered = reportTypeOptions.filter((option) => allowedSet.has(option.type));
-    return filtered.length > 0 ? filtered : reportTypeOptions;
-  }, [target?.allowedTypes]);
 
   useEffect(() => {
-    if (!visible || !target) return;
-    const fallbackType = availableTypeOptions[0]?.type ?? 'GENERAL';
-    const preferredType = target.initialType ?? fallbackType;
-    const nextType = availableTypeOptions.some((option) => option.type === preferredType)
-      ? preferredType
-      : fallbackType;
-    setReportType(nextType);
+    if (!visible) return;
+    setReason('GENERAL');
     setContent('');
-  }, [availableTypeOptions, target, visible]);
+  }, [visible]);
 
   const handleSubmit = () => {
     const trimmed = content.trim();
-    onSubmit({
-      reportType,
-      content: trimmed || undefined,
-    });
+    onSubmit({ reason, content: trimmed || undefined });
   };
 
   const targetCardContent = target ? (
@@ -131,13 +111,13 @@ export function ReportMemberModal({
 
             <Text style={styles.label}>종류</Text>
             <View style={styles.typeRow}>
-              {availableTypeOptions.map((option) => {
-                const active = reportType === option.type;
+              {reasonOptions.map((option) => {
+                const active = reason === option.type;
                 return (
                   <Pressable
                     key={option.type}
                     style={[styles.typeButton, active ? styles.typeButtonActive : null]}
-                    onPress={() => setReportType(option.type)}
+                    onPress={() => setReason(option.type)}
                   >
                     <Text style={[styles.typeButtonText, active ? styles.typeButtonTextActive : null]}>
                       {option.label}

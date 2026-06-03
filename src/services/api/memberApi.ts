@@ -70,31 +70,32 @@ export type UpdateMyPasswordPayload = {
   confirmPassword: string;
 };
 
-export type MemberReportType = 'GENERAL' | 'CLUB_MEETING' | 'BOOK_STORY' | 'COMMENT';
+export type ReportTargetType =
+  | 'MEMBER' | 'CLUB' | 'BOOK_STORY' | 'BOOK_STORY_COMMENT'
+  | 'CLUB_NOTICE' | 'CLUB_NOTICE_COMMENT' | 'CLUB_TOPIC' | 'CLUB_BOOK_REVIEW' | 'CHAT';
 
-export type ReportMemberPayload = {
-  reportedMemberNickname: string;
-  reportType: MemberReportType;
+export type ReportReason = 'GENERAL' | 'INSULT' | 'INAPPROPRIATE_CONTENT' | 'SPAM';
+
+export type CreateReportPayload = {
+  targetType: ReportTargetType;
+  targetId: string;
+  reason: ReportReason;
   content?: string;
 };
 
 export type ReportItem = {
   reportId?: number;
-  reportedMemberNickname?: string;
-  reportedMemberProfileImageUrl?: string;
-  reportType?: string;
+  targetType?: string;
+  targetTypeDescription?: string;
+  targetId?: string;
+  targetSummary?: string;
+  reason?: string;
+  reasonDescription?: string;
   content?: string;
-  reportDate?: string;
-  createdAt?: string;
+  displayName?: string;
+  displayImageUrl?: string;
+  reportedAt?: string;
 };
-
-type ReportListResult = {
-  reports?: ReportItem[];
-  hasNext?: boolean;
-  nextCursor?: number | null;
-};
-
-type ReportListPayload = ReportListResult | ReportItem[];
 
 type NormalizedReportListPage = {
   items: ReportItem[];
@@ -139,27 +140,16 @@ function normalizeFollowInfo(item: FollowInfo): FollowInfo {
   };
 }
 
-function normalizeReportListPage(payload: ReportListPayload | null | undefined): NormalizedReportListPage {
-  if (Array.isArray(payload)) {
-    return {
-      items: payload,
-      hasNext: false,
-      nextCursor: null,
-    };
+function normalizeReportListPage(payload: unknown): NormalizedReportListPage {
+  if (!payload || typeof payload !== 'object') {
+    return { items: [], hasNext: false, nextCursor: null };
   }
-
-  if (!payload) {
-    return {
-      items: [],
-      hasNext: false,
-      nextCursor: null,
-    };
-  }
-
+  const record = payload as Record<string, unknown>;
+  const reports = Array.isArray(record.reports) ? record.reports as ReportItem[] : [];
   return {
-    items: Array.isArray(payload.reports) ? payload.reports : [],
-    hasNext: Boolean(payload.hasNext),
-    nextCursor: typeof payload.nextCursor === 'number' ? payload.nextCursor : null,
+    items: reports,
+    hasNext: Boolean(record.hasNext),
+    nextCursor: typeof record.nextCursor === 'number' ? record.nextCursor : null,
   };
 }
 
@@ -409,8 +399,8 @@ export async function updateMyPassword(payload: UpdateMyPasswordPayload): Promis
   });
 }
 
-export async function reportMember(payload: ReportMemberPayload): Promise<void> {
-  await requestJson<ApiEnvelope<number>>('/members/report', {
+export async function createReport(payload: CreateReportPayload): Promise<void> {
+  await requestJson<ApiEnvelope<number>>('/reports', {
     method: 'POST',
     suppressErrorToast: false,
     body: payload,
@@ -427,7 +417,7 @@ export async function withdrawMember(): Promise<void> {
 export async function fetchMyReports(): Promise<ReportItem[]> {
   return collectAllCursorPages({
     fetchPage: async (cursor) => {
-      const response = await requestJson<ApiEnvelope<ReportListPayload>>('/members/me/reports', {
+      const response = await requestJson<ApiEnvelope<unknown>>('/reports/me', {
         method: 'GET',
         query: { cursorId: cursor },
       });
@@ -435,10 +425,9 @@ export async function fetchMyReports(): Promise<ReportItem[]> {
     },
     dedupeId: (item) => [
       typeof item.reportId === 'number' ? `id:${item.reportId}` : 'no-id',
-      item.reportedMemberNickname ?? '',
-      item.reportType ?? '',
-      item.reportDate ?? item.createdAt ?? '',
-      item.content ?? '',
+      item.targetId ?? '',
+      item.reason ?? '',
+      item.reportedAt ?? '',
     ].join('|'),
   });
 }

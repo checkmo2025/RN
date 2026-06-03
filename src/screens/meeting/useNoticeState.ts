@@ -18,8 +18,6 @@ import {
   updateClubNotice,
   createClubNotice,
 } from '../../services/api/clubApi';
-import { reportMember } from '../../services/api/memberApi';
-import type { MemberReportType } from '../../services/api/memberApi';
 import { getCurrentKstApiDateTime } from '../../utils/date';
 import { showToast } from '../../utils/toast';
 import type {
@@ -470,8 +468,6 @@ export function useNoticeState({
         setReportModal({
           nickname: comment.author,
           profileImageUrl: comment.authorProfileImageUrl,
-          initialType: 'CLUB_MEETING',
-          allowedTypes: ['CLUB_MEETING'],
         });
         return;
       }
@@ -570,8 +566,6 @@ export function useNoticeState({
         setReportModal({
           nickname: targetNickname,
           profileImageUrl: targetProfileImageUrl,
-          initialType: 'CLUB_MEETING',
-          allowedTypes: ['CLUB_MEETING'],
         });
       };
 

@@ -42,11 +42,11 @@ import {
   fetchMemberFollowers,
   fetchMemberFollowings,
   fetchMemberProfile,
-  reportMember,
+  createReport,
   setFollowingMember,
   blockMember,
   unblockMember,
-  type MemberReportType,
+  type ReportReason,
   type MemberProfile,
 } from '../services/api/memberApi';
 import {
@@ -509,8 +509,6 @@ export function UserProfileScreen() {
     setReportModal({
       nickname: profileName,
       profileImageUrl: profile?.profileImageUrl,
-      initialType: 'GENERAL',
-      allowedTypes: ['GENERAL'],
     });
   }, [profile?.profileImageUrl, profileName]);
 
@@ -575,14 +573,15 @@ export function UserProfileScreen() {
   }, [submittingReport]);
 
   const handleSubmitReport = useCallback(
-    (payload: { reportType: MemberReportType; content?: string }) => {
+    (payload: { reason: ReportReason; content?: string }) => {
       requireAuth(() => {
         const submit = async () => {
           setSubmittingReport(true);
           try {
-            await reportMember({
-              reportedMemberNickname: memberNickname,
-              reportType: payload.reportType,
+            await createReport({
+              targetType: 'MEMBER',
+              targetId: memberNickname,
+              reason: payload.reason,
               content: payload.content,
             });
             setReportModal(null);

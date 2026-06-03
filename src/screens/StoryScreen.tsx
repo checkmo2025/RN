@@ -73,9 +73,9 @@ import { fetchMyClubs } from '../services/api/clubApi';
 import {
   fetchMyProfile,
   fetchRecommendedMembers,
-  reportMember,
+  createReport,
   setFollowingMember,
-  type MemberReportType,
+  type ReportReason,
 } from '../services/api/memberApi';
 import { ApiError } from '../services/api/http';
 import { searchBooks, type BookItem } from '../services/api/bookApi';
@@ -871,22 +871,13 @@ export function StoryScreen() {
   }, []);
 
   const openReportModal = useCallback(
-    (
-      nickname: string,
-      profileImageUrl: string | undefined,
-      defaultType: MemberReportType,
-    ) => {
+    (nickname: string, profileImageUrl: string | undefined) => {
       const targetNickname = nickname.trim();
       if (!targetNickname) {
         showToast('신고 대상을 확인할 수 없습니다.');
         return;
       }
-      setReportModal({
-        nickname: targetNickname,
-        profileImageUrl,
-        initialType: defaultType,
-        allowedTypes: [defaultType],
-      });
+      setReportModal({ nickname: targetNickname, profileImageUrl });
     },
     [],
   );
@@ -906,22 +897,17 @@ export function StoryScreen() {
     [openUserProfile, submittingReport],
   );
 
-  const submitReport = useCallback((payload: { reportType: MemberReportType; content?: string }) => {
+  const submitReport = useCallback((payload: { reason: ReportReason; content?: string }) => {
     if (!reportModal?.nickname) return;
-    const content = payload.content?.trim() ?? '';
-    if (content.length > 500) {
-      showToast('신고 내용은 500자 이하여야 합니다.');
-      return;
-    }
-
     requireAuth(() => {
       const submit = async () => {
         setSubmittingReport(true);
         try {
-          await reportMember({
-            reportedMemberNickname: reportModal.nickname,
-            reportType: payload.reportType,
-            content: content || undefined,
+          await createReport({
+            targetType: 'MEMBER',
+            targetId: reportModal.nickname,
+            reason: payload.reason,
+            content: payload.content,
           });
           showToast('신고가 접수되었습니다.');
           setReportModal(null);
@@ -956,7 +942,7 @@ export function StoryScreen() {
       }
 
       if (action === 'report') {
-        openReportModal(selectedStory.author, selectedStory.profileImageUrl, 'BOOK_STORY');
+        openReportModal(selectedStory.author, selectedStory.profileImageUrl);
         return;
       }
 
@@ -1053,7 +1039,7 @@ export function StoryScreen() {
       }
 
       if (action === 'report') {
-        openReportModal(current.author, current.profileImageUrl, 'COMMENT');
+        openReportModal(current.author, current.profileImageUrl);
         return;
       }
 

@@ -2329,3 +2329,12 @@ export const interactionOpacity = {
 # 2026-06-04 CHAT-03 todo 정리
 
 - CHAT-03 채팅 히스토리 API 문서 항목 ✅ 처리 (채팅 제거로 N/A)
+
+# 2026-06-04 REPORT-01 신고 API 교체
+
+- `POST /members/report` → `POST /api/reports` 엔드포인트 교체
+- `ReportMemberPayload` → `CreateReportPayload` (`targetType`/`targetId`/`reason`) 타입 교체
+- reason 옵션: 일반/욕설·비방/음란·부적절/홍보·도배 4종
+- StoryScreen, UserProfileScreen, useManagementState, useNoticeState, useBookshelfState 전체 신고 호출 교체
+- `fetchMyReports` → `GET /reports/me` 엔드포인트 교체, 신고 내역 레이블 매핑 업데이트
+- tsc --noEmit 통과
