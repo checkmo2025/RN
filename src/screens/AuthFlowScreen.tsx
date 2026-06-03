@@ -82,18 +82,6 @@ function normalizeDisplayImageUri(uri?: string): string | undefined {
 }
 
 
-const defaultProfilePalette = [
-  colors.subbrown3,
-  colors.primary2,
-  colors.primary1,
-  colors.subbrown1,
-  colors.primary3,
-  colors.gray2,
-  colors.gray4,
-  colors.gray5,
-  colors.gray6,
-  colors.gray7,
-];
 
 export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const ev = useEmailVerificationFlow();
@@ -131,8 +119,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [selectedProfileImage, setSelectedProfileImage] = useState<LocalProfileImage | null>(null);
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
-  const [selectedProfileColor, setSelectedProfileColor] = useState(colors.subbrown3);
-  const [showProfileColorModal, setShowProfileColorModal] = useState(false);
+
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [signUpSubmitting, setSignUpSubmitting] = useState(false);
   const [findName, setFindName] = useState('');
@@ -233,8 +220,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     setProfileImageUrl('');
     setSelectedProfileImage(null);
     setUploadingProfileImage(false);
-    setSelectedProfileColor(colors.subbrown3);
-    setShowProfileColorModal(false);
+
     setSelectedCategories([]);
     setSignUpSubmitting(false);
   };
@@ -1026,7 +1012,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
                   style={styles.avatarImage}
                 />
               ) : (
-                <MaterialIcons name="person" size={54} color={selectedProfileColor} />
+                <MaterialIcons name="person" size={54} color={colors.subbrown3} />
               )}
             </View>
             <Pressable
@@ -1050,7 +1036,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             onPress={() => {
               setProfileImageUrl('');
               setSelectedProfileImage(null);
-              setShowProfileColorModal(true);
             }}
           />
         </View>
@@ -1088,36 +1073,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           />
         </View>
 
-        <DialogOverlay
-          visible={showProfileColorModal}
-          onClose={() => setShowProfileColorModal(false)}
-          overlayStyle={styles.profileColorModalOverlay}
-          cardStyle={styles.profileColorModalCard}
-        >
-          <Text style={styles.profileColorModalTitle}>원하시는 색상을 선택해야 합니다.</Text>
-          <View style={styles.profileColorGrid}>
-            {defaultProfilePalette.map((color) => {
-              const selected = selectedProfileColor === color;
-              return (
-                <Pressable
-                  key={color}
-                  style={[
-                    styles.profileColorOption,
-                    selected ? styles.profileColorOptionSelected : null,
-                  ]}
-                  onPress={() => {
-                    setSelectedProfileColor(color);
-                    setProfileImageUrl('');
-                    setSelectedProfileImage(null);
-                    setShowProfileColorModal(false);
-                  }}
-                >
-                  <MaterialIcons name="person" size={40} color={color} />
-                </Pressable>
-              );
-            })}
-          </View>
-        </DialogOverlay>
+
       </>,
     );
   }
@@ -1135,7 +1091,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             {signupCompleteProfileUri ? (
               <Image source={{ uri: signupCompleteProfileUri }} style={styles.completeAvatarImage} />
             ) : (
-              <MaterialIcons name="person" size={54} color={selectedProfileColor} />
+              <MaterialIcons name="person" size={54} color={colors.subbrown3} />
             )}
           </View>
           <Text style={styles.completeNickname}>{nickname || '닉네임'}</Text>
@@ -1565,46 +1521,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  profileColorModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileColorModalCard: {
-    width: '100%',
-    maxWidth: 420,
-    borderRadius: radius.lg,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    gap: spacing.md,
-  },
-  profileColorModalTitle: {
-    ...typography.subhead2,
-    color: colors.gray6,
-  },
-  profileColorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: spacing.md,
-  },
-  profileColorOption: {
-    width: '19%',
-    aspectRatio: 1,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.subbrown3,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
-  profileColorOptionSelected: {
-    borderColor: colors.primary1,
-    borderWidth: 2,
   },
   chipGrid: {
     flexDirection: 'row',

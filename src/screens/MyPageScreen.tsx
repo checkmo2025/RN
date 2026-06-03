@@ -158,18 +158,6 @@ const profileEditCategoryOrder = [
 ] as const;
 
 
-const defaultProfilePalette = [
-  colors.subbrown3,
-  colors.primary2,
-  colors.primary1,
-  colors.subbrown1,
-  colors.primary3,
-  colors.gray2,
-  colors.gray4,
-  colors.gray5,
-  colors.gray6,
-  colors.gray7,
-];
 
 const fallbackBooks: BookCard[] = [];
 
@@ -312,7 +300,6 @@ export function MyPageScreen() {
   );
   const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>(undefined);
   const [profilePhoneNumber, setProfilePhoneNumber] = useState('');
-  const [profileDefaultColor, setProfileDefaultColor] = useState(colors.subbrown3);
   const [profileCategoryCodes, setProfileCategoryCodes] = useState<string[]>([]);
   const [profileCategories, setProfileCategories] = useState<string[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
@@ -332,9 +319,7 @@ export function MyPageScreen() {
   const [profileEditDescription, setProfileEditDescription] = useState('');
   const [profileEditImageUrl, setProfileEditImageUrl] = useState('');
   const [profileEditCategoryCodes, setProfileEditCategoryCodes] = useState<string[]>([]);
-  const [profileEditDefaultColor, setProfileEditDefaultColor] = useState(colors.subbrown3);
   const [profileEditUseDefaultAvatar, setProfileEditUseDefaultAvatar] = useState(false);
-  const [showDefaultAvatarPicker, setShowDefaultAvatarPicker] = useState(false);
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   const [submittingProfileEdit, setSubmittingProfileEdit] = useState(false);
 
@@ -670,12 +655,6 @@ export function MyPageScreen() {
     void submit();
   }, [uploadingProfileImage]);
 
-  const handleSelectDefaultAvatarColor = useCallback((color: string) => {
-    setProfileEditDefaultColor(color);
-    setProfileEditUseDefaultAvatar(true);
-    setProfileEditImageUrl('');
-    setShowDefaultAvatarPicker(false);
-  }, []);
 
   const handleSubmitProfileEdit = useCallback(() => {
     const description = profileEditDescription.trim();
@@ -716,9 +695,6 @@ export function MyPageScreen() {
             .map((code) => CATEGORY_CODE_TO_LABEL[code as ClubCategoryCode] ?? code)
             .filter((label) => label.length > 0),
         );
-        if (profileEditUseDefaultAvatar) {
-          setProfileDefaultColor(profileEditDefaultColor);
-        }
         showToast('프로필이 변경되었습니다.');
       } catch (error) {
         if (!(error instanceof ApiError)) {
@@ -732,7 +708,6 @@ export function MyPageScreen() {
   }, [
     profileCategoryCodes,
     profileEditCategoryCodes,
-    profileEditDefaultColor,
     profileEditDescription,
     profileEditImageUrl,
     profileEditUseDefaultAvatar,
@@ -747,7 +722,6 @@ export function MyPageScreen() {
       profileEditDescription !== originalDesc ||
       profileEditImageUrl !== (profileImageUrl ?? '') ||
       profileEditUseDefaultAvatar !== !profileImageUrl ||
-      profileEditDefaultColor !== profileDefaultColor ||
       currentCodes !== originalCodes;
 
     if (!isDirty) {
@@ -771,8 +745,6 @@ export function MyPageScreen() {
     profileEditImageUrl,
     profileImageUrl,
     profileEditUseDefaultAvatar,
-    profileEditDefaultColor,
-    profileDefaultColor,
   ]);
 
   useEffect(() => {
@@ -1396,10 +1368,8 @@ export function MyPageScreen() {
     setProfileEditDescription(profileDesc === '소개글이 없습니다.' ? '' : profileDesc);
     setProfileEditImageUrl(profileImageUrl ?? '');
     setProfileEditCategoryCodes(profileCategoryCodes);
-    setProfileEditDefaultColor(profileDefaultColor);
     setProfileEditUseDefaultAvatar(!profileImageUrl);
-    setShowDefaultAvatarPicker(false);
-  }, [profileCategoryCodes, profileDefaultColor, profileDesc, profileImageUrl, selectedSetting]);
+  }, [profileCategoryCodes, profileDesc, profileImageUrl, selectedSetting]);
 
   useConsumeRouteParam(
     route.params?.openMyTab,
@@ -1583,7 +1553,7 @@ export function MyPageScreen() {
               <View style={styles.profileImagePreviewWrap}>
                 {profileEditUseDefaultAvatar || !profileEditImageUrl ? (
                   <View style={styles.profileImagePreviewDefault}>
-                    <MaterialIcons name="person" size={44} color={profileEditDefaultColor} />
+                    <MaterialIcons name="person" size={44} color={colors.subbrown3} />
                   </View>
                 ) : (
                   <Image source={{ uri: profileEditImageUrl }} style={styles.profileImagePreview} />
@@ -1607,7 +1577,7 @@ export function MyPageScreen() {
                     styles.profileImageActionButton,
                     pressed && styles.pressed,
                   ]}
-                  onPress={() => setShowDefaultAvatarPicker(true)}
+                  onPress={() => { setProfileEditUseDefaultAvatar(true); setProfileEditImageUrl(''); }}
                 >
                   <Text style={styles.profileImageActionText}>기본 프로필 선택</Text>
                 </Pressable>
@@ -1657,31 +1627,6 @@ export function MyPageScreen() {
             </Text>
           </Pressable>
 
-          <DialogOverlay
-            visible={showDefaultAvatarPicker}
-            onClose={() => setShowDefaultAvatarPicker(false)}
-            overlayStyle={styles.defaultAvatarModalOverlay}
-            cardStyle={styles.defaultAvatarModalCard}
-          >
-            <Text style={styles.defaultAvatarModalTitle}>원하시는 색상을 선택해야 합니다.</Text>
-            <View style={styles.defaultAvatarGrid}>
-              {defaultProfilePalette.map((color) => {
-                const selected = profileEditDefaultColor === color;
-                return (
-                  <Pressable
-                    key={color}
-                    style={[
-                      styles.defaultAvatarOption,
-                      selected ? styles.defaultAvatarOptionSelected : null,
-                    ]}
-                    onPress={() => handleSelectDefaultAvatarColor(color)}
-                  >
-                    <MaterialIcons name="person" size={42} color={color} />
-                  </Pressable>
-                );
-              })}
-            </View>
-          </DialogOverlay>
         </View>
       );
     }
@@ -2489,45 +2434,6 @@ const styles = StyleSheet.create({
   categoryHintText: {
     ...typography.body2_3,
     color: colors.gray4,
-  },
-  defaultAvatarModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  defaultAvatarModalCard: {
-    width: '100%',
-    maxWidth: 420,
-    borderRadius: radius.lg,
-    backgroundColor: colors.white,
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  defaultAvatarModalTitle: {
-    ...typography.body1_2,
-    color: colors.gray6,
-  },
-  defaultAvatarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: spacing.md,
-  },
-  defaultAvatarOption: {
-    width: '19%',
-    aspectRatio: 1,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.subbrown3,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
-  defaultAvatarOptionSelected: {
-    borderColor: colors.primary1,
-    borderWidth: 2,
   },
   inputPlaceholder: {
     borderWidth: 1,

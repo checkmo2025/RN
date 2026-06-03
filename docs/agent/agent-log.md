@@ -2317,3 +2317,11 @@ export const interactionOpacity = {
 - `useBookshelfState`, `MeetingScreen`, `helpers`, `clubApi`, `types`, `iconMap`, `meetingStyles`에서 채팅 관련 코드 전면 제거
 - todo.md 채팅 항목 ✅ 완료 처리
 - tsc --noEmit 통과
+
+# 2026-06-04 기본 프로필 색상 선택 제거
+
+- 회원가입/마이페이지 기본 프로필 색상 선택 모달 제거
+- "기본 프로필" 클릭 시 즉시 고정 색상(subbrown3) 적용으로 변경
+- `defaultProfilePalette`, 관련 state/handler/DialogOverlay/스타일 전면 제거
+- CHAT-02 todo ✅ 처리 (채팅 제거로 완료)
+- tsc --noEmit 통과
