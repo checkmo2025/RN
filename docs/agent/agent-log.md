@@ -2353,3 +2353,8 @@ export const interactionOpacity = {
 # 2026-06-04 01:23:00 KST todo 정리
 
 - MYPAGE-02 ✅ 처리: 기본 프로필 색상 선택 제거로 고정 1개 정책 확정, N/A
+
+# 2026-06-04 01:25:53 KST MEM-04 todo 정리
+
+- Swagger 확인: POST /api/members/find-email 단일 경로 확정
+- RN 코드 일치, MEM-04 ✅ 처리
