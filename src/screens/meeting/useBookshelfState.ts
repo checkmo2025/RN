@@ -72,6 +72,8 @@ import {
   toApiDateTime,
 } from './formatters';
 import { resolveBookshelfActionErrorMessage } from './mappers';
+import { useRegularGroupStomp } from '../../services/websocket/useRegularGroupStomp';
+import type { TopicUpdatePayload } from '../../services/websocket/useRegularGroupStomp';
 
 const BOOKSHELF_CURSOR_LOOP_LIMIT = 100;
 const MAX_REGULAR_GROUP_COUNT = 10;
@@ -221,9 +223,15 @@ export function useBookshelfState({
   const dragAutoScrollFrameRef = useRef<number | null>(null);
   const dragCurrentPageYRef = useRef(0);
   const currentMemberNicknameRef = useRef(currentMemberNickname);
+  const teamToGroupIdRef = useRef<Record<number, string>>({});
+  const regularGroupPostsByIdRef = useRef(regularGroupPostsById);
 
   useEffect(() => {
     currentMemberNicknameRef.current = currentMemberNickname;
+  });
+
+  useEffect(() => {
+    regularGroupPostsByIdRef.current = regularGroupPostsById;
   });
 
   const bookshelfSessions = useMemo(() => {
@@ -338,6 +346,45 @@ export function useBookshelfState({
     if (!regularMeetingInfo || !selectedRegularGroupId) return null;
     return regularMeetingInfo.groups.find((g) => g.id === selectedRegularGroupId) ?? null;
   }, [regularMeetingInfo, selectedRegularGroupId]);
+
+  useEffect(() => {
+    if (!baseRegularMeetingInfo) return;
+    const mapping: Record<number, string> = {};
+    baseRegularMeetingInfo.groups.forEach((g) => {
+      if (g.teamId != null) mapping[g.teamId] = g.id;
+    });
+    teamToGroupIdRef.current = mapping;
+  }, [baseRegularMeetingInfo]);
+
+  const handleStompTopicUpdate = useCallback((payload: TopicUpdatePayload) => {
+    const groupId = teamToGroupIdRef.current[payload.teamId];
+    if (!groupId) return;
+    setRegularGroupPostsById((prev) => {
+      const current = prev[groupId];
+      if (!current) return prev;
+      const hasChange = current.some(
+        (post) => post.remoteTopicId === payload.topicId && post.completed !== payload.isSelected,
+      );
+      if (!hasChange) return prev;
+      return {
+        ...prev,
+        [groupId]: current.map((post) =>
+          post.remoteTopicId === payload.topicId ? { ...post, completed: payload.isSelected } : post,
+        ),
+      };
+    });
+  }, []);
+
+  const { publishToggle: stompPublishToggle } = useRegularGroupStomp({
+    clubId: group.clubId,
+    meetingId: selectedBookshelfBook?.remoteMeetingId,
+    teamId: selectedRegularGroup?.teamId,
+    enabled: isLoggedIn && bookshelfViewMode === 'REGULAR_GROUP',
+    onTopicUpdate: handleStompTopicUpdate,
+  });
+
+  const stompPublishToggleRef = useRef(stompPublishToggle);
+  stompPublishToggleRef.current = stompPublishToggle;
 
   const teamManageMemberById = useMemo(
     () =>
@@ -1087,13 +1134,18 @@ export function useBookshelfState({
   }, []);
 
   const handleToggleRegularGroupPost = useCallback((groupId: string, postId: string) => {
+    const posts = regularGroupPostsByIdRef.current[groupId];
+    const post = posts?.find((p) => p.id === postId);
+    if (post?.remoteTopicId != null) {
+      stompPublishToggleRef.current(post.remoteTopicId, !post.completed);
+    }
     setRegularGroupPostsById((prev) => {
       const current = prev[groupId];
       if (!current) return prev;
       return {
         ...prev,
-        [groupId]: current.map((post) =>
-          post.id === postId ? { ...post, completed: !post.completed } : post,
+        [groupId]: current.map((p) =>
+          p.id === postId ? { ...p, completed: !p.completed } : p,
         ),
       };
     });

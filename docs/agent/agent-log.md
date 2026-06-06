@@ -2378,3 +2378,9 @@ export const interactionOpacity = {
 # 2026-06-06 17:31:41 KST 고객센터 URL 업데이트
 
 - SUPPORT_FORM_URL 구글폼 → https://www.checkmo.co.kr/support 로 변경
+
+# 2026-06-06 18:45:47 KST 발제 선택 실시간 동기화 (STOMP WebSocket)
+
+- src/services/websocket/useRegularGroupStomp.ts 신규: STOMP 연결/구독/publish 훅
+- useBookshelfState.ts: 발제 토글 시 STOMP publish + 수신 메시지로 상태 업데이트 연동
+- publish destination /app → /pub 수정 (백엔드 prefix 맞춤)
