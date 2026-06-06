@@ -18,7 +18,7 @@ export const PUBLIC_ENV = {
   ),
   SUPPORT_FORM_URL: readPublicEnv(
     process.env.EXPO_PUBLIC_SUPPORT_FORM_URL,
-    'https://forms.gle/qNjhNN7RBTiWNuX99',
+    'https://www.checkmo.co.kr/support',
   ),
   ALADIN_HOME_URL: readPublicEnv(
     process.env.EXPO_PUBLIC_ALADIN_HOME_URL,

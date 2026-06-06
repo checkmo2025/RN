@@ -2374,3 +2374,7 @@ export const interactionOpacity = {
 - BottomTabs: shadow 제거 (shadowColor/Opacity/Radius/Offset, elevation)
 - BottomTabs: 고정 height 제거 → 콘텐츠 기준 auto-height로 변경
 - AppHeader: HEADER_HEIGHT scaleSize(56) → scaleSize(44) 축소
+
+# 2026-06-06 17:31:41 KST 고객센터 URL 업데이트
+
+- SUPPORT_FORM_URL 구글폼 → https://www.checkmo.co.kr/support 로 변경
