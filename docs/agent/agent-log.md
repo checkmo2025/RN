@@ -2368,3 +2368,9 @@ export const interactionOpacity = {
 - Swagger PUT 방식 확인: 미전송 시 links 초기화 가능성
 - updateClub 호출 시 `links: group.links` 추가하여 기존 링크 보존
 - MEET-MGMT-04 ✅ 처리
+
+# 2026-06-06 16:49:38 KST 탭바/헤더 UI 정리
+
+- BottomTabs: shadow 제거 (shadowColor/Opacity/Radius/Offset, elevation)
+- BottomTabs: 고정 height 제거 → 콘텐츠 기준 auto-height로 변경
+- AppHeader: HEADER_HEIGHT scaleSize(56) → scaleSize(44) 축소

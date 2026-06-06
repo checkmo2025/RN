@@ -89,7 +89,7 @@ type HeaderRouteParams = {
   openSearchBook?: unknown;
 };
 
-const HEADER_HEIGHT = scaleSize(56);
+const HEADER_HEIGHT = scaleSize(44);
 
 function resolveBookStorySearchId(book: BookItem | null): string | null {
   if (!book) return null;
