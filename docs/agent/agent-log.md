@@ -2401,3 +2401,9 @@ export const interactionOpacity = {
 
 - docs/documents/rn-stomp-websocket-connection-debugging.md 신규: 발제 실시간 동기화 RN 연결 장애 보고서
 - 2개 원인(nginx 빈 UA 차단 / RN text 프레임 NULL 누락) + UI 정확성 수정 + 진단 과정/교훈 정리
+
+# 2026-06-07 19:27:19 KST App Store 제출 설정 정리
+
+- iOS tablet 지원을 끄고 iPhone 전용 제출 설정으로 변경
+- Expo SDK 54 요구 패치 버전에 맞춰 expo / expo-font 업데이트
+- App Store 제출 전 `npm run check` 통과 확인
