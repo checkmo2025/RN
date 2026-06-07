@@ -2407,3 +2407,9 @@ export const interactionOpacity = {
 - iOS tablet 지원을 끄고 iPhone 전용 제출 설정으로 변경
 - Expo SDK 54 요구 패치 버전에 맞춰 expo / expo-font 업데이트
 - App Store 제출 전 `npm run check` 통과 확인
+
+# 2026-06-07 19:50:11 KST EAS Update 설정 반영 및 권한 중복 정리
+
+- eas build가 자동 설치한 expo-updates 반영: app.json에 runtimeVersion(appVersion)/updates.url, package.json 의존성 추가
+- android permissions의 RECORD_AUDIO 중복 항목 1개 제거
+- eas.json 프로파일에 channel이 있어 expo-updates는 유지(되돌려도 빌드 시 재설치됨)
