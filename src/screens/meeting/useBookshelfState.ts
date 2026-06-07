@@ -81,6 +81,9 @@ const BOOKSHELF_MEETING_TITLE_MAX_LENGTH = 12;
 const BOOKSHELF_MEETING_LOCATION_MAX_LENGTH = 12;
 const ISBN13_REGEX = /^\d{13}$/;
 
+const makeRegularGroupPendingKey = (groupId: string, postId: string) =>
+  `${groupId}:${postId}`;
+
 export type BookshelfStateParams = {
   group: Group;
   isManagedClub: boolean;
@@ -152,6 +155,9 @@ export function useBookshelfState({
   const [regularGroupPostsById, setRegularGroupPostsById] = useState<
     Record<string, Array<{ id: string; remoteTopicId?: number; author: string; authorProfileImageUrl?: string; content: string; completed: boolean }>>
   >({});
+  const [regularGroupPendingPostKeys, setRegularGroupPendingPostKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [regularGroupMembersVisible, setRegularGroupMembersVisible] = useState(false);
   const [creatingBookshelf, setCreatingBookshelf] = useState(false);
   const [updatingBookshelf, setUpdatingBookshelf] = useState(false);
@@ -225,6 +231,7 @@ export function useBookshelfState({
   const currentMemberNicknameRef = useRef(currentMemberNickname);
   const teamToGroupIdRef = useRef<Record<number, string>>({});
   const regularGroupPostsByIdRef = useRef(regularGroupPostsById);
+  const regularGroupPendingPostKeysRef = useRef(regularGroupPendingPostKeys);
 
   useEffect(() => {
     currentMemberNicknameRef.current = currentMemberNickname;
@@ -233,6 +240,27 @@ export function useBookshelfState({
   useEffect(() => {
     regularGroupPostsByIdRef.current = regularGroupPostsById;
   });
+
+  useEffect(() => {
+    regularGroupPendingPostKeysRef.current = regularGroupPendingPostKeys;
+  });
+
+  const addRegularGroupPendingPost = useCallback((pendingKey: string) => {
+    if (regularGroupPendingPostKeysRef.current.has(pendingKey)) return false;
+    const next = new Set(regularGroupPendingPostKeysRef.current);
+    next.add(pendingKey);
+    regularGroupPendingPostKeysRef.current = next;
+    setRegularGroupPendingPostKeys(next);
+    return true;
+  }, []);
+
+  const removeRegularGroupPendingPost = useCallback((pendingKey: string) => {
+    if (!regularGroupPendingPostKeysRef.current.has(pendingKey)) return;
+    const next = new Set(regularGroupPendingPostKeysRef.current);
+    next.delete(pendingKey);
+    regularGroupPendingPostKeysRef.current = next;
+    setRegularGroupPendingPostKeys(next);
+  }, []);
 
   const bookshelfSessions = useMemo(() => {
     const sessions = Array.from(
@@ -359,6 +387,13 @@ export function useBookshelfState({
   const handleStompTopicUpdate = useCallback((payload: TopicUpdatePayload) => {
     const groupId = teamToGroupIdRef.current[payload.teamId];
     if (!groupId) return;
+    const pendingPost = regularGroupPostsByIdRef.current[groupId]?.find(
+      (post) => post.remoteTopicId === payload.topicId,
+    );
+    if (pendingPost) {
+      const pendingKey = makeRegularGroupPendingKey(groupId, pendingPost.id);
+      removeRegularGroupPendingPost(pendingKey);
+    }
     setRegularGroupPostsById((prev) => {
       const current = prev[groupId];
       if (!current) return prev;
@@ -373,9 +408,9 @@ export function useBookshelfState({
         ),
       };
     });
-  }, []);
+  }, [removeRegularGroupPendingPost]);
 
-  const { publishToggle: stompPublishToggle } = useRegularGroupStomp({
+  const { publishToggle: stompPublishToggle, isConnected: isRegularGroupStompConnected } = useRegularGroupStomp({
     clubId: group.clubId,
     meetingId: selectedBookshelfBook?.remoteMeetingId,
     teamId: selectedRegularGroup?.teamId,
@@ -385,6 +420,13 @@ export function useBookshelfState({
 
   const stompPublishToggleRef = useRef(stompPublishToggle);
   stompPublishToggleRef.current = stompPublishToggle;
+
+  useEffect(() => {
+    if (isRegularGroupStompConnected) return;
+    if (regularGroupPendingPostKeysRef.current.size === 0) return;
+    regularGroupPendingPostKeysRef.current = new Set();
+    setRegularGroupPendingPostKeys(new Set());
+  }, [isRegularGroupStompConnected]);
 
   const teamManageMemberById = useMemo(
     () =>
@@ -1136,20 +1178,52 @@ export function useBookshelfState({
   const handleToggleRegularGroupPost = useCallback((groupId: string, postId: string) => {
     const posts = regularGroupPostsByIdRef.current[groupId];
     const post = posts?.find((p) => p.id === postId);
-    if (post?.remoteTopicId != null) {
-      stompPublishToggleRef.current(post.remoteTopicId, !post.completed);
+    if (post?.remoteTopicId == null) {
+      showToast('발제 정보를 찾을 수 없습니다.');
+      return;
     }
-    setRegularGroupPostsById((prev) => {
-      const current = prev[groupId];
-      if (!current) return prev;
-      return {
-        ...prev,
-        [groupId]: current.map((p) =>
-          p.id === postId ? { ...p, completed: !p.completed } : p,
+
+    const targetGroup = regularMeetingInfo?.groups.find((groupItem) => groupItem.id === groupId);
+    const normalizedCurrentNickname = currentMemberNicknameRef.current.trim();
+    const isCurrentMemberGroup =
+      Boolean(normalizedCurrentNickname) &&
+      Boolean(
+        targetGroup?.members.some(
+          (member) =>
+            member.nickname.trim().localeCompare(normalizedCurrentNickname, 'ko', {
+              sensitivity: 'accent',
+            }) === 0,
         ),
-      };
-    });
-  }, []);
+      );
+
+    if (!canManageClub && !isCurrentMemberGroup) {
+      showToast('현재 조의 발제만 선택할 수 있습니다.');
+      return;
+    }
+
+    if (!isRegularGroupStompConnected) {
+      showToast('실시간 연결이 아직 되지 않았습니다.');
+      return;
+    }
+
+    const pendingKey = makeRegularGroupPendingKey(groupId, postId);
+    if (regularGroupPendingPostKeysRef.current.has(pendingKey)) return;
+
+    if (!addRegularGroupPendingPost(pendingKey)) return;
+
+    try {
+      stompPublishToggleRef.current(post.remoteTopicId, !post.completed);
+    } catch (error) {
+      removeRegularGroupPendingPost(pendingKey);
+      showToast(error instanceof Error ? error.message : '발제 선택을 반영하지 못했습니다.');
+    }
+  }, [
+    addRegularGroupPendingPost,
+    canManageClub,
+    isRegularGroupStompConnected,
+    regularMeetingInfo?.groups,
+    removeRegularGroupPendingPost,
+  ]);
 
   const handleSortRegularGroupPosts = useCallback((groupId: string) => {
     setRegularGroupPostsById((prev) => {
@@ -1813,6 +1887,7 @@ export function useBookshelfState({
     bookshelfItems, setBookshelfItems,
     selectedRegularGroupId, setSelectedRegularGroupId,
     regularGroupPostsById, setRegularGroupPostsById,
+    regularGroupPendingPostKeys,
     regularGroupMembersVisible,
     creatingBookshelf,
     updatingBookshelf,

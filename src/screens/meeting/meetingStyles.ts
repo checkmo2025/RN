@@ -3024,4 +3024,7 @@ export const styles = StyleSheet.create({
     backgroundColor: '#E7F2E6',
     borderColor: '#D2E7CF',
   },
+  bookshelfGroupPostCardPending: {
+    opacity: interactionOpacity.disabled,
+  },
 });

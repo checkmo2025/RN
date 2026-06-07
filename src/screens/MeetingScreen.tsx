@@ -919,6 +919,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     bookshelfItems, setBookshelfItems,
     selectedRegularGroupId, setSelectedRegularGroupId,
     regularGroupPostsById, setRegularGroupPostsById,
+    regularGroupPendingPostKeys,
     regularGroupMembersVisible,
     creatingBookshelf,
     updatingBookshelf,
@@ -1734,6 +1735,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           regularMeetingInfo={regularMeetingInfo}
           selectedRegularGroupId={selectedRegularGroupId}
           selectedRegularGroup={selectedRegularGroup}
+          regularGroupPendingPostKeys={regularGroupPendingPostKeys}
           regularGroupMembersVisible={regularGroupMembersVisible}
           setSelectedBookshelfSession={setSelectedBookshelfSession}
           openBookshelfDetail={openBookshelfDetail}

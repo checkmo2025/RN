@@ -2389,3 +2389,10 @@ export const interactionOpacity = {
 
 - useRegularGroupStomp.ts: appendMissingNULLonIncoming: true 추가 (iOS NUL 파싱 워크어라운드)
 - useRegularGroupStomp.ts: debug 로그 추가 (연결 상태 추적용, 원인 분석 중)
+
+# 2026-06-07 18:58:51 KST 발제 실시간 동기화 RN 연결 문제 해결
+
+- 원인 1: nginx가 빈 User-Agent를 봇으로 차단(444). iOS 네이티브 WebSocket이 UA 미전송 → webSocketFactory로 User-Agent 헤더 부착해 통과
+- 원인 2: RN WebSocket이 text 프레임 전송 시 STOMP 종료 NULL(\0)을 잘라먹어 서버가 CONNECT 무응답 → forceBinaryWSFrames: true 추가로 해결
+- useBookshelfState 등: optimistic update 제거, 서버 이벤트(/sub presentation) 수신 기준으로 상태 확정 + pending 처리
+- iOS 실기기 검증 완료(CONNECT→CONNECTED→SUBSCRIBE→MESSAGE 왕복 동기화 확인), tsc 통과
