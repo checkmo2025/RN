@@ -46,6 +46,8 @@ export function useRegularGroupStomp({ clubId, meetingId, teamId, enabled, onTop
       heartbeatOutgoing: 25000,
       heartbeatIncoming: 20000,
       reconnectDelay: 5000,
+      appendMissingNULLonIncoming: true,
+      debug: (msg) => console.log('[STOMP DEBUG]', msg),
       onConnect: () => {
         console.log('[STOMP] connected, subscribing to', subDestination);
         client.subscribe(subDestination, (message) => {

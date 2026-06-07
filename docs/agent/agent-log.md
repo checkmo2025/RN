@@ -2384,3 +2384,8 @@ export const interactionOpacity = {
 - src/services/websocket/useRegularGroupStomp.ts 신규: STOMP 연결/구독/publish 훅
 - useBookshelfState.ts: 발제 토글 시 STOMP publish + 수신 메시지로 상태 업데이트 연동
 - publish destination /app → /pub 수정 (백엔드 prefix 맞춤)
+
+# 2026-06-07 18:31:02 KST RN STOMP 디버깅 옵션 추가
+
+- useRegularGroupStomp.ts: appendMissingNULLonIncoming: true 추가 (iOS NUL 파싱 워크어라운드)
+- useRegularGroupStomp.ts: debug 로그 추가 (연결 상태 추적용, 원인 분석 중)
