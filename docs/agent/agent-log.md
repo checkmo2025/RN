@@ -2396,3 +2396,8 @@ export const interactionOpacity = {
 - 원인 2: RN WebSocket이 text 프레임 전송 시 STOMP 종료 NULL(\0)을 잘라먹어 서버가 CONNECT 무응답 → forceBinaryWSFrames: true 추가로 해결
 - useBookshelfState 등: optimistic update 제거, 서버 이벤트(/sub presentation) 수신 기준으로 상태 확정 + pending 처리
 - iOS 실기기 검증 완료(CONNECT→CONNECTED→SUBSCRIBE→MESSAGE 왕복 동기화 확인), tsc 통과
+
+# 2026-06-07 19:25:08 KST RN STOMP 연결 디버깅 보고서 작성
+
+- docs/documents/rn-stomp-websocket-connection-debugging.md 신규: 발제 실시간 동기화 RN 연결 장애 보고서
+- 2개 원인(nginx 빈 UA 차단 / RN text 프레임 NULL 누락) + UI 정확성 수정 + 진단 과정/교훈 정리
