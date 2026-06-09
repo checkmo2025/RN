@@ -2413,3 +2413,9 @@ export const interactionOpacity = {
 - eas build가 자동 설치한 expo-updates 반영: app.json에 runtimeVersion(appVersion)/updates.url, package.json 의존성 추가
 - android permissions의 RECORD_AUDIO 중복 항목 1개 제거
 - eas.json 프로파일에 channel이 있어 expo-updates는 유지(되돌려도 빌드 시 재설치됨)
+
+# 2026-06-09 11:28:00 KST Silent Refresh 구현 계획 문서 작성
+
+- 앱 재시작 시 쿠키 유실로 로그아웃되는 문제 원인 분석 (httpOnly+Secure 쿠키 RN 이슈)
+- BE/RN 각 변경 파일 및 코드 수준 계획 정리 (`docs/documents/silent-refresh-plan.md`)
+- expo-secure-store 패키지 설치 완료
