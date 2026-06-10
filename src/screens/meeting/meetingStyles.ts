@@ -3027,4 +3027,79 @@ export const styles = StyleSheet.create({
   bookshelfGroupPostCardPending: {
     opacity: interactionOpacity.disabled,
   },
+  teamManageSkeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  teamManageSkeletonAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  teamManageSkeletonName: {
+    flex: 1,
+    height: 14,
+    borderRadius: 4,
+  },
+  noticeTabSkeletonWrap: {
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  noticeTabSkeletonCard: {
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+  },
+  noticeTabSkeletonTitle: {
+    height: 14,
+    width: '70%',
+    borderRadius: 4,
+  },
+  noticeTabSkeletonBody: {
+    height: 12,
+    width: '90%',
+    borderRadius: 4,
+  },
+  noticeTabSkeletonDate: {
+    height: 10,
+    width: '40%',
+    borderRadius: 4,
+  },
+  bookshelfTabSkeletonWrap: {
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  bookshelfTabSkeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+  },
+  bookshelfTabSkeletonThumb: {
+    width: 48,
+    height: 64,
+    borderRadius: radius.xs,
+  },
+  bookshelfTabSkeletonInfo: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  bookshelfTabSkeletonTitle: {
+    height: 14,
+    width: '70%',
+    borderRadius: 4,
+  },
+  bookshelfTabSkeletonSub: {
+    height: 12,
+    width: '50%',
+    borderRadius: 4,
+  },
 });

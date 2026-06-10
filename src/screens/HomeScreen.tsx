@@ -617,6 +617,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    height: 64,
   },
   userSkeletonAvatar: {
     width: 42,

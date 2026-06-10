@@ -2479,3 +2479,10 @@ export const interactionOpacity = {
 - `AppHeader`: 헤더 알림 드롭다운 로딩 텍스트 → 스켈레톤 3행으로 교체
 - `AppHeader`: 책 검색 결과 로딩 텍스트 → 결과 카드 스켈레톤 3개로 교체 (테스트용 2초 지연 포함)
 - TODO 추가: 모임 내부 화면 스켈레톤, UserProfileScreen 스켈레톤
+
+# 2026-06-10 22:47:03 KST 스켈레톤 UI 전면 구현
+
+- `HomeScreen`: `userSkeletonRow` height 64 고정 → SubscribeUserItem 높이 불일치로 인한 레이아웃 shift 해소
+- `UserProfileScreen`: 서재(6 book card) / 모임(3 group row) / 구독목록(3 user row) / 프로필 로딩 텍스트 전부 SkeletonBox로 교체
+- `MeetingScreen`: `teamManageLoading` 텍스트 → 스켈레톤 rows 교체, `workspaceLoaded` 상태 추가
+- `GroupNoticeView` / `GroupBookshelfView`: `isInitialLoading` prop 추가, 초기 워크스페이스 로딩 시 스켈레톤 표시

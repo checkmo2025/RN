@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Image, Text, View } from 'react-native';
+import { SkeletonBox } from '../../components/common/SkeletonBox';
 import type { GestureResponderEvent } from 'react-native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -60,6 +61,7 @@ function renderNoticeTag(tag: 'PIN' | 'VOTE' | 'MEETING', key: string) {
 
 export type GroupNoticeViewProps = {
   isMember: boolean;
+  isInitialLoading?: boolean;
   navigation: NavigationProp<ParamListBase>;
   // Raw notice state
   noticeItems: NoticeItem[];
@@ -92,6 +94,7 @@ export type GroupNoticeViewProps = {
 
 export function GroupNoticeView({
   isMember,
+  isInitialLoading = false,
   navigation,
   noticeItems,
   noticePage,
@@ -170,6 +173,20 @@ export function GroupNoticeView({
     start = Math.max(1, end - pageWindow + 1);
     return Array.from({ length: end - start + 1 }).map((_, idx) => start + idx);
   }, [currentNoticePage, totalNoticePages]);
+
+  if (isInitialLoading) {
+    return (
+      <View style={styles.noticeTabSkeletonWrap}>
+        {[0, 1, 2, 3].map((i) => (
+          <View key={i} style={styles.noticeTabSkeletonCard}>
+            <SkeletonBox style={styles.noticeTabSkeletonTitle} />
+            <SkeletonBox style={styles.noticeTabSkeletonBody} />
+            <SkeletonBox style={styles.noticeTabSkeletonDate} />
+          </View>
+        ))}
+      </View>
+    );
+  }
 
   if (!isMember) {
     return (

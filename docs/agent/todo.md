@@ -75,9 +75,9 @@ TODO 수정 시 아래 규칙만 지킨다.
 
 | 상태 | 항목 | 설명 | 생성일자 | 최종 편집일자 |
 | ------ | ------ | ------ | ------ | ------ |
-| ⬜ | **홈 스켈레톤 → 실제 콘텐츠 전환 시 레이아웃 shift 개선** | 캐러셀/사용자 추천 스켈레톤 높이가 실제 콘텐츠와 미세하게 달라 전환 시 아래 목록이 살짝 밀림. 스켈레톤 row 높이를 `SubscribeUserItem` 실제 높이에 맞추거나 `minHeight` 고정으로 shift 최소화. DoD: 스켈레톤 → 실제 전환 시 책이야기 목록 위치 변동 없음. | 2026-06-10 | 2026-06-10 |
-| ⬜ | **모임 내부 화면 스켈레톤 UI 구현** | `GroupHomeView` 홈 탭 / `GroupNoticeView` 공지 탭 / `GroupBookshelfView` 책장 탭 초기 로딩 영역에 스켈레톤 적용. `MeetingScreen` 내 `teamManageLoading`(조 편성) 로딩 텍스트도 포함. DoD: 모임 진입 시 각 탭 첫 로딩에 텍스트 대신 스켈레톤 표시. | 2026-06-10 | 2026-06-10 |
-| ⬜ | **UserProfileScreen 스켈레톤 UI 구현** | 서재·모임·구독목록 탭 로딩 텍스트(`불러오는 중...`)를 스켈레톤으로 교체. DoD: 유저 프로필 진입 시 각 탭 로딩에 스켈레톤 표시. | 2026-06-10 | 2026-06-10 |
+| ✅ | **홈 스켈레톤 → 실제 콘텐츠 전환 시 레이아웃 shift 개선** | `userSkeletonRow`에 `height: 64` 고정. SubscribeUserItem 실제 높이(avatar 42 + paddingVertical 10×2 + border 1×2)에 맞춤. DoD: 스켈레톤 → 실제 전환 시 책이야기 목록 위치 변동 없음. | 2026-06-10 | 2026-06-10 |
+| ✅ | **모임 내부 화면 스켈레톤 UI 구현** | `GroupNoticeView` 공지 탭 / `GroupBookshelfView` 책장 탭에 `isInitialLoading` prop 추가, `workspaceLoaded` 상태로 제어. `teamManageLoading` 텍스트 → 스켈레톤 rows 교체. `meetingStyles.ts`에 스켈레톤 스타일 추가. DoD: 모임 진입 시 각 탭 첫 로딩에 텍스트 대신 스켈레톤 표시. | 2026-06-10 | 2026-06-10 |
+| ✅ | **UserProfileScreen 스켈레톤 UI 구현** | 서재(6 book card), 모임(3 group row), 구독목록(3 user row), 프로필 로딩 영역 스켈레톤 교체. DoD: 유저 프로필 진입 시 각 탭 로딩에 스켈레톤 표시. | 2026-06-10 | 2026-06-10 |
 | ✅ | **채팅 기능 제거** | 모임 채팅 기능 제거 결정. `useMeetingChatStomp.ts` 삭제, `useBookshelfState`/`MeetingScreen`/`helpers`/`clubApi`/`types`/`iconMap`/`meetingStyles`에서 채팅 관련 코드 전면 제거. tsc 통과. | 2026-05-08 | 2026-06-01 |
 | ✅ | **사용자 차단 화면 API 연결** | 차단 목록/차단/차단해제 화면을 실제 API와 연결. `fetchBlockedMembers`, `blockMember`, `unblockMember` 구현 완료. MyPageScreen(차단 목록/해제), UserProfileScreen(차단) 연결 완료. | 2026-05-20 | 2026-05-24 |
 | ✅ | **책이야기 임시저장 API 연결** | 책이야기 저장 플로우에서 임시저장을 `status: DRAFT`로 연동. 기준 경로: `POST /api/book-stories`, `PATCH /api/book-stories/{bookStoryId}`. 완료 기준(DoD): 임시저장 생성/수정, 재진입 시 DRAFT 이어쓰기, 발행 시 `PUBLISHED` 전환까지 확인. | 2026-05-20 | 2026-05-21 |

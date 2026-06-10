@@ -98,6 +98,7 @@ import {
   normalizeClubContacts,
 } from './meeting/mappers';
 import { styles } from './meeting/meetingStyles';
+import { SkeletonBox } from '../components/common/SkeletonBox';
 import { GroupNoticeView } from './meeting/GroupNoticeView';
 import { GroupBookshelfView } from './meeting/GroupBookshelfView';
 import { GroupManagementOverlay } from './meeting/GroupManagementOverlay';
@@ -857,6 +858,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [groupHomeRefreshing, setGroupHomeRefreshing] = useState(false);
   const [latestNoticeId, setLatestNoticeId] = useState<number | null>(null);
   const clubWorkspaceRequestIdRef = useRef(0);
+  const [workspaceLoaded, setWorkspaceLoaded] = useState(!isManagedClub);
 
   const setReportModalRef = useRef<Dispatch<SetStateAction<ReportMemberModalState | null>>>(() => {});
   const setActiveManagementScreenRef = useRef<(s: GroupManagementScreen | null) => void>(() => {});
@@ -1217,8 +1219,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         setVoteEditEnabledByNotice({});
         setJoinRequests(snapshot.joinRequests);
         setMembers(snapshot.members);
+        setWorkspaceLoaded(true);
       } catch (error) {
         if (isStale()) return;
+        setWorkspaceLoaded(true);
         if (error instanceof ApiError) {
           if (error.status === 401) {
             handleAuthExpired({ suppressToast: options?.suppressErrorToast });
@@ -1234,7 +1238,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         }
       }
     },
-    [group, group.clubId, handleAuthExpired, isManagedClub, isLoggedIn],
+    [group, group.clubId, handleAuthExpired, isManagedClub, isLoggedIn, setWorkspaceLoaded],
   );
 
   useEffect(() => {
@@ -1695,6 +1699,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       {activeTab === 'notice' ? (
         <GroupNoticeView
           isMember={isMember}
+          isInitialLoading={!workspaceLoaded}
           navigation={navigation}
           noticeItems={noticeItems}
           noticePage={noticePage}
@@ -1726,6 +1731,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       {activeTab === 'bookshelf' ? (
         <GroupBookshelfView
           isMember={isMember}
+          isInitialLoading={!workspaceLoaded}
           canManageClub={canManageClub}
           group={managedGroup}
           groupHomeScrollRef={groupHomeScrollRef}
@@ -1782,7 +1788,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
           {teamManageLoading ? (
             <View style={styles.teamManageLoadingWrap}>
-              <Text style={styles.managementEmptyText}>조 편성 정보를 불러오는 중입니다.</Text>
+              {[0, 1, 2, 3].map((i) => (
+                <View key={i} style={styles.teamManageSkeletonRow}>
+                  <SkeletonBox style={styles.teamManageSkeletonAvatar} />
+                  <SkeletonBox style={styles.teamManageSkeletonName} />
+                </View>
+              ))}
             </View>
           ) : (
             <>

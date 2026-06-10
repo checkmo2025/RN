@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 import { Image, ScrollView, Text, View } from 'react-native';
+import { SkeletonBox } from '../../components/common/SkeletonBox';
 import type { GestureResponderEvent } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing } from '../../theme';
@@ -36,6 +37,7 @@ function getBookshelfCategoryBadgeStyle(category: string) {
 
 export type GroupBookshelfViewProps = {
   isMember: boolean;
+  isInitialLoading?: boolean;
   canManageClub: boolean;
   group: Group;
   groupHomeScrollRef: RefObject<ScrollView | null>;
@@ -75,6 +77,7 @@ export type GroupBookshelfViewProps = {
 
 export function GroupBookshelfView({
   isMember,
+  isInitialLoading = false,
   canManageClub,
   group,
   groupHomeScrollRef,
@@ -119,6 +122,22 @@ export function GroupBookshelfView({
       });
     });
   }, [bookshelfViewMode, groupHomeScrollRef]);
+
+  if (isInitialLoading) {
+    return (
+      <View style={styles.bookshelfTabSkeletonWrap}>
+        {[0, 1, 2, 3].map((i) => (
+          <View key={i} style={styles.bookshelfTabSkeletonRow}>
+            <SkeletonBox style={styles.bookshelfTabSkeletonThumb} />
+            <View style={styles.bookshelfTabSkeletonInfo}>
+              <SkeletonBox style={styles.bookshelfTabSkeletonTitle} />
+              <SkeletonBox style={styles.bookshelfTabSkeletonSub} />
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  }
 
   if (!isMember) {
     return (

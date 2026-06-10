@@ -29,6 +29,7 @@ import { DialogOverlay } from '../components/common/DialogOverlay';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
+import { SkeletonBox } from '../components/common/SkeletonBox';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { BOOK_DEFAULT_IMAGE } from '../constants/defaultAssets';
@@ -686,7 +687,17 @@ export function UserProfileScreen() {
 
   const renderLibraryCards = () => (
     <View style={[styles.gridContent, styles.bookWrap]}>
-      {loadingBooks ? <Text style={styles.emptyText}>서재를 불러오는 중...</Text> : null}
+      {loadingBooks ? (
+        <View style={styles.bookWrap}>
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <View key={i} style={styles.bookCard}>
+              <SkeletonBox style={styles.bookThumb} />
+              <SkeletonBox style={styles.bookSkeletonTitle} />
+              <SkeletonBox style={styles.bookSkeletonAuthor} />
+            </View>
+          ))}
+        </View>
+      ) : null}
       {!loadingBooks && books.length === 0 ? <Text style={styles.emptyText}>공개된 서재가 없습니다.</Text> : null}
       {books.map((book) => (
         <Pressable
@@ -713,7 +724,15 @@ export function UserProfileScreen() {
 
   const renderMeetings = () => (
     <View style={styles.listContainer}>
-      {loadingGroups ? <Text style={styles.emptyText}>모임을 불러오는 중...</Text> : null}
+      {loadingGroups ? (
+        <View style={styles.listContainer}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={[styles.groupRow, styles.groupSkeletonRow]}>
+              <SkeletonBox style={styles.groupSkeletonName} />
+            </View>
+          ))}
+        </View>
+      ) : null}
       {!loadingGroups && groups.length === 0 ? (
         <Text style={styles.emptyText}>공개된 모임이 없습니다.</Text>
       ) : null}
@@ -786,7 +805,15 @@ export function UserProfileScreen() {
 
       <View style={styles.followListWrap}>
         {loadingFollowUsers ? (
-          <Text style={styles.emptyText}>구독 목록을 불러오는 중...</Text>
+          <View style={styles.followSkeletonWrap}>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={styles.followSkeletonRow}>
+                <SkeletonBox style={styles.followSkeletonAvatar} />
+                <SkeletonBox style={styles.followSkeletonName} />
+                <SkeletonBox style={styles.followSkeletonChip} />
+              </View>
+            ))}
+          </View>
         ) : null}
         {!loadingFollowUsers && activeFollowUsers.length === 0 ? (
           <Text style={styles.emptyText}>표시할 사용자가 없습니다.</Text>
@@ -953,7 +980,11 @@ export function UserProfileScreen() {
 
               <View style={styles.tabContent}>
                 {profileLoading && !refreshing ? (
-                  <Text style={styles.emptyText}>불러오는 중...</Text>
+                  <View style={styles.profileSkeletonWrap}>
+                    <SkeletonBox style={styles.profileSkeletonAvatar} />
+                    <SkeletonBox style={styles.profileSkeletonName} />
+                    <SkeletonBox style={styles.profileSkeletonBio} />
+                  </View>
                 ) : (
                   renderTabContent()
                 )}
@@ -1455,5 +1486,69 @@ modalDivider: {
   modalActionDivider: {
     width: 1,
     backgroundColor: colors.gray1,
+  },
+  profileSkeletonWrap: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+  },
+  profileSkeletonAvatar: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+  },
+  profileSkeletonName: {
+    width: 120,
+    height: 16,
+    borderRadius: 4,
+  },
+  profileSkeletonBio: {
+    width: 200,
+    height: 12,
+    borderRadius: 4,
+  },
+  bookSkeletonTitle: {
+    width: '80%',
+    height: 12,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  bookSkeletonAuthor: {
+    width: '60%',
+    height: 10,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  groupSkeletonRow: {
+    justifyContent: 'center',
+  },
+  groupSkeletonName: {
+    height: 14,
+    width: '60%',
+    borderRadius: 4,
+  },
+  followSkeletonWrap: {
+    gap: spacing.sm,
+  },
+  followSkeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    height: 64,
+  },
+  followSkeletonAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+  },
+  followSkeletonName: {
+    flex: 1,
+    height: 14,
+    borderRadius: 4,
+  },
+  followSkeletonChip: {
+    width: 60,
+    height: 32,
+    borderRadius: 6,
   },
 });
