@@ -2414,6 +2414,11 @@ export const interactionOpacity = {
 - android permissions의 RECORD_AUDIO 중복 항목 1개 제거
 - eas.json 프로파일에 channel이 있어 expo-updates는 유지(되돌려도 빌드 시 재설치됨)
 
+# 2026-06-10 11:30:00 KST 책이야기 댓글창 키보드에 가리는 버그 수정
+
+- StoryScreen: KeyboardAvoidingView에 keyboardVerticalOffset 추가 (insets.top + 헤더 높이)
+- iOS/Android behavior 분기 처리 (ios: padding, android: height)
+
 # 2026-06-10 11:00:00 KST RN Silent Refresh 구현 (version-2 브랜치)
 
 - src/services/tokenStore.ts 신규: expo-secure-store 유틸 (save/get/delete)

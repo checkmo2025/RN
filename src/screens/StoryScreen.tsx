@@ -32,11 +32,12 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import * as Clipboard from 'expo-clipboard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import { PENCIL_ICON_URI } from '../constants/iconMap';
 import { INPUT_LIMITS } from '../constants/inputLimits';
-import { colors, interactionOpacity, layers, radius, spacing, typography } from '../theme';
+import { colors, interactionOpacity, layers, radius, scaleSize, spacing, typography } from '../theme';
 import { navigateToHome, parsePositiveIntParam } from '../navigation/navigateToHome';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
@@ -256,6 +257,7 @@ export function StoryScreen() {
   const route = useRoute<RouteProp<{ Story: StoryRouteParams }, 'Story'>>();
   const { requireAuth, isLoggedIn } = useAuthGate();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
   }
@@ -1712,7 +1714,11 @@ export function StoryScreen() {
           style={styles.detailBackSwipeEdge}
           {...detailBackSwipeResponder.panHandlers}
         />
-        <KeyboardAvoidingView style={styles.container} behavior="padding">
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + scaleSize(44) : 0}
+        >
           <ScrollView
             ref={detailScrollRef}
             contentContainerStyle={styles.detailContent}
