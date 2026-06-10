@@ -2414,6 +2414,11 @@ export const interactionOpacity = {
 - android permissions의 RECORD_AUDIO 중복 항목 1개 제거
 - eas.json 프로파일에 channel이 있어 expo-updates는 유지(되돌려도 빌드 시 재설치됨)
 
+# 2026-06-10 13:00:00 KST silentRefreshSession 버그 수정
+
+- 요청 방식: Cookie 헤더 수동 주입 → request body로 변경 (RN 안정성)
+- 응답에서 새 Refresh Token 꺼내 SecureStore 업데이트 (Rotation 대응)
+
 # 2026-06-10 12:00:00 KST 모임 카드 제목 길어질 때 비공개 태그 잘리는 버그 수정
 
 - MeetingListCard: title에 flex:1 + marginRight 추가, headerRight에 flexShrink:0 추가

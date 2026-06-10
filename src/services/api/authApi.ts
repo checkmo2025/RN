@@ -234,11 +234,15 @@ export async function silentRefreshSession(): Promise<boolean> {
   if (!storedToken) return false;
 
   try {
-    await requestJson<ApiEnvelope<null>>('/members/me/refresh', {
+    const response = await requestJson<ApiEnvelope<{ refreshToken?: string }>>('/members/me/refresh', {
       method: 'POST',
-      headers: { Cookie: `refreshToken=${storedToken}` },
+      body: { refreshToken: storedToken },
       suppressErrorToast: true,
     });
+    const newToken = unwrapResult(response)?.refreshToken;
+    if (newToken) {
+      await saveRefreshToken(newToken);
+    }
     return true;
   } catch {
     await deleteRefreshToken();
