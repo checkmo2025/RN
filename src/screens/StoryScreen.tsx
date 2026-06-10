@@ -50,6 +50,8 @@ import { BottomSheet } from '../components/common/BottomSheet';
 import { FormTextInput } from '../components/common/FormTextInput';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import BookStoryFeedCard from '../components/feature/bookstory/BookStoryFeedCard';
+import { BookStoryFeedCardSkeleton } from '../components/feature/bookstory/BookStoryFeedCardSkeleton';
+import { SkeletonBox } from '../components/common/SkeletonBox';
 import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import {
@@ -280,6 +282,8 @@ export function StoryScreen() {
   const [hasNext, setHasNext] = useState(false);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [editingStoryId, setEditingStoryId] = useState<number | null>(null);
   const [draftStoryId, setDraftStoryId] = useState<number | null>(null);
@@ -689,6 +693,8 @@ export function StoryScreen() {
       if (!reset) {
         if (!hasNext || isLoadingMore) return;
         setIsLoadingMore(true);
+      } else {
+        setIsInitialLoading(true);
       }
 
       try {
@@ -723,6 +729,8 @@ export function StoryScreen() {
       } finally {
         if (!reset) {
           setIsLoadingMore(false);
+        } else {
+          setIsInitialLoading(false);
         }
       }
     },
@@ -748,6 +756,7 @@ export function StoryScreen() {
   const loadStoryDetail = useCallback(
     async (story: Story) => {
       if (typeof story.remoteId !== 'number') return;
+      setIsDetailLoading(true);
       try {
         const detail = await fetchBookStoryDetail(story.remoteId, {
           viewerAuthenticated: isLoggedIn,
@@ -759,6 +768,8 @@ export function StoryScreen() {
         if (!(error instanceof ApiError)) {
           showToast('책이야기 상세를 불러오지 못했습니다.');
         }
+      } finally {
+        setIsDetailLoading(false);
       }
     },
     [applyStoryUpdate, isLoggedIn],
@@ -1856,6 +1867,19 @@ export function StoryScreen() {
 
           <View style={styles.commentSection} onLayout={handleCommentSectionLayout}>
             <Text style={styles.commentHeader}>댓글</Text>
+            {isDetailLoading && selectedStory.commentList.length === 0 && (
+              <View style={styles.commentSkeletonList}>
+                {[0, 1].map((i) => (
+                  <View key={i} style={styles.commentSkeletonItem}>
+                    <SkeletonBox style={styles.commentSkeletonAvatar} />
+                    <View style={styles.commentSkeletonBody}>
+                      <SkeletonBox style={styles.commentSkeletonName} />
+                      <SkeletonBox style={styles.commentSkeletonText} />
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
             {(editingCommentId || !replyTarget) && (
               <View style={styles.commentInputRow}>
                 <TextInput
@@ -2329,6 +2353,17 @@ export function StoryScreen() {
           }}
           onEndReachedThreshold={0.3}
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            isInitialLoading ? (
+              <View style={styles.skeletonList}>
+                <BookStoryFeedCardSkeleton />
+                <View style={styles.storyItemSeparator} />
+                <BookStoryFeedCardSkeleton />
+                <View style={styles.storyItemSeparator} />
+                <BookStoryFeedCardSkeleton />
+              </View>
+            ) : null
+          }
           ListFooterComponent={
             isLoadingMore ? (
               <View style={styles.listFooter}>
@@ -2475,6 +2510,35 @@ const styles = StyleSheet.create({
   filterTabTextActive: {
     ...typography.body1,
     color: colors.gray7,
+  },
+  skeletonList: {
+    paddingTop: spacing.xs,
+  },
+  commentSkeletonList: {
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  commentSkeletonItem: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'flex-start',
+  },
+  commentSkeletonAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  commentSkeletonBody: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  commentSkeletonName: {
+    width: 80,
+    height: 12,
+  },
+  commentSkeletonText: {
+    width: '90%',
+    height: 12,
   },
   recommendedCard: {
     borderWidth: 1,

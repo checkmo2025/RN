@@ -2439,6 +2439,12 @@ export const interactionOpacity = {
 - app.json: android versionCode 추가, expo-secure-store 플러그인 등록
 - eas.json: Android buildType(app-bundle) 및 submit(serviceAccountKeyPath/track) 설정 추가
 
+# 2026-06-10 13:00:00 KST 책이야기 스켈레톤 UI 구현
+
+- SkeletonBox 공통 컴포넌트 신규 (shimmer 애니메이션)
+- BookStoryFeedCardSkeleton 신규 (피드 카드 레이아웃 스켈레톤)
+- StoryScreen: 피드 첫 로딩 시 카드 3개 스켈레톤, 상세 진입 시 댓글 스켈레톤 표시
+
 # 2026-06-10 12:00:00 KST Silent Refresh - X-Refresh-Token 헤더 방식으로 수정
 
 - BE JwtAuthenticationFilter: 쿠키 없을 때 X-Refresh-Token 헤더 fallback 추가 (feat-217-login)
