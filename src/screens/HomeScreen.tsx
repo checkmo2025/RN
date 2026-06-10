@@ -10,10 +10,12 @@ import {
 import { useNavigation, useScrollToTop, type NavigationProp, type ParamListBase } from '@react-navigation/native';
 
 import { colors, radius, spacing, typography } from '../theme';
+import { SkeletonBox } from '../components/common/SkeletonBox';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import HomePostCard from '../components/feature/home/HomePostCard';
 import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
 import { NewsPromotionCarousel, type NewsPromotionCarouselItem } from '../components/feature/news/NewsPromotionCarousel';
+import { NewsPromotionCarouselSkeleton } from '../components/feature/news/NewsPromotionCarouselSkeleton';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { resolveHomeAccessPolicy } from '../constants/homeAccessPolicy';
 import { NEWS_DEFAULT_IMAGE } from '../constants/defaultAssets';
@@ -99,8 +101,10 @@ export function HomeScreen() {
   const [myNickname, setMyNickname] = useState('');
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [loadingMorePosts, setLoadingMorePosts] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingPromotions, setLoadingPromotions] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [promotions, setPromotions] = useState<HomePromotionItem[]>(defaultPromotions);
+  const [promotions, setPromotions] = useState<HomePromotionItem[]>([]);
   const loadingPostsRef = useRef(false);
   const loadingMorePostsRef = useRef(false);
   const hasNextPostsRef = useRef(true);
@@ -114,6 +118,7 @@ export function HomeScreen() {
       return;
     }
 
+    setLoadingUsers(true);
     try {
       const users = await fetchRecommendedMembers();
       if (users.length === 0) {
@@ -153,6 +158,8 @@ export function HomeScreen() {
         showToast('추천 사용자를 불러오지 못했습니다.');
       }
       setUserRecommendations([]);
+    } finally {
+      setLoadingUsers(false);
     }
   }, [isLoggedIn]);
 
@@ -191,6 +198,7 @@ export function HomeScreen() {
   }, [isLoggedIn]);
 
   const loadPromotions = useCallback(async () => {
+    setLoadingPromotions(true);
     try {
       const allNews = await collectAllCursorPages({
         fetchPage: (cursor) => fetchNewsList(cursor),
@@ -216,6 +224,8 @@ export function HomeScreen() {
     } catch (error) {
       showToast(resolveApiError(error, { 401: '로그인 상태를 확인해 주십시오.', 403: '접근 권한이 없습니다.', 404: '요청한 소식을 찾을 수 없습니다.' }, '소식을 불러오지 못했습니다.'));
       setPromotions(defaultPromotions);
+    } finally {
+      setLoadingPromotions(false);
     }
   }, []);
 
@@ -452,25 +462,37 @@ export function HomeScreen() {
       <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
         <Text style={styles.sectionTitle}>소식</Text>
       </View>
-      <NewsPromotionCarousel
-        items={promotions}
-        horizontalInset={horizontalInset}
-        onPressItem={(index) => {
-          const target = promotions[index];
-          if (!target) return;
-          if (typeof target.newsId === 'number' && target.newsId > 0) {
-            navigation.navigate('News', { openNewsId: target.newsId });
-            return;
-          }
-          navigation.navigate('News');
-        }}
-      />
+      {loadingPromotions && promotions.length === 0 ? (
+        <NewsPromotionCarouselSkeleton horizontalInset={horizontalInset} />
+      ) : (
+        <NewsPromotionCarousel
+          items={promotions}
+          horizontalInset={horizontalInset}
+          onPressItem={(index) => {
+            const target = promotions[index];
+            if (!target) return;
+            if (typeof target.newsId === 'number' && target.newsId > 0) {
+              navigation.navigate('News', { openNewsId: target.newsId });
+              return;
+            }
+            navigation.navigate('News');
+          }}
+        />
+      )}
       {isLoggedIn ? (
         <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
           <View style={styles.userRecommendationCard}>
             <Text style={styles.sectionTitle}>사용자 추천</Text>
             <View style={styles.userRecommendationList}>
-              {userRecommendations.length > 0 ? (
+              {loadingUsers ? (
+                [0, 1, 2].map((i) => (
+                  <View key={i} style={styles.userSkeletonRow}>
+                    <SkeletonBox style={styles.userSkeletonAvatar} />
+                    <SkeletonBox style={styles.userSkeletonName} />
+                    <SkeletonBox style={styles.userSkeletonChip} />
+                  </View>
+                ))
+              ) : userRecommendations.length > 0 ? (
                 userRecommendations.map((user) => (
                   <SubscribeUserItem
                     key={user.id}
@@ -590,6 +612,25 @@ const styles = StyleSheet.create({
   emptyUserText: {
     ...typography.body2_2,
     color: colors.gray4,
+  },
+  userSkeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  userSkeletonAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+  },
+  userSkeletonName: {
+    flex: 1,
+    height: 14,
+  },
+  userSkeletonChip: {
+    width: 52,
+    height: 28,
+    borderRadius: 6,
   },
   emptyPostText: {
     ...typography.body2_2,

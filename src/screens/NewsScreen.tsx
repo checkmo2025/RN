@@ -40,6 +40,7 @@ import {
   NewsPromotionCarousel,
   type NewsPromotionCarouselItem,
 } from '../components/feature/news/NewsPromotionCarousel';
+import { NewsPromotionCarouselSkeleton } from '../components/feature/news/NewsPromotionCarouselSkeleton';
 import {
   fetchNewsDetail,
   fetchNewsList,
@@ -182,7 +183,7 @@ export function NewsScreen() {
   const [loadingNews, setLoadingNews] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [loadingBooks, setLoadingBooks] = useState(false);
-  const [promotions, setPromotions] = useState<NewsItem[]>(fallbackPromotions);
+  const [promotions, setPromotions] = useState<NewsItem[]>([]);
   const [items, setItems] = useState<NewsItem[]>([]);
   const [recommendedBooks, setRecommendedBooks] = useState<RecommendedBook[]>([]);
   const newsListRef = useRef<FlatList>(null);
@@ -525,15 +526,19 @@ export function NewsScreen() {
           ListHeaderComponent={
             <View style={styles.headerWrap}>
               <View style={styles.carouselFullBleed}>
-                <NewsPromotionCarousel
-                  items={promotionCarouselItems}
-                  horizontalInset={horizontalInset}
-                  onPressItem={(index) => {
-                    const target = promotions[index];
-                    if (!target) return;
-                    onSelect(target);
-                  }}
-                />
+                {loadingNews && promotions.length === 0 ? (
+                  <NewsPromotionCarouselSkeleton horizontalInset={horizontalInset} />
+                ) : (
+                  <NewsPromotionCarousel
+                    items={promotionCarouselItems}
+                    horizontalInset={horizontalInset}
+                    onPressItem={(index) => {
+                      const target = promotions[index];
+                      if (!target) return;
+                      onSelect(target);
+                    }}
+                  />
+                )}
               </View>
               <View style={styles.recommendedSection}>
                 <Text style={styles.recommendedTitle}>오늘의 추천 책</Text>

@@ -2439,6 +2439,12 @@ export const interactionOpacity = {
 - app.json: android versionCode 추가, expo-secure-store 플러그인 등록
 - eas.json: Android buildType(app-bundle) 및 submit(serviceAccountKeyPath/track) 설정 추가
 
+# 2026-06-10 15:00:00 KST 홈 스켈레톤 UI 구현 + 캐러셀 스켈레톤 공용화
+
+- NewsPromotionCarouselSkeleton 신규 (HomeScreen/NewsScreen 공용)
+- HomeScreen: 캐러셀/사용자 추천 스켈레톤 적용, loadingPromotions/loadingUsers 상태 추가
+- NewsScreen: 인라인 캐러셀 스켈레톤 → 공용 컴포넌트로 교체
+
 # 2026-06-10 14:00:00 KST 소식 스켈레톤 UI 구현
 
 - NewsCardSkeleton 신규 (소식 카드 레이아웃 스켈레톤)
