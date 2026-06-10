@@ -2492,3 +2492,8 @@ export const interactionOpacity = {
 - 테스트용 5초 지연 4곳(HomeScreen/UserProfileScreen×3/MeetingScreen) 전부 제거
 - TODO 추가: UserProfileScreen 스켈레톤 재검토 (마이페이지·타인 프로필 미노출)
 - TODO 추가: 모임 내부 화면 스켈레톤 재검토 (GroupNoticeView/GroupBookshelfView 이상)
+
+# 2026-06-10 23:20:00 KST 모임 포커싱 메커니즘 문서화 및 TODO 추가
+
+- `docs/documents/meeting-focus-scroll-mechanism.md` 신규 작성 (focusGroupTitle / shouldScrollToBookshelfDetailRef / detailSectionYRef 흐름 정리)
+- TODO 추가: 모임 화면 포커싱 동작 확인 (스켈레톤 타이밍 충돌 포함)
