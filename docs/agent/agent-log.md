@@ -2439,6 +2439,12 @@ export const interactionOpacity = {
 - app.json: android versionCode 추가, expo-secure-store 플러그인 등록
 - eas.json: Android buildType(app-bundle) 및 submit(serviceAccountKeyPath/track) 설정 추가
 
+# 2026-06-10 14:00:00 KST 소식 스켈레톤 UI 구현
+
+- NewsCardSkeleton 신규 (소식 카드 레이아웃 스켈레톤)
+- NewsScreen: 소식 리스트/추천 책/상세 본문 스켈레톤 적용
+- 추천 책 loadingBooks 상태 추가, 상세 본문 "불러오는 중..." → 스켈레톤으로 교체
+
 # 2026-06-10 13:00:00 KST 책이야기 스켈레톤 UI 구현
 
 - SkeletonBox 공통 컴포넌트 신규 (shimmer 애니메이션)

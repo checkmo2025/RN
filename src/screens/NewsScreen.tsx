@@ -30,6 +30,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import { NEWS_DEFAULT_IMAGE } from '../constants/defaultAssets';
 import { colors, radius, spacing, typography } from '../theme';
+import { SkeletonBox } from '../components/common/SkeletonBox';
+import { NewsCardSkeleton } from '../components/feature/news/NewsCardSkeleton';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { LeftFocalCoverImage } from '../components/common/LeftFocalCoverImage';
 import { ScreenLayout } from '../components/common/ScreenLayout';
@@ -179,6 +181,7 @@ export function NewsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingNews, setLoadingNews] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [loadingBooks, setLoadingBooks] = useState(false);
   const [promotions, setPromotions] = useState<NewsItem[]>(fallbackPromotions);
   const [items, setItems] = useState<NewsItem[]>([]);
   const [recommendedBooks, setRecommendedBooks] = useState<RecommendedBook[]>([]);
@@ -222,6 +225,7 @@ export function NewsScreen() {
   }, []);
 
   const loadRecommendedBookCards = useCallback(async () => {
+    setLoadingBooks(true);
     try {
       const books = await fetchRecommendedBooks();
       const cards = shuffleItems(books).slice(0, 4).map((book, index) => {
@@ -242,6 +246,8 @@ export function NewsScreen() {
       setRecommendedBooks([]);
       if (error instanceof ApiError) return;
       showToast('추천 책을 불러오지 못했습니다.');
+    } finally {
+      setLoadingBooks(false);
     }
   }, []);
 
@@ -482,9 +488,15 @@ export function NewsScreen() {
           <Text style={styles.detailTitle}>{item.title}</Text>
           <Text style={styles.detailDate}>{item.date}</Text>
         </View>
-        <Text style={styles.detailBody}>
-          {loadingDetail ? '불러오는 중...' : item.body || item.excerpt}
-        </Text>
+        {loadingDetail ? (
+          <View style={styles.detailBodySkeleton}>
+            {['100%', '95%', '100%', '85%', '90%', '100%', '80%', '70%'].map((w, i) => (
+              <SkeletonBox key={i} style={{ width: w as `${number}%`, height: 14 }} />
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.detailBody}>{item.body || item.excerpt}</Text>
+        )}
         {item.originalLink ? (
           <Pressable
             style={styles.detailLinkButton}
@@ -530,36 +542,49 @@ export function NewsScreen() {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.recommendedRow}
                 >
-                  {recommendedBooks.map((book) => (
-                    <Pressable
-                      key={book.id}
-                      style={styles.recommendedCard}
-                      onPress={() => openBookSearchDetail(book)}
-                    >
-                      <ImageBackground
-                        source={book.imgUrl ? { uri: book.imgUrl } : undefined}
-                        style={styles.recommendedThumb}
-                        imageStyle={styles.recommendedThumbImage}
-                      >
-                        <View style={styles.recommendedOverlay} />
-                        <View style={styles.recommendedTextWrap}>
-                          <Text style={styles.recommendedBookTitle} numberOfLines={1}>
-                            {book.title}
-                          </Text>
-                          <Text style={styles.recommendedBookAuthor} numberOfLines={1}>
-                            {book.author}
-                          </Text>
-                        </View>
-                      </ImageBackground>
-                    </Pressable>
-                  ))}
+                  {loadingBooks
+                    ? [0, 1, 2, 3].map((i) => (
+                        <SkeletonBox key={i} style={styles.recommendedSkeletonCard} />
+                      ))
+                    : recommendedBooks.map((book) => (
+                        <Pressable
+                          key={book.id}
+                          style={styles.recommendedCard}
+                          onPress={() => openBookSearchDetail(book)}
+                        >
+                          <ImageBackground
+                            source={book.imgUrl ? { uri: book.imgUrl } : undefined}
+                            style={styles.recommendedThumb}
+                            imageStyle={styles.recommendedThumbImage}
+                          >
+                            <View style={styles.recommendedOverlay} />
+                            <View style={styles.recommendedTextWrap}>
+                              <Text style={styles.recommendedBookTitle} numberOfLines={1}>
+                                {book.title}
+                              </Text>
+                              <Text style={styles.recommendedBookAuthor} numberOfLines={1}>
+                                {book.author}
+                              </Text>
+                            </View>
+                          </ImageBackground>
+                        </Pressable>
+                      ))}
                 </ScrollView>
               </View>
               <Text style={styles.newsListTitle}>소식</Text>
             </View>
           }
           ListEmptyComponent={
-            !loadingNews ? <Text style={styles.emptyNewsText}>등록된 소식이 없습니다.</Text> : null
+            loadingNews ? (
+              <View style={styles.skeletonList}>
+                <NewsCardSkeleton />
+                <NewsCardSkeleton />
+                <NewsCardSkeleton />
+                <NewsCardSkeleton />
+              </View>
+            ) : (
+              <Text style={styles.emptyNewsText}>등록된 소식이 없습니다.</Text>
+            )
           }
           renderItem={({ item }) => (
             <Pressable style={styles.card} onPress={() => onSelect(item)}>
@@ -697,6 +722,17 @@ const styles = StyleSheet.create({
     color: colors.gray4,
     textAlign: 'center',
     paddingVertical: spacing.lg,
+  },
+  skeletonList: {
+    gap: spacing.sm,
+  },
+  recommendedSkeletonCard: {
+    width: 132,
+    aspectRatio: 3 / 4,
+    borderRadius: radius.md,
+  },
+  detailBodySkeleton: {
+    gap: spacing.sm,
   },
   dot: {
     width: 8,
