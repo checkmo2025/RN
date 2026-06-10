@@ -2414,6 +2414,12 @@ export const interactionOpacity = {
 - android permissions의 RECORD_AUDIO 중복 항목 1개 제거
 - eas.json 프로파일에 channel이 있어 expo-updates는 유지(되돌려도 빌드 시 재설치됨)
 
+# 2026-06-10 11:00:00 KST RN Silent Refresh 구현 (version-2 브랜치)
+
+- src/services/tokenStore.ts 신규: expo-secure-store 유틸 (save/get/delete)
+- authApi.ts: 로그인 시 Refresh Token SecureStore 저장, 로그아웃 시 삭제, silentRefreshSession() 추가
+- AuthGateContext.tsx: 앱 시작 401 시 silent refresh 시도 후 재확인
+
 # 2026-06-09 11:35:00 KST Android EAS 빌드/제출 설정 및 expo-secure-store 플러그인 등록
 
 - app.json: android versionCode 추가, expo-secure-store 플러그인 등록

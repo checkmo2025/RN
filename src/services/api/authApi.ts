@@ -1,4 +1,5 @@
 import { API_BASE_URL, ApiEnvelope, ApiError, requestJson, unwrapResult } from './http';
+import { deleteRefreshToken, getRefreshToken, saveRefreshToken } from '../tokenStore';
 
 type ApiResponseString = ApiEnvelope<string>;
 type FindEmailResult = {
@@ -44,7 +45,7 @@ export async function loginByIdentifier(
   password: string,
   options?: { suppressErrorToast?: boolean },
 ): Promise<void> {
-  await requestJson<ApiResponseString>('/auth/login', {
+  const response = await requestJson<ApiEnvelope<{ refreshToken?: string }>>('/auth/login', {
     method: 'POST',
     body: {
       identifier,
@@ -52,6 +53,10 @@ export async function loginByIdentifier(
     },
     suppressErrorToast: options?.suppressErrorToast,
   });
+  const refreshToken = unwrapResult(response)?.refreshToken;
+  if (refreshToken) {
+    await saveRefreshToken(refreshToken);
+  }
 }
 
 // Backward-compatible alias for existing callers.
@@ -221,4 +226,22 @@ export async function logoutSession(): Promise<void> {
   await requestJson<ApiEnvelope<null>>('/auth/logout', {
     method: 'POST',
   });
+  await deleteRefreshToken();
+}
+
+export async function silentRefreshSession(): Promise<boolean> {
+  const storedToken = await getRefreshToken();
+  if (!storedToken) return false;
+
+  try {
+    await requestJson<ApiEnvelope<null>>('/members/me/refresh', {
+      method: 'POST',
+      headers: { Cookie: `refreshToken=${storedToken}` },
+      suppressErrorToast: true,
+    });
+    return true;
+  } catch {
+    await deleteRefreshToken();
+    return false;
+  }
 }
