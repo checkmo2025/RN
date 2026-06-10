@@ -236,7 +236,7 @@ export async function silentRefreshSession(): Promise<boolean> {
   try {
     const response = await requestJson<ApiEnvelope<{ refreshToken?: string }>>('/members/me/refresh', {
       method: 'POST',
-      body: { refreshToken: storedToken },
+      headers: { 'X-Refresh-Token': storedToken },
       suppressErrorToast: true,
     });
     const newToken = unwrapResult(response)?.refreshToken;
