@@ -83,6 +83,7 @@ import {
   type AlarmItem,
 } from './mypage/useNotificationState';
 import { useAccountSettingsState, type ReportHistoryItem } from './mypage/useAccountSettingsState';
+import { SkeletonBox } from '../components/common/SkeletonBox';
 
 const tabs = ['내 책 이야기', '내 서재', '내 모임', '내 알림'] as const;
 type TabKey = (typeof tabs)[number];
@@ -948,7 +949,22 @@ export function MyPageScreen() {
 
   const renderStories = () => (
     <View style={[styles.gridContent, styles.cardWrap]}>
-      {loadingStories ? <Text style={styles.loadingText}>내 책이야기를 불러오는 중...</Text> : null}
+      {loadingStories ? (
+        <>
+          {[0, 1, 2, 3].map((i) => (
+            <View key={i} style={styles.storyCard}>
+              <SkeletonBox style={{ aspectRatio: 1, borderRadius: radius.sm }} />
+              <View style={styles.storyTextWrap}>
+                <SkeletonBox style={{ height: 18, width: '80%', borderRadius: radius.xs }} />
+                <SkeletonBox style={{ height: 14, width: '60%', borderRadius: radius.xs }} />
+              </View>
+              <View style={[styles.storyActions, { borderTopWidth: 0 }]}>
+                <SkeletonBox style={{ flex: 1, height: 16, borderRadius: radius.xs }} />
+              </View>
+            </View>
+          ))}
+        </>
+      ) : null}
       {!loadingStories && stories.length === 0 ? (
         <Text style={styles.emptyText}>작성한 책이야기가 없습니다.</Text>
       ) : null}
@@ -1010,7 +1026,17 @@ export function MyPageScreen() {
 
   const renderBooks = () => (
     <View style={[styles.gridContent, styles.bookWrap]}>
-      {loadingBooks ? <Text style={styles.loadingText}>내 서재를 불러오는 중...</Text> : null}
+      {loadingBooks ? (
+        <>
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <View key={i} style={[styles.bookCard, { width: bookshelfCardWidth }]}>
+              <SkeletonBox style={{ width: '100%', aspectRatio: 2 / 3, borderRadius: radius.sm }} />
+              <SkeletonBox style={{ height: 14, width: '85%', borderRadius: radius.xs }} />
+              <SkeletonBox style={{ height: 12, width: '60%', borderRadius: radius.xs }} />
+            </View>
+          ))}
+        </>
+      ) : null}
       {!loadingBooks && books.length === 0 ? (
         <Text style={styles.emptyText}>내 서재에 표시할 책이 없습니다.</Text>
       ) : null}
@@ -1042,7 +1068,16 @@ export function MyPageScreen() {
 
   const renderGroups = () => (
     <View style={styles.listContainer}>
-      {loadingGroups ? <Text style={styles.loadingText}>내 모임을 불러오는 중...</Text> : null}
+      {loadingGroups ? (
+        <>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={styles.groupRow}>
+              <SkeletonBox style={{ flex: 1, height: 18, borderRadius: radius.xs, marginRight: spacing.sm }} />
+              <SkeletonBox style={{ width: 18, height: 18, borderRadius: radius.xs }} />
+            </View>
+          ))}
+        </>
+      ) : null}
       {!loadingGroups && groups.length === 0 ? (
         <Text style={styles.emptyText}>가입한 모임이 없습니다.</Text>
       ) : null}
@@ -1074,7 +1109,17 @@ export function MyPageScreen() {
 
   const renderAlarms = () => (
     <View style={styles.listContainer}>
-      {loadingAlarms ? <Text style={styles.loadingText}>알림을 불러오는 중...</Text> : null}
+      {loadingAlarms ? (
+        <>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={styles.alarmRow}>
+              <SkeletonBox style={{ width: 8, height: 8, borderRadius: 4 }} />
+              <SkeletonBox style={{ flex: 1, height: 16, borderRadius: radius.xs }} />
+              <SkeletonBox style={{ width: 40, height: 12, borderRadius: radius.xs }} />
+            </View>
+          ))}
+        </>
+      ) : null}
       {!loadingAlarms && alarms.length === 0 ? (
         <Text style={styles.emptyText}>도착한 알림이 없습니다.</Text>
       ) : null}
@@ -1098,7 +1143,20 @@ export function MyPageScreen() {
 
   const renderMyNews = () => (
     <View style={styles.listContainer}>
-      {loadingMyNews ? <Text style={styles.loadingText}>내 소식을 불러오는 중...</Text> : null}
+      {loadingMyNews ? (
+        <>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={styles.myNewsRow}>
+              <SkeletonBox style={{ width: 64, height: 64, borderRadius: radius.sm }} />
+              <View style={styles.myNewsBody}>
+                <SkeletonBox style={{ height: 16, width: '90%', borderRadius: radius.xs }} />
+                <SkeletonBox style={{ height: 13, width: '70%', borderRadius: radius.xs }} />
+              </View>
+              <SkeletonBox style={{ width: 40, height: 12, alignSelf: 'flex-start', borderRadius: radius.xs }} />
+            </View>
+          ))}
+        </>
+      ) : null}
       {!loadingMyNews && myNews.length === 0 ? (
         <Text style={styles.emptyText}>등록한 소식이 없습니다.</Text>
       ) : null}
@@ -1224,7 +1282,17 @@ export function MyPageScreen() {
 
       <View style={styles.followListWrap}>
         {loadingFollowUsers ? (
-          <Text style={styles.loadingText}>구독 목록을 불러오는 중...</Text>
+          <>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={styles.followUserRow}>
+                <View style={styles.followUserMeta}>
+                  <SkeletonBox style={{ width: 28, height: 28, borderRadius: 14 }} />
+                  <SkeletonBox style={{ flex: 1, height: 16, borderRadius: radius.xs }} />
+                </View>
+                <SkeletonBox style={{ width: 56, height: 26, borderRadius: radius.sm }} />
+              </View>
+            ))}
+          </>
         ) : null}
 
         {!loadingFollowUsers && activeFollowUsers.length === 0 ? (

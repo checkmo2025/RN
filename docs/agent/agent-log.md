@@ -2467,3 +2467,9 @@ export const interactionOpacity = {
 - 앱 재시작 시 쿠키 유실로 로그아웃되는 문제 원인 분석 (httpOnly+Secure 쿠키 RN 이슈)
 - BE/RN 각 변경 파일 및 코드 수준 계획 정리 (`docs/documents/silent-refresh-plan.md`)
 - expo-secure-store 패키지 설치 완료
+
+# 2026-06-10 KST 모임/마이페이지 스켈레톤 UI 구현
+
+- `MeetingListCardSkeleton`, `MyGroupsDropdownCardSkeleton` 신규 컴포넌트 생성
+- `MeetingScreen`: 내 모임 목록 / 모임 검색 결과 로딩 텍스트 → 스켈레톤으로 교체
+- `MyPageScreen`: 내 책이야기·내 서재·내 모임·내 알림·내 소식·구독 목록 로딩 텍스트 → 스켈레톤으로 교체 (SkeletonBox 인라인)

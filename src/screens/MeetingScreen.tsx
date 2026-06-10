@@ -49,7 +49,9 @@ import { DialogOverlay } from '../components/common/DialogOverlay';
 import { FormTextInput } from '../components/common/FormTextInput';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import { MeetingListCard } from '../components/feature/groups/MeetingListCard';
+import { MeetingListCardSkeleton } from '../components/feature/groups/MeetingListCardSkeleton';
 import { MyGroupsDropdownCard } from '../components/feature/groups/MyGroupsDropdownCard';
+import { MyGroupsDropdownCardSkeleton } from '../components/feature/groups/MyGroupsDropdownCardSkeleton';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { ApiError } from '../services/api/http';
 import { issueImageUploadUrl } from '../services/api/authApi';
@@ -689,7 +691,7 @@ export function MeetingScreen() {
           />
         </>
       ) : null}
-      {myGroupsLoading ? <Text style={styles.helperText}>내 모임 목록을 불러오는 중...</Text> : null}
+      {myGroupsLoading ? <MyGroupsDropdownCardSkeleton /> : null}
       {!myGroupsLoading && isLoggedIn && myGroups.length === 0 ? (
         <Text style={styles.helperText}>가입한 모임이 없습니다.</Text>
       ) : null}
@@ -813,7 +815,13 @@ export function MeetingScreen() {
             onPressVisit={() => openGroupHome(group)}
           />
         ))}
-        {discoverLoading ? <Text style={styles.helperText}>모임 목록을 불러오는 중...</Text> : null}
+        {discoverLoading && visibleDiscoverGroups.length === 0 ? (
+          <>
+            <MeetingListCardSkeleton />
+            <MeetingListCardSkeleton />
+            <MeetingListCardSkeleton />
+          </>
+        ) : null}
         {!discoverLoading && visibleDiscoverGroups.length === 0 ? (
           <View style={styles.emptySearchBox}>
             <Text style={styles.emptySearchText}>검색 결과가 없습니다.</Text>
