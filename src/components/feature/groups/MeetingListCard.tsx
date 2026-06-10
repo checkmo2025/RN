@@ -179,10 +179,13 @@ const styles = StyleSheet.create({
   title: {
     ...typography.subhead3,
     color: colors.gray7,
+    flex: 1,
+    marginRight: spacing.xs,
   },
   headerRight: {
     alignItems: 'flex-end',
     gap: spacing.xxs,
+    flexShrink: 0,
   },
   privateWrap: {
     flexDirection: 'row',

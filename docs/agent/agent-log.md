@@ -2414,6 +2414,10 @@ export const interactionOpacity = {
 - android permissions의 RECORD_AUDIO 중복 항목 1개 제거
 - eas.json 프로파일에 channel이 있어 expo-updates는 유지(되돌려도 빌드 시 재설치됨)
 
+# 2026-06-10 12:00:00 KST 모임 카드 제목 길어질 때 비공개 태그 잘리는 버그 수정
+
+- MeetingListCard: title에 flex:1 + marginRight 추가, headerRight에 flexShrink:0 추가
+
 # 2026-06-10 11:30:00 KST 책이야기 댓글창 키보드에 가리는 버그 수정
 
 - StoryScreen: KeyboardAvoidingView에 keyboardVerticalOffset 추가 (insets.top + 헤더 높이)
