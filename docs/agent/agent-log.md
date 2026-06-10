@@ -2473,3 +2473,9 @@ export const interactionOpacity = {
 - `MeetingListCardSkeleton`, `MyGroupsDropdownCardSkeleton` 신규 컴포넌트 생성
 - `MeetingScreen`: 내 모임 목록 / 모임 검색 결과 로딩 텍스트 → 스켈레톤으로 교체
 - `MyPageScreen`: 내 책이야기·내 서재·내 모임·내 알림·내 소식·구독 목록 로딩 텍스트 → 스켈레톤으로 교체 (SkeletonBox 인라인)
+
+# 2026-06-10 KST 알림/책 검색 스켈레톤 UI + TODO 추가
+
+- `AppHeader`: 헤더 알림 드롭다운 로딩 텍스트 → 스켈레톤 3행으로 교체
+- `AppHeader`: 책 검색 결과 로딩 텍스트 → 결과 카드 스켈레톤 3개로 교체 (테스트용 2초 지연 포함)
+- TODO 추가: 모임 내부 화면 스켈레톤, UserProfileScreen 스켈레톤

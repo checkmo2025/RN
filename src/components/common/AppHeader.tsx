@@ -60,6 +60,7 @@ import { formatNotificationText, resolveNotificationTarget } from '../../utils/n
 import { showToast } from '../../utils/toast';
 import { useConsumeRouteParam } from '../../hooks/useConsumeRouteParam';
 import BookStoryFeedCard from '../feature/bookstory/BookStoryFeedCard';
+import { SkeletonBox } from './SkeletonBox';
 
 const logoUri = MOBILE_HEADER_LOGO_URI;
 const searchUri = HEADER_SEARCH_URI;
@@ -513,6 +514,7 @@ export function AppHeader(props: Props) {
     setSearchCurrentPage(1);
     setSearchLoadingMore(false);
     try {
+      await new Promise((r) => setTimeout(r, 2000)); // TODO: remove
       const result = await searchBooks(keyword, 1);
       setSearchResults(result.items);
       setSearchHasNext(result.hasNext);
@@ -907,7 +909,15 @@ export function AppHeader(props: Props) {
               disableFeedback
             >
               {notificationPreviewLoading ? (
-                <Text style={styles.notiEmptyText}>알림을 불러오는 중...</Text>
+                <>
+                  {[0, 1, 2].map((i) => (
+                    <View key={i} style={styles.notiRow}>
+                      <SkeletonBox style={{ width: 8, height: 8, borderRadius: 4 }} />
+                      <SkeletonBox style={{ flex: 1, height: 14, borderRadius: radius.xs }} />
+                      <SkeletonBox style={{ width: 36, height: 12, borderRadius: radius.xs }} />
+                    </View>
+                  ))}
+                </>
               ) : null}
               {!notificationPreviewLoading && notificationPreview.length === 0 ? (
                 <Text style={styles.notiEmptyText}>표시할 알림이 없습니다.</Text>
@@ -1156,6 +1166,22 @@ export function AppHeader(props: Props) {
                   ) : null}
 
                   <View style={styles.resultList}>
+                    {searchLoading ? (
+                      <>
+                        {[0, 1, 2].map((i) => (
+                          <View key={i} style={styles.resultCard}>
+                            <SkeletonBox style={{ width: 96, height: 138, borderRadius: radius.sm }} />
+                            <View style={[styles.resultBody, { gap: spacing.xs }]}>
+                              <SkeletonBox style={{ height: 18, width: '90%', borderRadius: radius.xs }} />
+                              <SkeletonBox style={{ height: 18, width: '70%', borderRadius: radius.xs }} />
+                              <SkeletonBox style={{ height: 14, width: '55%', borderRadius: radius.xs }} />
+                              <SkeletonBox style={{ height: 13, width: '85%', borderRadius: radius.xs }} />
+                              <SkeletonBox style={{ height: 13, width: '75%', borderRadius: radius.xs }} />
+                            </View>
+                          </View>
+                        ))}
+                      </>
+                    ) : null}
                     {searchResults.map((book, index) => (
                       <Pressable
                         key={`${book.isbn}-${index}`}
