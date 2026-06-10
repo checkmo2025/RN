@@ -75,6 +75,8 @@ TODO 수정 시 아래 규칙만 지킨다.
 
 | 상태 | 항목 | 설명 | 생성일자 | 최종 편집일자 |
 | ------ | ------ | ------ | ------ | ------ |
+| ⬜ | **UserProfileScreen 스켈레톤 UI 재검토** | 마이페이지(내 프로필)와 타인 프로필 양쪽에서 스켈레톤이 정상 노출되지 않는 문제 확인 및 수정. DoD: 두 화면 진입 시 로딩 중 스켈레톤 정상 표시. | 2026-06-10 | 2026-06-10 |
+| ⬜ | **모임 내부 화면 스켈레톤 UI 재검토** | GroupNoticeView / GroupBookshelfView 초기 로딩 스켈레톤 표시 이상 확인 및 수정. DoD: 모임 진입 시 공지/책장 탭 첫 로딩에 스켈레톤 정상 표시. | 2026-06-10 | 2026-06-10 |
 | ✅ | **홈 스켈레톤 → 실제 콘텐츠 전환 시 레이아웃 shift 개선** | `userSkeletonRow`에 `height: 64` 고정. SubscribeUserItem 실제 높이(avatar 42 + paddingVertical 10×2 + border 1×2)에 맞춤. DoD: 스켈레톤 → 실제 전환 시 책이야기 목록 위치 변동 없음. | 2026-06-10 | 2026-06-10 |
 | ✅ | **모임 내부 화면 스켈레톤 UI 구현** | `GroupNoticeView` 공지 탭 / `GroupBookshelfView` 책장 탭에 `isInitialLoading` prop 추가, `workspaceLoaded` 상태로 제어. `teamManageLoading` 텍스트 → 스켈레톤 rows 교체. `meetingStyles.ts`에 스켈레톤 스타일 추가. DoD: 모임 진입 시 각 탭 첫 로딩에 텍스트 대신 스켈레톤 표시. | 2026-06-10 | 2026-06-10 |
 | ✅ | **UserProfileScreen 스켈레톤 UI 구현** | 서재(6 book card), 모임(3 group row), 구독목록(3 user row), 프로필 로딩 영역 스켈레톤 교체. DoD: 유저 프로필 진입 시 각 탭 로딩에 스켈레톤 표시. | 2026-06-10 | 2026-06-10 |

@@ -2486,3 +2486,9 @@ export const interactionOpacity = {
 - `UserProfileScreen`: 서재(6 book card) / 모임(3 group row) / 구독목록(3 user row) / 프로필 로딩 텍스트 전부 SkeletonBox로 교체
 - `MeetingScreen`: `teamManageLoading` 텍스트 → 스켈레톤 rows 교체, `workspaceLoaded` 상태 추가
 - `GroupNoticeView` / `GroupBookshelfView`: `isInitialLoading` prop 추가, 초기 워크스페이스 로딩 시 스켈레톤 표시
+
+# 2026-06-10 23:05:00 KST 스켈레톤 테스트 지연 원복 및 TODO 추가
+
+- 테스트용 5초 지연 4곳(HomeScreen/UserProfileScreen×3/MeetingScreen) 전부 제거
+- TODO 추가: UserProfileScreen 스켈레톤 재검토 (마이페이지·타인 프로필 미노출)
+- TODO 추가: 모임 내부 화면 스켈레톤 재검토 (GroupNoticeView/GroupBookshelfView 이상)
