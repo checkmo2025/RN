@@ -2497,3 +2497,9 @@ export const interactionOpacity = {
 
 - `docs/documents/meeting-focus-scroll-mechanism.md` 신규 작성 (focusGroupTitle / shouldScrollToBookshelfDetailRef / detailSectionYRef 흐름 정리)
 - TODO 추가: 모임 화면 포커싱 동작 확인 (스켈레톤 타이밍 충돌 포함)
+
+# 2026-06-11 10:39:47 KST MyPageScreen 스켈레톤 재구현 및 API 병렬화
+
+- `MyPageScreen` 내 책이야기 탭 스켈레톤 재구현 — `storyThumb` 스타일 정확히 반영, title(40px)/excerpt(34px) 실제 minHeight 일치, storyActions 2버튼+divider 구조로 수정
+- `loadMyPageData` `Promise.all` 병렬화 — 프로필/팔로우/책이야기/서재/모임 5개 fetch 동시 실행 (순차 → 병렬)
+- 내 알림 탭 `useEffect` — `alarms.length > 0`이면 재fetch skip 처리

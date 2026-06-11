@@ -466,96 +466,100 @@ export function MyPageScreen() {
     }
 
     setLoadingProfile(true);
-    try {
-      const profile = await fetchMyProfile();
-      if (profile) {
-        setProfileName(profile.nickname || '_사용자');
-        setProfileDesc(profile.description || '소개글이 없습니다.');
-        setProfileImageUrl(normalizeImageUrl(profile.profileImageUrl));
-        setProfilePhoneNumber(profile.phoneNumber ?? '');
-        setProfileCategoryCodes(profile.categories);
-        setProfileCategories(
-          profile.categories
-            .map((code) => CATEGORY_CODE_TO_LABEL[code as ClubCategoryCode] ?? code)
-            .filter((label) => label.length > 0),
-        );
-      } else {
-        setProfilePhoneNumber('');
-      }
-    } catch (error) {
-      if (!(error instanceof ApiError)) {
-        showToast('내 프로필을 불러오지 못했습니다.');
-      }
-    } finally {
-      setLoadingProfile(false);
-    }
-
-    try {
-      const [followCount, followers, followings] = await Promise.all([
-        fetchMyFollowCount().catch(() => null),
-        fetchAllFollowUsers(fetchMyFollowers),
-        fetchAllFollowUsers(fetchMyFollowing),
-      ]);
-      setFollowerUsers(followers);
-      setFollowingUsers(followings);
-      setFollowerCount(followCount?.followerCount ?? followers.length);
-      setFollowingCount(followCount?.followingCount ?? followings.length);
-    } catch (error) {
-      if (!(error instanceof ApiError)) {
-        showToast('구독 정보를 불러오지 못했습니다.');
-      }
-    }
-
     setLoadingStories(true);
-    try {
-      const allStories = await collectAllCursorPages({
-        fetchPage: (cursor) => fetchMyBookStories(cursor),
-        dedupeId: (item) => item.id,
-      });
-
-      const mapped: StoryCard[] = allStories.map((item) => ({
-        id: `s-${item.id}`,
-        remoteId: item.id,
-        title: item.title || '제목 없음',
-        excerpt: item.description || '내용이 없습니다.',
-        imageUrl: normalizeImageUrl(item.bookInfo?.imgUrl),
-        likes: item.likeCount ?? 0,
-        comments: item.commentCount ?? 0,
-        status: item.status,
-        bookInfo: item.bookInfo,
-      }));
-      setStories(mapped);
-    } catch (error) {
-      showToast(resolveApiError(error, STORY_FEED_ERROR_OVERRIDES, '내 책이야기를 불러오지 못했습니다.'));
-    } finally {
-      setLoadingStories(false);
-    }
-
-    try {
-      await loadLikedBooks();
-    } catch (error) {
-      if (!(error instanceof ApiError)) {
-        showToast('내 서재를 불러오지 못했습니다.');
-      }
-    }
-
     setLoadingGroups(true);
-    try {
-      const result = await fetchMyClubs();
-      setGroups(
-        result.items.map((club) => ({
-          id: `club-${club.clubId}`,
-          clubId: club.clubId,
-          name: club.clubName,
-        })),
-      );
-    } catch (error) {
-      if (!(error instanceof ApiError)) {
-        showToast('내 모임을 불러오지 못했습니다.');
-      }
-    } finally {
-      setLoadingGroups(false);
-    }
+
+    await Promise.all([
+      (async () => {
+        try {
+          const profile = await fetchMyProfile();
+          if (profile) {
+            setProfileName(profile.nickname || '_사용자');
+            setProfileDesc(profile.description || '소개글이 없습니다.');
+            setProfileImageUrl(normalizeImageUrl(profile.profileImageUrl));
+            setProfilePhoneNumber(profile.phoneNumber ?? '');
+            setProfileCategoryCodes(profile.categories);
+            setProfileCategories(
+              profile.categories
+                .map((code) => CATEGORY_CODE_TO_LABEL[code as ClubCategoryCode] ?? code)
+                .filter((label) => label.length > 0),
+            );
+          } else {
+            setProfilePhoneNumber('');
+          }
+        } catch (error) {
+          if (!(error instanceof ApiError)) {
+            showToast('내 프로필을 불러오지 못했습니다.');
+          }
+        } finally {
+          setLoadingProfile(false);
+        }
+      })(),
+      (async () => {
+        try {
+          const [followCount, followers, followings] = await Promise.all([
+            fetchMyFollowCount().catch(() => null),
+            fetchAllFollowUsers(fetchMyFollowers),
+            fetchAllFollowUsers(fetchMyFollowing),
+          ]);
+          setFollowerUsers(followers);
+          setFollowingUsers(followings);
+          setFollowerCount(followCount?.followerCount ?? followers.length);
+          setFollowingCount(followCount?.followingCount ?? followings.length);
+        } catch (error) {
+          if (!(error instanceof ApiError)) {
+            showToast('구독 정보를 불러오지 못했습니다.');
+          }
+        }
+      })(),
+      (async () => {
+        try {
+          const allStories = await collectAllCursorPages({
+            fetchPage: (cursor) => fetchMyBookStories(cursor),
+            dedupeId: (item) => item.id,
+          });
+          const mapped: StoryCard[] = allStories.map((item) => ({
+            id: `s-${item.id}`,
+            remoteId: item.id,
+            title: item.title || '제목 없음',
+            excerpt: item.description || '내용이 없습니다.',
+            imageUrl: normalizeImageUrl(item.bookInfo?.imgUrl),
+            likes: item.likeCount ?? 0,
+            comments: item.commentCount ?? 0,
+            status: item.status,
+            bookInfo: item.bookInfo,
+          }));
+          setStories(mapped);
+        } catch (error) {
+          showToast(resolveApiError(error, STORY_FEED_ERROR_OVERRIDES, '내 책이야기를 불러오지 못했습니다.'));
+        } finally {
+          setLoadingStories(false);
+        }
+      })(),
+      loadLikedBooks().catch((error) => {
+        if (!(error instanceof ApiError)) {
+          showToast('내 서재를 불러오지 못했습니다.');
+        }
+      }),
+      (async () => {
+        try {
+          const result = await fetchMyClubs();
+          setGroups(
+            result.items.map((club) => ({
+              id: `club-${club.clubId}`,
+              clubId: club.clubId,
+              name: club.clubName,
+            })),
+          );
+        } catch (error) {
+          if (!(error instanceof ApiError)) {
+            showToast('내 모임을 불러오지 못했습니다.');
+          }
+        } finally {
+          setLoadingGroups(false);
+        }
+      })(),
+    ]);
   }, [isLoggedIn, loadLikedBooks]);
 
   const loadFollowUsers = useCallback(async () => {
@@ -953,12 +957,16 @@ export function MyPageScreen() {
         <>
           {[0, 1, 2, 3].map((i) => (
             <View key={i} style={styles.storyCard}>
-              <SkeletonBox style={{ aspectRatio: 1, borderRadius: radius.sm }} />
-              <View style={styles.storyTextWrap}>
-                <SkeletonBox style={{ height: 18, width: '80%', borderRadius: radius.xs }} />
-                <SkeletonBox style={{ height: 14, width: '60%', borderRadius: radius.xs }} />
+              <View style={styles.storyThumb}>
+                <SkeletonBox style={{ width: '100%', height: '100%' }} />
               </View>
-              <View style={[styles.storyActions, { borderTopWidth: 0 }]}>
+              <View style={styles.storyTextWrap}>
+                <SkeletonBox style={{ height: 40, borderRadius: radius.xs }} />
+                <SkeletonBox style={{ height: 34, width: '75%', borderRadius: radius.xs }} />
+              </View>
+              <View style={styles.storyActions}>
+                <SkeletonBox style={{ flex: 1, height: 16, borderRadius: radius.xs }} />
+                <View style={styles.actionDivider} />
                 <SkeletonBox style={{ flex: 1, height: 16, borderRadius: radius.xs }} />
               </View>
             </View>
@@ -1378,8 +1386,9 @@ export function MyPageScreen() {
 
   useEffect(() => {
     if (activeTab !== '내 알림') return;
+    if (alarms.length > 0) return;
     void loadAllNotifications();
-  }, [activeTab, loadAllNotifications]);
+  }, [activeTab, loadAllNotifications, alarms.length]);
 
   useEffect(() => {
     if (selectedSetting !== '알림 관리') return;
