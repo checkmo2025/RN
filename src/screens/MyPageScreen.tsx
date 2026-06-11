@@ -1866,7 +1866,18 @@ export function MyPageScreen() {
           <Text style={styles.detailTitle}>신고 관리</Text>
           <Text style={styles.detailDivider} />
           {loadingReportHistory ? (
-            <Text style={styles.loadingText}>신고 목록을 불러오는 중...</Text>
+            <View style={styles.reportList}>
+              {[0, 1, 2].map((i) => (
+                <View key={i} style={styles.reportCard}>
+                  <SkeletonBox style={{ height: 22, width: 60, borderRadius: radius.lg }} />
+                  <View style={styles.reportHeader}>
+                    <SkeletonBox style={{ height: 16, width: '50%', borderRadius: radius.xs }} />
+                    <SkeletonBox style={{ height: 13, width: 60, borderRadius: radius.xs }} />
+                  </View>
+                  <SkeletonBox style={{ height: 14, width: '85%', borderRadius: radius.xs }} />
+                </View>
+              ))}
+            </View>
           ) : null}
           {!loadingReportHistory && reportHistory.length === 0 ? (
             <Text style={styles.emptyText}>신고한 내역이 없습니다.</Text>
@@ -1896,7 +1907,16 @@ export function MyPageScreen() {
           <Text style={styles.detailTitle}>차단 관리</Text>
           <Text style={styles.detailDivider} />
           {loadingBlockedMembers ? (
-            <Text style={styles.loadingText}>차단 목록을 불러오는 중...</Text>
+            <View style={styles.reportList}>
+              {[0, 1, 2].map((i) => (
+                <View key={i} style={styles.reportCard}>
+                  <View style={styles.reportHeader}>
+                    <SkeletonBox style={{ height: 16, width: '50%', borderRadius: radius.xs }} />
+                    <SkeletonBox style={{ height: 14, width: 60, borderRadius: radius.xs }} />
+                  </View>
+                </View>
+              ))}
+            </View>
           ) : null}
           {!loadingBlockedMembers && blockedMembers.length === 0 ? (
             <Text style={styles.emptyText}>차단한 사용자가 없습니다.</Text>
@@ -1950,7 +1970,17 @@ export function MyPageScreen() {
           <Text style={styles.detailTitle}>알림 관리</Text>
           <Text style={styles.detailDivider} />
           {loadingNotificationSettings ? (
-            <Text style={styles.loadingText}>알림 설정을 불러오는 중...</Text>
+            <>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <View key={i} style={styles.alarmRow}>
+                  <View style={styles.alarmInfo}>
+                    <SkeletonBox style={{ height: 16, width: '60%', borderRadius: radius.xs }} />
+                    <SkeletonBox style={{ height: 13, width: '80%', borderRadius: radius.xs }} />
+                  </View>
+                  <SkeletonBox style={{ width: 44, height: 26, borderRadius: radius.lg }} />
+                </View>
+              ))}
+            </>
           ) : null}
           {notificationSettingRows.map((row) => {
             const enabled = notificationSettings[row.key];
