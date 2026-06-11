@@ -2527,3 +2527,9 @@ export const interactionOpacity = {
 - `MeetingScreen`: `focusGroupTitle` 스크롤 기준점을 모임 이름 Text → pillNav Y(`pillNavAnchorYRef`)로 통일 — 모임 홈/공지사항/책장 탭 전환 시 pillNav가 항상 화면 최상단
 - `GroupBookshelfView`: 책 상세/REGULAR_GROUP 진입 시 로컬 Y scrollTo → `onScrollToPillNav()` prop으로 교체, 포커싱 픽셀 불일치 해소 (`groupHomeScrollRef`/`detailSectionYRef` 의존 제거)
 - TODO 갱신: "모임 화면 포커싱 동작 확인" ✅ 완료
+
+# 2026-06-11 15:04:56 KST 모임 탭 포커싱 pending 패턴 제거 및 테스트 TODO 추가
+
+- 모임 홈/공지 첫 진입을 "콘텐츠 onLayout 후 스크롤"(pending 패턴)로 시도했으나, 탭마다 스크롤 타이밍이 달라져 부자연스러움 → 전부 되돌림
+- 결과: 세 탭(모임 홈·공지사항·책장) 모두 클릭 즉시 `focusGroupTitle(true)` 호출로 동일하게 유지 (책장 탭 클릭 기준). 코드 net 변경 없음(MeetingScreen 직전 커밋 상태로 복원)
+- TODO 추가: 🧪 "모임 탭바 포커싱 동작 통일 확인" (실기기 QA)
