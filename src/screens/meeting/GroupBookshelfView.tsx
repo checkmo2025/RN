@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import type { RefObject } from 'react';
 import { Image, ScrollView, Text, View } from 'react-native';
 import { SkeletonBox } from '../../components/common/SkeletonBox';
@@ -40,8 +40,8 @@ export type GroupBookshelfViewProps = {
   isInitialLoading?: boolean;
   canManageClub: boolean;
   group: Group;
-  groupHomeScrollRef: RefObject<ScrollView | null>;
   shouldScrollToBookshelfDetailRef: RefObject<boolean>;
+  onScrollToPillNav: () => void;
   // Bookshelf state
   bookshelfViewMode: BookshelfViewMode;
   bookshelfSessions: string[];
@@ -80,8 +80,8 @@ export function GroupBookshelfView({
   isInitialLoading = false,
   canManageClub,
   group,
-  groupHomeScrollRef,
   shouldScrollToBookshelfDetailRef,
+  onScrollToPillNav,
   bookshelfViewMode,
   bookshelfSessions,
   selectedBookshelfSession,
@@ -111,17 +111,11 @@ export function GroupBookshelfView({
   handleOpenBookshelfEdit,
   handlePressManageRegularGroups,
 }: GroupBookshelfViewProps) {
-  const detailSectionYRef = useRef(0);
 
   useEffect(() => {
     if (bookshelfViewMode !== 'REGULAR_GROUP') return;
-    requestAnimationFrame(() => {
-      groupHomeScrollRef.current?.scrollTo({
-        y: Math.max(0, detailSectionYRef.current - spacing.sm),
-        animated: true,
-      });
-    });
-  }, [bookshelfViewMode, groupHomeScrollRef]);
+    onScrollToPillNav();
+  }, [bookshelfViewMode, onScrollToPillNav]);
 
   if (isInitialLoading) {
     return (
@@ -267,14 +261,10 @@ export function GroupBookshelfView({
   ) : selectedBookshelfBook ? (
     <View
       style={styles.bookshelfDetailSection}
-      onLayout={(e) => {
-        const y = e.nativeEvent.layout.y;
-        detailSectionYRef.current = y;
+      onLayout={() => {
         if (!shouldScrollToBookshelfDetailRef.current) return;
         shouldScrollToBookshelfDetailRef.current = false;
-        requestAnimationFrame(() => {
-          groupHomeScrollRef.current?.scrollTo({ y: Math.max(0, y - spacing.sm), animated: true });
-        });
+        onScrollToPillNav();
       }}
     >
       <View style={styles.detailTitleRow}>

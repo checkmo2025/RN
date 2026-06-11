@@ -2520,3 +2520,10 @@ export const interactionOpacity = {
 - GroupNoticeView: 공지 스켈레톤 → 헤더("공지사항/모임의 공지사항을 확인하세요!") 유지, 리스트 자리에만 4개 row 스켈레톤
 - MeetingScreen 테스트용 5초 지연 제거
 - TODO 추가: 모임 내부 스켈레톤 직접 테스트 필요
+
+# 2026-06-11 13:35:49 KST 댓글 포커싱 추가 및 모임 탭 포커싱 기준 통일
+
+- `StoryScreen`: 피드 댓글 아이콘 → 상세 진입 시 스크롤만 되고 input focus 누락 → `handleCommentSectionLayout`에서 스크롤 완료(350ms) 후 `commentInputRef.current?.focus()` 추가
+- `MeetingScreen`: `focusGroupTitle` 스크롤 기준점을 모임 이름 Text → pillNav Y(`pillNavAnchorYRef`)로 통일 — 모임 홈/공지사항/책장 탭 전환 시 pillNav가 항상 화면 최상단
+- `GroupBookshelfView`: 책 상세/REGULAR_GROUP 진입 시 로컬 Y scrollTo → `onScrollToPillNav()` prop으로 교체, 포커싱 픽셀 불일치 해소 (`groupHomeScrollRef`/`detailSectionYRef` 의존 제거)
+- TODO 갱신: "모임 화면 포커싱 동작 확인" ✅ 완료

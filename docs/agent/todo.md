@@ -78,8 +78,8 @@ TODO 수정 시 아래 규칙만 지킨다.
 | ✅ | **MyPageScreen 내 책이야기 탭 스켈레톤 재구현** | `renderStories`에서 `storyThumb` 스타일 적용, title(40px)/excerpt(34px) 높이 실제 레이아웃과 일치, storyActions 2버튼+divider 구조로 재구현. DoD: 마이페이지 진입 시 책이야기 탭 로딩 중 실제 카드 레이아웃과 동일한 스켈레톤 표시. | 2026-06-11 | 2026-06-11 |
 | ✅ | **설정 화면 스켈레톤 구현** | 신고 관리(reportCard 3개) / 차단 관리(reportCard 3개) / 알림 관리(alarmRow 6개) 로딩 텍스트 → SkeletonBox로 교체. 내 소식 관리는 기존에 이미 구현됨. | 2026-06-11 | 2026-06-11 |
 | ✅ | **MyPageScreen API 병렬화** | `loadMyPageData`를 `Promise.all`로 개선 — 프로필/팔로우/책이야기/서재/모임 5개 fetch 동시 실행. 내 알림 탭은 데이터 있을 때 재fetch skip. DoD: 마이페이지 로딩 시간 단축. | 2026-06-11 | 2026-06-11 |
-| ⬜ | **모임 화면 포커싱 동작 확인** | 탭 전환/공지상세/책장상세 진입 시 `focusGroupTitle` 스크롤 동작 및 스켈레톤과의 타이밍 충돌 여부 확인. 관련 문서: `docs/documents/meeting-focus-scroll-mechanism.md`. DoD: 각 포커싱 시나리오에서 스크롤 위치가 의도대로 동작. | 2026-06-10 | 2026-06-10 |
-| ⬜ | **UserProfileScreen 스켈레톤 UI 재검토** | 마이페이지(내 프로필)와 타인 프로필 양쪽에서 스켈레톤이 정상 노출되지 않는 문제 확인 및 수정. DoD: 두 화면 진입 시 로딩 중 스켈레톤 정상 표시. | 2026-06-10 | 2026-06-10 |
+| ✅ | **모임 화면 포커싱 동작 확인** | 탭 전환/공지상세/책장상세 진입 시 `focusGroupTitle` 스크롤 기준점을 모임 이름 Text → pillNav Y(`pillNavAnchorYRef`)로 통일. GroupBookshelfView 책 상세/REGULAR_GROUP 진입도 로컬 Y → `onScrollToPillNav()`로 교체해 픽셀 불일치 해소. 관련 문서: `docs/documents/meeting-focus-scroll-mechanism.md`. DoD: 각 포커싱 시나리오에서 pillNav가 항상 화면 최상단. | 2026-06-10 | 2026-06-11 |
+| ✅ | **UserProfileScreen 스켈레톤 UI 재검토** | 마이페이지(내 프로필)와 타인 프로필 양쪽에서 스켈레톤이 정상 노출되지 않는 문제 확인 및 수정. DoD: 두 화면 진입 시 로딩 중 스켈레톤 정상 표시. | 2026-06-10 | 2026-06-11 |
 | ⬜ | **모임 내부 스켈레톤 직접 테스트 필요** | 공지사항 리스트 스켈레톤(헤더 유지, 리스트 자리 4개 row) / 책장 스켈레톤(기수 버튼 chip + 2열 그리드) 실기기에서 정상 노출 확인. DoD: 모임 진입 시 공지/책장 탭 로딩 중 스켈레톤 정상 표시 확인. | 2026-06-11 | 2026-06-11 |
 | ⬜ | **모임 내부 화면 스켈레톤 UI 재검토** | GroupNoticeView / GroupBookshelfView 초기 로딩 스켈레톤 표시 이상 확인 및 수정. DoD: 모임 진입 시 공지/책장 탭 첫 로딩에 스켈레톤 정상 표시. | 2026-06-10 | 2026-06-10 |
 | ✅ | **홈 스켈레톤 → 실제 콘텐츠 전환 시 레이아웃 shift 개선** | `userSkeletonRow`에 `height: 64` 고정. SubscribeUserItem 실제 높이(avatar 42 + paddingVertical 10×2 + border 1×2)에 맞춤. DoD: 스켈레톤 → 실제 전환 시 책이야기 목록 위치 변동 없음. | 2026-06-10 | 2026-06-10 |

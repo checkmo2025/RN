@@ -854,6 +854,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [currentMemberNickname, setCurrentMemberNickname] = useState('');
   const groupHomeScrollRef = useRef<ScrollView>(null);
   const groupTitleAnchorYRef = useRef(0);
+  const pillNavAnchorYRef = useRef(0);
   const hasFocusedGroupTitleRef = useRef(false);
   const [groupHomeRefreshing, setGroupHomeRefreshing] = useState(false);
   const [latestNoticeId, setLatestNoticeId] = useState<number | null>(null);
@@ -1289,9 +1290,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   }, [group.id]);
 
   const focusGroupTitle = useCallback((animated: boolean) => {
-    const targetY = Math.max(0, groupTitleAnchorYRef.current - spacing.xs);
     requestAnimationFrame(() => {
-      groupHomeScrollRef.current?.scrollTo({ y: targetY, animated });
+      groupHomeScrollRef.current?.scrollTo({ y: pillNavAnchorYRef.current, animated });
     });
   }, []);
 
@@ -1581,7 +1581,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         {managedGroup.name}
       </Text>
 
-      <View style={styles.pillNav}>
+      <View style={styles.pillNav} onLayout={(e) => { pillNavAnchorYRef.current = e.nativeEvent.layout.y; }}>
         {tabItems.map((tab) => {
           const active = activeTab === tab.key;
           return (
@@ -1734,8 +1734,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           isInitialLoading={!workspaceLoaded}
           canManageClub={canManageClub}
           group={managedGroup}
-          groupHomeScrollRef={groupHomeScrollRef}
           shouldScrollToBookshelfDetailRef={shouldScrollToBookshelfDetailRef}
+          onScrollToPillNav={() => focusGroupTitle(true)}
           bookshelfViewMode={bookshelfViewMode}
           bookshelfSessions={bookshelfSessions}
           selectedBookshelfSession={selectedBookshelfSession}

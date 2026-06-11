@@ -354,6 +354,9 @@ export function StoryScreen() {
       requestAnimationFrame(() => {
         if (!scrollToCommentSection(true)) return;
         pendingDetailFocusRef.current = null;
+        setTimeout(() => {
+          commentInputRef.current?.focus();
+        }, 350);
       });
     },
     [scrollToCommentSection],
