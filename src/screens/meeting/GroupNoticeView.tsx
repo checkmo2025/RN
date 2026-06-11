@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { Image, Text, View } from 'react-native';
 import { SkeletonBox } from '../../components/common/SkeletonBox';
+import { Image, Text, View } from 'react-native';
 import type { GestureResponderEvent } from 'react-native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -173,20 +173,6 @@ export function GroupNoticeView({
     start = Math.max(1, end - pageWindow + 1);
     return Array.from({ length: end - start + 1 }).map((_, idx) => start + idx);
   }, [currentNoticePage, totalNoticePages]);
-
-  if (isInitialLoading) {
-    return (
-      <View style={styles.noticeTabSkeletonWrap}>
-        {[0, 1, 2, 3].map((i) => (
-          <View key={i} style={styles.noticeTabSkeletonCard}>
-            <SkeletonBox style={styles.noticeTabSkeletonTitle} />
-            <SkeletonBox style={styles.noticeTabSkeletonBody} />
-            <SkeletonBox style={styles.noticeTabSkeletonDate} />
-          </View>
-        ))}
-      </View>
-    );
-  }
 
   if (!isMember) {
     return (
@@ -525,7 +511,17 @@ export function GroupNoticeView({
         </View>
       </View>
       <View style={styles.noticeList}>
-        {visibleNotices.map((notice) => (
+        {isInitialLoading ? (
+          <>
+            {[0, 1, 2, 3].map((i) => (
+              <View key={i} style={styles.noticeItemRow}>
+                <SkeletonBox style={{ width: 42, height: 28, borderRadius: 6, flexShrink: 0 }} />
+                <SkeletonBox style={{ flex: 1, height: 16, borderRadius: 4 }} />
+              </View>
+            ))}
+          </>
+        ) : null}
+        {!isInitialLoading && visibleNotices.map((notice) => (
           <Pressable
             key={notice.id}
             style={({ pressed }) => [styles.noticeItemRow, pressed && styles.pressed]}
@@ -547,7 +543,7 @@ export function GroupNoticeView({
             ) : null}
           </Pressable>
         ))}
-        {visibleNotices.length === 0 ? (
+        {!isInitialLoading && visibleNotices.length === 0 ? (
           <View style={styles.managementEmptyCard}>
             <Text style={styles.managementEmptyText}>등록된 공지가 없습니다.</Text>
           </View>

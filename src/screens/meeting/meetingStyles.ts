@@ -3070,6 +3070,11 @@ export const styles = StyleSheet.create({
     width: '40%',
     borderRadius: 4,
   },
+  bookshelfSessionChipSkeleton: {
+    width: 60,
+    height: 32,
+    borderRadius: radius.sm,
+  },
   bookshelfTabSkeletonWrap: {
     gap: spacing.sm,
     paddingVertical: spacing.sm,

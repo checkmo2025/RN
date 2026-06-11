@@ -126,15 +126,25 @@ export function GroupBookshelfView({
   if (isInitialLoading) {
     return (
       <View style={styles.bookshelfTabSkeletonWrap}>
-        {[0, 1, 2, 3].map((i) => (
-          <View key={i} style={styles.bookshelfTabSkeletonRow}>
-            <SkeletonBox style={styles.bookshelfTabSkeletonThumb} />
-            <View style={styles.bookshelfTabSkeletonInfo}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.bookshelfSessionRow}
+          scrollEnabled={false}
+        >
+          {[0, 1, 2, 3].map((i) => (
+            <SkeletonBox key={i} style={styles.bookshelfSessionChipSkeleton} />
+          ))}
+        </ScrollView>
+        <View style={styles.bookshelfGrid}>
+          {[0, 1, 2, 3].map((i) => (
+            <View key={i} style={styles.bookshelfCard}>
+              <SkeletonBox style={styles.bookshelfCover} />
               <SkeletonBox style={styles.bookshelfTabSkeletonTitle} />
               <SkeletonBox style={styles.bookshelfTabSkeletonSub} />
             </View>
-          </View>
-        ))}
+          ))}
+        </View>
       </View>
     );
   }

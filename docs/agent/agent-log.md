@@ -2513,3 +2513,10 @@ export const interactionOpacity = {
 # 2026-06-11 11:10:00 KST 설정 화면 스켈레톤 테스트 지연 제거
 
 - 내 소식 관리 / 차단 관리 / 신고 관리 / 알림 관리 테스트용 5초 지연 전부 제거
+
+# 2026-06-11 11:45:00 KST 모임 내부 스켈레톤 재구현 및 테스트 지연 제거
+
+- GroupBookshelfView: 책장 스켈레톤 → 기수 버튼 chip 4개 + 2열 bookshelfCard 그리드로 재구현
+- GroupNoticeView: 공지 스켈레톤 → 헤더("공지사항/모임의 공지사항을 확인하세요!") 유지, 리스트 자리에만 4개 row 스켈레톤
+- MeetingScreen 테스트용 5초 지연 제거
+- TODO 추가: 모임 내부 스켈레톤 직접 테스트 필요
