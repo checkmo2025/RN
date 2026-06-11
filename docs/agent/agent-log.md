@@ -2509,3 +2509,7 @@ export const interactionOpacity = {
 - 신고 관리: 로딩 텍스트 → reportCard 3개 스켈레톤 (badge/header/text 영역)
 - 차단 관리: 로딩 텍스트 → reportCard 3개 스켈레톤 (nickname/버튼 영역)
 - 알림 관리: 로딩 텍스트 → alarmRow 6개 스켈레톤 (label/body/toggle 영역)
+
+# 2026-06-11 11:10:00 KST 설정 화면 스켈레톤 테스트 지연 제거
+
+- 내 소식 관리 / 차단 관리 / 신고 관리 / 알림 관리 테스트용 5초 지연 전부 제거
