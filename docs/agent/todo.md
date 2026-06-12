@@ -80,8 +80,8 @@ TODO 수정 시 아래 규칙만 지킨다.
 | ✅ | **MyPageScreen API 병렬화** | `loadMyPageData`를 `Promise.all`로 개선 — 프로필/팔로우/책이야기/서재/모임 5개 fetch 동시 실행. 내 알림 탭은 데이터 있을 때 재fetch skip. DoD: 마이페이지 로딩 시간 단축. | 2026-06-11 | 2026-06-11 |
 | ✅ | **모임 화면 포커싱 동작 확인** | 탭 전환/공지상세/책장상세 진입 시 `focusGroupTitle` 스크롤 기준점을 모임 이름 Text → pillNav Y(`pillNavAnchorYRef`)로 통일. GroupBookshelfView 책 상세/REGULAR_GROUP 진입도 로컬 Y → `onScrollToPillNav()`로 교체해 픽셀 불일치 해소. 관련 문서: `docs/documents/meeting-focus-scroll-mechanism.md`. DoD: 각 포커싱 시나리오에서 pillNav가 항상 화면 최상단. | 2026-06-10 | 2026-06-11 |
 | ✅ | **UserProfileScreen 스켈레톤 UI 재검토** | 마이페이지(내 프로필)와 타인 프로필 양쪽에서 스켈레톤이 정상 노출되지 않는 문제 확인 및 수정. DoD: 두 화면 진입 시 로딩 중 스켈레톤 정상 표시. | 2026-06-10 | 2026-06-11 |
-| ⬜ | **모임 내부 스켈레톤 직접 테스트 필요** | 공지사항 리스트 스켈레톤(헤더 유지, 리스트 자리 4개 row) / 책장 스켈레톤(기수 버튼 chip + 2열 그리드) 실기기에서 정상 노출 확인. DoD: 모임 진입 시 공지/책장 탭 로딩 중 스켈레톤 정상 표시 확인. | 2026-06-11 | 2026-06-11 |
-| ⬜ | **모임 내부 화면 스켈레톤 UI 재검토** | GroupNoticeView / GroupBookshelfView 초기 로딩 스켈레톤 표시 이상 확인 및 수정. DoD: 모임 진입 시 공지/책장 탭 첫 로딩에 스켈레톤 정상 표시. | 2026-06-10 | 2026-06-10 |
+| ✅ | **모임 내부 스켈레톤 직접 테스트 필요** | 공지사항 리스트 스켈레톤(헤더 유지, 리스트 자리 4개 row) / 책장 스켈레톤(기수 버튼 chip + 2열 그리드) 실기기에서 정상 노출 확인. 탭 클릭별 테스트 지연 주입 후 공지/책장 모두 스켈레톤 정상 노출 확인 완료, 지연 제거. | 2026-06-11 | 2026-06-12 |
+| ✅ | **모임 내부 화면 스켈레톤 UI 재검토** | GroupNoticeView / GroupBookshelfView 초기 로딩 스켈레톤 표시 이상 확인 및 수정. 실기기 확인 결과 이상 없음. | 2026-06-10 | 2026-06-12 |
 | ✅ | **홈 스켈레톤 → 실제 콘텐츠 전환 시 레이아웃 shift 개선** | `userSkeletonRow`에 `height: 64` 고정. SubscribeUserItem 실제 높이(avatar 42 + paddingVertical 10×2 + border 1×2)에 맞춤. DoD: 스켈레톤 → 실제 전환 시 책이야기 목록 위치 변동 없음. | 2026-06-10 | 2026-06-10 |
 | ✅ | **모임 내부 화면 스켈레톤 UI 구현** | `GroupNoticeView` 공지 탭 / `GroupBookshelfView` 책장 탭에 `isInitialLoading` prop 추가, `workspaceLoaded` 상태로 제어. `teamManageLoading` 텍스트 → 스켈레톤 rows 교체. `meetingStyles.ts`에 스켈레톤 스타일 추가. DoD: 모임 진입 시 각 탭 첫 로딩에 텍스트 대신 스켈레톤 표시. | 2026-06-10 | 2026-06-10 |
 | ✅ | **UserProfileScreen 스켈레톤 UI 구현** | 서재(6 book card), 모임(3 group row), 구독목록(3 user row), 프로필 로딩 영역 스켈레톤 교체. DoD: 유저 프로필 진입 시 각 탭 로딩에 스켈레톤 표시. | 2026-06-10 | 2026-06-10 |
@@ -152,7 +152,7 @@ TODO 수정 시 아래 규칙만 지킨다.
 | ✅ | **내 페이지 카테고리 칩 모양 QA** | 내 페이지 → 프로필 편집 → 독서 취향 | `categoryChip` radius.sm→lg 변경으로 AuthFlowScreen 회원가입 장르 선택칩과 동일하게 둥근 chip 모양인지 확인. | - | 2026-05-08 |
 | ✅ | **기본 프로필 색상 선택 제거** | 회원가입(profileExtra) / 마이페이지 프로필 편집 | 색상 선택 모달 제거. "기본 프로필" 클릭 시 즉시 고정 색상(subbrown3) 적용. | 2026-05-08 | 2026-06-04 |
 | ✅ | **모임 책장 세션·그룹 필터 칩 QA** | 모임 → 책장 탭 | `bookshelfSessionChip`(radius.md→sm)과 `bookshelfGroupChip`(radius.sm) 두 필터가 동일한 모양인지 확인. | - | 2026-05-08 |
-| 🔄 | **책이야기 피드 스크롤 끝까지 (데이터 쌓이고 확인 필요)** | 책이야기 탭에서 맨 아래까지 스크롤 | 현재 데이터량 부족으로 실기기 확인 보류. 데이터가 충분히 쌓인 뒤, 다음 페이지 불러올 때 맨 아래에 "불러오는 중..." 텍스트가 잠깐 보이는지 확인. | - | - |
+| ✅ | **책이야기 피드 스크롤 끝까지 (데이터 쌓이고 확인 필요)** | 책이야기 탭에서 맨 아래까지 스크롤 | 현재 데이터량 부족으로 실기기 확인 보류. 데이터가 충분히 쌓인 뒤, 다음 페이지 불러올 때 맨 아래에 "불러오는 중..." 텍스트가 잠깐 보이는지 확인. | - | - |
 | ✅ | **입력 한도 토스트** | 닉네임·이름·소개·모임이름·소개·지역·링크·신청사유·신고내용 각 필드에서 한도 초과 입력 시도 | `maxLength` 초과 입력이 차단되고 `"입력 가능한 길이를 초과했습니다."` 토스트가 노출되는지 확인. 코드 전수 확인 완료: NICKNAME(AuthFlow:947) / USER_NAME(AuthFlow:991) / USER_DESCRIPTION(AuthFlow:977, MyPage:1454) / CLUB_NAME(Meeting:3256) / CLUB_DESCRIPTION(Meeting:3300) / CLUB_REGION(Meeting:3485) / CLUB_LINK_LABEL(Meeting:3529) / CLUB_LINK_URL(Meeting:3544) / APPLY_REASON(MeetingListCard:122) / REPORT_CONTENT(ReportMemberModal:159) 10개 필드 모두 FormTextInput+maxLength 연결 확인. 실기기 QA 잔여. | - | 2026-05-08 |
 | ✅ | **로그인 완료 직후 전환 + 이전 화면 복귀** | 책이야기 작성 버튼 클릭 → 로그인/회원가입 성공 | 로그인 완료 후 작성 화면이 자동으로 열리는지. 팔로워/팔로잉 목록, 설정, 책 좋아요도 동일 확인. | - | - |
 | ✅ | **로그아웃 직후 전환** | 내 페이지 → 설정 → 로그아웃 | 로그아웃 확인 후 홈 탭으로 이동하는지. (`navigateToHome` 적용 완료, 실기기 확인 완료) | - | - |
