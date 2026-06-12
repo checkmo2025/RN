@@ -2538,3 +2538,9 @@ export const interactionOpacity = {
 
 - 공지/책장 탭 클릭별 테스트 지연(5초) 주입 → 공지 리스트 / 책장(기수 chip + 2열 그리드) 스켈레톤 정상 노출 확인 → 지연 제거(코드 net 변경 없음)
 - TODO 갱신: "모임 내부 스켈레톤 직접 테스트 필요" / "모임 내부 화면 스켈레톤 UI 재검토" ✅ 완료
+
+# 2026-06-12 10:30:03 KST 모임 탭 포커싱 기준 모임 이름으로 변경 및 책장 클램프 수정
+
+- `MeetingScreen`: `focusGroupTitle` 스크롤 기준을 pillNav Y → 모임 이름 Text Y(`groupTitleAnchorYRef - spacing.xs`)로 변경 — 모임 이름이 화면 상단에 보이도록. 안 쓰게 된 `pillNavAnchorYRef`/pillNav onLayout 제거
+- 책장 탭만 즉시 스크롤 시 GRID 콘텐츠 레이아웃 전이라 클램프되어 모임 이름이 덜 올라가는 문제 → `bookshelfTabScrollRef` 플래그 + `GroupBookshelfView` `bookshelfSection` onLayout에서 콘텐츠 레이아웃 후 스크롤하도록 수정 (책 상세/정기모임과 동일 패턴)
+- 모임홈/공지 실기기 통과. 책장 실기기 확인 대기 (TODO 🔄)

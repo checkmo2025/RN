@@ -156,7 +156,7 @@ TODO 수정 시 아래 규칙만 지킨다.
 | ✅ | **입력 한도 토스트** | 닉네임·이름·소개·모임이름·소개·지역·링크·신청사유·신고내용 각 필드에서 한도 초과 입력 시도 | `maxLength` 초과 입력이 차단되고 `"입력 가능한 길이를 초과했습니다."` 토스트가 노출되는지 확인. 코드 전수 확인 완료: NICKNAME(AuthFlow:947) / USER_NAME(AuthFlow:991) / USER_DESCRIPTION(AuthFlow:977, MyPage:1454) / CLUB_NAME(Meeting:3256) / CLUB_DESCRIPTION(Meeting:3300) / CLUB_REGION(Meeting:3485) / CLUB_LINK_LABEL(Meeting:3529) / CLUB_LINK_URL(Meeting:3544) / APPLY_REASON(MeetingListCard:122) / REPORT_CONTENT(ReportMemberModal:159) 10개 필드 모두 FormTextInput+maxLength 연결 확인. 실기기 QA 잔여. | - | 2026-05-08 |
 | ✅ | **로그인 완료 직후 전환 + 이전 화면 복귀** | 책이야기 작성 버튼 클릭 → 로그인/회원가입 성공 | 로그인 완료 후 작성 화면이 자동으로 열리는지. 팔로워/팔로잉 목록, 설정, 책 좋아요도 동일 확인. | - | - |
 | ✅ | **로그아웃 직후 전환** | 내 페이지 → 설정 → 로그아웃 | 로그아웃 확인 후 홈 탭으로 이동하는지. (`navigateToHome` 적용 완료, 실기기 확인 완료) | - | - |
-| ⬜ | **모임 탭바 포커싱 동작 통일 확인** | 모임 진입 → 모임 홈 / 공지사항 / 책장 탭 전환 | 세 탭 모두 클릭 시 pillNav(모임 홈·공지사항·책장 버튼)가 동일하게 화면 최상단으로 스크롤되는지. 탭마다 타이밍/위치 차이 없이 책장 탭 클릭과 같은 느낌인지. (pending 패턴은 탭마다 타이밍이 달라 제거, `focusGroupTitle(true)` 즉시 호출로 통일함) | 2026-06-11 | 2026-06-11 |
+| 🔄 | **모임 탭바 포커싱 동작 통일 확인** | 모임 진입 → 모임 홈 / 공지사항 / 책장 탭 전환 | 포커싱 기준을 pillNav → 모임 이름 Text(`groupTitleAnchorYRef`)로 변경, 모임 이름이 화면 상단에 보이게 통일. 모임홈/공지 실기기 통과 확인. 책장 탭은 GRID 콘텐츠 레이아웃 전 스크롤로 클램프되어 덜 올라가던 문제 → `bookshelfTabScrollRef` + `bookshelfSection` onLayout으로 콘텐츠 레이아웃 후 스크롤하게 수정. DoD: 책장 탭 클릭 시에도 모임홈/공지와 동일 위치로 스크롤되는지 실기기 확인. | 2026-06-11 | 2026-06-12 |
 
 ---
 

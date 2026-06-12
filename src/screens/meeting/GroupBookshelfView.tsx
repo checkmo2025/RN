@@ -41,6 +41,7 @@ export type GroupBookshelfViewProps = {
   canManageClub: boolean;
   group: Group;
   shouldScrollToBookshelfDetailRef: RefObject<boolean>;
+  bookshelfTabScrollRef: RefObject<boolean>;
   onScrollToPillNav: () => void;
   // Bookshelf state
   bookshelfViewMode: BookshelfViewMode;
@@ -81,6 +82,7 @@ export function GroupBookshelfView({
   canManageClub,
   group,
   shouldScrollToBookshelfDetailRef,
+  bookshelfTabScrollRef,
   onScrollToPillNav,
   bookshelfViewMode,
   bookshelfSessions,
@@ -154,7 +156,16 @@ export function GroupBookshelfView({
   }
 
   return (
-<View style={styles.bookshelfSection}>
+<View
+  style={styles.bookshelfSection}
+  onLayout={() => {
+    // 책장 탭 진입 시: GRID 콘텐츠가 레이아웃된 뒤에 스크롤 (즉시 스크롤은 클램프되어 덜 올라감)
+    if (bookshelfViewMode !== 'GRID') return;
+    if (!bookshelfTabScrollRef.current) return;
+    bookshelfTabScrollRef.current = false;
+    onScrollToPillNav();
+  }}
+>
   {bookshelfViewMode === 'GRID' ? (
     <>
       <ScrollView

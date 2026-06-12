@@ -854,8 +854,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [currentMemberNickname, setCurrentMemberNickname] = useState('');
   const groupHomeScrollRef = useRef<ScrollView>(null);
   const groupTitleAnchorYRef = useRef(0);
-  const pillNavAnchorYRef = useRef(0);
   const hasFocusedGroupTitleRef = useRef(false);
+  // 책장 탭 진입 시: GRID 콘텐츠가 레이아웃된 뒤 스크롤하기 위한 플래그 (클램프 방지)
+  const bookshelfTabScrollRef = useRef(false);
   const [groupHomeRefreshing, setGroupHomeRefreshing] = useState(false);
   const [latestNoticeId, setLatestNoticeId] = useState<number | null>(null);
   const clubWorkspaceRequestIdRef = useRef(0);
@@ -1290,8 +1291,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   }, [group.id]);
 
   const focusGroupTitle = useCallback((animated: boolean) => {
+    // 포커싱 기준: 모임 이름 Text가 화면 상단에 보이도록 (pillNav가 아니라 제목 기준)
     requestAnimationFrame(() => {
-      groupHomeScrollRef.current?.scrollTo({ y: pillNavAnchorYRef.current, animated });
+      groupHomeScrollRef.current?.scrollTo({
+        y: Math.max(0, groupTitleAnchorYRef.current - spacing.xs),
+        animated,
+      });
     });
   }, []);
 
@@ -1338,7 +1343,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
       const open = () => {
         setActiveTab(nextTab);
-        focusGroupTitle(true);
+        if (nextTab === 'bookshelf') {
+          // 책장은 GRID 콘텐츠가 레이아웃된 뒤 스크롤 (GroupBookshelfView onLayout에서)
+          bookshelfTabScrollRef.current = true;
+        } else {
+          focusGroupTitle(true);
+        }
       };
 
       if (!isLoggedIn) {
@@ -1581,7 +1591,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         {managedGroup.name}
       </Text>
 
-      <View style={styles.pillNav} onLayout={(e) => { pillNavAnchorYRef.current = e.nativeEvent.layout.y; }}>
+      <View style={styles.pillNav}>
         {tabItems.map((tab) => {
           const active = activeTab === tab.key;
           return (
@@ -1735,6 +1745,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           canManageClub={canManageClub}
           group={managedGroup}
           shouldScrollToBookshelfDetailRef={shouldScrollToBookshelfDetailRef}
+          bookshelfTabScrollRef={bookshelfTabScrollRef}
           onScrollToPillNav={() => focusGroupTitle(true)}
           bookshelfViewMode={bookshelfViewMode}
           bookshelfSessions={bookshelfSessions}
