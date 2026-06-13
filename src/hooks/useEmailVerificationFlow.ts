@@ -18,6 +18,8 @@ export type EmailVerificationFlow = {
   confirming: boolean;
   sendCode: (email: string, type: EmailVerificationType) => Promise<void>;
   confirmCode: (email: string, code: string) => Promise<void>;
+  startLocalVerification: (toastMessage?: string) => void;
+  verifyLocally: () => void;
   reset: () => void;
 };
 
@@ -76,13 +78,34 @@ export function useEmailVerificationFlow(): EmailVerificationFlow {
       setRemainingSeconds(0);
       showToast('인증이 완료되었습니다.');
     } catch (error) {
-      if (!(error instanceof ApiError)) {
+      if (error instanceof ApiError) {
+        showToast(
+          error.status === 0 || error.status >= 500
+            ? error.message || '이메일 인증에 실패했습니다.'
+            : '인증 코드가 일치하지 않습니다.',
+        );
+      } else {
         showToast('이메일 인증에 실패했습니다.');
       }
       setVerified(false);
     } finally {
       setConfirming(false);
     }
+  };
+
+  const startLocalVerification = (toastMessage = '인증번호를 발송했습니다.') => {
+    setSent(true);
+    setVerified(false);
+    setRemainingSeconds(COUNTDOWN_SECONDS);
+    setDeadline(Date.now() + COUNTDOWN_SECONDS * 1000);
+    showToast(toastMessage);
+  };
+
+  const verifyLocally = () => {
+    setVerified(true);
+    setDeadline(null);
+    setRemainingSeconds(0);
+    showToast('인증이 완료되었습니다.');
   };
 
   const reset = () => {
@@ -94,5 +117,17 @@ export function useEmailVerificationFlow(): EmailVerificationFlow {
     setRemainingSeconds(0);
   };
 
-  return { sent, verified, remainingSeconds, remainingText, sending, confirming, sendCode, confirmCode, reset };
+  return {
+    sent,
+    verified,
+    remainingSeconds,
+    remainingText,
+    sending,
+    confirming,
+    sendCode,
+    confirmCode,
+    startLocalVerification,
+    verifyLocally,
+    reset,
+  };
 }

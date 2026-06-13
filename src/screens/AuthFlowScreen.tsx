@@ -38,6 +38,8 @@ import { showToast } from '../utils/toast';
 import { CATEGORY_OPTIONS } from '../constants/domain/category';
 import { useEmailVerificationFlow } from '../hooks/useEmailVerificationFlow';
 
+declare const __DEV__: boolean;
+
 type Step =
   | 'login'
   | 'findId'
@@ -81,11 +83,25 @@ function normalizeDisplayImageUri(uri?: string): string | undefined {
   return trimmed;
 }
 
+function resolveNicknameFormatError(value: string): string {
+  if (!value) return '';
+  if (/\s/.test(value)) return '아이디에는 띄어쓰기를 사용할 수 없습니다.';
+  if (/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(value)) {
+    return '아이디에는 한글을 사용할 수 없습니다.';
+  }
+  if (!nicknameRegex.test(value)) {
+    return '아이디는 영문 소문자, 숫자, 특수문자만 사용할 수 있습니다.';
+  }
+  return '';
+}
+
 
 
 export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const ev = useEmailVerificationFlow();
   const [step, setStep] = useState<Step>('login');
+  const [signUpUiPreview, setSignUpUiPreview] = useState(false);
+  const [emailResetConfirmVisible, setEmailResetConfirmVisible] = useState(false);
 
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -200,6 +216,8 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   };
 
   const resetSignUpFlow = () => {
+    setSignUpUiPreview(false);
+    setEmailResetConfirmVisible(false);
     setAgreeService(false);
     setAgreeCheckmo(false);
     setAgreeThirdParty(false);
@@ -226,6 +244,8 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   };
 
   const goToLogin = () => {
+    setSignUpUiPreview(false);
+    setEmailResetConfirmVisible(false);
     setStep('login');
     setActiveTermsModalKey(null);
     setVerificationCode('');
@@ -235,6 +255,25 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const startSignUp = () => {
     resetSignUpFlow();
     setStep('terms');
+  };
+
+  const openSignUpUiPreview = () => {
+    resetSignUpFlow();
+    setSignUpUiPreview(true);
+    setAgreeService(true);
+    setAgreeCheckmo(true);
+    setAgreeThirdParty(true);
+    setAgreeMarketing(true);
+    setSignUpEmail('dev-checkmo@example.com');
+    setSignUpPassword('checkmo!');
+    setSignUpPasswordConfirm('checkmo!');
+    setNickname('bookbook');
+    setNicknameChecked({ value: 'bookbook', duplicate: false });
+    setDescription('안녕하세요');
+    setName('홍길동');
+    setPhoneNumber('010-1234-5678');
+    setSelectedCategories(CATEGORY_OPTIONS.slice(0, 2).map((category) => category.code));
+    setStep('emailVerification');
   };
 
   const completeAuthFlow = useCallback((nextToast?: string) => {
@@ -274,12 +313,24 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       showToast('올바른 이메일 형식이어야 합니다.');
       return;
     }
+    if (__DEV__ && signUpUiPreview) {
+      ev.startLocalVerification('개발용 인증은 임의의 6자리 숫자로 진행할 수 있습니다.');
+      return;
+    }
     await ev.sendCode(email, 'SIGN_UP');
   };
 
   const handleConfirmVerificationCode = async () => {
     const email = signUpEmail.trim();
     const code = verificationCode.trim();
+    if (__DEV__ && signUpUiPreview) {
+      if (/^\d{6}$/.test(code)) {
+        ev.verifyLocally();
+      } else {
+        showToast('인증 코드가 일치하지 않습니다.');
+      }
+      return;
+    }
     if (!ev.sent) {
       showToast('먼저 인증번호를 발송해야 합니다.');
       return;
@@ -293,6 +344,17 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       return;
     }
     await ev.confirmCode(email, code);
+  };
+
+  const handleVerificationCodeChange = (value: string) => {
+    setVerificationCode(value.replace(/\D/g, '').slice(0, 6));
+  };
+
+  const resetEmailVerificationStep = () => {
+    setSignUpEmail('');
+    setVerificationCode('');
+    ev.reset();
+    setEmailResetConfirmVisible(false);
   };
 
   const handlePasswordStepNext = () => {
@@ -408,6 +470,13 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const handleSubmitSignUp = async () => {
     if (selectedCategories.length === 0) {
       showToast('관심 카테고리를 1개 이상 선택해야 합니다.');
+      return;
+    }
+
+    if (__DEV__ && signUpUiPreview) {
+      setProfileImageUrl(selectedProfileImage?.uri ?? profileImageUrl.trim());
+      showToast('회원가입에 성공했습니다');
+      setStep('signupComplete');
       return;
     }
 
@@ -714,6 +783,8 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           <ScrollView
             style={styles.termsModalBody}
             contentContainerStyle={styles.termsModalBodyContent}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
             showsVerticalScrollIndicator={false}
           >
             <Text style={styles.termsModalText}>
@@ -782,42 +853,80 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             </Text>
           </Pressable>
 
-          <Text style={styles.label}>인증번호</Text>
+          <View style={styles.verificationLabelRow}>
+            <Text style={styles.label}>인증번호</Text>
+            {ev.sent && !ev.verified ? (
+              <Text
+                style={[
+                  styles.timerText,
+                  ev.remainingSeconds <= 0 ? styles.timerExpiredText : null,
+                ]}
+              >
+                남은 시간 {ev.remainingText}
+              </Text>
+            ) : null}
+          </View>
           <FormTextInput
             value={verificationCode}
-            onChangeText={setVerificationCode}
+            onChangeText={handleVerificationCodeChange}
             placeholder="인증번호 입력"
             style={[styles.input, styles.inputDescenderSafe]}
             placeholderTextColor={colors.gray3}
             fieldType="number"
           />
-          {ev.sent && !ev.verified ? (
-            <Text
-              style={[
-                styles.timerText,
-                ev.remainingSeconds <= 0 ? styles.timerExpiredText : null,
+          <View style={styles.verificationActionRow}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.outlineButton,
+                styles.actionButton,
+                ev.verified && styles.outlineButtonActive,
+                pressed && styles.pressed,
               ]}
+              onPress={() => {
+                void handleConfirmVerificationCode();
+              }}
+              disabled={ev.confirming}
             >
-              남은 시간 {ev.remainingText}
-            </Text>
-          ) : null}
-          <Pressable
-            style={({ pressed }) => [
-              styles.outlineButton,
-              styles.actionButton,
-              ev.verified && styles.outlineButtonActive,
-              pressed && styles.pressed,
-            ]}
-            onPress={() => {
-              void handleConfirmVerificationCode();
-            }}
-            disabled={ev.confirming}
-          >
-            <Text style={[styles.outlineText, ev.verified && styles.outlineTextActive]}>
-              {ev.confirming ? '확인 중...' : ev.verified ? '인증 완료되었습니다' : '인증 완료'}
-            </Text>
-          </Pressable>
+              <Text style={[styles.outlineText, ev.verified && styles.outlineTextActive]}>
+                {ev.confirming ? '확인 중...' : ev.verified ? '인증 완료되었습니다' : '인증하기'}
+              </Text>
+            </Pressable>
+            {ev.verified ? (
+              <Pressable
+                style={({ pressed }) => [styles.outlineButton, styles.actionButton, pressed && styles.pressed]}
+                onPress={() => setEmailResetConfirmVisible(true)}
+              >
+                <Text style={styles.outlineText}>초기화</Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
+
+        <DialogOverlay
+          visible={emailResetConfirmVisible}
+          onClose={() => setEmailResetConfirmVisible(false)}
+          overlayStyle={styles.confirmModalOverlay}
+          cardStyle={styles.confirmModalCard}
+        >
+          <Text style={styles.confirmModalTitle}>
+            이메일 인증을 다시 진행하시겠습니까?
+          </Text>
+          <View style={styles.confirmModalButtonRow}>
+            <AppButton
+              variant="secondary"
+              label="취소"
+              onPress={() => setEmailResetConfirmVisible(false)}
+              size="lg"
+              fullWidth
+            />
+            <AppButton
+              label="초기화"
+              onPress={resetEmailVerificationStep}
+              size="lg"
+              fullWidth
+            />
+          </View>
+        </DialogOverlay>
 
         <View style={styles.buttonRow}>
           <AppButton variant="secondary" label="이전" onPress={() => setStep('terms')} />
@@ -904,6 +1013,8 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   }
 
   if (step === 'profileBasic') {
+    const nicknameFormatError = resolveNicknameFormatError(nickname);
+
     return renderCard(
       <>
         <Text style={styles.title}>프로필 설정</Text>
@@ -950,19 +1061,26 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               {nicknameChecked.duplicate ? '이미 사용 중인 닉네임입니다.' : '사용 가능한 닉네임입니다.'}
             </Text>
           ) : null}
+          {nicknameFormatError ? (
+            <Text style={[styles.nicknameCheckText, styles.nicknameCheckError]}>
+              {nicknameFormatError}
+            </Text>
+          ) : null}
 
-          <Text style={styles.label}>소개</Text>
-          <FormTextInput
-            value={description}
-            onChangeText={setDescription}
-            placeholder={`${INPUT_LIMITS.USER_DESCRIPTION}자 이내로 작성해주세요`}
-            style={[styles.input, styles.inputDescenderSafe]}
-            placeholderTextColor={colors.gray3}
-            maxLength={INPUT_LIMITS.USER_DESCRIPTION}
-          />
-          <Text style={styles.inputCounterText}>
-            {description.length}/{INPUT_LIMITS.USER_DESCRIPTION}
-          </Text>
+          <View style={styles.descriptionFieldGroup}>
+            <Text style={styles.label}>소개</Text>
+            <FormTextInput
+              value={description}
+              onChangeText={setDescription}
+              placeholder={`${INPUT_LIMITS.USER_DESCRIPTION}자 이내로 작성해주세요`}
+              style={[styles.input, styles.inputDescenderSafe]}
+              placeholderTextColor={colors.gray3}
+              maxLength={INPUT_LIMITS.USER_DESCRIPTION}
+            />
+            <Text style={styles.inputCounterText}>
+              {description.length}/{INPUT_LIMITS.USER_DESCRIPTION}
+            </Text>
+          </View>
 
           <Text style={styles.label}>이름</Text>
           <FormTextInput
@@ -1245,9 +1363,19 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         loadingLabel="로그인 중..."
         onPress={() => { void handleLogin(); }}
       />
-      <Pressable onPress={startSignUp}>
-        <Text style={styles.linkText}>아직 회원이 아니신가요? 회원가입하러가기</Text>
-      </Pressable>
+      <View style={styles.signUpActionRow}>
+        <Pressable onPress={startSignUp}>
+          <Text style={styles.linkText}>아직 회원이 아니신가요? 회원가입하러가기</Text>
+        </Pressable>
+        {__DEV__ ? (
+          <Pressable
+            style={({ pressed }) => [styles.devPreviewButton, pressed && styles.pressed]}
+            onPress={openSignUpUiPreview}
+          >
+            <Text style={styles.devPreviewButtonText}>UI 보기(개발용)</Text>
+          </Pressable>
+        ) : null}
+      </View>
       <Pressable onPress={() => Linking.openURL(PUBLIC_ENV.SUPPORT_FORM_URL).catch(() => null)}>
         <Text style={styles.linkText}>고객센터/문의하기</Text>
       </Pressable>
@@ -1364,6 +1492,7 @@ const styles = StyleSheet.create({
   termsModalCard: {
     width: '100%',
     maxWidth: 460,
+    height: '82%',
     maxHeight: '82%',
     borderRadius: radius.lg,
     backgroundColor: colors.white,
@@ -1382,7 +1511,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   termsModalBody: {
-    flexGrow: 0,
+    flex: 1,
+    minHeight: 0,
+    width: '100%',
   },
   termsModalBodyContent: {
     paddingBottom: spacing.xs,
@@ -1392,6 +1523,30 @@ const styles = StyleSheet.create({
     color: colors.gray6,
   },
   termsModalButtonRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  confirmModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmModalCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: radius.lg,
+    backgroundColor: colors.white,
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  confirmModalTitle: {
+    ...typography.body1_2,
+    color: colors.gray6,
+    textAlign: 'center',
+  },
+  confirmModalButtonRow: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
@@ -1412,6 +1567,9 @@ const styles = StyleSheet.create({
   labelHint: {
     ...typography.body2_3,
     color: colors.gray4,
+  },
+  descriptionFieldGroup: {
+    gap: spacing.xs,
   },
   inputCounterText: {
     ...typography.body2_3,
@@ -1472,6 +1630,18 @@ const styles = StyleSheet.create({
   actionButton: {
     alignSelf: 'flex-start',
   },
+  verificationLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  verificationActionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   profileDefaultButton: {
     alignSelf: 'center',
   },
@@ -1488,8 +1658,9 @@ const styles = StyleSheet.create({
   timerText: {
     ...typography.body2_2,
     color: colors.gray4,
-    alignSelf: 'flex-end',
-    marginTop: -spacing.xxs,
+    flexShrink: 0,
+    marginLeft: 'auto',
+    textAlign: 'right',
   },
   timerExpiredText: {
     color: colors.likeRed,
@@ -1627,10 +1798,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  signUpActionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
   linkText: {
     ...typography.body1_3,
     color: colors.gray5,
     textDecorationLine: 'underline',
+  },
+  devPreviewButton: {
+    borderWidth: 1,
+    borderColor: colors.primary1,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xxs,
+    backgroundColor: colors.white,
+  },
+  devPreviewButtonText: {
+    ...typography.body2_3,
+    color: colors.primary1,
   },
   linkDivider: {
     width: 1,
