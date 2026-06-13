@@ -2645,3 +2645,9 @@ export const interactionOpacity = {
 - 백드롭 하드코딩 rgba → `colors.overlay30` 통일 (AuthFlow/MyPage/Story/UserProfile/Meeting/ReportMemberModal)
 - maxWidth(420/460/760/180) · borderRadius(md↔lg) → `dialog.*` 단일 토큰으로 수렴
 - MyPageScreen: 프로필 수정 저장 후 설정 화면 자동 닫힘, 신고 내역 텍스트 오버플로우 수정, 버전 날짜 업데이트
+
+# 2026-06-14 02:06:31 KST 이메일 인증 초기화 / 기본 프로필 확인 모달 → Alert 전환
+
+- 이메일 인증 초기화 확인: DialogOverlay → Alert.alert() (destructive 스타일)
+- 기본 프로필 이미지 확인: DialogOverlay → Alert.alert()
+- 관련 state 2개 제거 (emailResetConfirmVisible, defaultProfileConfirmVisible)

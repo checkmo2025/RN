@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
+  Alert,
   Image,
   KeyboardAvoidingView,
   Linking,
@@ -101,7 +102,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const ev = useEmailVerificationFlow();
   const [step, setStep] = useState<Step>('login');
   const [signUpUiPreview, setSignUpUiPreview] = useState(false);
-  const [emailResetConfirmVisible, setEmailResetConfirmVisible] = useState(false);
   const [exitSignupConfirmVisible, setExitSignupConfirmVisible] = useState(false);
 
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -136,7 +136,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [selectedProfileImage, setSelectedProfileImage] = useState<LocalProfileImage | null>(null);
-  const [defaultProfileConfirmVisible, setDefaultProfileConfirmVisible] = useState(false);
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -220,7 +219,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
   const resetSignUpFlow = () => {
     setSignUpUiPreview(false);
-    setEmailResetConfirmVisible(false);
     setAgreeService(false);
     setAgreeCheckmo(false);
     setAgreeThirdParty(false);
@@ -241,7 +239,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     setPhoneNumber('');
     setProfileImageUrl('');
     setSelectedProfileImage(null);
-    setDefaultProfileConfirmVisible(false);
     setUploadingProfileImage(false);
 
     setSelectedCategories([]);
@@ -250,8 +247,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
   const goToLogin = () => {
     setSignUpUiPreview(false);
-    setEmailResetConfirmVisible(false);
-    setDefaultProfileConfirmVisible(false);
     setStep('login');
     setActiveTermsModalKey(null);
     setVerificationCode('');
@@ -371,7 +366,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     setSignUpEmail('');
     setVerificationCode('');
     ev.reset();
-    setEmailResetConfirmVisible(false);
   };
 
   const handlePasswordStepNext = () => {
@@ -487,7 +481,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const useDefaultProfileImage = () => {
     setProfileImageUrl('');
     setSelectedProfileImage(null);
-    setDefaultProfileConfirmVisible(false);
   };
 
   const handleSubmitSignUp = async () => {
@@ -976,39 +969,20 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             {ev.verified ? (
               <Pressable
                 style={({ pressed }) => [styles.outlineButton, styles.actionButton, pressed && styles.pressed]}
-                onPress={() => setEmailResetConfirmVisible(true)}
+                onPress={() => Alert.alert(
+                  '이메일 인증 초기화',
+                  '이메일 인증을 다시 진행하시겠습니까?',
+                  [
+                    { text: '취소', style: 'cancel' },
+                    { text: '초기화', style: 'destructive', onPress: resetEmailVerificationStep },
+                  ],
+                )}
               >
                 <Text style={styles.outlineText}>초기화</Text>
               </Pressable>
             ) : null}
           </View>
         </View>
-
-        <DialogOverlay
-          visible={emailResetConfirmVisible}
-          onClose={() => setEmailResetConfirmVisible(false)}
-          overlayStyle={styles.confirmModalOverlay}
-          cardStyle={styles.confirmModalCard}
-        >
-          <Text style={styles.confirmModalTitle}>
-            이메일 인증을 다시 진행하시겠습니까?
-          </Text>
-          <View style={styles.confirmModalButtonRow}>
-            <AppButton
-              variant="secondary"
-              label="취소"
-              onPress={() => setEmailResetConfirmVisible(false)}
-              size="lg"
-              fullWidth
-            />
-            <AppButton
-              label="초기화"
-              onPress={resetEmailVerificationStep}
-              size="lg"
-              fullWidth
-            />
-          </View>
-        </DialogOverlay>
 
         <View style={styles.buttonRow}>
           <AppButton variant="secondary" label="이전" onPress={() => setStep('terms')} />
@@ -1262,35 +1236,16 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             variant={defaultProfileSelected ? 'primary' : 'secondary'}
             label="기본 프로필 이미지"
             style={styles.profileDefaultButton}
-            onPress={() => setDefaultProfileConfirmVisible(true)}
+            onPress={() => Alert.alert(
+              '기본 프로필 이미지',
+              '기본 프로필 이미지를 사용하시겠습니까?',
+              [
+                { text: '취소', style: 'cancel' },
+                { text: '확인', onPress: useDefaultProfileImage },
+              ],
+            )}
           />
         </View>
-
-        <DialogOverlay
-          visible={defaultProfileConfirmVisible}
-          onClose={() => setDefaultProfileConfirmVisible(false)}
-          overlayStyle={styles.confirmModalOverlay}
-          cardStyle={styles.confirmModalCard}
-        >
-          <Text style={styles.confirmModalTitle}>
-            기본프로필 이미지를 사용하시겠습니까?
-          </Text>
-          <View style={styles.confirmModalButtonRow}>
-            <AppButton
-              variant="secondary"
-              label="취소"
-              onPress={() => setDefaultProfileConfirmVisible(false)}
-              size="lg"
-              fullWidth
-            />
-            <AppButton
-              label="확인"
-              onPress={useDefaultProfileImage}
-              size="lg"
-              fullWidth
-            />
-          </View>
-        </DialogOverlay>
 
         <Text style={styles.label}>관심 카테고리 (최소 1개, 최대 6개 선택)</Text>
         <View style={styles.chipGrid}>
