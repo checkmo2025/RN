@@ -860,6 +860,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const hasFocusedGroupTitleRef = useRef(false);
   const pendingGroupTitleFocusRef = useRef(false);
   const pendingGroupTitleFocusAnimatedRef = useRef(false);
+  const pendingBookshelfDetailFocusYRef = useRef<number | null>(null);
+  const bookshelfDetailFocusRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [groupHomeViewportHeight, setGroupHomeViewportHeight] = useState(0);
   const [groupTitleFocusOffset, setGroupTitleFocusOffset] = useState(0);
   // 책장 탭 진입 시: GRID 콘텐츠가 레이아웃된 뒤 스크롤하기 위한 플래그 (클램프 방지)
@@ -1300,6 +1302,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   useEffect(() => {
     hasFocusedGroupTitleRef.current = false;
     pendingGroupTitleFocusRef.current = false;
+    pendingBookshelfDetailFocusYRef.current = null;
+    if (bookshelfDetailFocusRetryRef.current) {
+      clearTimeout(bookshelfDetailFocusRetryRef.current);
+      bookshelfDetailFocusRetryRef.current = null;
+    }
     groupTitleFocusOffsetRef.current = 0;
     setGroupTitleFocusOffset(0);
   }, [group.id]);
@@ -1329,14 +1336,36 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     [flushPendingGroupTitleFocus],
   );
 
+  const flushPendingBookshelfDetailFocus = useCallback(() => {
+    const targetY = pendingBookshelfDetailFocusYRef.current;
+    if (targetY === null) return;
+    groupHomeScrollRef.current?.scrollTo({ y: targetY, animated: true });
+  }, []);
+
   const focusBookshelfDetail = useCallback((sectionY: number) => {
+    pendingGroupTitleFocusRef.current = false;
     const targetY = Math.max(0, sectionY - BOOKSHELF_DETAIL_FOCUS_TOP_OFFSET);
+    pendingBookshelfDetailFocusYRef.current = targetY;
+    if (bookshelfDetailFocusRetryRef.current) {
+      clearTimeout(bookshelfDetailFocusRetryRef.current);
+      bookshelfDetailFocusRetryRef.current = null;
+    }
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        groupHomeScrollRef.current?.scrollTo({ y: targetY, animated: true });
+        flushPendingBookshelfDetailFocus();
       });
     });
-  }, []);
+    bookshelfDetailFocusRetryRef.current = setTimeout(() => {
+      flushPendingBookshelfDetailFocus();
+      pendingBookshelfDetailFocusYRef.current = null;
+      bookshelfDetailFocusRetryRef.current = null;
+    }, 250);
+  }, [flushPendingBookshelfDetailFocus]);
+
+  const handleGroupHomeContentSizeChange = useCallback(() => {
+    flushPendingGroupTitleFocus();
+    flushPendingBookshelfDetailFocus();
+  }, [flushPendingBookshelfDetailFocus, flushPendingGroupTitleFocus]);
 
   useEffect(() => {
     requestAnimationFrame(flushPendingGroupTitleFocus);
@@ -1616,6 +1645,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           },
         ]}
         onLayout={handleGroupHomeLayout}
+        onContentSizeChange={handleGroupHomeContentSizeChange}
         showsVerticalScrollIndicator={false}
         onScroll={handleGroupHomeScroll}
         scrollEventThrottle={16}

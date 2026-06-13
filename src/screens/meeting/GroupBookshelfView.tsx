@@ -117,9 +117,10 @@ export function GroupBookshelfView({
   handleOpenBookshelfEdit,
   handlePressManageRegularGroups,
 }: GroupBookshelfViewProps) {
+  const bookshelfSectionYRef = useRef(0);
   const detailSectionYRef = useRef(0);
   const scrollToBookshelfDetail = useCallback(() => {
-    onScrollToBookshelfDetail(detailSectionYRef.current);
+    onScrollToBookshelfDetail(bookshelfSectionYRef.current + detailSectionYRef.current);
   }, [onScrollToBookshelfDetail]);
 
   useEffect(() => {
@@ -166,7 +167,8 @@ export function GroupBookshelfView({
   return (
 <View
   style={styles.bookshelfSection}
-  onLayout={() => {
+  onLayout={(event) => {
+    bookshelfSectionYRef.current = event.nativeEvent.layout.y;
     // 책장 탭 진입 시: GRID 콘텐츠가 레이아웃된 뒤에 스크롤 (즉시 스크롤은 클램프되어 덜 올라감)
     if (bookshelfViewMode !== 'GRID') return;
     if (!bookshelfTabScrollRef.current) return;
@@ -286,6 +288,7 @@ export function GroupBookshelfView({
       onLayout={(event) => {
         detailSectionYRef.current = event.nativeEvent.layout.y;
         if (!shouldScrollToBookshelfDetailRef.current) return;
+        bookshelfTabScrollRef.current = false;
         shouldScrollToBookshelfDetailRef.current = false;
         scrollToBookshelfDetail();
       }}
