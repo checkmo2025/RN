@@ -175,6 +175,7 @@ const MAX_REGULAR_GROUP_COUNT = 10;
 const MEETING_TAB_DOUBLE_TAP_WINDOW_MS = 450;
 const GROUP_TITLE_FOCUS_TOP_OFFSET = spacing.xs;
 const GROUP_TITLE_FOCUS_SCROLL_SAFETY = spacing.md;
+const BOOKSHELF_DETAIL_FOCUS_TOP_OFFSET = spacing.sm;
 
 
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
@@ -1328,6 +1329,15 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     [flushPendingGroupTitleFocus],
   );
 
+  const focusBookshelfDetail = useCallback((sectionY: number) => {
+    const targetY = Math.max(0, sectionY - BOOKSHELF_DETAIL_FOCUS_TOP_OFFSET);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        groupHomeScrollRef.current?.scrollTo({ y: targetY, animated: true });
+      });
+    });
+  }, []);
+
   useEffect(() => {
     requestAnimationFrame(flushPendingGroupTitleFocus);
   }, [activeTab, flushPendingGroupTitleFocus, groupHomeContentMinHeight]);
@@ -1796,6 +1806,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           shouldScrollToBookshelfDetailRef={shouldScrollToBookshelfDetailRef}
           bookshelfTabScrollRef={bookshelfTabScrollRef}
           onScrollToPillNav={() => focusGroupTitle(true)}
+          onScrollToBookshelfDetail={focusBookshelfDetail}
+          bookshelfDetailMinHeight={groupHomeViewportHeight || undefined}
           bookshelfViewMode={bookshelfViewMode}
           bookshelfSessions={bookshelfSessions}
           selectedBookshelfSession={selectedBookshelfSession}

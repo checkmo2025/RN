@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 import { Image, ScrollView, Text, View } from 'react-native';
 import { SkeletonBox } from '../../components/common/SkeletonBox';
 import type { GestureResponderEvent } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors, spacing } from '../../theme';
+import { colors } from '../../theme';
 import { DefaultProfileAvatar } from '../../components/common/DefaultProfileAvatar';
 import { FeedbackPressable as Pressable } from '../../components/common/FeedbackPressable';
 import { styles } from './meetingStyles';
@@ -43,6 +43,8 @@ export type GroupBookshelfViewProps = {
   shouldScrollToBookshelfDetailRef: RefObject<boolean>;
   bookshelfTabScrollRef: RefObject<boolean>;
   onScrollToPillNav: () => void;
+  onScrollToBookshelfDetail: (sectionY: number) => void;
+  bookshelfDetailMinHeight?: number;
   // Bookshelf state
   bookshelfViewMode: BookshelfViewMode;
   bookshelfSessions: string[];
@@ -84,6 +86,8 @@ export function GroupBookshelfView({
   shouldScrollToBookshelfDetailRef,
   bookshelfTabScrollRef,
   onScrollToPillNav,
+  onScrollToBookshelfDetail,
+  bookshelfDetailMinHeight,
   bookshelfViewMode,
   bookshelfSessions,
   selectedBookshelfSession,
@@ -113,11 +117,15 @@ export function GroupBookshelfView({
   handleOpenBookshelfEdit,
   handlePressManageRegularGroups,
 }: GroupBookshelfViewProps) {
+  const detailSectionYRef = useRef(0);
+  const scrollToBookshelfDetail = useCallback(() => {
+    onScrollToBookshelfDetail(detailSectionYRef.current);
+  }, [onScrollToBookshelfDetail]);
 
   useEffect(() => {
     if (bookshelfViewMode !== 'REGULAR_GROUP') return;
-    onScrollToPillNav();
-  }, [bookshelfViewMode, onScrollToPillNav]);
+    scrollToBookshelfDetail();
+  }, [bookshelfViewMode, scrollToBookshelfDetail]);
 
   if (isInitialLoading) {
     return (
@@ -271,11 +279,15 @@ export function GroupBookshelfView({
     </>
   ) : selectedBookshelfBook ? (
     <View
-      style={styles.bookshelfDetailSection}
-      onLayout={() => {
+      style={[
+        styles.bookshelfDetailSection,
+        bookshelfDetailMinHeight ? { minHeight: bookshelfDetailMinHeight } : null,
+      ]}
+      onLayout={(event) => {
+        detailSectionYRef.current = event.nativeEvent.layout.y;
         if (!shouldScrollToBookshelfDetailRef.current) return;
         shouldScrollToBookshelfDetailRef.current = false;
-        onScrollToPillNav();
+        scrollToBookshelfDetail();
       }}
     >
       <View style={styles.detailTitleRow}>

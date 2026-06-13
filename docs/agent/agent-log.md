@@ -2564,3 +2564,9 @@ export const interactionOpacity = {
 - `DefaultProfileAvatar`: 외부 SVG를 `SvgUri`로 불러오던 방식이 일부 iOS 기기(Pro Max 등)에서 고정 크기(140px)/`clip-path` 미적용으로 원 밖으로 삐져나오는 문제 → `react-native-svg` 프리미티브(`Svg`/`ClipPath`/`Ellipse`/`Rect`)로 직접 그려 viewBox 스케일링 보장 + 원형 `overflow:hidden` 래퍼로 넘침 차단(이중 안전장치)
 - `AppHeader` 책 검색: "검색 결과 더보기" 버튼 제거 → ScrollView `onScroll`로 바닥 240px 이내 감지 시 `loadMoreSearchResults()` 자동 호출, 버튼 자리에 `ActivityIndicator` 스피너 표시(무한 스크롤). 중복 호출은 기존 가드(`searchLoading||searchLoadingMore||!searchHasNext`)로 방지
 - 검증: `npm run typecheck` 통과
+
+# 2026-06-13 16:01:43 KST 책장 상세 포커싱 기준 분리
+
+- 모임 내부 탭 클릭은 기존처럼 모임 이름 기준 포커싱을 유지
+- 책장 상세 진입은 `< 책장` breadcrumb가 상단에 오도록 상세 섹션 Y좌표 기준 포커싱으로 분리
+- 상세 콘텐츠가 짧아도 목표 위치까지 스크롤 가능하도록 상세 섹션 최소 높이 보강
