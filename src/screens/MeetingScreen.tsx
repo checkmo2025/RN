@@ -216,6 +216,13 @@ function pickAndUploadImage(type: 'CLUB' | 'NOTICE'): Promise<string | null> {
   );
 }
 
+function isMissingClubMembershipError(error: ApiError) {
+  return (
+    error.code === 'CLUB_MEMBER_404' ||
+    (error.status === 404 && error.message.includes('해당 클럽 회원'))
+  );
+}
+
 
 
 function createPendingClubGroup(clubId: number): Group {
@@ -1241,6 +1248,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         if (error instanceof ApiError) {
           if (error.status === 401) {
             handleAuthExpired({ suppressToast: options?.suppressErrorToast });
+          } else if (isMissingClubMembershipError(error)) {
+            // 가입 직후에는 클럽 멤버 row가 없을 수 있어 배경 로드 실패를 조용히 흡수합니다.
+            return;
           } else if (error.status === 403 && !options?.suppressErrorToast) {
             showToast('공지사항 및 책장 정보는 모임 회원만 조회 가능합니다. 모임 가입 신청을 완료해주세요.');
           } else if (error.status !== 401 && !options?.suppressErrorToast) {

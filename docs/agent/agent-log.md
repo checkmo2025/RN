@@ -2587,3 +2587,10 @@ export const interactionOpacity = {
 
 - `docs/documents/apple-login-backend-plan.md` 추가
 - 현재 BE 회원가입/소셜 로그인 흐름과 RN Apple 로그인 도입 시 필요한 BE 변경 포인트 정리
+
+# 2026-06-13 17:05:29 KST 회원가입/기본 프로필 UX 보완
+
+- 회원가입 성공 토스트 문구를 "회원가입에 성공했습니다"로 변경
+- 회원가입 직후 모임 배경 로드에서 `CLUB_MEMBER_404` 토스트가 노출되지 않도록 처리
+- 기본 프로필 선택 상태 표시 및 기본 아바타 clip-path/마이페이지 원형 wrapper 안정화
+- 검증: `npm run typecheck` 통과

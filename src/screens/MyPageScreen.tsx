@@ -2949,6 +2949,9 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 32,
     backgroundColor: colors.gray2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   profileAvatarImage: {
     width: 64,

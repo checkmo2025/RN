@@ -490,7 +490,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       });
       setProfileImageUrl(uploadedProfileImageUrl ?? '');
 
-      showToast('회원가입이 완료되었습니다.');
+      showToast('회원가입에 성공했습니다');
       setStep('signupComplete');
     } catch (error) {
       if (error instanceof ApiError) {
@@ -998,6 +998,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     const profileExtraPreviewUri = normalizeDisplayImageUri(
       selectedProfileImage?.uri ?? profileImageUrl,
     );
+    const defaultProfileSelected = !profileExtraPreviewUri;
     return renderCard(
       <>
         <Text style={styles.title}>프로필 설정</Text>
@@ -1005,7 +1006,12 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
         <View style={styles.avatarSection}>
           <View style={styles.avatarHolder}>
-            <View style={styles.avatarCircle}>
+            <View
+              style={[
+                styles.avatarCircle,
+                defaultProfileSelected ? styles.avatarCircleDefaultSelected : null,
+              ]}
+            >
               {profileExtraPreviewUri ? (
                 <Image
                   source={{ uri: profileExtraPreviewUri }}
@@ -1030,7 +1036,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             </Pressable>
           </View>
           <AppButton
-            variant="secondary"
+            variant={defaultProfileSelected ? 'primary' : 'secondary'}
             label="기본 프로필 이미지"
             style={styles.profileDefaultButton}
             onPress={() => {
@@ -1506,6 +1512,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+  },
+  avatarCircleDefaultSelected: {
+    borderColor: colors.primary1,
+    borderWidth: 2,
+    backgroundColor: colors.subbrown4,
   },
   avatarImage: {
     width: '100%',
