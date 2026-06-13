@@ -2558,3 +2558,9 @@ export const interactionOpacity = {
 - 새 브랜치 `feature/auth-silent-refresh`를 version-2 HEAD에서 생성·push — Silent Refresh/쿠키 인증 구현 일체 보존
 - version-2: 인증 코드 4개 파일을 인증 작업 직전(`a3f0fa9`) 상태로 복원 — `authApi.ts`/`http.ts`/`AuthGateContext.tsx` 되돌림, 신규 파일 `tokenStore.ts` 삭제. 스켈레톤/포커싱/WebSocket 등 무관 작업은 그대로 유지(history 재작성·force-push 없음)
 - 검증: tokenStore/silentRefreshSession 등 잔여 참조 0건, `npx tsc --noEmit` 통과
+
+# 2026-06-13 14:54:34 KST 기본 프로필 아바타 렌더링 수정 및 책 검색 무한 스크롤 적용
+
+- `DefaultProfileAvatar`: 외부 SVG를 `SvgUri`로 불러오던 방식이 일부 iOS 기기(Pro Max 등)에서 고정 크기(140px)/`clip-path` 미적용으로 원 밖으로 삐져나오는 문제 → `react-native-svg` 프리미티브(`Svg`/`ClipPath`/`Ellipse`/`Rect`)로 직접 그려 viewBox 스케일링 보장 + 원형 `overflow:hidden` 래퍼로 넘침 차단(이중 안전장치)
+- `AppHeader` 책 검색: "검색 결과 더보기" 버튼 제거 → ScrollView `onScroll`로 바닥 240px 이내 감지 시 `loadMoreSearchResults()` 자동 호출, 버튼 자리에 `ActivityIndicator` 스피너 표시(무한 스크롤). 중복 호출은 기존 가드(`searchLoading||searchLoadingMore||!searchHasNext`)로 방지
+- 검증: `npm run typecheck` 통과

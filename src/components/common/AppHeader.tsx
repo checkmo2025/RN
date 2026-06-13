@@ -9,6 +9,7 @@ import {
   type RouteProp,
 } from '@react-navigation/native';
 import {
+  ActivityIndicator,
   Animated,
   Image,
   Linking,
@@ -1110,6 +1111,16 @@ export function AppHeader(props: Props) {
               ]}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
+              scrollEventThrottle={16}
+              onScroll={({ nativeEvent }) => {
+                if (searchStage !== 'results') return;
+                const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+                const distanceToBottom =
+                  contentSize.height - (layoutMeasurement.height + contentOffset.y);
+                if (distanceToBottom <= 240) {
+                  void loadMoreSearchResults();
+                }
+              }}
             >
               {searchStage === 'results' ? (
                 <>
@@ -1236,20 +1247,9 @@ export function AppHeader(props: Props) {
 
                   {searched && searchResults.length > 0 ? (
                     searchHasNext ? (
-                      <Pressable
-                        style={({ pressed }) => [
-                          styles.searchMoreButton,
-                          pressed && !searchLoadingMore ? styles.searchMoreButtonPressed : null,
-                        ]}
-                        onPress={() => {
-                          void loadMoreSearchResults();
-                        }}
-                        disabled={searchLoadingMore}
-                      >
-                        <Text style={styles.searchMoreButtonText}>
-                          {searchLoadingMore ? '불러오는 중...' : '검색 결과 더보기'}
-                        </Text>
-                      </Pressable>
+                      <View style={styles.searchMoreSpinner}>
+                        <ActivityIndicator size="small" color={colors.primary1} />
+                      </View>
                     ) : (
                       <Text style={styles.searchEndText}>마지막 검색 결과입니다.</Text>
                     )
@@ -1657,6 +1657,11 @@ const styles = StyleSheet.create({
   searchMoreButtonText: {
     ...typography.body1_2,
     color: colors.primary1,
+  },
+  searchMoreSpinner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
   },
   searchEndText: {
     ...typography.body2_3,
