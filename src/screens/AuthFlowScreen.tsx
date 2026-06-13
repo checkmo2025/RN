@@ -666,6 +666,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     children: React.ReactNode,
     options?: {
       showTopBackButton?: boolean;
+      equalHeight?: 'sm' | 'lg';
     },
   ) => (
     <View style={styles.container}>
@@ -683,7 +684,13 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               <SvgUri uri={topLogoUri} width={92} height={56} />
             </View>
           ) : null}
-          <View style={styles.card}>
+          <View
+            style={[
+              styles.card,
+              options?.equalHeight === 'sm' && styles.cardEqualHeight,
+              options?.equalHeight === 'lg' && styles.cardEqualHeightLarge,
+            ]}
+          >
             <View style={styles.closeRow}>
               {options?.showTopBackButton ? (
                 <Pressable
@@ -836,6 +843,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           />
         </View>
       </>,
+      { equalHeight: 'sm' },
     );
   }
 
@@ -980,6 +988,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           />
         </View>
       </>,
+      { equalHeight: 'sm' },
     );
   }
 
@@ -1045,6 +1054,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           <AppButton label="다음" fullWidth onPress={handlePasswordStepNext} />
         </View>
       </>,
+      { equalHeight: 'sm' },
     );
   }
 
@@ -1150,6 +1160,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           <AppButton label="다음" fullWidth onPress={handleProfileBasicNext} />
         </View>
       </>,
+      { equalHeight: 'lg' },
     );
   }
 
@@ -1260,9 +1271,8 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             onPress={() => { void handleSubmitSignUp(); }}
           />
         </View>
-
-
       </>,
+      { equalHeight: 'lg' },
     );
   }
 
@@ -1288,10 +1298,13 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           </Text>
         </View>
 
-        <AppButton label="모임 검색하기" onPress={() => completeAuthFlow('모임 탭에서 모임을 탐색해보세요.')} />
-        <AppButton label="모임 생성하기" onPress={() => completeAuthFlow('모임 탭에서 모임을 생성할 수 있습니다.')} />
-        <AppButton variant="secondary" label="모임 없이 이용하기" onPress={() => completeAuthFlow()} />
+        <View style={styles.completeButtonGroup}>
+          <AppButton label="모임 검색하기" onPress={() => completeAuthFlow('모임 탭에서 모임을 탐색해보세요.')} />
+          <AppButton label="모임 생성하기" onPress={() => completeAuthFlow('모임 탭에서 모임을 생성할 수 있습니다.')} />
+          <AppButton variant="secondary" label="모임 없이 이용하기" onPress={() => completeAuthFlow()} />
+        </View>
       </>,
+      { equalHeight: 'lg' },
     );
   }
 
@@ -1468,6 +1481,16 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     minHeight: 560,
     elevation: 4,
+  },
+  // 약관 동의(1/6) · 이메일 인증(2/6) · 비밀번호 입력(3/6) 단계의
+  // 하얀 카드를 동일한 크기로 맞추기 위한 공통 최소 높이.
+  cardEqualHeight: {
+    minHeight: 600,
+  },
+  // 프로필 설정(4/6) · 프로필/카테고리(5/6) · 가입 완료(6/6) 단계의
+  // 하얀 카드를 동일한 크기로 맞추기 위한 공통 최소 높이.
+  cardEqualHeightLarge: {
+    minHeight: 720,
   },
   closeRow: {
     position: 'relative',
@@ -1821,6 +1844,10 @@ const styles = StyleSheet.create({
   completeAvatarImage: {
     width: '100%',
     height: '100%',
+  },
+  completeButtonGroup: {
+    marginTop: 'auto',
+    gap: spacing.md,
   },
   completeNickname: {
     ...typography.subhead3,
