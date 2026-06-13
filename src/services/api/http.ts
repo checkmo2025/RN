@@ -1,11 +1,5 @@
-import { Platform } from 'react-native';
-
 import { PUBLIC_ENV } from '../../constants/publicEnv';
 import { showToast } from '../../utils/toast';
-import {
-  getAuthCookieHeader,
-  saveAuthCookiesFromHeaders,
-} from '../tokenStore';
 
 export const API_BASE_URL = PUBLIC_ENV.API_BASE_URL;
 
@@ -42,12 +36,6 @@ type RequestOptions = {
   credentials?: RequestCredentials;
   suppressErrorToast?: boolean;
   timeoutMs?: number;
-};
-
-type HeadersWithCookieHelpers = Headers & {
-  getSetCookie?: () => string[];
-  raw?: () => Record<string, string[] | undefined>;
-  map?: Record<string, string | string[] | undefined>;
 };
 
 function toDefaultHttpErrorMessage(status: number): string {
@@ -91,30 +79,6 @@ function buildUrl(path: string, query?: Record<string, QueryValue>) {
   return url.toString();
 }
 
-function readSetCookieHeaders(headers: Headers): string[] {
-  const cookieHeaders = headers as HeadersWithCookieHelpers;
-  const directSetCookie = cookieHeaders.getSetCookie?.();
-  if (directSetCookie && directSetCookie.length > 0) {
-    return directSetCookie.filter((header) => header.length > 0);
-  }
-
-  const rawSetCookie = cookieHeaders.raw?.()?.['set-cookie'];
-  if (rawSetCookie && rawSetCookie.length > 0) {
-    return rawSetCookie.filter((header) => header.length > 0);
-  }
-
-  const mappedSetCookie = cookieHeaders.map?.['set-cookie'] ?? cookieHeaders.map?.['Set-Cookie'];
-  if (Array.isArray(mappedSetCookie)) {
-    return mappedSetCookie.filter((header) => header.length > 0);
-  }
-  if (typeof mappedSetCookie === 'string' && mappedSetCookie.length > 0) {
-    return [mappedSetCookie];
-  }
-
-  const singleSetCookie = headers.get('set-cookie') ?? headers.get('Set-Cookie');
-  return singleSetCookie ? [singleSetCookie] : [];
-}
-
 export async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const {
     method = 'GET',
@@ -129,13 +93,6 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
   const requestHeaders: Record<string, string> = {
     ...headers,
   };
-
-  if (Platform.OS !== 'web' && credentials !== 'omit' && !requestHeaders.Cookie) {
-    const cookieHeader = await getAuthCookieHeader();
-    if (cookieHeader) {
-      requestHeaders.Cookie = cookieHeader;
-    }
-  }
 
   if (typeof body !== 'undefined') {
     requestHeaders['Content-Type'] = 'application/json';
@@ -161,11 +118,6 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
     throw new ApiError(message, 0, 'NETWORK_ERROR', error);
   } finally {
     clearTimeout(timeoutId);
-  }
-
-  const setCookieHeaders = readSetCookieHeaders(response.headers);
-  if (setCookieHeaders.length > 0) {
-    await saveAuthCookiesFromHeaders(setCookieHeaders);
   }
 
   const text = await response.text();

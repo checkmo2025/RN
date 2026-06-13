@@ -2551,3 +2551,10 @@ export const interactionOpacity = {
 - `authApi`: silent refresh를 `POST /members/me/refresh` → `GET /members/me/login-status`(쿠키 유효성 확인)로 교체, 로그아웃/실패 시 `deleteAuthCookies()` 사용, 로그인 응답 타입 `string | {refreshToken?}` 대응
 - `MeetingScreen`: 모임 제목 포커싱을 pending 플래그+flush 패턴으로 재구현, 뷰포트/제목 오프셋 측정 후 contentContainer `minHeight` 동적 부여로 스크롤 클램프 방지, 모든 탭 전환에서 `focusGroupTitle(true)` 통일
 - 검증: `npm run typecheck` 통과
+
+# 2026-06-13 12:29:56 KST 신규 인증(Silent Refresh/쿠키) 작업을 별도 브랜치로 분리, version-2는 옛 인증 흐름 복원
+
+- 배경: BE PR #218(refresh 30일 rotation/`/members/me/refresh`)이 미머지 상태라, RN version-2가 신규 쿠키 인증 흐름으로 나가면 현 BE와 비호환 → 신규 인증 작업을 보관용 브랜치로 분리하고 version-2는 옛 흐름 유지
+- 새 브랜치 `feature/auth-silent-refresh`를 version-2 HEAD에서 생성·push — Silent Refresh/쿠키 인증 구현 일체 보존
+- version-2: 인증 코드 4개 파일을 인증 작업 직전(`a3f0fa9`) 상태로 복원 — `authApi.ts`/`http.ts`/`AuthGateContext.tsx` 되돌림, 신규 파일 `tokenStore.ts` 삭제. 스켈레톤/포커싱/WebSocket 등 무관 작업은 그대로 유지(history 재작성·force-push 없음)
+- 검증: tokenStore/silentRefreshSession 등 잔여 참조 0건, `npx tsc --noEmit` 통과
