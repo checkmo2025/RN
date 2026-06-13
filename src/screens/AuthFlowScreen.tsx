@@ -723,7 +723,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
                 cardStyle={styles.confirmModalCard}
               >
                 <Text style={styles.confirmModalTitle}>
-                  나가시겠습니까?{'\n'}현재 저장된 정보가 사라집니다.
+                  회원가입을 그만하시겠습니까?{'\n'}현재 저장된 정보가 사라집니다.
                 </Text>
                 <View style={styles.confirmModalButtonRow}>
                   <AppButton
