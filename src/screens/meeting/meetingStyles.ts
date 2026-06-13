@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { buttonSize, colors, interactionOpacity, layers, radius, spacing, typography } from '../../theme';
+import { buttonSize, colors, dialog, interactionOpacity, layers, radius, spacing, typography } from '../../theme';
 
 export const styles = StyleSheet.create({
   screenWrap: {
@@ -2394,16 +2394,17 @@ export const styles = StyleSheet.create({
   },
   voteVotersModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.28)',
-    alignItems: 'flex-end',
+    backgroundColor: colors.overlay30,
+    alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
   },
   voteVotersModalCard: {
-    width: 180,
+    width: '100%',
+    maxWidth: dialog.maxWidth,
     maxHeight: 320,
     backgroundColor: colors.white,
-    borderRadius: radius.md,
+    borderRadius: dialog.borderRadius,
     borderWidth: 1,
     borderColor: colors.gray2,
     padding: spacing.sm,
@@ -2479,9 +2480,9 @@ export const styles = StyleSheet.create({
   },
   contactModalCard: {
     width: '100%',
-    maxWidth: 420,
+    maxWidth: dialog.maxWidth,
     minHeight: 220,
-    borderRadius: radius.lg,
+    borderRadius: dialog.borderRadius,
     backgroundColor: colors.white,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
@@ -2732,8 +2733,8 @@ export const styles = StyleSheet.create({
   },
   bookshelfComposerCard: {
     width: '100%',
-    maxWidth: 420,
-    borderRadius: radius.lg,
+    maxWidth: dialog.maxWidth,
+    borderRadius: dialog.borderRadius,
     backgroundColor: colors.white,
     padding: spacing.md,
     gap: spacing.md,

@@ -21,7 +21,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 
 import { BOOKSTORY_COMMENT_URI, BOOKSTORY_LIKE_URI } from '../constants/iconMap';
-import { colors, interactionOpacity, radius, spacing, typography } from '../theme';
+import { colors, dialog, interactionOpacity, radius, spacing, typography } from '../theme';
 import { navigateToHome, findNavigatorWithRoute } from '../navigation/navigateToHome';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
@@ -1437,15 +1437,15 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: colors.overlay30,
     paddingHorizontal: spacing.md,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalCard: {
     width: '100%',
-    maxWidth: 420,
-    borderRadius: radius.lg,
+    maxWidth: dialog.maxWidth,
+    borderRadius: dialog.borderRadius,
     backgroundColor: colors.white,
   },
   modalProfileSection: {

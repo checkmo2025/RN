@@ -86,6 +86,22 @@ import { useAccountSettingsState, type ReportHistoryItem } from './mypage/useAcc
 import { SkeletonBox } from '../components/common/SkeletonBox';
 
 const tabs = ['내 책 이야기', '내 서재', '내 모임', '내 알림'] as const;
+const reportContentBreakInterval = 12;
+const softBreak = String.fromCharCode(8203);
+
+function formatReportContent(content: string): string {
+  return content
+    .split(/(\s+)/)
+    .map((part) => {
+      if (/^\s+$/.test(part) || part.length <= reportContentBreakInterval) return part;
+      return Array.from(part).reduce((acc, char, index) => {
+        const needsBreak = index > 0 && index % reportContentBreakInterval === 0;
+        return `${acc}${needsBreak ? softBreak : ''}${char}`;
+      }, '');
+    })
+    .join('');
+}
+
 type TabKey = (typeof tabs)[number];
 type MyPageRouteParams = {
   openMyTab?: TabKey | 'ALARM';
@@ -700,6 +716,8 @@ export function MyPageScreen() {
             .map((code) => CATEGORY_CODE_TO_LABEL[code as ClubCategoryCode] ?? code)
             .filter((label) => label.length > 0),
         );
+        setSelectedSetting(null);
+        setShowSettings(false);
         showToast('프로필이 변경되었습니다.');
       } catch (error) {
         if (!(error instanceof ApiError)) {
@@ -1587,7 +1605,7 @@ export function MyPageScreen() {
           {back}
           <Text style={styles.detailTitle}>{selectedSetting}</Text>
           <Text style={styles.detailDivider} />
-          <Text style={styles.detailBody}>버전 업데이트 날짜 : 2026.01.01</Text>
+          <Text style={styles.detailBody}>버전 업데이트 날짜 : 2026.06.14</Text>
         </View>
       );
     }
@@ -1892,7 +1910,13 @@ export function MyPageScreen() {
                     <Text style={styles.reportDate}>{report.createdAtLabel}</Text>
                   ) : null}
                 </View>
-                <Text style={styles.reportText}>{report.content}</Text>
+                <Text
+                  style={styles.reportText}
+                  lineBreakStrategyIOS="hangul-word"
+                  textBreakStrategy="balanced"
+                >
+                  {formatReportContent(report.content)}
+                </Text>
               </View>
             ))}
           </View>
@@ -2676,16 +2700,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.sm,
   },
   reportUser: {
+    flex: 1,
+    minWidth: 0,
     ...typography.body1_3,
     color: colors.gray6,
   },
   reportDate: {
+    flexShrink: 0,
     ...typography.body2_3,
     color: colors.gray4,
   },
   reportText: {
+    width: '100%',
+    alignSelf: 'stretch',
+    flexShrink: 1,
     ...typography.body2_3,
     color: colors.gray5,
   },

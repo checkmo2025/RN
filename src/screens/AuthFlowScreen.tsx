@@ -19,7 +19,7 @@ import { termsDocuments, type TermsAgreementKey } from '../constants/termsDocume
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import { LOGO_PRIMARY_URI, MOBILE_HEADER_LOGO_URI } from '../constants/iconMap';
 import { emailRegex, passwordRegex, phoneRegex, nicknameRegex } from '../constants/validation';
-import { colors, interactionOpacity, radius, spacing, typography } from '../theme';
+import { colors, dialog, interactionOpacity, radius, spacing, typography } from '../theme';
 import { AppButton } from '../components/common/PrimaryButton';
 import { DialogOverlay } from '../components/common/DialogOverlay';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
@@ -1625,17 +1625,17 @@ const styles = StyleSheet.create({
   },
   termsModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: colors.overlay30,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   termsModalCard: {
     width: '100%',
-    maxWidth: 460,
+    maxWidth: dialog.maxWidth,
     height: '82%',
     maxHeight: '82%',
-    borderRadius: radius.lg,
+    borderRadius: dialog.borderRadius,
     backgroundColor: colors.white,
     padding: spacing.md,
     gap: spacing.sm,
@@ -1669,15 +1669,15 @@ const styles = StyleSheet.create({
   },
   confirmModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: colors.overlay30,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   confirmModalCard: {
     width: '100%',
-    maxWidth: 420,
-    borderRadius: radius.lg,
+    maxWidth: dialog.maxWidth,
+    borderRadius: dialog.borderRadius,
     backgroundColor: colors.white,
     padding: spacing.md,
     gap: spacing.md,

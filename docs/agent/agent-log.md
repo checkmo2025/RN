@@ -2638,3 +2638,10 @@ export const interactionOpacity = {
 
 - 마이페이지 SVG 확인하기 → ✅ (실기기 확인 완료)
 - 모임 상세정보 로딩 안됨 → ✅ (실기기 확인 완료)
+
+# 2026-06-14 01:58:33 KST 모달 시각 토큰 통일 및 마이페이지 버그 수정
+
+- `src/theme/dialog.ts` 신규: `dialog.maxWidth` / `dialog.borderRadius` 토큰 정의
+- 백드롭 하드코딩 rgba → `colors.overlay30` 통일 (AuthFlow/MyPage/Story/UserProfile/Meeting/ReportMemberModal)
+- maxWidth(420/460/760/180) · borderRadius(md↔lg) → `dialog.*` 단일 토큰으로 수렴
+- MyPageScreen: 프로필 수정 저장 후 설정 화면 자동 닫힘, 신고 내역 텍스트 오버플로우 수정, 버전 날짜 업데이트

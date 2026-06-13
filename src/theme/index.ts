@@ -8,3 +8,4 @@ export { layers } from './layers';
 export { buttonSize } from './buttonSize';
 export { getDeviceScale, scaleFont, scaleSize } from './responsive';
 export { inputStyles } from './inputStyles';
+export { dialog } from './dialog';

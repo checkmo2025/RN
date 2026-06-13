@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Image,
   Keyboard,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-import { colors, interactionOpacity, radius, spacing, typography } from '../../theme';
+import { colors, dialog, interactionOpacity, radius, spacing, typography } from '../../theme';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
 import { DefaultProfileAvatar } from './DefaultProfileAvatar';
@@ -167,16 +167,16 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.24)',
+    backgroundColor: colors.overlay30,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
   },
   card: {
     width: '100%',
-    maxWidth: 760,
+    maxWidth: dialog.maxWidth,
     backgroundColor: colors.white,
-    borderRadius: radius.md,
+    borderRadius: dialog.borderRadius,
     borderWidth: 1,
     borderColor: colors.gray2,
     padding: spacing.md,
