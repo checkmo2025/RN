@@ -173,6 +173,8 @@ const BOOKSHELF_MEETING_LOCATION_MAX_LENGTH = 12;
 const ISBN13_REGEX = /^\d{13}$/;
 const MAX_REGULAR_GROUP_COUNT = 10;
 const MEETING_TAB_DOUBLE_TAP_WINDOW_MS = 450;
+const GROUP_TITLE_FOCUS_TOP_OFFSET = spacing.xs;
+const GROUP_TITLE_FOCUS_SCROLL_SAFETY = spacing.md;
 
 
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
@@ -853,8 +855,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [activeTab, setActiveTab] = useState<'home' | 'notice' | 'bookshelf'>('home');
   const [currentMemberNickname, setCurrentMemberNickname] = useState('');
   const groupHomeScrollRef = useRef<ScrollView>(null);
-  const groupTitleAnchorYRef = useRef(0);
+  const groupTitleFocusOffsetRef = useRef(0);
   const hasFocusedGroupTitleRef = useRef(false);
+  const pendingGroupTitleFocusRef = useRef(false);
+  const pendingGroupTitleFocusAnimatedRef = useRef(false);
+  const [groupHomeViewportHeight, setGroupHomeViewportHeight] = useState(0);
+  const [groupTitleFocusOffset, setGroupTitleFocusOffset] = useState(0);
   // 책장 탭 진입 시: GRID 콘텐츠가 레이아웃된 뒤 스크롤하기 위한 플래그 (클램프 방지)
   const bookshelfTabScrollRef = useRef(false);
   const [groupHomeRefreshing, setGroupHomeRefreshing] = useState(false);
@@ -1129,6 +1135,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     () => normalizeClubContacts(managedGroup.links),
     [managedGroup.links],
   );
+  const groupHomeContentMinHeight = useMemo(() => {
+    if (groupHomeViewportHeight <= 0) return undefined;
+    return groupHomeViewportHeight + groupTitleFocusOffset + GROUP_TITLE_FOCUS_SCROLL_SAFETY;
+  }, [groupHomeViewportHeight, groupTitleFocusOffset]);
   const handleAuthExpired = useCallback(
     (options?: { suppressToast?: boolean }) => {
       setCanManageClub(false);
@@ -1288,20 +1298,53 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
   useEffect(() => {
     hasFocusedGroupTitleRef.current = false;
+    pendingGroupTitleFocusRef.current = false;
+    groupTitleFocusOffsetRef.current = 0;
+    setGroupTitleFocusOffset(0);
   }, [group.id]);
 
-  const focusGroupTitle = useCallback((animated: boolean) => {
-    // 포커싱 기준: 모임 이름 Text가 화면 상단에 보이도록 (pillNav가 아니라 제목 기준)
+  const flushPendingGroupTitleFocus = useCallback(() => {
+    if (!pendingGroupTitleFocusRef.current) return;
+
+    pendingGroupTitleFocusRef.current = false;
+    const animated = pendingGroupTitleFocusAnimatedRef.current;
+
     requestAnimationFrame(() => {
       groupHomeScrollRef.current?.scrollTo({
-        y: Math.max(0, groupTitleAnchorYRef.current - spacing.xs),
+        y: groupTitleFocusOffsetRef.current,
         animated,
       });
     });
   }, []);
 
+  const focusGroupTitle = useCallback(
+    (animated: boolean) => {
+      pendingGroupTitleFocusRef.current = true;
+      pendingGroupTitleFocusAnimatedRef.current = animated;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(flushPendingGroupTitleFocus);
+      });
+    },
+    [flushPendingGroupTitleFocus],
+  );
+
+  useEffect(() => {
+    requestAnimationFrame(flushPendingGroupTitleFocus);
+  }, [activeTab, flushPendingGroupTitleFocus, groupHomeContentMinHeight]);
+
+  const handleGroupHomeLayout = useCallback((event: LayoutChangeEvent) => {
+    const nextHeight = event.nativeEvent.layout.height;
+    setGroupHomeViewportHeight((prev) =>
+      Math.abs(prev - nextHeight) < 1 ? prev : nextHeight,
+    );
+  }, []);
+
   const handleGroupTitleLayout = useCallback((event: LayoutChangeEvent) => {
-    groupTitleAnchorYRef.current = event.nativeEvent.layout.y;
+    const nextOffset = Math.max(0, event.nativeEvent.layout.y - GROUP_TITLE_FOCUS_TOP_OFFSET);
+    groupTitleFocusOffsetRef.current = nextOffset;
+    setGroupTitleFocusOffset((prev) =>
+      Math.abs(prev - nextOffset) < 1 ? prev : nextOffset,
+    );
     if (hasFocusedGroupTitleRef.current) return;
 
     focusGroupTitle(false);
@@ -1346,9 +1389,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         if (nextTab === 'bookshelf') {
           // 책장은 GRID 콘텐츠가 레이아웃된 뒤 스크롤 (GroupBookshelfView onLayout에서)
           bookshelfTabScrollRef.current = true;
-        } else {
-          focusGroupTitle(true);
         }
+        focusGroupTitle(true);
       };
 
       if (!isLoggedIn) {
@@ -1556,7 +1598,14 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       <ScrollView
         ref={groupHomeScrollRef}
         style={styles.container}
-        contentContainerStyle={[styles.content, { paddingBottom: spacing.xl * 2 }]}
+        contentContainerStyle={[
+          styles.content,
+          {
+            minHeight: groupHomeContentMinHeight,
+            paddingBottom: spacing.xl * 2,
+          },
+        ]}
+        onLayout={handleGroupHomeLayout}
         showsVerticalScrollIndicator={false}
         onScroll={handleGroupHomeScroll}
         scrollEventThrottle={16}

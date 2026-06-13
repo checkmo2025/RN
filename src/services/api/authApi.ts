@@ -1,5 +1,5 @@
 import { API_BASE_URL, ApiEnvelope, ApiError, requestJson, unwrapResult } from './http';
-import { deleteRefreshToken, getRefreshToken, saveRefreshToken } from '../tokenStore';
+import { deleteAuthCookies, getRefreshToken, saveRefreshToken } from '../tokenStore';
 
 type ApiResponseString = ApiEnvelope<string>;
 type FindEmailResult = {
@@ -45,7 +45,7 @@ export async function loginByIdentifier(
   password: string,
   options?: { suppressErrorToast?: boolean },
 ): Promise<void> {
-  const response = await requestJson<ApiEnvelope<{ refreshToken?: string }>>('/auth/login', {
+  const response = await requestJson<ApiEnvelope<string | { refreshToken?: string }>>('/auth/login', {
     method: 'POST',
     body: {
       identifier,
@@ -53,7 +53,9 @@ export async function loginByIdentifier(
     },
     suppressErrorToast: options?.suppressErrorToast,
   });
-  const refreshToken = unwrapResult(response)?.refreshToken;
+  const result = unwrapResult(response);
+  const refreshToken =
+    typeof result === 'object' && result !== null ? result.refreshToken : undefined;
   if (refreshToken) {
     await saveRefreshToken(refreshToken);
   }
@@ -226,7 +228,7 @@ export async function logoutSession(): Promise<void> {
   await requestJson<ApiEnvelope<null>>('/auth/logout', {
     method: 'POST',
   });
-  await deleteRefreshToken();
+  await deleteAuthCookies();
 }
 
 export async function silentRefreshSession(): Promise<boolean> {
@@ -234,18 +236,13 @@ export async function silentRefreshSession(): Promise<boolean> {
   if (!storedToken) return false;
 
   try {
-    const response = await requestJson<ApiEnvelope<{ refreshToken?: string }>>('/members/me/refresh', {
-      method: 'POST',
-      headers: { 'X-Refresh-Token': storedToken },
+    await requestJson<ApiEnvelope<LoginStatus>>('/members/me/login-status', {
+      method: 'GET',
       suppressErrorToast: true,
     });
-    const newToken = unwrapResult(response)?.refreshToken;
-    if (newToken) {
-      await saveRefreshToken(newToken);
-    }
     return true;
   } catch {
-    await deleteRefreshToken();
+    await deleteAuthCookies();
     return false;
   }
 }

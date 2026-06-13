@@ -2544,3 +2544,10 @@ export const interactionOpacity = {
 - `MeetingScreen`: `focusGroupTitle` 스크롤 기준을 pillNav Y → 모임 이름 Text Y(`groupTitleAnchorYRef - spacing.xs`)로 변경 — 모임 이름이 화면 상단에 보이도록. 안 쓰게 된 `pillNavAnchorYRef`/pillNav onLayout 제거
 - 책장 탭만 즉시 스크롤 시 GRID 콘텐츠 레이아웃 전이라 클램프되어 모임 이름이 덜 올라가는 문제 → `bookshelfTabScrollRef` 플래그 + `GroupBookshelfView` `bookshelfSection` onLayout에서 콘텐츠 레이아웃 후 스크롤하도록 수정 (책 상세/정기모임과 동일 패턴)
 - 모임홈/공지 실기기 통과. 책장 실기기 확인 대기 (TODO 🔄)
+
+# 2026-06-13 10:28:00 KST 쿠키 기반 인증 전환 및 모임 제목 포커싱 안정화
+
+- 인증: 헤더(X-Refresh-Token) 기반 → 쿠키 기반으로 전환. `tokenStore`에 access/refresh 쿠키 저장·조회·삭제 헬퍼 추가, `http`에서 요청 시 Cookie 자동 첨부 + 응답 Set-Cookie 자동 저장(`readSetCookieHeaders`로 RN fetch 환경별 대응)
+- `authApi`: silent refresh를 `POST /members/me/refresh` → `GET /members/me/login-status`(쿠키 유효성 확인)로 교체, 로그아웃/실패 시 `deleteAuthCookies()` 사용, 로그인 응답 타입 `string | {refreshToken?}` 대응
+- `MeetingScreen`: 모임 제목 포커싱을 pending 플래그+flush 패턴으로 재구현, 뷰포트/제목 오프셋 측정 후 contentContainer `minHeight` 동적 부여로 스크롤 클램프 방지, 모든 탭 전환에서 `focusGroupTitle(true)` 통일
+- 검증: `npm run typecheck` 통과
