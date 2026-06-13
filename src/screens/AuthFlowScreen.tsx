@@ -102,6 +102,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const [step, setStep] = useState<Step>('login');
   const [signUpUiPreview, setSignUpUiPreview] = useState(false);
   const [emailResetConfirmVisible, setEmailResetConfirmVisible] = useState(false);
+  const [exitSignupConfirmVisible, setExitSignupConfirmVisible] = useState(false);
 
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -667,6 +668,8 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     options?: {
       showTopBackButton?: boolean;
       equalHeight?: 'sm' | 'lg';
+      hideClose?: boolean;
+      confirmClose?: boolean;
     },
   ) => (
     <View style={styles.container}>
@@ -703,10 +706,45 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
                   <MaterialIcons name="arrow-back-ios-new" size={20} color={colors.primary1} />
                 </Pressable>
               ) : null}
-              <Pressable onPress={onClose} hitSlop={8}>
-                <MaterialIcons name="close" size={30} color={colors.primary1} />
-              </Pressable>
+              {!options?.hideClose ? (
+                <Pressable
+                  onPress={options?.confirmClose ? () => setExitSignupConfirmVisible(true) : onClose}
+                  hitSlop={8}
+                >
+                  <MaterialIcons name="close" size={30} color={colors.primary1} />
+                </Pressable>
+              ) : null}
             </View>
+            {options?.confirmClose ? (
+              <DialogOverlay
+                visible={exitSignupConfirmVisible}
+                onClose={() => setExitSignupConfirmVisible(false)}
+                overlayStyle={styles.confirmModalOverlay}
+                cardStyle={styles.confirmModalCard}
+              >
+                <Text style={styles.confirmModalTitle}>
+                  나가시겠습니까?{'\n'}현재 저장된 정보가 사라집니다.
+                </Text>
+                <View style={styles.confirmModalButtonRow}>
+                  <AppButton
+                    variant="secondary"
+                    label="취소"
+                    onPress={() => setExitSignupConfirmVisible(false)}
+                    size="lg"
+                    fullWidth
+                  />
+                  <AppButton
+                    label="나가기"
+                    onPress={() => {
+                      setExitSignupConfirmVisible(false);
+                      onClose?.();
+                    }}
+                    size="lg"
+                    fullWidth
+                  />
+                </View>
+              </DialogOverlay>
+            ) : null}
             <View style={styles.cardHeader}>
               <SvgUri uri={logoUri} width={108} height={64} />
             </View>
@@ -843,7 +881,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           />
         </View>
       </>,
-      { equalHeight: 'sm' },
+      { equalHeight: 'sm', confirmClose: true },
     );
   }
 
@@ -988,7 +1026,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           />
         </View>
       </>,
-      { equalHeight: 'sm' },
+      { equalHeight: 'sm', confirmClose: true },
     );
   }
 
@@ -1054,7 +1092,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           <AppButton label="다음" fullWidth onPress={handlePasswordStepNext} />
         </View>
       </>,
-      { equalHeight: 'sm' },
+      { equalHeight: 'sm', confirmClose: true },
     );
   }
 
@@ -1280,9 +1318,8 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     const signupCompleteProfileUri = normalizeDisplayImageUri(profileImageUrl);
     return renderCard(
       <>
+        <Text style={[styles.flowStep, { marginTop: 0 }]}>6 / 6</Text>
         <Text style={styles.title}>회원이 되신 것을 환영합니다!</Text>
-        <Text style={styles.flowStep}>6 / 6</Text>
-        <Text style={styles.completeSubLabel}>참여중인 독서 모임이 있으신가요?</Text>
 
         <View style={styles.completeProfileCard}>
           <View style={styles.completeAvatarCircle}>
@@ -1298,13 +1335,15 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           </Text>
         </View>
 
-        <View style={styles.completeButtonGroup}>
+        <Text style={[styles.completeSubLabel, { marginTop: spacing.lg }]}>참여중인 독서 모임이 있으신가요?</Text>
+
+        <View style={[styles.completeButtonGroup, { marginTop: spacing.sm }]}>
           <AppButton label="모임 검색하기" onPress={() => completeAuthFlow('모임 탭에서 모임을 탐색해보세요.')} />
           <AppButton label="모임 생성하기" onPress={() => completeAuthFlow('모임 탭에서 모임을 생성할 수 있습니다.')} />
           <AppButton variant="secondary" label="모임 없이 이용하기" onPress={() => completeAuthFlow()} />
         </View>
       </>,
-      { equalHeight: 'lg' },
+      { equalHeight: 'lg', hideClose: true },
     );
   }
 
