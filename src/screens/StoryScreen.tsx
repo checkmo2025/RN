@@ -858,7 +858,7 @@ export function StoryScreen() {
     const storyId = selectedStory.remoteId ?? selectedStory.id.replace('story-', '');
     const webBaseUrl = PUBLIC_ENV.WEB_BASE_URL.replace(/\/+$/, '');
     const url = `${webBaseUrl}/stories/${storyId}`;
-    void Share.share({ url, message: url });
+    void Share.share({ message: url });
   }, [selectedStory]);
 
   const openStoryMenu = useCallback((event: GestureResponderEvent) => {

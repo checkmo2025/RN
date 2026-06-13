@@ -2658,3 +2658,8 @@ export const interactionOpacity = {
 - 공유 방식 변경: 클립보드 복사 → 네이티브 Share 시트
 - 댓글 입력창: 수동 height 추적 제거 → minHeight(48)/maxHeight(120) 스타일로 자동 확장
 - expo-clipboard import 제거
+
+# 2026-06-14 02:14:25 KST 공유하기 링크 중복 수정 및 TODO 업데이트
+
+- 공유하기 Share.share({ url, message }) → { message } 단일 전달로 링크 중복 제거
+- TODO: 뒤로가기 액션 확인 항목 추가 (🧪 직접 테스트 필요)
