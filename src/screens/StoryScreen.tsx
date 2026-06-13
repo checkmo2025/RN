@@ -8,6 +8,7 @@ import {
   LayoutChangeEvent,
   ScrollView,
   RefreshControl,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -31,7 +32,6 @@ import {
 } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
-import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
@@ -140,8 +140,6 @@ type StoryFeedItem =
       key: string;
     };
 
-const COMMENT_INPUT_MIN_HEIGHT = 48;
-const COMMENT_INPUT_MAX_HEIGHT = 160;
 
 type CommentMenuState = {
   comment: Comment;
@@ -292,7 +290,6 @@ export function StoryScreen() {
   const [detailRefreshing, setDetailRefreshing] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [commentInput, setCommentInput] = useState('');
-  const [commentInputHeight, setCommentInputHeight] = useState(COMMENT_INPUT_MIN_HEIGHT);
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [replyTarget, setReplyTarget] = useState<{
     commentId?: number;
@@ -443,19 +440,6 @@ export function StoryScreen() {
   }, [body, commentInput, isComposing, selectedBook, selectedStory, title]);
   const isCommentSubmitDisabled = commentInput.trim().length === 0;
 
-  useEffect(() => {
-    if (commentInput.length === 0) {
-      setCommentInputHeight(COMMENT_INPUT_MIN_HEIGHT);
-    }
-  }, [commentInput]);
-
-  const handleCommentInputSizeChange = useCallback((nextContentHeight: number) => {
-    const nextHeight = Math.max(
-      COMMENT_INPUT_MIN_HEIGHT,
-      Math.min(COMMENT_INPUT_MAX_HEIGHT, Math.ceil(nextContentHeight)),
-    );
-    setCommentInputHeight((prev) => (Math.abs(prev - nextHeight) > 1 ? nextHeight : prev));
-  }, []);
 
   const showDiscardStoryAlert = useCallback(
     (onClose: () => void) => {
@@ -873,9 +857,8 @@ export function StoryScreen() {
 
     const storyId = selectedStory.remoteId ?? selectedStory.id.replace('story-', '');
     const webBaseUrl = PUBLIC_ENV.WEB_BASE_URL.replace(/\/+$/, '');
-    const url = `${webBaseUrl}/book-stories/${storyId}`;
-    void Clipboard.setStringAsync(url);
-    showToast('링크가 클립보드에 복사되었습니다.');
+    const url = `${webBaseUrl}/stories/${storyId}`;
+    void Share.share({ url, message: url });
   }, [selectedStory]);
 
   const openStoryMenu = useCallback((event: GestureResponderEvent) => {
@@ -1887,20 +1870,13 @@ export function StoryScreen() {
               <View style={styles.commentInputRow}>
                 <TextInput
                   ref={commentInputRef}
-                  style={[
-                    styles.commentInput,
-                    { height: commentInputHeight },
-                  ]}
+                  style={styles.commentInput}
                   placeholder={editingCommentId ? '댓글 수정' : '댓글 내용'}
                   placeholderTextColor={colors.gray3}
                   value={commentInput}
                   onChangeText={setCommentInput}
                   multiline
-                  scrollEnabled={false}
                   textAlignVertical="top"
-                  onContentSizeChange={(event) => {
-                    handleCommentInputSizeChange(event.nativeEvent.contentSize.height);
-                  }}
                 />
                 <Pressable
                   style={[
@@ -1961,20 +1937,13 @@ export function StoryScreen() {
                       <View style={styles.inlineReplyRow}>
                         <TextInput
                           ref={inlineReplyInputRef}
-                          style={[
-                            styles.commentInput,
-                            { height: commentInputHeight },
-                          ]}
+                          style={styles.commentInput}
                           placeholder="대댓글 내용"
                           placeholderTextColor={colors.gray3}
                           value={commentInput}
                           onChangeText={setCommentInput}
                           multiline
-                          scrollEnabled={false}
                           textAlignVertical="top"
-                          onContentSizeChange={(event) => {
-                            handleCommentInputSizeChange(event.nativeEvent.contentSize.height);
-                          }}
                         />
                         <Pressable
                           style={[
@@ -3008,6 +2977,8 @@ const styles = StyleSheet.create({
   },
   commentInput: {
     flex: 1,
+    minHeight: 48,
+    maxHeight: 120,
     borderWidth: 1,
     borderColor: colors.gray2,
     borderRadius: radius.md,

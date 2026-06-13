@@ -2651,3 +2651,10 @@ export const interactionOpacity = {
 - 이메일 인증 초기화 확인: DialogOverlay → Alert.alert() (destructive 스타일)
 - 기본 프로필 이미지 확인: DialogOverlay → Alert.alert()
 - 관련 state 2개 제거 (emailResetConfirmVisible, defaultProfileConfirmVisible)
+
+# 2026-06-14 02:09:49 KST 공유하기 URL 수정 및 댓글 입력창 자동 확장
+
+- 공유하기 URL 경로 수정: /book-stories/ → /stories/
+- 공유 방식 변경: 클립보드 복사 → 네이티브 Share 시트
+- 댓글 입력창: 수동 height 추적 제거 → minHeight(48)/maxHeight(120) 스타일로 자동 확장
+- expo-clipboard import 제거
