@@ -383,7 +383,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       return;
     }
     if (!passwordRegex.test(password)) {
-      showToast('비밀번호는 6~12자, 영어 1자 이상, 특수문자 1자 이상이어야 합니다.');
+      showToast('비밀번호는 6~24자, 영어 1자 이상, 특수문자 1자 이상이어야 합니다.');
       return;
     }
     if (password !== passwordConfirm) {
@@ -1038,9 +1038,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
         <View style={styles.formGroup}>
           <Text style={styles.label}>비밀번호</Text>
-          <Text style={styles.helperInline}>
-            비밀번호는 6~12자, 영어 최소 1자 이상, 특수문자 최소 1자 이상
-          </Text>
           <View style={styles.passwordInputRow}>
             <FormTextInput
               value={signUpPassword}
@@ -1050,6 +1047,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               placeholderTextColor={colors.gray3}
               fieldType="password"
               secureTextEntry={!showSignUpPassword}
+              maxLength={24}
             />
             <Pressable
               style={styles.passwordToggleButton}
@@ -1072,6 +1070,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               placeholderTextColor={colors.gray3}
               fieldType="password"
               secureTextEntry={!showSignUpPasswordConfirm}
+              maxLength={24}
             />
             <Pressable
               style={styles.passwordToggleButton}
@@ -1085,6 +1084,22 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               />
             </Pressable>
           </View>
+          {[
+            { label: '6~24자', ok: signUpPassword.length >= 6 && signUpPassword.length <= 24 },
+            { label: '영어 최소 1자 이상', ok: /[a-zA-Z]/.test(signUpPassword) },
+            { label: '특수문자 최소 1자 이상', ok: /[!@#$%^&*]/.test(signUpPassword) },
+          ].map(({ label, ok }) => (
+            <View key={label} style={styles.passwordHintRow}>
+              <MaterialIcons
+                name={ok ? 'check' : 'close'}
+                size={14}
+                color={ok ? colors.green : colors.gray3}
+              />
+              <Text style={[styles.passwordHintText, ok && styles.passwordHintTextOk]}>
+                {label}
+              </Text>
+            </View>
+          ))}
         </View>
 
         <View style={styles.buttonRow}>
@@ -1743,6 +1758,19 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  passwordHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  passwordHintText: {
+    fontSize: 12,
+    color: colors.gray3,
+  },
+  passwordHintTextOk: {
+    color: colors.green,
   },
   inlineRow: {
     flexDirection: 'row',
