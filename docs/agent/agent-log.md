@@ -2663,3 +2663,7 @@ export const interactionOpacity = {
 
 - 공유하기 Share.share({ url, message }) → { message } 단일 전달로 링크 중복 제거
 - TODO: 뒤로가기 액션 확인 항목 추가 (🧪 직접 테스트 필요)
+
+# 2026-06-14 02:18:09 KST 회원가입 전화번호 라벨 괄호 텍스트 제거
+
+- 전화번호 옆 "(아이디 찾기용)" 텍스트 제거

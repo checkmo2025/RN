@@ -1168,10 +1168,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             maxLength={INPUT_LIMITS.USER_NAME}
           />
 
-          <View style={styles.labelRow}>
-            <Text style={styles.label}>전화번호</Text>
-            <Text style={styles.labelHint}>(아이디 찾기용)</Text>
-          </View>
+          <Text style={styles.label}>전화번호</Text>
           <FormTextInput
             value={phoneNumber}
             onChangeText={(value) => setPhoneNumber(formatPhoneNumberInput(value))}
