@@ -2582,3 +2582,8 @@ export const interactionOpacity = {
 - 책장 상세 진입/상세 탭 전환 시 상세 데이터 캐시가 없으면 자동으로 `reloadBookshelfMeetingDetail` 실행
 - 발제/한줄평/정기모임 탭 첫 렌더에서 빈 상태 대신 로딩 문구를 먼저 표시하도록 수정
 - TODO 갱신: 모임 탭바 포커싱 통과 처리, 회원가입/마이페이지 SVG/모임 생성/모임 상세정보 로딩 항목 추가
+
+# 2026-06-13 16:57:21 KST 애플 로그인 백엔드 변경안 문서 추가
+
+- `docs/documents/apple-login-backend-plan.md` 추가
+- 현재 BE 회원가입/소셜 로그인 흐름과 RN Apple 로그인 도입 시 필요한 BE 변경 포인트 정리
