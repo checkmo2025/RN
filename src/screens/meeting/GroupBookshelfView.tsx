@@ -122,6 +122,10 @@ export function GroupBookshelfView({
   const scrollToBookshelfDetail = useCallback(() => {
     onScrollToBookshelfDetail(bookshelfSectionYRef.current + detailSectionYRef.current);
   }, [onScrollToBookshelfDetail]);
+  const showBookshelfTopicLoading = loadingBookshelfDetail && bookshelfTopicItems.length === 0;
+  const showBookshelfReviewLoading = loadingBookshelfDetail && bookshelfReviewItems.length === 0;
+  const showRegularMeetingLoading =
+    loadingBookshelfDetail && (!regularMeetingInfo || regularMeetingInfo.groups.length === 0);
 
   useEffect(() => {
     if (bookshelfViewMode !== 'REGULAR_GROUP') return;
@@ -436,7 +440,12 @@ export function GroupBookshelfView({
                 <Text style={styles.bookshelfPostContent}>{item.content}</Text>
               </View>
             ))}
-            {bookshelfTopicItems.length === 0 ? (
+            {showBookshelfTopicLoading ? (
+              <View style={styles.managementEmptyCard}>
+                <Text style={styles.managementEmptyText}>발제를 불러오는 중...</Text>
+              </View>
+            ) : null}
+            {!showBookshelfTopicLoading && bookshelfTopicItems.length === 0 ? (
               <View style={styles.managementEmptyCard}>
                 <Text style={styles.managementEmptyText}>등록된 발제가 없습니다.</Text>
               </View>
@@ -508,7 +517,12 @@ export function GroupBookshelfView({
 	                        <Text style={styles.bookshelfPostContent}>{item.content}</Text>
 	                      </View>
 	                    ))}
-            {bookshelfReviewItems.length === 0 ? (
+            {showBookshelfReviewLoading ? (
+              <View style={styles.managementEmptyCard}>
+                <Text style={styles.managementEmptyText}>한줄평을 불러오는 중...</Text>
+              </View>
+            ) : null}
+            {!showBookshelfReviewLoading && bookshelfReviewItems.length === 0 ? (
               <View style={styles.managementEmptyCard}>
                 <Text style={styles.managementEmptyText}>등록된 한줄평이 없습니다.</Text>
               </View>
@@ -519,7 +533,7 @@ export function GroupBookshelfView({
 
       {bookshelfDetailTab === 'REGULAR' ? (
         <View style={styles.bookshelfPanel}>
-          {loadingBookshelfDetail && !regularMeetingInfo ? (
+          {showRegularMeetingLoading ? (
             <View style={styles.managementEmptyCard}>
               <Text style={styles.managementEmptyText}>정기모임 정보를 불러오는 중...</Text>
             </View>
@@ -554,35 +568,41 @@ export function GroupBookshelfView({
                 </View>
               </View>
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.bookshelfGroupChipRow}
-              >
-                {regularMeetingInfo.groups.map((groupItem) => {
-                  const active = selectedRegularGroupId === groupItem.id;
-                  return (
-                    <Pressable
-                      key={groupItem.id}
-                      style={({ pressed }) => [
-                        styles.bookshelfGroupChip,
-                        active && styles.bookshelfGroupChipActive,
-                        pressed && styles.pressed,
-                      ]}
-                      onPress={() => handleSelectRegularGroup(groupItem.id)}
-                    >
-                      <Text
-                        style={[
-                          styles.bookshelfGroupChipText,
-                          active && styles.bookshelfGroupChipTextActive,
+              {regularMeetingInfo.groups.length > 0 ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.bookshelfGroupChipRow}
+                >
+                  {regularMeetingInfo.groups.map((groupItem) => {
+                    const active = selectedRegularGroupId === groupItem.id;
+                    return (
+                      <Pressable
+                        key={groupItem.id}
+                        style={({ pressed }) => [
+                          styles.bookshelfGroupChip,
+                          active && styles.bookshelfGroupChipActive,
+                          pressed && styles.pressed,
                         ]}
+                        onPress={() => handleSelectRegularGroup(groupItem.id)}
                       >
-                        {groupItem.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
+                        <Text
+                          style={[
+                            styles.bookshelfGroupChipText,
+                            active && styles.bookshelfGroupChipTextActive,
+                          ]}
+                        >
+                          {groupItem.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              ) : (
+                <View style={styles.managementEmptyCard}>
+                  <Text style={styles.managementEmptyText}>등록된 조 정보가 없습니다.</Text>
+                </View>
+              )}
 
               {bookshelfViewMode !== 'REGULAR_GROUP' && selectedRegularGroup ? (
                 <Pressable

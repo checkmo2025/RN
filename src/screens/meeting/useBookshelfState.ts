@@ -215,6 +215,7 @@ export function useBookshelfState({
 
   const shouldScrollToBookshelfDetailRef = useRef(false);
   const bookshelfMeetingDetailRequestIdRef = useRef<Record<number, number>>({});
+  const bookshelfDetailLoadingCountByMeetingIdRef = useRef<Record<number, number>>({});
   const teamManageDropRefs = useRef<Record<string, View | null>>({});
   const dragStartRef = useRef<{
     memberId: number;
@@ -552,6 +553,24 @@ export function useBookshelfState({
     [],
   );
 
+  const setBookshelfDetailLoadingForMeeting = useCallback((meetingId: number, loading: boolean) => {
+    const next = { ...bookshelfDetailLoadingCountByMeetingIdRef.current };
+
+    if (loading) {
+      next[meetingId] = (next[meetingId] ?? 0) + 1;
+    } else {
+      const current = next[meetingId] ?? 0;
+      if (current <= 1) {
+        delete next[meetingId];
+      } else {
+        next[meetingId] = current - 1;
+      }
+    }
+
+    bookshelfDetailLoadingCountByMeetingIdRef.current = next;
+    setLoadingBookshelfDetail(Object.keys(next).length > 0);
+  }, []);
+
   const reloadBookshelfMeetingDetail = useCallback(
     async (book: BookshelfItem, options?: { suppressErrorToast?: boolean }) => {
       const clubId = group.clubId;
@@ -561,6 +580,7 @@ export function useBookshelfState({
       bookshelfMeetingDetailRequestIdRef.current[meetingId] = requestId;
       const isStale = () => bookshelfMeetingDetailRequestIdRef.current[meetingId] !== requestId;
 
+      setBookshelfDetailLoadingForMeeting(meetingId, true);
       try {
         const [topicPage, reviews, detail, editDetail] = await Promise.all([
           fetchClubBookshelfTopics(clubId, meetingId, undefined, {
@@ -749,6 +769,8 @@ export function useBookshelfState({
         if (!options?.suppressErrorToast) {
           showToast(resolveBookshelfActionErrorMessage(error, '책장 상세를 불러오지 못했습니다.'));
         }
+      } finally {
+        setBookshelfDetailLoadingForMeeting(meetingId, false);
       }
     },
     [
@@ -756,7 +778,37 @@ export function useBookshelfState({
       fetchAllBookshelfReviewsForMeeting,
       fetchAllMeetingTeamTopics,
       group.clubId,
+      setBookshelfDetailLoadingForMeeting,
     ],
+  );
+
+  const hasBookshelfMeetingDetailCache = useCallback(
+    (book: BookshelfItem) => {
+      const meetingId = book.remoteMeetingId;
+      if (typeof meetingId !== 'number') return true;
+      return (
+        Object.prototype.hasOwnProperty.call(bookshelfTopicPageStateByMeetingId, meetingId) &&
+        Object.prototype.hasOwnProperty.call(bookshelfReviewsByMeetingId, meetingId) &&
+        Object.prototype.hasOwnProperty.call(regularMeetingInfoByMeetingId, meetingId)
+      );
+    },
+    [
+      bookshelfReviewsByMeetingId,
+      bookshelfTopicPageStateByMeetingId,
+      regularMeetingInfoByMeetingId,
+    ],
+  );
+
+  const ensureBookshelfMeetingDetailLoaded = useCallback(
+    (book: BookshelfItem) => {
+      const meetingId = book.remoteMeetingId;
+      if (typeof meetingId !== 'number') return;
+      if (hasBookshelfMeetingDetailCache(book)) return;
+      if ((bookshelfDetailLoadingCountByMeetingIdRef.current[meetingId] ?? 0) > 0) return;
+
+      void reloadBookshelfMeetingDetail(book);
+    },
+    [hasBookshelfMeetingDetailCache, reloadBookshelfMeetingDetail],
   );
 
   const closeBookshelfBookSelector = useCallback(() => {
@@ -847,6 +899,7 @@ export function useBookshelfState({
         setBookshelfDetailTab(tab);
         setSelectedRegularGroupId(null);
         setBookshelfViewMode('DETAIL');
+        ensureBookshelfMeetingDetailLoaded(book);
       };
 
       if (tab === 'REGULAR' && !isLoggedIn) {
@@ -855,7 +908,7 @@ export function useBookshelfState({
       }
       open();
     },
-    [isLoggedIn, requireAuth],
+    [ensureBookshelfMeetingDetailLoaded, isLoggedIn, requireAuth],
   );
 
   const openBookshelfTopicByMeetingId = useCallback(
@@ -1145,6 +1198,9 @@ export function useBookshelfState({
       triggerSelectionHaptic();
       const change = () => {
         setBookshelfDetailTab(tab);
+        if (selectedBookshelfBook) {
+          ensureBookshelfMeetingDetailLoaded(selectedBookshelfBook);
+        }
         if (tab !== 'REGULAR') {
           setSelectedRegularGroupId(null);
           setBookshelfViewMode('DETAIL');
@@ -1158,7 +1214,7 @@ export function useBookshelfState({
       }
       change();
     },
-    [isLoggedIn, requireAuth],
+    [ensureBookshelfMeetingDetailLoaded, isLoggedIn, requireAuth, selectedBookshelfBook],
   );
 
   const handleSelectRegularGroup = useCallback((groupId: string) => {
