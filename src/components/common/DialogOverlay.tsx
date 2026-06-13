@@ -1,4 +1,12 @@
-import { Modal, KeyboardAvoidingView, Platform, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
 
 interface DialogOverlayProps {
@@ -19,11 +27,12 @@ export function DialogOverlay({
   withKeyboard,
 }: DialogOverlayProps) {
   const inner = (
-    <Pressable style={overlayStyle} onPress={onClose} disableFeedback>
-      <Pressable style={cardStyle} onPress={(e) => e.stopPropagation()} disableFeedback>
+    <View style={overlayStyle}>
+      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} disableFeedback />
+      <View style={cardStyle}>
         {children}
-      </Pressable>
-    </Pressable>
+      </View>
+    </View>
   );
 
   return (

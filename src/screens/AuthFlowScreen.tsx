@@ -127,6 +127,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     value: string;
     duplicate: boolean;
   } | null>(null);
+  const [nicknameLengthExceeded, setNicknameLengthExceeded] = useState(false);
   const [checkingNickname, setCheckingNickname] = useState(false);
 
   const [description, setDescription] = useState('');
@@ -134,6 +135,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [selectedProfileImage, setSelectedProfileImage] = useState<LocalProfileImage | null>(null);
+  const [defaultProfileConfirmVisible, setDefaultProfileConfirmVisible] = useState(false);
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -232,11 +234,13 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     setShowSignUpPasswordConfirm(false);
     setNickname('');
     setNicknameChecked(null);
+    setNicknameLengthExceeded(false);
     setDescription('');
     setName('');
     setPhoneNumber('');
     setProfileImageUrl('');
     setSelectedProfileImage(null);
+    setDefaultProfileConfirmVisible(false);
     setUploadingProfileImage(false);
 
     setSelectedCategories([]);
@@ -246,6 +250,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const goToLogin = () => {
     setSignUpUiPreview(false);
     setEmailResetConfirmVisible(false);
+    setDefaultProfileConfirmVisible(false);
     setStep('login');
     setActiveTermsModalKey(null);
     setVerificationCode('');
@@ -269,6 +274,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     setSignUpPasswordConfirm('checkmo!');
     setNickname('bookbook');
     setNicknameChecked({ value: 'bookbook', duplicate: false });
+    setNicknameLengthExceeded(false);
     setDescription('안녕하세요');
     setName('홍길동');
     setPhoneNumber('010-1234-5678');
@@ -348,6 +354,16 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
   const handleVerificationCodeChange = (value: string) => {
     setVerificationCode(value.replace(/\D/g, '').slice(0, 6));
+  };
+
+  const handleNicknameChange = (value: string) => {
+    const nextNickname = value.slice(0, INPUT_LIMITS.NICKNAME);
+    setNicknameLengthExceeded(value.length > INPUT_LIMITS.NICKNAME);
+    setNickname(nextNickname);
+    const trimmed = nextNickname.trim();
+    if (nicknameChecked && nicknameChecked.value !== trimmed) {
+      setNicknameChecked(null);
+    }
   };
 
   const resetEmailVerificationStep = () => {
@@ -465,6 +481,12 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       mimeType: asset.mimeType,
     });
     setProfileImageUrl('');
+  };
+
+  const useDefaultProfileImage = () => {
+    setProfileImageUrl('');
+    setSelectedProfileImage(null);
+    setDefaultProfileConfirmVisible(false);
   };
 
   const handleSubmitSignUp = async () => {
@@ -785,7 +807,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             contentContainerStyle={styles.termsModalBodyContent}
             keyboardShouldPersistTaps="handled"
             nestedScrollEnabled
-            showsVerticalScrollIndicator={false}
+            showsVerticalScrollIndicator
           >
             <Text style={styles.termsModalText}>
               {activeTermsModalDocument?.content ?? ''}
@@ -818,6 +840,13 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   }
 
   if (step === 'emailVerification') {
+    const canConfirmVerification =
+      ev.sent &&
+      !ev.verified &&
+      !ev.confirming &&
+      ev.remainingSeconds > 0 &&
+      verificationCode.trim().length > 0;
+
     return renderCard(
       <>
         <Text style={styles.title}>이메일 인증</Text>
@@ -880,14 +909,21 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
                 styles.outlineButton,
                 styles.actionButton,
                 ev.verified && styles.outlineButtonActive,
-                pressed && styles.pressed,
+                !canConfirmVerification && !ev.verified && styles.outlineButtonDisabled,
+                pressed && canConfirmVerification && styles.pressed,
               ]}
               onPress={() => {
                 void handleConfirmVerificationCode();
               }}
-              disabled={ev.confirming}
+              disabled={!canConfirmVerification}
             >
-              <Text style={[styles.outlineText, ev.verified && styles.outlineTextActive]}>
+              <Text
+                style={[
+                  styles.outlineText,
+                  ev.verified && styles.outlineTextActive,
+                  !canConfirmVerification && !ev.verified && styles.outlineTextDisabled,
+                ]}
+              >
                 {ev.confirming ? '확인 중...' : ev.verified ? '인증 완료되었습니다' : '인증하기'}
               </Text>
             </Pressable>
@@ -1028,18 +1064,13 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           <View style={styles.inlineRow}>
             <FormTextInput
               value={nickname}
-              onChangeText={(value) => {
-                setNickname(value);
-                const trimmed = value.trim();
-                if (nicknameChecked && nicknameChecked.value !== trimmed) {
-                  setNicknameChecked(null);
-                }
-              }}
+              onChangeText={handleNicknameChange}
               placeholder="닉네임 입력해주세요"
               style={[styles.input, styles.inputDescenderSafe, styles.inlineInput]}
               placeholderTextColor={colors.gray3}
               fieldType="nickname"
               maxLength={INPUT_LIMITS.NICKNAME}
+              enforceMaxLength={false}
             />
             <Pressable
               style={({ pressed }) => [styles.outlineButton, styles.inlineButton, pressed && styles.pressed]}
@@ -1066,9 +1097,19 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               {nicknameFormatError}
             </Text>
           ) : null}
+          {nicknameLengthExceeded ? (
+            <Text style={[styles.nicknameCheckText, styles.nicknameCheckError]}>
+              닉네임은 최대 20글자까지 입력할 수 있습니다.
+            </Text>
+          ) : null}
 
           <View style={styles.descriptionFieldGroup}>
-            <Text style={styles.label}>소개</Text>
+            <View style={styles.descriptionLabelRow}>
+              <Text style={styles.label}>소개</Text>
+              <Text style={styles.inputCounterText}>
+                {description.length}/{INPUT_LIMITS.USER_DESCRIPTION}
+              </Text>
+            </View>
             <FormTextInput
               value={description}
               onChangeText={setDescription}
@@ -1077,9 +1118,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               placeholderTextColor={colors.gray3}
               maxLength={INPUT_LIMITS.USER_DESCRIPTION}
             />
-            <Text style={styles.inputCounterText}>
-              {description.length}/{INPUT_LIMITS.USER_DESCRIPTION}
-            </Text>
           </View>
 
           <Text style={styles.label}>이름</Text>
@@ -1093,7 +1131,10 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             maxLength={INPUT_LIMITS.USER_NAME}
           />
 
-          <Text style={styles.label}>전화번호</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>전화번호</Text>
+            <Text style={styles.labelHint}>(아이디 찾기용)</Text>
+          </View>
           <FormTextInput
             value={phoneNumber}
             onChangeText={(value) => setPhoneNumber(formatPhoneNumberInput(value))}
@@ -1157,12 +1198,35 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
             variant={defaultProfileSelected ? 'primary' : 'secondary'}
             label="기본 프로필 이미지"
             style={styles.profileDefaultButton}
-            onPress={() => {
-              setProfileImageUrl('');
-              setSelectedProfileImage(null);
-            }}
+            onPress={() => setDefaultProfileConfirmVisible(true)}
           />
         </View>
+
+        <DialogOverlay
+          visible={defaultProfileConfirmVisible}
+          onClose={() => setDefaultProfileConfirmVisible(false)}
+          overlayStyle={styles.confirmModalOverlay}
+          cardStyle={styles.confirmModalCard}
+        >
+          <Text style={styles.confirmModalTitle}>
+            기본프로필 이미지를 사용하시겠습니까?
+          </Text>
+          <View style={styles.confirmModalButtonRow}>
+            <AppButton
+              variant="secondary"
+              label="취소"
+              onPress={() => setDefaultProfileConfirmVisible(false)}
+              size="lg"
+              fullWidth
+            />
+            <AppButton
+              label="확인"
+              onPress={useDefaultProfileImage}
+              size="lg"
+              fullWidth
+            />
+          </View>
+        </DialogOverlay>
 
         <Text style={styles.label}>관심 카테고리 (최소 1개, 최대 6개 선택)</Text>
         <View style={styles.chipGrid}>
@@ -1516,7 +1580,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   termsModalBodyContent: {
-    paddingBottom: spacing.xs,
+    paddingBottom: spacing.lg,
   },
   termsModalText: {
     ...typography.caption1_3_spacious,
@@ -1571,11 +1635,17 @@ const styles = StyleSheet.create({
   descriptionFieldGroup: {
     gap: spacing.xs,
   },
+  descriptionLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
   inputCounterText: {
     ...typography.body2_3,
     color: colors.gray4,
     textAlign: 'right',
-    marginTop: -spacing.xxs,
+    marginLeft: 'auto',
   },
   helperInline: {
     ...typography.body2_3,
@@ -1763,6 +1833,7 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+    marginTop: 'auto',
   },
   findIdResultActions: {
     gap: spacing.xs,
