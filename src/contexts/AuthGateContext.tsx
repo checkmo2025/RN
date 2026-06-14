@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ApiError } from '../services/api/http';
-import { fetchLoginStatusSilently } from '../services/api/authApi';
+import { fetchLoginStatusSilently, silentRefreshSession } from '../services/api/authApi';
 
 const AUTH_TRANSITION_MS = 1000;
 
@@ -70,7 +70,23 @@ export function AuthGateProvider({ children }: Props) {
       } catch (error) {
         if (cancelled) return;
         if (error instanceof ApiError && error.status === 401) {
-          setLoginState(false);
+          const refreshed = await silentRefreshSession();
+          if (cancelled) return;
+
+          if (refreshed) {
+            try {
+              const status = await fetchLoginStatusSilently(true);
+              if (!cancelled) {
+                setLoginState(status !== null);
+              }
+            } catch {
+              if (!cancelled) {
+                setLoginState(false);
+              }
+            }
+          } else {
+            setLoginState(false);
+          }
         } else {
           setLoginState(false);
         }

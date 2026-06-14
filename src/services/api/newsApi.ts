@@ -1,15 +1,6 @@
-import { API_BASE_URL, ApiEnvelope, ApiError, unwrapResult } from './http';
+import { ApiEnvelope, requestJson, unwrapResult } from './http';
 
 type UnknownRecord = Record<string, unknown>;
-
-type QueryValue = string | number | boolean | null | undefined;
-
-type RequestOptions = {
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  query?: Record<string, QueryValue>;
-  body?: unknown;
-  headers?: Record<string, string>;
-};
 
 type NewsListResult = {
   basicInfoList?: unknown[];
@@ -44,95 +35,6 @@ export type RemoteNewsSummaryList = {
   nextCursor: number | null;
   pageSize?: number;
 };
-
-function buildUrl(path: string, query?: Record<string, QueryValue>) {
-  const normalizedPath = path
-    .replace(/^\/+/, '')
-    .replace(/^api\//, '');
-  const url = new URL(normalizedPath, `${API_BASE_URL}/`);
-
-  if (query) {
-    Object.entries(query).forEach(([key, value]) => {
-      if (value === null || typeof value === 'undefined') return;
-      url.searchParams.set(key, String(value));
-    });
-  }
-
-  return url.toString();
-}
-
-async function requestJsonSilent<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const {
-    method = 'GET',
-    query,
-    body,
-    headers = {},
-  } = options;
-
-  const requestHeaders: Record<string, string> = {
-    ...headers,
-  };
-
-  if (typeof body !== 'undefined') {
-    requestHeaders['Content-Type'] = 'application/json';
-  }
-
-  let response: Response;
-  try {
-    response = await fetch(buildUrl(path, query), {
-      method,
-      headers: requestHeaders,
-      body: typeof body !== 'undefined' ? JSON.stringify(body) : undefined,
-      credentials: 'include',
-    });
-  } catch (error) {
-    throw new ApiError('네트워크 연결을 확인해 주십시오.', 0, 'NETWORK_ERROR', error);
-  }
-
-  const text = await response.text();
-  let parsed: unknown = null;
-
-  if (text) {
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      parsed = text;
-    }
-  }
-
-  if (!response.ok) {
-    const message =
-      (typeof parsed === 'object' && parsed !== null && 'message' in parsed
-        ? String((parsed as { message?: unknown }).message)
-        : null) ?? `요청에 실패했습니다. (${response.status})`;
-
-    const code =
-      typeof parsed === 'object' && parsed !== null && 'code' in parsed
-        ? String((parsed as { code?: unknown }).code)
-        : undefined;
-
-    throw new ApiError(message, response.status, code, parsed);
-  }
-
-  if (
-    typeof parsed === 'object' &&
-    parsed !== null &&
-    'isSuccess' in parsed &&
-    (parsed as { isSuccess?: unknown }).isSuccess === false
-  ) {
-    const message =
-      typeof (parsed as { message?: unknown }).message === 'string'
-        ? ((parsed as { message?: string }).message as string)
-        : '요청에 실패했습니다.';
-    const code =
-      typeof (parsed as { code?: unknown }).code === 'string'
-        ? ((parsed as { code?: string }).code as string)
-        : undefined;
-    throw new ApiError(message, response.status, code, parsed);
-  }
-
-  return parsed as T;
-}
 
 function asRecord(value: unknown): UnknownRecord | null {
   return typeof value === 'object' && value !== null ? (value as UnknownRecord) : null;
@@ -233,7 +135,7 @@ function normalizeNewsListResult(payload: unknown): RemoteNewsSummaryList {
 }
 
 export async function fetchNewsList(cursorId?: number): Promise<RemoteNewsSummaryList> {
-  const response = await requestJsonSilent<NewsListResponse>('/news', {
+  const response = await requestJson<NewsListResponse>('/news', {
     method: 'GET',
     query: {
       cursorId,
@@ -243,7 +145,7 @@ export async function fetchNewsList(cursorId?: number): Promise<RemoteNewsSummar
 }
 
 export async function fetchMyNewsList(cursorId?: number): Promise<RemoteNewsSummaryList> {
-  const response = await requestJsonSilent<NewsListResponse>('/news/me', {
+  const response = await requestJson<NewsListResponse>('/news/me', {
     method: 'GET',
     query: {
       cursorId,
@@ -253,7 +155,7 @@ export async function fetchMyNewsList(cursorId?: number): Promise<RemoteNewsSumm
 }
 
 export async function fetchNewsDetail(newsId: number): Promise<RemoteNewsDetail | null> {
-  const response = await requestJsonSilent<NewsDetailResponse>(`/news/${newsId}`, {
+  const response = await requestJson<NewsDetailResponse>(`/news/${newsId}`, {
     method: 'GET',
   });
   const result = unwrapResult(response);

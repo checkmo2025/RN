@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { type NavigationProp, type ParamListBase } from '@react-navigation/native';
 import { ApiError } from '../../services/api/http';
-import { logoutSession } from '../../services/api/authApi';
+import { clearStoredAuthSession, logoutSession } from '../../services/api/authApi';
 import {
   fetchMyReports,
   updateMyEmail,
@@ -226,6 +226,7 @@ export function useAccountSettingsState({
     const submit = async () => {
       try {
         await updateMyPassword({ currentPassword, newPassword, confirmPassword });
+        await clearStoredAuthSession();
         showToast('비밀번호가 변경되었습니다. 다시 로그인해 주세요.');
         logout();
       } catch (error) {
@@ -252,6 +253,7 @@ export function useAccountSettingsState({
           const submit = async () => {
             try {
               await withdrawMember();
+              await clearStoredAuthSession();
               showToast('탈퇴가 신청되었습니다.');
               logout();
               onCloseSettings();

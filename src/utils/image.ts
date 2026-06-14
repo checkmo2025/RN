@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../services/api/http';
+import { API_ORIGIN_URL } from '../services/api/http';
 
 const SUPPORTED_IMAGE_URL_PATTERN =
   /^(https?:\/\/|file:\/\/|content:\/\/|asset:\/\/|ph:\/\/|data:image\/)/i;
@@ -19,7 +19,7 @@ export function normalizeRemoteImageUrl(url?: string | null): string | undefined
   }
 
   if (trimmed.startsWith('/')) {
-    return new URL(trimmed, API_BASE_URL).toString();
+    return new URL(trimmed, `${API_ORIGIN_URL}/`).toString();
   }
 
   if (DOMAIN_ONLY_IMAGE_URL_PATTERN.test(trimmed)) {
@@ -27,9 +27,8 @@ export function normalizeRemoteImageUrl(url?: string | null): string | undefined
   }
 
   if (RELATIVE_IMAGE_PATH_PATTERN.test(trimmed)) {
-    const origin = new URL(API_BASE_URL).origin;
     const normalizedPath = trimmed.replace(/^\.?\//, '');
-    return new URL(normalizedPath, `${origin}/`).toString();
+    return new URL(normalizedPath, `${API_ORIGIN_URL}/`).toString();
   }
 
   return undefined;

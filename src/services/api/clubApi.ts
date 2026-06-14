@@ -1,4 +1,4 @@
-import { API_BASE_URL, ApiEnvelope, ApiError, requestJson, unwrapResult } from './http';
+import { ApiEnvelope, ApiError, fetchApi, requestJson, unwrapResult } from './http';
 import { asRecord, toBooleanValue, toNumberValue, toStringValue, firstDefined } from './parseUtils';
 import { normalizeRemoteImageUrl } from '../../utils/image';
 
@@ -517,11 +517,6 @@ type ApiResponseBookshelfReviews = ApiEnvelope<{
 type ApiResponseMeetingInfo = ApiEnvelope<unknown>;
 type ApiResponseMeetingMemberList = ApiEnvelope<unknown>;
 type ApiResponseMeetingTeamTopics = ApiEnvelope<unknown>;
-
-function buildAbsoluteApiUrl(path: string): string {
-  const normalizedPath = path.replace(/^\/+/, '').replace(/^api\//, '');
-  return new URL(normalizedPath, `${API_BASE_URL}/`).toString();
-}
 
 function extractMeetingIdFromUrl(value?: string): number | undefined {
   if (!value) return undefined;
@@ -1881,9 +1876,8 @@ export async function fetchClubNextMeetingRedirect(
   let response: Response;
 
   try {
-    response = await fetch(buildAbsoluteApiUrl(`/clubs/${clubId}/meetings/next`), {
+    response = await fetchApi(`/clubs/${clubId}/meetings/next`, {
       method: 'GET',
-      credentials: 'include',
       redirect: 'manual',
       headers: {
         Accept: 'application/json',

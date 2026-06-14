@@ -1,6 +1,17 @@
-import { API_BASE_URL, ApiEnvelope, ApiError, requestJson, unwrapResult } from './http';
+import { ApiEnvelope, ApiError, fetchApi, requestJson, silentRefreshSession, unwrapResult } from './http';
+import {
+  deleteStoredRefreshToken,
+  getStoredRefreshToken,
+  saveStoredRefreshToken,
+} from './authTokenStore';
 
-type ApiResponseString = ApiEnvelope<string>;
+type SignUpResult = {
+  email?: string;
+  isProfileCompleted?: boolean;
+};
+type LoginResult = {
+  refreshToken?: string;
+};
 type FindEmailResult = {
   email?: string;
 };
@@ -27,24 +38,12 @@ type PresignedUrl = {
 
 type JsonRecord = Record<string, unknown>;
 
-function buildUrl(path: string, query?: Record<string, string | undefined>) {
-  const normalizedPath = path
-    .replace(/^\/+/, '')
-    .replace(/^api\//, '');
-  const url = new URL(normalizedPath, `${API_BASE_URL}/`);
-  Object.entries(query ?? {}).forEach(([key, value]) => {
-    if (!value) return;
-    url.searchParams.set(key, value);
-  });
-  return url.toString();
-}
-
 export async function loginByIdentifier(
   identifier: string,
   password: string,
   options?: { suppressErrorToast?: boolean },
 ): Promise<void> {
-  await requestJson<ApiResponseString>('/auth/login', {
+  const response = await requestJson<ApiEnvelope<LoginResult>>('/auth/app/login', {
     method: 'POST',
     body: {
       identifier,
@@ -52,6 +51,13 @@ export async function loginByIdentifier(
     },
     suppressErrorToast: options?.suppressErrorToast,
   });
+
+  const refreshToken = unwrapResult(response)?.refreshToken;
+  if (!refreshToken) {
+    throw new ApiError('로그인 토큰을 확인할 수 없습니다.', 500, 'MISSING_REFRESH_TOKEN', response);
+  }
+
+  await saveStoredRefreshToken(refreshToken);
 }
 
 // Backward-compatible alias for existing callers.
@@ -62,7 +68,7 @@ export async function signUpByEmail(
   password: string,
   options?: { suppressErrorToast?: boolean },
 ): Promise<void> {
-  await requestJson<ApiResponseString>('/auth/signup', {
+  await requestJson<ApiEnvelope<SignUpResult>>('/auth/signup', {
     method: 'POST',
     body: {
       email,
@@ -99,9 +105,11 @@ export async function confirmEmailVerification(
 }
 
 export async function checkNicknameDuplicate(nickname: string): Promise<boolean> {
-  const response = await fetch(buildUrl('/members/check-nickname', { nickname }), {
+  const response = await fetchApi('/members/check-nickname', {
     method: 'POST',
-    credentials: 'include',
+    query: {
+      nickname,
+    },
   });
 
   const rawText = await response.text();
@@ -218,7 +226,27 @@ export async function fetchLoginStatusSilently(
 }
 
 export async function logoutSession(): Promise<void> {
-  await requestJson<ApiEnvelope<null>>('/auth/logout', {
-    method: 'POST',
-  });
+  const refreshToken = await getStoredRefreshToken();
+
+  try {
+    if (refreshToken) {
+      await requestJson<ApiEnvelope<null>>('/auth/app/logout', {
+        method: 'POST',
+        headers: {
+          'X-Refresh-Token': refreshToken,
+        },
+        suppressErrorToast: true,
+      });
+      return;
+    }
+
+    await requestJson<ApiEnvelope<null>>('/auth/logout', {
+      method: 'POST',
+      suppressErrorToast: true,
+    });
+  } finally {
+    await deleteStoredRefreshToken();
+  }
 }
+
+export { deleteStoredRefreshToken as clearStoredAuthSession, silentRefreshSession };

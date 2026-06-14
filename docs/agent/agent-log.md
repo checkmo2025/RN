@@ -2782,3 +2782,10 @@ export const interactionOpacity = {
 - 책이야기 상세/공지 상세/책장 상세 메뉴를 바텀시트 액션 메뉴로 전환하고, 댓글·발제·한줄평은 기존 앵커 메뉴 유지
 - 공지/책장 삭제는 `Alert.alert` 확인창을 거치도록 정리하고, TODO에 실기기 육안 확인 항목 6건 추가
 - 검증: `npm run check` 통과
+
+# 2026-06-15 01:44:22 KST RN API v1 및 앱 인증 분리 대응
+
+- API base URL 기본값을 `/api/v1`로 전환하고 legacy `/api` env 보정, 공용 `buildApiUrl`/`fetchApi` 정리
+- 앱 로그인/로그아웃을 `/auth/app/*`로 전환하고 SecureStore refresh token 저장소 및 silent refresh single-flight 추가
+- 앱 시작 401 refresh 복구, 직접 fetch 호출(news/닉네임/next meeting), 이미지 URL origin 기준 정규화 반영
+- 검증: `npm run check` 통과
