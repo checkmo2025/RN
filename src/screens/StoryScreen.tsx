@@ -39,7 +39,6 @@ import { PENCIL_ICON_URI } from '../constants/iconMap';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import { colors, interactionOpacity, layers, radius, scaleSize, spacing, typography } from '../theme';
 import { navigateToHome, parsePositiveIntParam } from '../navigation/navigateToHome';
-import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { FloatingActionButton } from '../components/common/FloatingActionButton';
@@ -339,8 +338,39 @@ export function StoryScreen() {
   const inlineReplyInputRef = useRef<TextInput>(null);
   const commentSectionYRef = useRef(0);
   const pendingDetailFocusRef = useRef<'comments' | null>(null);
+  const isComposingRef = useRef(false);
+  const titleValueRef = useRef('');
+  const bodyValueRef = useRef('');
+  const selectedBookValueRef = useRef<Book | null>(null);
+  const composeInitialDraftRef = useRef<ComposeInitialDraft>(EMPTY_COMPOSE_INITIAL_DRAFT);
+  const selectedStoryValueRef = useRef<Story | null>(null);
+  const commentDraftTextRef = useRef('');
+  const editingCommentIdRef = useRef<number | null>(null);
+  const editingCommentOriginalTextRef = useRef('');
   const writeIconUri = PENCIL_ICON_URI;
   const detailTranslateX = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    isComposingRef.current = isComposing;
+    titleValueRef.current = title;
+    bodyValueRef.current = body;
+    selectedBookValueRef.current = selectedBook;
+    composeInitialDraftRef.current = composeInitialDraft;
+    selectedStoryValueRef.current = selectedStory;
+    commentDraftTextRef.current = commentInput;
+    editingCommentIdRef.current = editingCommentId;
+    editingCommentOriginalTextRef.current = editingCommentOriginalText;
+  }, [
+    body,
+    commentInput,
+    composeInitialDraft,
+    editingCommentId,
+    editingCommentOriginalText,
+    isComposing,
+    selectedBook,
+    selectedStory,
+    title,
+  ]);
 
   const animateTransition = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -351,6 +381,10 @@ export function StoryScreen() {
     detailTranslateX.stopAnimation(() => {
       detailTranslateX.setValue(0);
     });
+    selectedStoryValueRef.current = null;
+    editingCommentIdRef.current = null;
+    editingCommentOriginalTextRef.current = '';
+    commentDraftTextRef.current = '';
     setSelectedStory(null);
     setEditingCommentId(null);
     setReplyTarget(null);
@@ -422,13 +456,23 @@ export function StoryScreen() {
       const nextTitle = draft?.title ?? '';
       const nextBody = draft?.body ?? '';
       const nextBook = initialBook ?? null;
+      const nextInitialDraft = buildComposeInitialDraft(nextBook, nextTitle, nextBody);
+      selectedStoryValueRef.current = null;
+      isComposingRef.current = true;
+      titleValueRef.current = nextTitle;
+      bodyValueRef.current = nextBody;
+      selectedBookValueRef.current = nextBook;
+      composeInitialDraftRef.current = nextInitialDraft;
+      commentDraftTextRef.current = '';
+      editingCommentIdRef.current = null;
+      editingCommentOriginalTextRef.current = '';
       setSelectedStory(null);
       setEditingStoryId(null);
       setDraftStoryId(draft?.id ?? null);
       setTitle(nextTitle);
       setBody(nextBody);
       setSelectedBook(nextBook);
-      setComposeInitialDraft(buildComposeInitialDraft(nextBook, nextTitle, nextBody));
+      setComposeInitialDraft(nextInitialDraft);
       setShowBookPicker(false);
       setBookSearchQuery(initialBook?.title ?? draft?.title ?? '');
       setBookSearchResults([]);
@@ -448,6 +492,11 @@ export function StoryScreen() {
 
   const closeCompose = useCallback(() => {
     animateTransition();
+    isComposingRef.current = false;
+    composeInitialDraftRef.current = EMPTY_COMPOSE_INITIAL_DRAFT;
+    editingCommentIdRef.current = null;
+    editingCommentOriginalTextRef.current = '';
+    commentDraftTextRef.current = '';
     setIsComposing(false);
     setEditingStoryId(null);
     setDraftStoryId(null);
@@ -483,10 +532,24 @@ export function StoryScreen() {
   ]);
   const isCommentSubmitDisabled = commentInput.trim().length === 0;
 
+  const hasUnsavedStoryChangesNow = useCallback(() => {
+    const initialDraft = composeInitialDraftRef.current;
+    const composingDraft =
+      isComposingRef.current &&
+      (titleValueRef.current !== initialDraft.title ||
+        bodyValueRef.current !== initialDraft.body ||
+        getComposeBookKey(selectedBookValueRef.current) !== initialDraft.bookKey);
+    const commentDraft =
+      Boolean(selectedStoryValueRef.current) &&
+      (editingCommentIdRef.current !== null
+        ? commentDraftTextRef.current !== editingCommentOriginalTextRef.current
+        : commentDraftTextRef.current.trim().length > 0);
+    return composingDraft || commentDraft;
+  }, []);
 
   const showDiscardStoryAlert = useCallback(
     (onClose: () => void) => {
-      if (!hasUnsavedStoryChanges) {
+      if (!hasUnsavedStoryChangesNow()) {
         onClose();
         return;
       }
@@ -496,8 +559,23 @@ export function StoryScreen() {
         { text: '닫기', style: 'destructive', onPress: onClose },
       ]);
     },
-    [hasUnsavedStoryChanges],
+    [hasUnsavedStoryChangesNow],
   );
+
+  const handleChangeStoryTitle = useCallback((text: string) => {
+    titleValueRef.current = text;
+    setTitle(text);
+  }, []);
+
+  const handleChangeStoryBody = useCallback((text: string) => {
+    bodyValueRef.current = text;
+    setBody(text);
+  }, []);
+
+  const handleChangeCommentInput = useCallback((text: string) => {
+    commentDraftTextRef.current = text;
+    setCommentInput(text);
+  }, []);
 
   const requestCloseCompose = useCallback(() => {
     showDiscardStoryAlert(closeCompose);
@@ -833,6 +911,11 @@ export function StoryScreen() {
       detailTranslateX.stopAnimation(() => {
         detailTranslateX.setValue(0);
       });
+      isComposingRef.current = false;
+      composeInitialDraftRef.current = EMPTY_COMPOSE_INITIAL_DRAFT;
+      commentDraftTextRef.current = '';
+      editingCommentIdRef.current = null;
+      editingCommentOriginalTextRef.current = '';
       setIsComposing(false);
       setEditingStoryId(null);
       setComposeInitialDraft(EMPTY_COMPOSE_INITIAL_DRAFT);
@@ -857,6 +940,7 @@ export function StoryScreen() {
           if (!exists) return [mapped, ...prev];
           return prev.map((story) => (story.id === mapped.id ? mapped : story));
         });
+        selectedStoryValueRef.current = mapped;
         setSelectedStory(mapped);
       } catch (error) {
         if (!(error instanceof ApiError)) {
@@ -872,11 +956,21 @@ export function StoryScreen() {
       if (typeof story.remoteId !== 'number') return;
       const nextBody = story.fullText || story.body;
       const nextBook = story.book ?? null;
+      const nextInitialDraft = buildComposeInitialDraft(nextBook, story.title, nextBody);
+      selectedStoryValueRef.current = null;
+      isComposingRef.current = true;
+      titleValueRef.current = story.title;
+      bodyValueRef.current = nextBody;
+      selectedBookValueRef.current = nextBook;
+      composeInitialDraftRef.current = nextInitialDraft;
+      commentDraftTextRef.current = '';
+      editingCommentIdRef.current = null;
+      editingCommentOriginalTextRef.current = '';
       setEditingStoryId(story.remoteId);
       setTitle(story.title);
       setBody(nextBody);
       setSelectedBook(nextBook);
-      setComposeInitialDraft(buildComposeInitialDraft(nextBook, story.title, nextBody));
+      setComposeInitialDraft(nextInitialDraft);
       setSelectedStory(null);
       setEditingCommentId(null);
       setEditingCommentOriginalText('');
@@ -1034,11 +1128,15 @@ export function StoryScreen() {
 
   const beginEditComment = useCallback((comment: Comment) => {
     if (typeof comment.remoteId !== 'number') return;
+    const nextCommentText = comment.deleted ? '' : comment.text;
+    editingCommentIdRef.current = comment.remoteId;
+    editingCommentOriginalTextRef.current = nextCommentText;
+    commentDraftTextRef.current = nextCommentText;
     setCommentMenu(null);
     setEditingCommentId(comment.remoteId);
-    setEditingCommentOriginalText(comment.deleted ? '' : comment.text);
+    setEditingCommentOriginalText(nextCommentText);
     setReplyTarget(null);
-    setCommentInput(comment.deleted ? '' : comment.text);
+    setCommentInput(nextCommentText);
     requestAnimationFrame(() => {
       commentInputRef.current?.focus();
     });
@@ -1067,6 +1165,9 @@ export function StoryScreen() {
         comments: Math.max(0, originalStory.comments - 1),
       };
       applyStoryUpdate(nextStory);
+      editingCommentIdRef.current = null;
+      editingCommentOriginalTextRef.current = '';
+      commentDraftTextRef.current = '';
       setEditingCommentId(null);
       setEditingCommentOriginalText('');
       setReplyTarget(null);
@@ -1118,11 +1219,18 @@ export function StoryScreen() {
         showToast('삭제된 댓글에는 대댓글을 작성할 수 없습니다.');
         return;
       }
+      if (current.replyTo) {
+        showToast('대댓글에는 다시 답글을 달 수 없습니다.');
+        return;
+      }
       if (typeof current.remoteId !== 'number') {
         showToast('잠시 후 다시 시도해 주십시오.');
         return;
       }
 
+      editingCommentIdRef.current = null;
+      editingCommentOriginalTextRef.current = '';
+      commentDraftTextRef.current = '';
       setEditingCommentId(null);
       setEditingCommentOriginalText('');
       setReplyTarget({
@@ -1140,9 +1248,19 @@ export function StoryScreen() {
 
   const commentMenuItems = useMemo<ActionMenuItem[]>(() => {
     if (!commentMenu) return [];
+    const canReply = !commentMenu.comment.replyTo && !commentMenu.comment.deleted;
+    const replyItems: ActionMenuItem[] = canReply
+      ? [
+          {
+            key: 'reply',
+            label: '대댓글 쓰기',
+            onPress: () => handleSelectCommentMenuAction('reply'),
+          },
+        ]
+      : [];
     if (isLoggedIn && commentMenu.comment.mine) {
       return [
-        { key: 'reply', label: '대댓글 쓰기', onPress: () => handleSelectCommentMenuAction('reply') },
+        ...replyItems,
         { key: 'edit', label: '수정하기', onPress: () => handleSelectCommentMenuAction('edit') },
         {
           key: 'delete',
@@ -1154,7 +1272,7 @@ export function StoryScreen() {
     }
     return [
       { key: 'report', label: '신고하기', onPress: () => handleSelectCommentMenuAction('report') },
-      { key: 'reply', label: '대댓글 쓰기', onPress: () => handleSelectCommentMenuAction('reply') },
+      ...replyItems,
     ];
   }, [commentMenu, handleSelectCommentMenuAction, isLoggedIn]);
 
@@ -1205,6 +1323,8 @@ export function StoryScreen() {
   }, []);
 
   const handleSaveDraft = useCallback(() => {
+    if (submittingStory) return;
+
     requireAuth(() => {
       const nextTitle = title.trim();
       const nextBody = body.trim();
@@ -1253,21 +1373,26 @@ export function StoryScreen() {
 
       void save();
     });
-  }, [requireAuth, title, body, selectedBook, draftStoryId, navigation]);
+  }, [requireAuth, submittingStory, title, body, selectedBook, draftStoryId, navigation]);
 
   const handleSubmit = () => {
+    if (submittingStory) return;
+
     const nextTitle = title.trim();
     const nextDescription = body.trim();
+    const currentEditingStoryId = editingStoryId;
+    const currentDraftStoryId = draftStoryId;
+    const currentSelectedBook = selectedBook;
 
-    if (!isEditingStory && !selectedBook) {
+    if (currentEditingStoryId === null && !currentSelectedBook) {
       showToast('책을 선택해야 합니다.');
       return;
     }
-    if (isEditingStory && !nextDescription) {
+    if (currentEditingStoryId !== null && !nextDescription) {
       showToast('내용을 입력해야 합니다.');
       return;
     }
-    if (!isEditingStory && (!nextTitle || !nextDescription)) {
+    if (currentEditingStoryId === null && (!nextTitle || !nextDescription)) {
       showToast('제목과 내용을 입력해야 합니다.');
       return;
     }
@@ -1276,12 +1401,24 @@ export function StoryScreen() {
         const loadingStartedAt = Date.now();
         setSubmittingStory(true);
         try {
-          if (editingStoryId) {
-            await updateBookStory(editingStoryId, { description: nextDescription });
+          let updatedEditedStory: Story | null = null;
+
+          if (currentEditingStoryId !== null) {
+            await updateBookStory(currentEditingStoryId, { description: nextDescription });
+            try {
+              const detail = await fetchBookStoryDetail(currentEditingStoryId, {
+                viewerAuthenticated: isLoggedIn,
+              });
+              if (detail) {
+                updatedEditedStory = mapRemoteDetailToStory(detail);
+              }
+            } catch {
+              updatedEditedStory = null;
+            }
             showToast('책이야기를 수정했습니다.');
-          } else if (draftStoryId !== null) {
+          } else if (currentDraftStoryId !== null) {
             // 임시저장 → 발행
-            await updateBookStory(draftStoryId, {
+            await updateBookStory(currentDraftStoryId, {
               title: nextTitle,
               description: nextDescription,
               status: 'PUBLISHED' as BookStoryStatus,
@@ -1289,11 +1426,11 @@ export function StoryScreen() {
             showToast('책이야기를 등록했습니다.');
             setDraftStoryId(null);
           } else {
-            if (!selectedBook) {
+            if (!currentSelectedBook) {
               showToast('책을 선택해야 합니다.');
               return;
             }
-            const isbn = selectedBook.id.trim();
+            const isbn = currentSelectedBook.id.trim();
             if (!ISBN13_REGEX.test(isbn)) {
               showToast('책 정보 형식이 올바르지 않습니다.');
               return;
@@ -1308,23 +1445,44 @@ export function StoryScreen() {
           }
 
           await loadStories({ reset: true });
-        } catch (error) {
-          if (!(error instanceof ApiError)) {
-            showToast(
-              editingStoryId
-                ? '책이야기 수정에 실패했습니다.'
-                : '책이야기 등록에 실패했습니다.',
-            );
-          }
-        }
 
-        try {
+          titleValueRef.current = '';
+          bodyValueRef.current = '';
+          selectedBookValueRef.current = null;
+          commentDraftTextRef.current = '';
+          editingCommentIdRef.current = null;
+          editingCommentOriginalTextRef.current = '';
           setTitle('');
           setBody('');
           setSelectedBook(null);
           setEditingStoryId(null);
           closeCompose();
-          listRef.current?.scrollToOffset({ offset: 0, animated: true });
+
+          if (updatedEditedStory) {
+            selectedStoryValueRef.current = updatedEditedStory;
+            setStories((prev) => {
+              const exists = prev.some((story) => story.id === updatedEditedStory.id);
+              if (!exists) return [updatedEditedStory, ...prev];
+              return prev.map((story) =>
+                story.id === updatedEditedStory.id ? updatedEditedStory : story,
+              );
+            });
+            setSelectedStory(updatedEditedStory);
+            requestAnimationFrame(() => {
+              scrollDetailToTop(false);
+            });
+          } else {
+            selectedStoryValueRef.current = null;
+            listRef.current?.scrollToOffset({ offset: 0, animated: true });
+          }
+        } catch (error) {
+          if (!(error instanceof ApiError)) {
+            showToast(
+              currentEditingStoryId !== null
+                ? '책이야기 수정에 실패했습니다.'
+                : '책이야기 등록에 실패했습니다.',
+            );
+          }
         } finally {
           await waitForMinimumLoading(loadingStartedAt);
           setSubmittingStory(false);
@@ -1433,6 +1591,12 @@ export function StoryScreen() {
       detailTranslateX.stopAnimation(() => {
         detailTranslateX.setValue(0);
       });
+      isComposingRef.current = false;
+      composeInitialDraftRef.current = EMPTY_COMPOSE_INITIAL_DRAFT;
+      selectedStoryValueRef.current = story;
+      commentDraftTextRef.current = '';
+      editingCommentIdRef.current = null;
+      editingCommentOriginalTextRef.current = '';
       setIsComposing(false);
       setComposeInitialDraft(EMPTY_COMPOSE_INITIAL_DRAFT);
       setSelectedStory(story);
@@ -1529,6 +1693,14 @@ export function StoryScreen() {
       const isEditing = typeof editingCommentId === 'number';
       const parentCommentId = !isEditing ? replyTarget?.commentId : undefined;
       const replyCommentKey = !isEditing ? replyTarget?.commentKey : undefined;
+      if (!isEditing && replyCommentKey) {
+        const replyParent = selectedStory.commentList.find((comment) => comment.id === replyCommentKey);
+        if (replyParent?.replyTo) {
+          showToast('대댓글에는 다시 답글을 달 수 없습니다.');
+          setReplyTarget(null);
+          return;
+        }
+      }
       let updated: Story;
 
       if (isEditing) {
@@ -1567,6 +1739,10 @@ export function StoryScreen() {
       }
 
       applyStoryUpdate(updated);
+      selectedStoryValueRef.current = updated;
+      commentDraftTextRef.current = '';
+      editingCommentIdRef.current = null;
+      editingCommentOriginalTextRef.current = '';
       setCommentInput('');
       setEditingCommentId(null);
       setEditingCommentOriginalText('');
@@ -1595,6 +1771,7 @@ export function StoryScreen() {
               if (!exists) return [mapped, ...prev];
               return prev.map((story) => (story.id === mapped.id ? mapped : story));
             });
+            selectedStoryValueRef.current = mapped;
             setSelectedStory(mapped);
           }
         } catch {
@@ -1608,6 +1785,12 @@ export function StoryScreen() {
   useFocusEffect(
     useCallback(() => {
       return () => {
+        selectedStoryValueRef.current = null;
+        isComposingRef.current = false;
+        composeInitialDraftRef.current = EMPTY_COMPOSE_INITIAL_DRAFT;
+        commentDraftTextRef.current = '';
+        editingCommentIdRef.current = null;
+        editingCommentOriginalTextRef.current = '';
         setSelectedStory(null);
         setIsComposing(false);
         setEditingStoryId(null);
@@ -1768,14 +1951,6 @@ export function StoryScreen() {
 
     return unsubscribe;
   }, [closeCompose, hasUnsavedStoryChanges, navigation]);
-
-  if (submittingStory) {
-    return (
-      <ScreenLayout title="책 이야기" onPressLogo={handlePressHeaderLogo}>
-        <BookFlipLoadingScreen />
-      </ScreenLayout>
-    );
-  }
 
   if (selectedStory) {
     const book = selectedStory.book;
@@ -1954,7 +2129,7 @@ export function StoryScreen() {
                   placeholder={editingCommentId ? '댓글 수정' : '댓글 내용'}
                   placeholderTextColor={colors.gray3}
                   value={commentInput}
-                  onChangeText={setCommentInput}
+                  onChangeText={handleChangeCommentInput}
                   multiline
                   textAlignVertical="top"
                 />
@@ -2021,7 +2196,7 @@ export function StoryScreen() {
                           placeholder="대댓글 내용"
                           placeholderTextColor={colors.gray3}
                           value={commentInput}
-                          onChangeText={setCommentInput}
+                          onChangeText={handleChangeCommentInput}
                           multiline
                           textAlignVertical="top"
                         />
@@ -2177,7 +2352,7 @@ export function StoryScreen() {
           <View style={styles.formCard}>
             <TextInput
               value={title}
-              onChangeText={setTitle}
+              onChangeText={handleChangeStoryTitle}
               placeholder="제목을 입력해야 합니다."
               placeholderTextColor={colors.gray3}
               style={[styles.titleInput, isEditingStory && styles.titleInputReadOnly]}
@@ -2187,7 +2362,7 @@ export function StoryScreen() {
             />
             <FormTextInput
               value={body}
-              onChangeText={setBody}
+              onChangeText={handleChangeStoryBody}
               placeholder={`자신의 책이야기를 들려주세요. (최대 ${INPUT_LIMITS.BOOK_STORY_CONTENT}자)`}
               placeholderTextColor={colors.gray3}
               style={styles.bodyInput}
@@ -2201,22 +2376,34 @@ export function StoryScreen() {
             </Text>
             <View style={styles.formActions}>
               <Pressable
-                style={styles.secondaryButton}
+                style={[styles.secondaryButton, submittingStory && styles.formButtonDisabled]}
                 onPress={requestCloseCompose}
+                disabled={submittingStory}
               >
                 <Text style={styles.secondaryButtonText}>취소</Text>
               </Pressable>
               {!editingStoryId && (
                 <Pressable
-                  style={styles.draftButton}
+                  style={[styles.draftButton, submittingStory && styles.formButtonDisabled]}
                   onPress={handleSaveDraft}
+                  disabled={submittingStory}
                 >
                   <Text style={styles.draftButtonText}>임시저장</Text>
                 </Pressable>
               )}
-              <Pressable style={styles.primaryButton} onPress={handleSubmit}>
+              <Pressable
+                style={[styles.primaryButton, submittingStory && styles.formButtonDisabled]}
+                onPress={handleSubmit}
+                disabled={submittingStory}
+              >
                 <Text style={styles.primaryButtonText}>
-                  {editingStoryId ? '수정' : '등록'}
+                  {submittingStory
+                    ? editingStoryId
+                      ? '수정 중...'
+                      : '등록 중...'
+                    : editingStoryId
+                      ? '수정'
+                      : '등록'}
                 </Text>
               </Pressable>
             </View>
@@ -2765,6 +2952,9 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     ...typography.body1_2,
     color: colors.gray6,
+  },
+  formButtonDisabled: {
+    opacity: 0.5,
   },
   primaryButton: {
     paddingHorizontal: spacing.lg,

@@ -163,6 +163,7 @@ export function useBookshelfState({
   const [updatingBookshelf, setUpdatingBookshelf] = useState(false);
   const [deletingBookshelf, setDeletingBookshelf] = useState(false);
   const [editingBookshelfMeetingId, setEditingBookshelfMeetingId] = useState<number | null>(null);
+  const openingBookshelfEditRef = useRef(false);
   const [openingNextMeeting, setOpeningNextMeeting] = useState(false);
   const [loadingBookshelfDetail, setLoadingBookshelfDetail] = useState(false);
   const [photoViewer, setPhotoViewer] = useState<{ photos: string[]; index: number } | null>(null);
@@ -1648,6 +1649,8 @@ export function useBookshelfState({
   ]);
 
   const handleOpenBookshelfEdit = useCallback(() => {
+    if (openingBookshelfEditRef.current) return;
+
     const clubId = group.clubId;
     const meetingId = selectedBookshelfBook?.remoteMeetingId;
     const fallbackBook = selectedBookshelfBook;
@@ -1658,6 +1661,8 @@ export function useBookshelfState({
     }
 
     const open = async () => {
+      openingBookshelfEditRef.current = true;
+      let scheduledManagementOpen = false;
       try {
         const detail = await fetchClubBookshelfEditInfo(clubId, meetingId);
         if (!detail) {
@@ -1666,10 +1671,9 @@ export function useBookshelfState({
           setEditingBookshelfMeetingId(null);
           return;
         }
-        setActiveManagementScreen('BOOKSHELF_CREATE');
-        setEditingBookshelfMeetingId(meetingId);
         closeBookshelfBookSelector();
         closeBookshelfCalendar();
+        setEditingBookshelfMeetingId(meetingId);
         setBookshelfCreateDraft({
           sourceBook: {
             isbn: (detail.book.bookId ?? fallbackBook.bookId ?? '').trim(),
@@ -1685,10 +1689,19 @@ export function useBookshelfState({
           meetingLocation: detail.location?.trim() ?? fallbackBook.meetingLocation ?? '',
           meetingDate: formatDotDate(detail.meetingTime),
         });
+        scheduledManagementOpen = true;
+        requestAnimationFrame(() => {
+          setActiveManagementScreen('BOOKSHELF_CREATE');
+          openingBookshelfEditRef.current = false;
+        });
       } catch (error) {
         showToast(resolveBookshelfActionErrorMessage(error, '책장 수정 정보를 불러오지 못했습니다.'));
         setActiveManagementScreen(null);
         setEditingBookshelfMeetingId(null);
+      } finally {
+        if (!scheduledManagementOpen) {
+          openingBookshelfEditRef.current = false;
+        }
       }
     };
     void open();

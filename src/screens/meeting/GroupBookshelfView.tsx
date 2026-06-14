@@ -305,7 +305,7 @@ export function GroupBookshelfView({
           <MaterialIcons name="chevron-left" size={18} color={colors.gray5} />
           <Text style={styles.breadcrumbText}>책장</Text>
         </Pressable>
-        {canManageClub && bookshelfDetailTab === 'REGULAR' ? (
+        {canManageClub ? (
           <View style={styles.detailTitleActionRow}>
             <Pressable
               style={({ pressed }) => [styles.detailTitleManageLink, pressed && styles.pressed]}
@@ -313,12 +313,14 @@ export function GroupBookshelfView({
             >
               <Text style={styles.detailTitleManageLinkText}>책장 수정</Text>
             </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.detailTitleManageLink, pressed && styles.pressed]}
-              onPress={handlePressManageRegularGroups}
-            >
-              <Text style={styles.detailTitleManageLinkText}>조 관리하기</Text>
-            </Pressable>
+            {bookshelfDetailTab === 'REGULAR' ? (
+              <Pressable
+                style={({ pressed }) => [styles.detailTitleManageLink, pressed && styles.pressed]}
+                onPress={handlePressManageRegularGroups}
+              >
+                <Text style={styles.detailTitleManageLinkText}>조 관리하기</Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
       </View>

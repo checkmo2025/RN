@@ -2722,3 +2722,10 @@ export const interactionOpacity = {
 - `2nd-review-changelog.md`: 2차 심사(version-2) 변경사항(버그 7·기능 7·개선 7) 정리 문서 추가
 - `bottomsheet-unification-plan.md`: 바텀시트 3종 구현 현황 및 공용 컴포넌트 통일 계획 추가
 - `ux-consistency-audit.md`: 바텀시트/이탈 경고/파괴적 삭제 등 UX 일관성·치명 이슈 전수 감사 문서 추가
+
+# 2026-06-14 16:44:59 KST 실기기 QA 피드백 반영
+
+- 책이야기 작성/수정, 댓글/대댓글 이탈 경고와 2뎁스 제한 보강
+- 공지 작성/수정 입력 스크롤, 저장 중 깜빡임 완화 및 중복 제출 방지 보강
+- 모임 정보 수정 사진 UI, 책장 생성/수정 버튼, 책장 수정 진입 크래시 대응
+- TODO에 남은 육안 확인 항목 갱신 및 `npm run check` 검증

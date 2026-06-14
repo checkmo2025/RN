@@ -171,6 +171,7 @@ export function useNoticeState({
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
   const [noticeCommentInput, setNoticeCommentInput] = useState('');
   const [editingNoticeCommentId, setEditingNoticeCommentId] = useState<string | null>(null);
+  const [submittingNotice, setSubmittingNotice] = useState(false);
   const [submittingNoticeComment, setSubmittingNoticeComment] = useState(false);
   const [noticeItems, setNoticeItems] = useState<NoticeItem[]>([]);
   const [noticeCommentsById, setNoticeCommentsById] = useState<Record<string, NoticeComment[]>>({});
@@ -910,15 +911,6 @@ export function useNoticeState({
               const detailKey = `${clubId}:${noticeId}`;
               enrichedNoticeDetailKeysRef.current.add(detailKey);
               editableNotice = merged;
-              setNoticeItems((prev) =>
-                sortNoticeItems(prev.map((item) => (item.id === notice.id ? merged : item))),
-              );
-              if (merged.poll) {
-                setNoticePollOptionsById((prev) => ({
-                  ...prev,
-                  [merged.id]: merged.poll?.options ?? [],
-                }));
-              }
             } else if (notice.content.trim().length === 0) {
               showToast('공지 상세 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주십시오.');
               return;
@@ -1011,6 +1003,8 @@ export function useNoticeState({
   }, []);
 
   const handleSubmitNotice = useCallback(() => {
+    if (submittingNotice) return;
+
     const title = noticeDraft.title.trim();
     const content = noticeDraft.content.trim();
     if (!title || !content) {
@@ -1022,8 +1016,10 @@ export function useNoticeState({
       return;
     }
 
-    const editingNotice = editingNoticeId
-      ? noticeItems.find((item) => item.id === editingNoticeId)
+    const currentEditingNoticeId = editingNoticeId;
+    const isEditingNotice = currentEditingNoticeId !== null;
+    const editingNotice = currentEditingNoticeId
+      ? noticeItems.find((item) => item.id === currentEditingNoticeId)
       : null;
     const bookshelfMeetingId = resolveNoticeBookshelfMeetingId(
       noticeDraft,
@@ -1046,8 +1042,9 @@ export function useNoticeState({
     }
 
     const submit = async () => {
+      setSubmittingNotice(true);
       try {
-        if (editingNoticeId) {
+        if (isEditingNotice) {
           if (!editingNotice?.remoteId) {
             showToast('수정할 공지 정보를 찾을 수 없습니다.');
             return;
@@ -1095,8 +1092,13 @@ export function useNoticeState({
           fetchClubLatestNotice(group.clubId as number, { suppressErrorToast: true }),
         ]);
         setNoticeItems(mapped);
-        setNoticePage(1);
-        setSelectedNoticeId(null);
+        if (isEditingNotice && currentEditingNoticeId) {
+          const editedNoticeExists = mapped.some((item) => item.id === currentEditingNoticeId);
+          setSelectedNoticeId(editedNoticeExists ? currentEditingNoticeId : null);
+        } else {
+          setNoticePage(1);
+          setSelectedNoticeId(null);
+        }
         setNoticeCommentInput('');
         setEditingNoticeCommentId(null);
         setNoticeMenuVisible(false);
@@ -1105,23 +1107,27 @@ export function useNoticeState({
         onNoticeSubmitSuccess?.();
         setNoticeComposerVisible(false);
         setEditingNoticeId(null);
-        setNoticeDraft(buildNoticeDraft());
-        showToast(editingNoticeId ? '공지가 수정되었습니다.' : '공지가 등록되었습니다.');
+        const emptyDraft = buildNoticeDraft();
+        setNoticeDraft(emptyDraft);
+        setNoticeComposerInitialDraft(emptyDraft);
+        showToast(isEditingNotice ? '공지가 수정되었습니다.' : '공지가 등록되었습니다.');
         logMeetingAction('notice_submit_success', {
           clubId: group.clubId,
-          mode: editingNoticeId ? 'edit' : 'create',
+          mode: isEditingNotice ? 'edit' : 'create',
           hasVote: noticeDraft.pollEnabled,
           hasBookshelfAttachment: typeof bookshelfMeetingId === 'number',
         });
       } catch (error) {
         logMeetingAction('notice_submit_failure', {
           clubId: group.clubId,
-          mode: editingNoticeId ? 'edit' : 'create',
+          mode: isEditingNotice ? 'edit' : 'create',
           message: error instanceof Error ? error.message : String(error),
         });
         if (!(error instanceof ApiError)) {
-          showToast(editingNoticeId ? '공지 수정에 실패했습니다.' : '공지 등록에 실패했습니다.');
+          showToast(isEditingNotice ? '공지 수정에 실패했습니다.' : '공지 등록에 실패했습니다.');
         }
+      } finally {
+        setSubmittingNotice(false);
       }
     };
 
@@ -1136,6 +1142,7 @@ export function useNoticeState({
     onNoticeSubmitSuccess,
     setLatestNoticeId,
     setManagedGroup,
+    submittingNotice,
   ]);
 
   const handleDeleteNotice = useCallback(() => {
@@ -1239,6 +1246,7 @@ export function useNoticeState({
     setNoticeCommentInput,
     editingNoticeCommentId,
     setEditingNoticeCommentId,
+    submittingNotice,
     submittingNoticeComment,
     noticeItems,
     setNoticeItems,

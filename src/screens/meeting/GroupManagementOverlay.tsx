@@ -54,16 +54,6 @@ const participantCodeLabels = [
   '대학생', '직장인', '온라인', '동아리', '모임', '오프라인',
 ];
 
-function ClubDefaultProfileArtworkPreview() {
-  return (
-    <Image
-      source={{ uri: CLUB_DEFAULT_IMAGE }}
-      style={styles.clubDefaultProfileArtworkPreview}
-      resizeMode="cover"
-    />
-  );
-}
-
 export type GroupManagementOverlayProps = {
   // Visibility
   managementMenuVisible: boolean;
@@ -548,36 +538,76 @@ export function GroupManagementOverlay({
                   <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
                     모임의 프로필 사진을 변경할 수 있어요!
                   </Text>
-                  <View style={styles.logoRow}>
-                    <View style={styles.logoPlaceholder}>
+                  <View style={styles.createProfileCard}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.createProfilePreviewLarge,
+                        !editDraft.imageUrl && styles.createProfilePreviewEmpty,
+                        pressed && !uploadingClubImage && styles.pressed,
+                      ]}
+                      onPress={handlePickClubImage}
+                      disabled={uploadingClubImage}
+                    >
                       {editDraft.imageUrl ? (
                         <Image
                           source={{ uri: editDraft.imageUrl }}
-                          style={styles.managementEditImagePreview}
+                          style={styles.createProfilePreviewLargeImage}
                           resizeMode="cover"
                         />
                       ) : (
-                        <ClubDefaultProfileArtworkPreview />
+                        <Image
+                          source={{ uri: CLUB_DEFAULT_IMAGE }}
+                          style={styles.createProfilePreviewLargeImage}
+                          resizeMode="cover"
+                        />
                       )}
-                    </View>
-                    <View style={{ gap: spacing.xs }}>
+                    </Pressable>
+
+                    <View style={styles.createProfileButtonRow}>
                       <Pressable
-                        style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
+                        style={({ pressed }) => [
+                          styles.createProfileBtn,
+                          !editDraft.imageUrl && styles.createProfileBtnSelected,
+                          pressed && styles.pressed,
+                        ]}
                         onPress={() =>
                           setEditDraft((prev) => ({ ...prev, imageUrl: '' }))
                         }
                       >
-                        <Text style={styles.outlineButtonText}>기본 프로필 사용하기</Text>
+                        <MaterialIcons
+                          name="auto-awesome"
+                          size={15}
+                          color={!editDraft.imageUrl ? colors.white : colors.primary1}
+                        />
+                        <Text
+                          style={[
+                            styles.createProfileBtnText,
+                            !editDraft.imageUrl && styles.createProfileBtnTextSelected,
+                          ]}
+                        >
+                          기본 이미지
+                        </Text>
                       </Pressable>
                       <Pressable
-                        style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
+                        style={({ pressed }) => [
+                          styles.createProfileBtn,
+                          styles.createProfileBtnPrimary,
+                          uploadingClubImage && styles.createProfileActionButtonDisabled,
+                          pressed && !uploadingClubImage && styles.pressed,
+                        ]}
                         onPress={handlePickClubImage}
+                        disabled={uploadingClubImage}
                       >
-                        <Text style={styles.outlineButtonText}>
-                          {uploadingClubImage ? '업로드 중...' : '사진 변경하기'}
+                        <MaterialIcons name="photo-camera" size={15} color={colors.primary1} />
+                        <Text style={styles.createProfileBtnTextPrimary}>
+                          {uploadingClubImage ? '업로드 중...' : '사진 업로드'}
                         </Text>
                       </Pressable>
                     </View>
+
+                    <Text style={styles.createProfileHint}>
+                      저장하면 모임 프로필 이미지가 변경됩니다.
+                    </Text>
                   </View>
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
@@ -890,7 +920,7 @@ export function GroupManagementOverlay({
                     onPress={handleSubmitBookshelfCreate}
                     disabled={updatingBookshelf || deletingBookshelf}
                   >
-                    <Text style={styles.primaryButtonText}>
+                    <Text style={styles.managementFooterPrimaryButtonText}>
                       {updatingBookshelf ? '저장 중...' : '저장하기'}
                     </Text>
                   </Pressable>
@@ -914,7 +944,7 @@ export function GroupManagementOverlay({
                   }
                   disabled={activeManagementScreen === 'BOOKSHELF_CREATE' && creatingBookshelf}
                 >
-                  <Text style={styles.primaryButtonText}>
+                  <Text style={styles.managementFooterPrimaryButtonText}>
                     {activeManagementScreen === 'EDIT'
                       ? '저장하기'
                       : creatingBookshelf

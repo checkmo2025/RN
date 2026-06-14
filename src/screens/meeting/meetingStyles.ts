@@ -968,7 +968,7 @@ export const styles = StyleSheet.create({
   managementScreenContent: {
     padding: spacing.md,
     gap: spacing.md,
-    paddingBottom: spacing.xl * 2,
+    paddingBottom: spacing.xxl * 3,
   },
   managementSummaryCard: {
     borderRadius: radius.md,
@@ -1379,6 +1379,8 @@ export const styles = StyleSheet.create({
   managementFooterButton: {
     flex: 1,
     borderRadius: radius.md,
+    minHeight: 52,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1397,6 +1399,12 @@ export const styles = StyleSheet.create({
   managementFooterDangerButtonText: {
     ...typography.body1_2,
     color: colors.likeRed,
+    textAlign: 'center',
+  },
+  managementFooterPrimaryButtonText: {
+    ...typography.body1_2,
+    color: colors.white,
+    textAlign: 'center',
   },
   managementMessageCard: {
     width: '100%',
@@ -2162,6 +2170,9 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.md,
     paddingVertical: spacing.sm,
+  },
+  noticeComposerFooterButtonDisabled: {
+    opacity: 0.5,
   },
   noticeBookSelectorInlineOverlay: {
     ...StyleSheet.absoluteFillObject,

@@ -229,6 +229,8 @@ const NOTICE_TITLE_INPUT_MAX_HEIGHT = 152;
 const NOTICE_CONTENT_INPUT_MIN_HEIGHT = 180;
 const NOTICE_CONTENT_INPUT_MAX_HEIGHT = 360;
 const NOTICE_INPUT_HEIGHT_SAFETY = spacing.sm;
+const NOTICE_CONTENT_SCROLL_CHAR_THRESHOLD = 220;
+const NOTICE_CONTENT_SCROLL_LINE_THRESHOLD = 8;
 const NOTICE_TITLE_INPUT_SCROLL_HEIGHT =
   NOTICE_TITLE_INPUT_MAX_HEIGHT - NOTICE_INPUT_HEIGHT_SAFETY;
 const NOTICE_CONTENT_INPUT_SCROLL_HEIGHT =
@@ -297,6 +299,18 @@ function getStableNoticeInputHeight(
 
 function shouldUpdateNoticeInputHeight(currentHeight: number, nextHeight: number) {
   return Math.abs(currentHeight - nextHeight) > 1;
+}
+
+function shouldEnableNoticeContentInputScroll(text: string) {
+  if (text.length >= NOTICE_CONTENT_SCROLL_CHAR_THRESHOLD) return true;
+  return text.split(/\r?\n/).length >= NOTICE_CONTENT_SCROLL_LINE_THRESHOLD;
+}
+
+function getInitialNoticeContentInputHeight(text: string) {
+  if (!text.trim()) return NOTICE_CONTENT_INPUT_MIN_HEIGHT;
+  return shouldEnableNoticeContentInputScroll(text)
+    ? NOTICE_CONTENT_INPUT_MAX_HEIGHT
+    : NOTICE_CONTENT_INPUT_MIN_HEIGHT;
 }
 
 
@@ -957,6 +971,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [noticeContentInputHeight, setNoticeContentInputHeight] = useState(
     NOTICE_CONTENT_INPUT_MIN_HEIGHT,
   );
+  const [noticeContentInputFocused, setNoticeContentInputFocused] = useState(false);
   const clubWorkspaceRequestIdRef = useRef(0);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(!isManagedClub);
 
@@ -1167,6 +1182,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     selectedNoticeId, setSelectedNoticeId,
     noticeCommentInput, setNoticeCommentInput,
     editingNoticeCommentId, setEditingNoticeCommentId,
+    submittingNotice,
     submittingNoticeComment,
     noticeItems, setNoticeItems,
     noticeCommentsById, setNoticeCommentsById,
@@ -1232,10 +1248,16 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       setNoticeDraft((prev) => ({ ...prev, content: text }));
       if (text.length === 0) {
         setNoticeContentInputHeight(NOTICE_CONTENT_INPUT_MIN_HEIGHT);
+      } else if (shouldEnableNoticeContentInputScroll(text)) {
+        setNoticeContentInputHeight(NOTICE_CONTENT_INPUT_MAX_HEIGHT);
       }
     },
     [setNoticeDraft],
   );
+
+  const noticeContentInputScrollEnabled =
+    noticeContentInputHeight >= NOTICE_CONTENT_INPUT_SCROLL_HEIGHT ||
+    shouldEnableNoticeContentInputScroll(noticeDraft.content);
 
   const {
     managementMenuVisible, openManagementMenu,
@@ -1279,6 +1301,37 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
   const [bookshelfCreateBaselineDraft, setBookshelfCreateBaselineDraft] =
     useState<BookshelfCreateDraft | null>(null);
+  const bookshelfComposerTypeRef = useRef<typeof bookshelfComposerType>(bookshelfComposerType);
+  const bookshelfComposerInputRef = useRef(bookshelfComposerInput);
+  const bookshelfComposerRatingRef = useRef(bookshelfComposerRating);
+  const editingBookshelfPostRef = useRef(editingBookshelfPost);
+
+  useEffect(() => {
+    bookshelfComposerTypeRef.current = bookshelfComposerType;
+    bookshelfComposerInputRef.current = bookshelfComposerInput;
+    bookshelfComposerRatingRef.current = bookshelfComposerRating;
+    editingBookshelfPostRef.current = editingBookshelfPost;
+  }, [
+    bookshelfComposerInput,
+    bookshelfComposerRating,
+    bookshelfComposerType,
+    editingBookshelfPost,
+  ]);
+
+  const handleChangeBookshelfComposerInput = useCallback(
+    (text: string) => {
+      bookshelfComposerInputRef.current = text;
+      setBookshelfComposerInput(text);
+    },
+    [setBookshelfComposerInput],
+  );
+  const handleChangeBookshelfComposerRating = useCallback(
+    (rating: number) => {
+      bookshelfComposerRatingRef.current = rating;
+      setBookshelfComposerRating(rating);
+    },
+    [setBookshelfComposerRating],
+  );
 
   useEffect(() => {
     if (activeManagementScreen !== 'BOOKSHELF_CREATE') {
@@ -1311,11 +1364,42 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     editingBookshelfPost,
   ]);
 
-  const { requestClose: requestCloseBookshelfComposer } = useUnsavedChangesGuard({
+  useUnsavedChangesGuard({
     enabled: Boolean(bookshelfComposerType),
     isDirty: bookshelfComposerDirty,
     onConfirmLeave: closeBookshelfComposer,
   });
+
+  const isBookshelfComposerDirtyNow = useCallback(() => {
+    const currentType = bookshelfComposerTypeRef.current;
+    if (!currentType) return false;
+
+    const currentPost = editingBookshelfPostRef.current;
+    if (currentPost?.type === currentType) {
+      const originalRating = currentType === 'REVIEW' ? (currentPost.rating ?? 0) : 0;
+      return (
+        bookshelfComposerInputRef.current !== currentPost.content ||
+        bookshelfComposerRatingRef.current !== originalRating
+      );
+    }
+
+    return (
+      bookshelfComposerInputRef.current.trim().length > 0 ||
+      (currentType === 'REVIEW' && bookshelfComposerRatingRef.current > 0)
+    );
+  }, []);
+
+  const requestCloseBookshelfComposerNow = useCallback(() => {
+    if (!isBookshelfComposerDirtyNow()) {
+      closeBookshelfComposer();
+      return;
+    }
+
+    Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
+      { text: '취소', style: 'cancel' },
+      { text: '닫기', style: 'destructive', onPress: closeBookshelfComposer },
+    ]);
+  }, [closeBookshelfComposer, isBookshelfComposerDirtyNow]);
 
   const groupEditDirty = useMemo(() => {
     if (activeManagementScreen !== 'EDIT') return false;
@@ -1358,10 +1442,15 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   ]);
 
   useEffect(() => {
-    if (noticeComposerVisible) return;
-    setNoticeTitleInputHeight(NOTICE_TITLE_INPUT_MIN_HEIGHT);
-    setNoticeContentInputHeight(NOTICE_CONTENT_INPUT_MIN_HEIGHT);
-  }, [noticeComposerVisible]);
+    if (!noticeComposerVisible) {
+      setNoticeTitleInputHeight(NOTICE_TITLE_INPUT_MIN_HEIGHT);
+      setNoticeContentInputHeight(NOTICE_CONTENT_INPUT_MIN_HEIGHT);
+      setNoticeContentInputFocused(false);
+      return;
+    }
+
+    setNoticeContentInputHeight(getInitialNoticeContentInputHeight(noticeDraft.content));
+  }, [editingNoticeId, noticeComposerVisible]);
 
   const contactLinks = useMemo(
     () => normalizeClubContacts(managedGroup.links),
@@ -2406,7 +2495,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       </Modal>
       <DialogOverlay
         visible={Boolean(bookshelfComposerType)}
-        onClose={requestCloseBookshelfComposer}
+        onClose={requestCloseBookshelfComposerNow}
         overlayStyle={styles.bookshelfComposerOverlay}
         cardStyle={styles.bookshelfComposerCard}
         withKeyboard
@@ -2421,7 +2510,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 	                      ? '한줄평 수정하기'
 	                      : '한줄평 추가하기'}
 	                </Text>
-	                <Pressable onPress={requestCloseBookshelfComposer} hitSlop={8}>
+	                <Pressable onPress={requestCloseBookshelfComposerNow} hitSlop={8}>
 	                  <MaterialIcons name="close" size={22} color={colors.gray5} />
 	                </Pressable>
 	              </View>
@@ -2450,7 +2539,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                             styles.bookshelfComposerRatingButtonLeft,
                             pressed && styles.pressed,
                           ]}
-                          onPress={() => setBookshelfComposerRating(value - 0.5)}
+                          onPress={() => handleChangeBookshelfComposerRating(value - 0.5)}
                         />
                         <Pressable
                           style={({ pressed }) => [
@@ -2458,7 +2547,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                             styles.bookshelfComposerRatingButtonRight,
                             pressed && styles.pressed,
                           ]}
-                          onPress={() => setBookshelfComposerRating(value)}
+                          onPress={() => handleChangeBookshelfComposerRating(value)}
                         />
                       </View>
                     ))}
@@ -2475,7 +2564,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 </Text>
                 <FormTextInput
                   value={bookshelfComposerInput}
-                  onChangeText={setBookshelfComposerInput}
+                  onChangeText={handleChangeBookshelfComposerInput}
                   placeholder={
                     bookshelfComposerType === 'TOPIC'
                       ? '발제 내용을 입력해주세요'
@@ -2500,7 +2589,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     submittingBookshelfComposer && styles.primaryButtonDisabled,
                     pressed && !submittingBookshelfComposer && styles.pressed,
                   ]}
-                  onPress={requestCloseBookshelfComposer}
+                  onPress={requestCloseBookshelfComposerNow}
                   disabled={submittingBookshelfComposer}
                 >
                   <Text style={styles.secondaryText}>취소</Text>
@@ -2657,6 +2746,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
             style={styles.managementScreenScroll}
             contentContainerStyle={styles.managementScreenContent}
             showsVerticalScrollIndicator={false}
+            scrollEnabled={
+              !noticeContentInputFocused ||
+              !noticeContentInputScrollEnabled
+            }
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.noticeComposerCard}>
               <View style={styles.noticeComposerFieldHeader}>
@@ -2699,12 +2793,18 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 style={[
                   styles.input,
                   styles.noticeComposerTextArea,
-                  { height: noticeContentInputHeight },
+                  {
+                    height: noticeContentInputHeight,
+                    maxHeight: NOTICE_CONTENT_INPUT_MAX_HEIGHT,
+                  },
                 ]}
                 multiline
+                textAlignVertical="top"
                 maxLength={INPUT_LIMITS.NOTICE_CONTENT}
                 overLimitMessage={`공지 내용은 ${INPUT_LIMITS.NOTICE_CONTENT}자 이하여야 합니다.`}
-                scrollEnabled={noticeContentInputHeight >= NOTICE_CONTENT_INPUT_SCROLL_HEIGHT}
+                scrollEnabled={noticeContentInputScrollEnabled}
+                onFocus={() => setNoticeContentInputFocused(true)}
+                onBlur={() => setNoticeContentInputFocused(false)}
                 onContentSizeChange={(event) =>
                   handleNoticeContentSizeChange(event, noticeDraft.content)
                 }
@@ -3006,16 +3106,36 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
           <View style={styles.noticeComposerFooter}>
             <Pressable
-              style={({ pressed }) => [styles.outlineButton, styles.noticeComposerFooterButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.outlineButton,
+                styles.noticeComposerFooterButton,
+                submittingNotice && styles.noticeComposerFooterButtonDisabled,
+                pressed && !submittingNotice && styles.pressed,
+              ]}
               onPress={handleCloseNoticeComposer}
+              disabled={submittingNotice}
             >
               <Text style={styles.outlineButtonText}>취소</Text>
             </Pressable>
             <Pressable
-              style={({ pressed }) => [styles.primaryButton, styles.noticeComposerFooterButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                styles.noticeComposerFooterButton,
+                submittingNotice && styles.primaryButtonDisabled,
+                pressed && !submittingNotice && styles.pressed,
+              ]}
               onPress={handleSubmitNotice}
+              disabled={submittingNotice}
             >
-              <Text style={styles.primaryButtonText}>{editingNoticeId ? '수정하기' : '등록하기'}</Text>
+              <Text style={styles.primaryButtonText}>
+                {submittingNotice
+                  ? editingNoticeId
+                    ? '수정 중'
+                    : '등록 중'
+                  : editingNoticeId
+                    ? '수정하기'
+                    : '등록하기'}
+              </Text>
             </Pressable>
           </View>
 
