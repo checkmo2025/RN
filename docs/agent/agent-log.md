@@ -2756,3 +2756,10 @@ export const interactionOpacity = {
 - 투표 기간 입력을 기기 네이티브 `DateTimeField`(iOS 스피너 모달 / Android 날짜·시간 다이얼로그)로 교체, `@react-native-community/datetimepicker` 도입(app.json plugin + iOS pod 링크)
 - 공지 컴포저 제목/내용 입력 `scrollEnabled` 항상 true로 변경해 iOS 고정높이 multiline 진동(jitter) 제거
 - 검증: `npx tsc --noEmit` 통과, eslint 0 error / 네이티브 모듈이라 `npx expo run:ios` 재빌드 필요
+
+# 2026-06-14 20:55:30 KST 투표 항목 6개 제한 + 수정 불가 안내 + TODO 동기화
+
+- 투표 항목 최대 6개 제한: `INPUT_LIMITS.NOTICE_POLL_OPTION_MAX=6` 단일 상수, 추가 시 토스트, UI는 6개 도달 시 "항목 추가" 버튼 숨김
+- "투표" 제목 옆에 빨간 문구(`colors.likeRed`) "투표가 있는 공지사항은 수정이 불가합니다" 추가
+- TODO 갱신: 공지 투표 QA·책장 날짜 항목을 🔄(코드 완료, 실기기 육안 잔여)로 전환하고 설명 현행화
+- 검증: `npx tsc --noEmit` 통과, eslint 0 error

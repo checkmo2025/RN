@@ -5,6 +5,7 @@ import type { GestureResponderEvent } from 'react-native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import type { ReportMemberModalState } from '../../components/common/ReportMemberModal';
 import { ApiError } from '../../services/api/http';
+import { INPUT_LIMITS } from '../../constants/inputLimits';
 import {
   createClubNoticeComment,
   deleteClubNoticeComment,
@@ -997,7 +998,13 @@ export function useNoticeState({
   }, []);
 
   const handleAddNoticePollOption = useCallback(() => {
-    setNoticeDraft((prev) => ({ ...prev, pollOptions: [...prev.pollOptions, ''] }));
+    setNoticeDraft((prev) => {
+      if (prev.pollOptions.length >= INPUT_LIMITS.NOTICE_POLL_OPTION_MAX) {
+        showToast(`투표 항목은 최대 ${INPUT_LIMITS.NOTICE_POLL_OPTION_MAX}개까지 추가할 수 있습니다.`);
+        return prev;
+      }
+      return { ...prev, pollOptions: [...prev.pollOptions, ''] };
+    });
   }, []);
 
   const handleRemoveNoticePollOption = useCallback((index: number) => {

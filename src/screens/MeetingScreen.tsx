@@ -2970,7 +2970,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
               {noticeDraft.pollEnabled ? (
                 <View style={styles.noticeComposerSection}>
-                  <Text style={styles.noticeAttachmentTitle}>투표</Text>
+                  <View style={styles.noticeComposerPollHeader}>
+                    <Text style={styles.noticeAttachmentTitle}>투표</Text>
+                    <Text style={styles.noticeComposerPollEditNote}>
+                      투표가 있는 공지사항은 수정이 불가합니다
+                    </Text>
+                  </View>
                   <View style={styles.noticeComposerPollOptionList}>
                     {noticeDraft.pollOptions.map((option, index) => {
                       const removable = index >= 2;
@@ -3004,13 +3009,15 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                         </View>
                       );
                     })}
-                    <Pressable
-                      style={({ pressed }) => [styles.noticeComposerAddOptionButton, pressed && styles.pressed]}
-                      onPress={handleAddNoticePollOption}
-                    >
-                      <MaterialIcons name="add" size={18} color={colors.gray5} />
-                      <Text style={styles.noticeComposerAddOptionText}>항목 추가</Text>
-                    </Pressable>
+                    {noticeDraft.pollOptions.length < INPUT_LIMITS.NOTICE_POLL_OPTION_MAX ? (
+                      <Pressable
+                        style={({ pressed }) => [styles.noticeComposerAddOptionButton, pressed && styles.pressed]}
+                        onPress={handleAddNoticePollOption}
+                      >
+                        <MaterialIcons name="add" size={18} color={colors.gray5} />
+                        <Text style={styles.noticeComposerAddOptionText}>항목 추가</Text>
+                      </Pressable>
+                    ) : null}
                   </View>
                   <View style={styles.noticeComposerChoiceRow}>
                     <Pressable

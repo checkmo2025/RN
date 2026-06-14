@@ -1714,6 +1714,17 @@ export const styles = StyleSheet.create({
     ...typography.body1_2,
     color: colors.gray6,
   },
+  noticeComposerPollHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  noticeComposerPollEditNote: {
+    ...typography.body2_3,
+    color: colors.likeRed,
+    flexShrink: 1,
+  },
   noticeBookshelfCard: {
     flexDirection: 'row',
     gap: spacing.sm,
