@@ -47,6 +47,10 @@ import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar'
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
+import {
+  BottomSheetActionMenu,
+  type BottomSheetActionMenuItem,
+} from '../components/common/BottomSheetActionMenu';
 import { DateTimeField } from '../components/common/DateTimeField';
 import { DialogOverlay } from '../components/common/DialogOverlay';
 import { FormTextInput } from '../components/common/FormTextInput';
@@ -1173,6 +1177,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     handleSelectBookshelfSourceBook,
     handleSubmitBookshelfCreate,
     handleDeleteEditingBookshelf,
+    handleDeleteSelectedBookshelf,
     resetBookshelfOnGroupChange,
   } = bookshelfState;
 
@@ -1846,6 +1851,41 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     ];
   }, [bookshelfPostMenu, handleSelectBookshelfPostMenuAction]);
 
+  const noticeMenuItems = useMemo<BottomSheetActionMenuItem[]>(() => {
+    if (!selectedNotice) return [];
+    if (canManageClub) {
+      return [
+        {
+          key: 'edit',
+          label: '수정하기',
+          icon: 'edit',
+          onPress: () => handleOpenNoticeComposer(selectedNotice),
+        },
+        {
+          key: 'delete',
+          label: '삭제하기',
+          icon: 'delete-outline',
+          destructive: true,
+          onPress: handleDeleteNotice,
+        },
+      ];
+    }
+    return [
+      {
+        key: 'report',
+        label: '신고하기',
+        icon: 'flag',
+        onPress: handleReportNotice,
+      },
+    ];
+  }, [
+    canManageClub,
+    handleDeleteNotice,
+    handleOpenNoticeComposer,
+    handleReportNotice,
+    selectedNotice,
+  ]);
+
   const handleBackFromGroupHome = useCallback(() => {
     if (contactModalVisible) {
       closeContactModal();
@@ -2168,6 +2208,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           selectedBookshelfSession={selectedBookshelfSession}
           visibleBookshelfItems={visibleBookshelfItems}
           selectedBookshelfBook={selectedBookshelfBook}
+          canManageRegularGroups={typeof selectedRegularMeetingId === 'number'}
           bookshelfDetailTab={bookshelfDetailTab}
           bookshelfTopicItems={bookshelfTopicItems}
           bookshelfReviewItems={bookshelfReviewItems}
@@ -2190,6 +2231,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           handleSortRegularGroupPosts={handleSortRegularGroupPosts}
           handleEnterRegularGroup={handleEnterRegularGroup}
           handleOpenBookshelfEdit={handleOpenBookshelfEdit}
+          handleDeleteSelectedBookshelf={handleDeleteSelectedBookshelf}
           handlePressManageRegularGroups={handlePressManageRegularGroups}
         />
       ) : null}
@@ -3222,63 +3264,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           ) : null}
         </KeyboardAvoidingView>
       </Modal>
-      <Modal
+      <BottomSheetActionMenu
         visible={noticeMenuVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setNoticeMenuVisible(false)}
-      >
-        <Pressable
-          style={styles.managementOverlayBottom}
-          onPress={() => setNoticeMenuVisible(false)}
-          disableFeedback
-        >
-          {selectedNotice ? (
-            <Pressable
-              style={styles.managementBottomSheet}
-              onPress={(event) => event.stopPropagation()}
-              disableFeedback
-            >
-              <Text style={styles.managementBottomSheetTitle}>공지 메뉴</Text>
-              {canManageClub ? (
-                <>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.managementBottomSheetItem,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => handleOpenNoticeComposer(selectedNotice)}
-                  >
-                    <MaterialIcons name="edit" size={20} color={colors.gray5} />
-                    <Text style={styles.managementBottomSheetItemText}>수정하기</Text>
-                  </Pressable>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.managementBottomSheetItem,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={handleDeleteNotice}
-                  >
-                    <MaterialIcons name="delete-outline" size={20} color={colors.likeRed} />
-                    <Text style={styles.managementBottomSheetItemText}>삭제하기</Text>
-                  </Pressable>
-                </>
-              ) : (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.managementBottomSheetItem,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={handleReportNotice}
-                >
-                  <MaterialIcons name="flag" size={20} color={colors.gray5} />
-                  <Text style={styles.managementBottomSheetItemText}>신고하기</Text>
-                </Pressable>
-              )}
-            </Pressable>
-          ) : null}
-        </Pressable>
-      </Modal>
+        title="공지 메뉴"
+        actions={noticeMenuItems}
+        onClose={() => setNoticeMenuVisible(false)}
+      />
       <DialogOverlay
         visible={contactModalVisible}
         onClose={closeContactModal}

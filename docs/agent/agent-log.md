@@ -2775,3 +2775,10 @@ export const interactionOpacity = {
 - AuthFlowScreen에서 "UI 보기(개발용)" 버튼 및 `signUpUiPreview` 미리보기 메커니즘 전면 제거(상태/openSignUpUiPreview 핸들러/`__DEV__` 분기 3곳/더미 데이터 프리필/전용 스타일)
 - 미사용이 된 `declare const __DEV__` 선언 제거, 회원가입은 실제 이메일 인증/제출 경로만 남김
 - 검증: `npx tsc --noEmit` 통과, eslint 에러 0, `signUpUiPreview` 잔존 0
+
+# 2026-06-15 00:50:40 KST 모달/경고창/바텀시트 액션 메뉴 통일
+
+- `BottomSheet` 기본 백드롭/시트 스타일과 safe-area 하단 패딩을 추가하고, `BottomSheetActionMenu` 공용 컴포넌트를 생성함
+- 책이야기 상세/공지 상세/책장 상세 메뉴를 바텀시트 액션 메뉴로 전환하고, 댓글·발제·한줄평은 기존 앵커 메뉴 유지
+- 공지/책장 삭제는 `Alert.alert` 확인창을 거치도록 정리하고, TODO에 실기기 육안 확인 항목 6건 추가
+- 검증: `npm run check` 통과

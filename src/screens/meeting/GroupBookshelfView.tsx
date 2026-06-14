@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { Image, ScrollView, Text, View } from 'react-native';
 import { SkeletonBox } from '../../components/common/SkeletonBox';
@@ -7,6 +7,10 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../theme';
 import { DefaultProfileAvatar } from '../../components/common/DefaultProfileAvatar';
 import { FeedbackPressable as Pressable } from '../../components/common/FeedbackPressable';
+import {
+  BottomSheetActionMenu,
+  type BottomSheetActionMenuItem,
+} from '../../components/common/BottomSheetActionMenu';
 import { styles } from './meetingStyles';
 import { formatAverageRating, getStarIconName } from './helpers';
 import type {
@@ -51,6 +55,7 @@ export type GroupBookshelfViewProps = {
   selectedBookshelfSession: string;
   visibleBookshelfItems: BookshelfItem[];
   selectedBookshelfBook: BookshelfItem | null;
+  canManageRegularGroups: boolean;
   bookshelfDetailTab: BookshelfDetailTab;
   bookshelfTopicItems: BookshelfPostItem[];
   bookshelfReviewItems: BookshelfPostItem[];
@@ -75,6 +80,7 @@ export type GroupBookshelfViewProps = {
   handleSortRegularGroupPosts: (groupId: string) => void;
   handleEnterRegularGroup: (groupId: string) => void;
   handleOpenBookshelfEdit: () => void;
+  handleDeleteSelectedBookshelf: () => void;
   handlePressManageRegularGroups: () => void;
 };
 
@@ -93,6 +99,7 @@ export function GroupBookshelfView({
   selectedBookshelfSession,
   visibleBookshelfItems,
   selectedBookshelfBook,
+  canManageRegularGroups,
   bookshelfDetailTab,
   bookshelfTopicItems,
   bookshelfReviewItems,
@@ -115,10 +122,12 @@ export function GroupBookshelfView({
   handleSortRegularGroupPosts,
   handleEnterRegularGroup,
   handleOpenBookshelfEdit,
+  handleDeleteSelectedBookshelf,
   handlePressManageRegularGroups,
 }: GroupBookshelfViewProps) {
   const bookshelfSectionYRef = useRef(0);
   const detailSectionYRef = useRef(0);
+  const [bookshelfMenuVisible, setBookshelfMenuVisible] = useState(false);
   const scrollToBookshelfDetail = useCallback(() => {
     onScrollToBookshelfDetail(bookshelfSectionYRef.current + detailSectionYRef.current);
   }, [onScrollToBookshelfDetail]);
@@ -131,6 +140,44 @@ export function GroupBookshelfView({
     if (bookshelfViewMode !== 'REGULAR_GROUP') return;
     scrollToBookshelfDetail();
   }, [bookshelfViewMode, scrollToBookshelfDetail]);
+
+  useEffect(() => {
+    setBookshelfMenuVisible(false);
+  }, [selectedBookshelfBook?.id]);
+
+  const bookshelfMenuItems = useMemo<BottomSheetActionMenuItem[]>(() => {
+    if (!selectedBookshelfBook || !canManageClub) return [];
+    return [
+      {
+        key: 'edit',
+        label: '책장 수정',
+        icon: 'edit',
+        onPress: handleOpenBookshelfEdit,
+      },
+      {
+        key: 'delete',
+        label: '책장 삭제',
+        icon: 'delete-outline',
+        destructive: true,
+        disabled: typeof selectedBookshelfBook.remoteMeetingId !== 'number',
+        onPress: handleDeleteSelectedBookshelf,
+      },
+      {
+        key: 'manage-groups',
+        label: '조 관리하기',
+        icon: 'groups',
+        disabled: !canManageRegularGroups,
+        onPress: handlePressManageRegularGroups,
+      },
+    ];
+  }, [
+    canManageClub,
+    canManageRegularGroups,
+    handleDeleteSelectedBookshelf,
+    handleOpenBookshelfEdit,
+    handlePressManageRegularGroups,
+    selectedBookshelfBook,
+  ]);
 
   if (isInitialLoading) {
     return (
@@ -306,22 +353,13 @@ export function GroupBookshelfView({
           <Text style={styles.breadcrumbText}>책장</Text>
         </Pressable>
         {canManageClub ? (
-          <View style={styles.detailTitleActionRow}>
-            <Pressable
-              style={({ pressed }) => [styles.detailTitleManageLink, pressed && styles.pressed]}
-              onPress={handleOpenBookshelfEdit}
-            >
-              <Text style={styles.detailTitleManageLinkText}>책장 수정</Text>
-            </Pressable>
-            {bookshelfDetailTab === 'REGULAR' ? (
-              <Pressable
-                style={({ pressed }) => [styles.detailTitleManageLink, pressed && styles.pressed]}
-                onPress={handlePressManageRegularGroups}
-              >
-                <Text style={styles.detailTitleManageLinkText}>조 관리하기</Text>
-              </Pressable>
-            ) : null}
-          </View>
+          <Pressable
+            style={({ pressed }) => [styles.bookshelfDetailMenuButton, pressed && styles.pressed]}
+            onPress={() => setBookshelfMenuVisible(true)}
+            hitSlop={8}
+          >
+            <MaterialIcons name="more-vert" size={22} color={colors.gray5} />
+          </Pressable>
         ) : null}
       </View>
 
@@ -790,6 +828,13 @@ export function GroupBookshelfView({
           )}
         </View>
       ) : null}
+
+      <BottomSheetActionMenu
+        visible={bookshelfMenuVisible}
+        title="책장 메뉴"
+        actions={bookshelfMenuItems}
+        onClose={() => setBookshelfMenuVisible(false)}
+      />
     </View>
   ) : null}
 </View>

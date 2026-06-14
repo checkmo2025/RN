@@ -749,6 +749,13 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
+  bookshelfDetailMenuButton: {
+    width: buttonSize.chip,
+    height: buttonSize.chip,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+  },
   detailTitleActionRow: {
     flexDirection: 'row',
     alignItems: 'center',

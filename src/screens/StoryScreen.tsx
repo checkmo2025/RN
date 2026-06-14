@@ -45,6 +45,10 @@ import { ScreenLayout } from '../components/common/ScreenLayout';
 import { IconButton } from '../components/common/IconButton';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
 import { BottomSheet } from '../components/common/BottomSheet';
+import {
+  BottomSheetActionMenu,
+  type BottomSheetActionMenuItem,
+} from '../components/common/BottomSheetActionMenu';
 import { FormTextInput } from '../components/common/FormTextInput';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import BookStoryFeedCard from '../components/feature/bookstory/BookStoryFeedCard';
@@ -142,11 +146,6 @@ type StoryFeedItem =
 
 type CommentMenuState = {
   comment: Comment;
-  pageX: number;
-  pageY: number;
-};
-
-type StoryMenuState = {
   pageX: number;
   pageY: number;
 };
@@ -325,7 +324,7 @@ export function StoryScreen() {
     author: string;
   } | null>(null);
   const [commentMenu, setCommentMenu] = useState<CommentMenuState | null>(null);
-  const [storyMenu, setStoryMenu] = useState<StoryMenuState | null>(null);
+  const [storyMenu, setStoryMenu] = useState(false);
   const [reportModal, setReportModal] = useState<ReportMemberModalState | null>(null);
   const [submittingReport, setSubmittingReport] = useState(false);
   const [submittingStory, setSubmittingStory] = useState(false);
@@ -403,7 +402,7 @@ export function StoryScreen() {
     setEditingCommentId(null);
     setReplyTarget(null);
     setCommentMenu(null);
-    setStoryMenu(null);
+    setStoryMenu(false);
     setCommentInput('');
     setEditingCommentOriginalText('');
     pendingDetailFocusRef.current = null;
@@ -498,7 +497,7 @@ export function StoryScreen() {
       setEditingCommentOriginalText('');
       setReplyTarget(null);
       setCommentMenu(null);
-      setStoryMenu(null);
+      setStoryMenu(false);
       animateTransition();
       setIsComposing(true);
     });
@@ -518,7 +517,7 @@ export function StoryScreen() {
     setShowBookPicker(false);
     setReplyTarget(null);
     setCommentMenu(null);
-    setStoryMenu(null);
+    setStoryMenu(false);
   }, [animateTransition]);
 
   const hasUnsavedStoryChanges = useMemo(() => {
@@ -619,7 +618,7 @@ export function StoryScreen() {
       setEditingCommentOriginalText('');
       setReplyTarget(null);
       setCommentMenu(null);
-      setStoryMenu(null);
+      setStoryMenu(false);
       setSelectedStory(null);
       closeCompose();
       navigateToHome(navigation);
@@ -938,7 +937,7 @@ export function StoryScreen() {
       setEditingCommentOriginalText('');
       setReplyTarget(null);
       setCommentMenu(null);
-      setStoryMenu(null);
+      setStoryMenu(false);
 
       try {
         const detail = await fetchBookStoryDetail(remoteId, {
@@ -1000,7 +999,7 @@ export function StoryScreen() {
       setCommentInput('');
       setReplyTarget(null);
       setCommentMenu(null);
-      setStoryMenu(null);
+      setStoryMenu(false);
       animateTransition();
       setIsComposing(true);
       // 모달 dismiss/화면 전환이 끝난 뒤에 포커스해야 iOS first-responder 충돌 크래시를 피한다.
@@ -1052,12 +1051,9 @@ export function StoryScreen() {
     void Share.share({ message: url });
   }, [selectedStory]);
 
-  const openStoryMenu = useCallback((event: GestureResponderEvent) => {
+  const openStoryMenu = useCallback(() => {
     setCommentMenu(null);
-    setStoryMenu({
-      pageX: event.nativeEvent.pageX,
-      pageY: event.nativeEvent.pageY,
-    });
+    setStoryMenu(true);
   }, []);
 
   const openReportModal = useCallback(
@@ -1117,7 +1113,7 @@ export function StoryScreen() {
     (action: 'edit' | 'delete' | 'report' | 'share') => {
       if (!selectedStory) return;
 
-      setStoryMenu(null);
+      setStoryMenu(false);
 
       if (action === 'edit') {
         if (!isLoggedIn || !selectedStory.mine) return;
@@ -1144,12 +1140,12 @@ export function StoryScreen() {
 
       handleShareStory();
     },
-    [handleDeleteStory, handleShareStory, openReportModal, selectedStory, startEditStory],
+    [handleDeleteStory, handleShareStory, isLoggedIn, openReportModal, selectedStory, startEditStory],
   );
 
   const openCommentMenu = useCallback(
     (comment: Comment, event: GestureResponderEvent) => {
-      setStoryMenu(null);
+      setStoryMenu(false);
       setCommentMenu({
         comment,
         pageX: event.nativeEvent.pageX,
@@ -1309,22 +1305,38 @@ export function StoryScreen() {
     ];
   }, [commentMenu, handleSelectCommentMenuAction, isLoggedIn]);
 
-  const storyMenuItems = useMemo<ActionMenuItem[]>(() => {
+  const storyMenuItems = useMemo<BottomSheetActionMenuItem[]>(() => {
     if (!storyMenu || !selectedStory) return [];
     if (isLoggedIn && selectedStory.mine) {
       return [
-        { key: 'edit', label: '수정하기', onPress: () => handleSelectStoryMenuAction('edit') },
+        {
+          key: 'edit',
+          label: '수정하기',
+          icon: 'edit',
+          onPress: () => handleSelectStoryMenuAction('edit'),
+        },
         {
           key: 'delete',
           label: '삭제하기',
+          icon: 'delete-outline',
           destructive: true,
           onPress: () => handleSelectStoryMenuAction('delete'),
         },
       ];
     }
     return [
-      { key: 'report', label: '신고하기', onPress: () => handleSelectStoryMenuAction('report') },
-      { key: 'share', label: '공유하기', onPress: () => handleSelectStoryMenuAction('share') },
+      {
+        key: 'report',
+        label: '신고하기',
+        icon: 'flag',
+        onPress: () => handleSelectStoryMenuAction('report'),
+      },
+      {
+        key: 'share',
+        label: '공유하기',
+        icon: 'share',
+        onPress: () => handleSelectStoryMenuAction('share'),
+      },
     ];
   }, [handleSelectStoryMenuAction, isLoggedIn, selectedStory, storyMenu]);
 
@@ -1717,7 +1729,7 @@ export function StoryScreen() {
       setEditingCommentOriginalText('');
       setReplyTarget(null);
       setCommentMenu(null);
-      setStoryMenu(null);
+      setStoryMenu(false);
       setCommentInput('');
       void loadStoryDetail(story);
     },
@@ -1912,7 +1924,7 @@ export function StoryScreen() {
         setEditingCommentOriginalText('');
         setReplyTarget(null);
         setCommentMenu(null);
-        setStoryMenu(null);
+        setStoryMenu(false);
         setCommentInput('');
       };
     }, []),
@@ -2021,7 +2033,7 @@ export function StoryScreen() {
               setEditingCommentOriginalText('');
               setReplyTarget(null);
               setCommentMenu(null);
-              setStoryMenu(null);
+              setStoryMenu(false);
               setSelectedStory(null);
               closeCompose();
               parent.navigate(targetRoute.name);
@@ -2052,7 +2064,7 @@ export function StoryScreen() {
               setEditingCommentOriginalText('');
               setReplyTarget(null);
               setCommentMenu(null);
-              setStoryMenu(null);
+              setStoryMenu(false);
               setSelectedStory(null);
               closeCompose();
               navigation.dispatch(event.data.action);
@@ -2355,22 +2367,11 @@ export function StoryScreen() {
           menuWidth={132}
           topBoundary={96}
         />
-        <ActionMenu
-          visible={Boolean(storyMenu)}
-          anchor={
-            storyMenu
-              ? {
-                  pageX: storyMenu.pageX,
-                  pageY: storyMenu.pageY,
-                }
-              : null
-          }
-          items={storyMenuItems}
-          onClose={() => setStoryMenu(null)}
-          screenWidth={screenWidth}
-          screenHeight={screenHeight}
-          menuWidth={132}
-          topBoundary={96}
+        <BottomSheetActionMenu
+          visible={storyMenu}
+          title="책이야기 메뉴"
+          actions={storyMenuItems}
+          onClose={() => setStoryMenu(false)}
         />
         <ReportMemberModal
           visible={Boolean(reportModal)}

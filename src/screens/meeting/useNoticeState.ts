@@ -1282,7 +1282,16 @@ export function useNoticeState({
       }
     };
 
-    void remove();
+    Alert.alert('공지 삭제', '이 공지를 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: () => {
+          void remove();
+        },
+      },
+    ]);
   }, [canManageClub, group.clubId, selectedNotice, setLatestNoticeId, setManagedGroup]);
 
   const handleOpenNoticeBookshelf = useCallback(() => {

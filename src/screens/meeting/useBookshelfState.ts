@@ -2041,6 +2041,50 @@ export function useBookshelfState({
     ]);
   }, [canManageClub, deletingBookshelf, editingBookshelfMeetingId, group.clubId, setActiveManagementScreen]);
 
+  const handleDeleteSelectedBookshelf = useCallback(() => {
+    const clubId = group.clubId;
+    const meetingId = selectedBookshelfBook?.remoteMeetingId;
+    if (deletingBookshelf || !canManageClub || typeof clubId !== 'number' || typeof meetingId !== 'number') {
+      showToast('책장 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+      return;
+    }
+
+    Alert.alert('책장 삭제', '이 책장을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: () => {
+          const submit = async () => {
+            setDeletingBookshelf(true);
+            try {
+              await deleteClubBookshelf(clubId, meetingId);
+              const bookshelfList = await fetchAllClubBookshelvesWithCursor(clubId);
+              setBookshelfItems(bookshelfList.items);
+              setSelectedBookshelfBookId(bookshelfList.items[0]?.id ?? null);
+              setBookshelfViewMode('GRID');
+              setSelectedRegularGroupId(null);
+              setActiveManagementScreen(null);
+              setEditingBookshelfMeetingId(null);
+              showToast('책장이 삭제되었습니다.');
+            } catch (error) {
+              showToast(resolveBookshelfActionErrorMessage(error, '책장 삭제에 실패했습니다.'));
+            } finally {
+              setDeletingBookshelf(false);
+            }
+          };
+          void submit();
+        },
+      },
+    ]);
+  }, [
+    canManageClub,
+    deletingBookshelf,
+    group.clubId,
+    selectedBookshelfBook?.remoteMeetingId,
+    setActiveManagementScreen,
+  ]);
+
   const resetBookshelfOnGroupChange = useCallback(() => {
     setSelectedBookshelfSession('');
     setBookshelfViewMode('GRID');
@@ -2154,6 +2198,7 @@ export function useBookshelfState({
     handleSelectBookshelfSourceBook,
     handleSubmitBookshelfCreate,
     handleDeleteEditingBookshelf,
+    handleDeleteSelectedBookshelf,
     resetBookshelfOnGroupChange,
   };
 }
