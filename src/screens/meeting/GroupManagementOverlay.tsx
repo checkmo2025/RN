@@ -1,3 +1,4 @@
+import { useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import {
   Animated,
@@ -10,7 +11,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import type { PanResponderInstance } from 'react-native';
+import type {
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  PanResponderInstance,
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing } from '../../theme';
@@ -37,6 +42,7 @@ import type { BookItem } from '../../services/api/bookApi';
 
 const BOOKSHELF_MEETING_TITLE_MAX_LENGTH = 12;
 const BOOKSHELF_MEETING_LOCATION_MAX_LENGTH = 12;
+const MANAGEMENT_MENU_PULL_CLOSE_OFFSET = -88;
 const calendarWeekdayLabels = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
 const categoryCodeLabels = [
@@ -197,6 +203,17 @@ export function GroupManagementOverlay({
   handleSubmitBookshelfCreate,
 }: GroupManagementOverlayProps) {
   const insets = useSafeAreaInsets();
+  const closingManagementMenuByPullRef = useRef(false);
+  const handleManagementMenuScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (closingManagementMenuByPullRef.current) return;
+      if (event.nativeEvent.contentOffset.y > MANAGEMENT_MENU_PULL_CLOSE_OFFSET) return;
+
+      closingManagementMenuByPullRef.current = true;
+      closeManagementMenu();
+    },
+    [closeManagementMenu],
+  );
 
   return (
     <Modal
@@ -1218,7 +1235,7 @@ export function GroupManagementOverlay({
       ) : (
         <Pressable
           style={styles.managementOverlay}
-          onPress={closeManagementMenu}
+          onPress={() => closeManagementMenu()}
           disableFeedback
         >
           <Animated.View
@@ -1232,68 +1249,81 @@ export function GroupManagementOverlay({
             <Text style={styles.managementMenuCaption}>
               운영진용 관리 기능을 선택해야 합니다.
             </Text>
-            {[
-              {
-                key: 'JOIN_REQUESTS' as const,
-                title: '모임 가입 신청 관리',
-                description: `${joinRequests.length}개의 대기 신청`,
-                icon: 'person-add-alt-1' as const,
-                onPress: () => handleOpenManagementScreen('JOIN_REQUESTS'),
-              },
-              {
-                key: 'MEMBERS' as const,
-                title: '모임 회원 관리',
-                description: `${members.length}명의 모임 회원`,
-                icon: 'groups' as const,
-                onPress: () => handleOpenManagementScreen('MEMBERS'),
-              },
-              {
-                key: 'EDIT' as const,
-                title: '모임 수정하기',
-                description: '소개, 태그, 공개 여부 수정',
-                icon: 'edit' as const,
-                onPress: () => handleOpenManagementScreen('EDIT'),
-              },
-              {
-                key: 'NOTICE_CREATE' as const,
-                title: '공지 작성하기',
-                description: '책장, 투표, 사진 첨부 가능',
-                icon: 'edit-note' as const,
-                onPress: handleOpenNoticeComposerFromManagement,
-              },
-              {
-                key: 'BOOKSHELF_CREATE' as const,
-                title: '책장 생성하기',
-                description: '정기모임용 책장 추가',
-                icon: 'library-add' as const,
-                onPress: () => handleOpenManagementScreen('BOOKSHELF_CREATE'),
-              },
-              {
-                key: 'DELETE_CLUB' as const,
-                title: '모임 삭제하기',
-                description: '삭제 후 복구할 수 없습니다',
-                icon: 'delete-outline' as const,
-                onPress: handleDeleteManagedClub,
-              },
-            ].map((item) => (
-              <Pressable
-                key={item.key}
-                style={({ pressed }) => [
-                  styles.managementMenuItem,
-                  pressed && styles.pressed,
-                ]}
-                onPress={item.onPress}
-              >
-                <View style={styles.managementMenuIcon}>
-                  <MaterialIcons name={item.icon} size={20} color={colors.primary1} />
-                </View>
-                <View style={styles.managementMenuTextWrap}>
-                  <Text style={styles.managementMenuItemTitle}>{item.title}</Text>
-                  <Text style={styles.managementMenuItemDescription}>{item.description}</Text>
-                </View>
-                <MaterialIcons name="chevron-right" size={20} color={colors.gray4} />
-              </Pressable>
-            ))}
+            <ScrollView
+              style={styles.managementMenuScroll}
+              contentContainerStyle={styles.managementMenuList}
+              showsVerticalScrollIndicator={false}
+              bounces
+              alwaysBounceVertical
+              scrollEventThrottle={16}
+              onScroll={handleManagementMenuScroll}
+              onScrollBeginDrag={() => {
+                closingManagementMenuByPullRef.current = false;
+              }}
+            >
+              {[
+                {
+                  key: 'JOIN_REQUESTS' as const,
+                  title: '모임 가입 신청 관리',
+                  description: `${joinRequests.length}개의 대기 신청`,
+                  icon: 'person-add-alt-1' as const,
+                  onPress: () => handleOpenManagementScreen('JOIN_REQUESTS'),
+                },
+                {
+                  key: 'MEMBERS' as const,
+                  title: '모임 회원 관리',
+                  description: `${members.length}명의 모임 회원`,
+                  icon: 'groups' as const,
+                  onPress: () => handleOpenManagementScreen('MEMBERS'),
+                },
+                {
+                  key: 'EDIT' as const,
+                  title: '모임 수정하기',
+                  description: '소개, 태그, 공개 여부 수정',
+                  icon: 'edit' as const,
+                  onPress: () => handleOpenManagementScreen('EDIT'),
+                },
+                {
+                  key: 'NOTICE_CREATE' as const,
+                  title: '공지 작성하기',
+                  description: '책장, 투표, 사진 첨부 가능',
+                  icon: 'edit-note' as const,
+                  onPress: handleOpenNoticeComposerFromManagement,
+                },
+                {
+                  key: 'BOOKSHELF_CREATE' as const,
+                  title: '책장 생성하기',
+                  description: '정기모임용 책장 추가',
+                  icon: 'library-add' as const,
+                  onPress: () => handleOpenManagementScreen('BOOKSHELF_CREATE'),
+                },
+                {
+                  key: 'DELETE_CLUB' as const,
+                  title: '모임 삭제하기',
+                  description: '삭제 후 복구할 수 없습니다',
+                  icon: 'delete-outline' as const,
+                  onPress: handleDeleteManagedClub,
+                },
+              ].map((item) => (
+                <Pressable
+                  key={item.key}
+                  style={({ pressed }) => [
+                    styles.managementMenuItem,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={item.onPress}
+                >
+                  <View style={styles.managementMenuIcon}>
+                    <MaterialIcons name={item.icon} size={20} color={colors.primary1} />
+                  </View>
+                  <View style={styles.managementMenuTextWrap}>
+                    <Text style={styles.managementMenuItemTitle}>{item.title}</Text>
+                    <Text style={styles.managementMenuItemDescription}>{item.description}</Text>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={20} color={colors.gray4} />
+                </Pressable>
+              ))}
+            </ScrollView>
           </Animated.View>
         </Pressable>
       )}

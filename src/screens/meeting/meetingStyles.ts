@@ -773,6 +773,7 @@ export const styles = StyleSheet.create({
   noticeText: {
     ...typography.body1_3,
     color: colors.gray6,
+    flex: 1,
   },
   detailMain: {
     gap: spacing.md,
@@ -877,6 +878,7 @@ export const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
     gap: spacing.sm,
+    maxHeight: '82%',
   },
   managementHandleArea: {
     alignSelf: 'stretch',
@@ -898,6 +900,13 @@ export const styles = StyleSheet.create({
   managementMenuCaption: {
     ...typography.body2_3,
     color: colors.gray4,
+  },
+  managementMenuScroll: {
+    flexGrow: 0,
+  },
+  managementMenuList: {
+    gap: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   managementMenuItem: {
     flexDirection: 'row',
@@ -1959,6 +1968,10 @@ export const styles = StyleSheet.create({
     ...typography.body1_2,
     color: colors.gray6,
   },
+  noticeComposerTitleInput: {
+    minHeight: 48,
+    textAlignVertical: 'top',
+  },
   noticeComposerTextArea: {
     minHeight: 180,
     textAlignVertical: 'top',
@@ -2144,7 +2157,18 @@ export const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingVertical: spacing.sm,
   },
+  noticeBookSelectorInlineOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: layers.overlay,
+    elevation: layers.overlay,
+    backgroundColor: colors.overlay30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
   noticeBookSelectorCard: {
+    width: '100%',
+    maxWidth: dialog.maxWidth,
     borderRadius: radius.lg,
     backgroundColor: colors.white,
     padding: spacing.md,

@@ -17,6 +17,7 @@ import {
   updateClubNoticeComment,
   updateClubNotice,
   createClubNotice,
+  type ClubNoticeList,
 } from '../../services/api/clubApi';
 import { getCurrentKstApiDateTime } from '../../utils/date';
 import { showToast } from '../../utils/toast';
@@ -41,6 +42,76 @@ import { toApiDateTime } from './formatters';
 import { logMeetingAction } from './helpers';
 
 const NOTICE_PAGE_SIZE = 8;
+const NOTICE_LIST_PAGE_FETCH_LIMIT = 20;
+
+function mapClubNoticeListToItems(
+  noticeList: Pick<ClubNoticeList, 'pinnedNotices' | 'normalNotices'>,
+) {
+  return sortNoticeItems([
+    ...noticeList.pinnedNotices.map(mapNoticePreviewToNoticeItem),
+    ...noticeList.normalNotices.map(mapNoticePreviewToNoticeItem),
+  ]);
+}
+
+async function fetchClubNoticeBoardItems(clubId: number) {
+  const first = await fetchClubNotices(clubId, 1);
+  const normalNotices = [...first.normalNotices];
+
+  for (let page = 2; page <= Math.min(first.totalPages, NOTICE_LIST_PAGE_FETCH_LIMIT); page += 1) {
+    const more = await fetchClubNotices(clubId, page);
+    normalNotices.push(...more.normalNotices);
+    if (!more.hasNext) break;
+  }
+
+  return mapClubNoticeListToItems({
+    pinnedNotices: first.pinnedNotices,
+    normalNotices,
+  });
+}
+
+function buildNoticeDraftFromNotice(notice: NoticeItem): NoticeDraft {
+  return {
+    title: notice.title,
+    content: notice.content,
+    isPinned: Boolean(notice.isPinned),
+    bookshelfEnabled: Boolean(notice.bookshelf),
+    bookshelfId: notice.bookshelf?.id ?? null,
+    pollEnabled: Boolean(notice.poll),
+    pollAnonymous: notice.poll?.anonymous ?? true,
+    pollAllowDuplicate: notice.poll?.allowDuplicate ?? false,
+    pollStartsAt: notice.poll?.startsAt ?? '2026.03.01 10:00',
+    pollEndsAt: notice.poll?.endsAt ?? '2026.03.08 22:00',
+    pollOptions: notice.poll?.options.map((option) => option.label) ?? ['', '', ''],
+    photos: notice.photos ?? [],
+  };
+}
+
+function getMeetingIdFromBookshelfId(bookshelfId?: string | null): number | undefined {
+  const matched = bookshelfId?.match(/^bookshelf-(\d+)$/);
+  if (!matched) return undefined;
+
+  const meetingId = Number(matched[1]);
+  return Number.isFinite(meetingId) ? meetingId : undefined;
+}
+
+function resolveNoticeBookshelfMeetingId(
+  draft: NoticeDraft,
+  bookshelfItems: BookshelfItem[],
+  editingNotice?: NoticeItem | null,
+): number | undefined {
+  if (!draft.bookshelfEnabled) return undefined;
+
+  const selectedBook = draft.bookshelfId
+    ? bookshelfItems.find((book) => book.id === draft.bookshelfId)
+    : null;
+
+  return (
+    selectedBook?.remoteMeetingId ??
+    selectedBook?.regularMeetingId ??
+    getMeetingIdFromBookshelfId(draft.bookshelfId) ??
+    editingNotice?.bookshelf?.remoteMeetingId
+  );
+}
 
 export type NoticeStateParams = {
   group: Group;
@@ -54,6 +125,7 @@ export type NoticeStateParams = {
   setLatestNoticeId: Dispatch<SetStateAction<number | null>>;
   setReportModal: Dispatch<SetStateAction<ReportMemberModalState | null>>;
   openBookshelfTopicByMeetingId: (meetingId: number) => Promise<boolean>;
+  onNoticeSubmitSuccess?: () => void;
 };
 
 export function useNoticeState({
@@ -68,6 +140,7 @@ export function useNoticeState({
   setLatestNoticeId,
   setReportModal,
   openBookshelfTopicByMeetingId,
+  onNoticeSubmitSuccess,
 }: NoticeStateParams) {
   const [noticePage, setNoticePage] = useState(1);
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
@@ -103,6 +176,8 @@ export function useNoticeState({
     voters: string[];
   } | null>(null);
   const [uploadingNoticePhoto, setUploadingNoticePhoto] = useState(false);
+  const enrichingNoticeDetailKeysRef = useRef<Set<string>>(new Set());
+  const enrichedNoticeDetailKeysRef = useRef<Set<string>>(new Set());
   const noticePageSize = NOTICE_PAGE_SIZE;
 
   const mapNoticeCommentItemToUi = useCallback(
@@ -199,6 +274,85 @@ export function useNoticeState({
     },
     [mapNoticeCommentItemToUi],
   );
+
+  useEffect(() => {
+    enrichingNoticeDetailKeysRef.current.clear();
+    enrichedNoticeDetailKeysRef.current.clear();
+  }, [group.clubId]);
+
+  useEffect(() => {
+    const clubId = group.clubId;
+    if (typeof clubId !== 'number') return;
+
+    const candidates = visibleNotices.filter((notice) => {
+      if (typeof notice.remoteId !== 'number') return false;
+      if (notice.content.trim().length > 0) return false;
+
+      const key = `${clubId}:${notice.remoteId}`;
+      return (
+        !enrichingNoticeDetailKeysRef.current.has(key) &&
+        !enrichedNoticeDetailKeysRef.current.has(key)
+      );
+    });
+    if (candidates.length === 0) return;
+
+    let cancelled = false;
+
+    const enrichVisibleNoticeDetails = async () => {
+      const results = await Promise.all(
+        candidates.map(async (notice) => {
+          const remoteId = notice.remoteId;
+          if (typeof remoteId !== 'number') return null;
+
+          const key = `${clubId}:${remoteId}`;
+          enrichingNoticeDetailKeysRef.current.add(key);
+
+          try {
+            const detail = await fetchClubNoticeDetail(clubId, remoteId);
+            return detail ? { key, noticeId: notice.id, detail } : null;
+          } catch (error) {
+            logMeetingAction('notice_detail_enrich_failure', {
+              clubId,
+              noticeId: remoteId,
+              message: error instanceof Error ? error.message : String(error),
+            });
+            return null;
+          } finally {
+            enrichingNoticeDetailKeysRef.current.delete(key);
+          }
+        }),
+      );
+
+      if (cancelled) return;
+
+      const detailByNoticeId = new Map(
+        results
+          .filter((result): result is NonNullable<typeof result> => Boolean(result))
+          .map((result) => [result.noticeId, result.detail]),
+      );
+
+      if (detailByNoticeId.size === 0) return;
+
+      results.forEach((result) => {
+        if (result) enrichedNoticeDetailKeysRef.current.add(result.key);
+      });
+
+      setNoticeItems((prev) =>
+        sortNoticeItems(
+          prev.map((item) => {
+            const detail = detailByNoticeId.get(item.id);
+            return detail ? mergeNoticeDetail(item, detail) : item;
+          }),
+        ),
+      );
+    };
+
+    void enrichVisibleNoticeDetails();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [group.clubId, visibleNotices]);
 
   useEffect(() => {
     if (typeof group.clubId !== 'number' || !selectedNoticeId) return;
@@ -690,30 +844,63 @@ export function useNoticeState({
   ]);
 
   const handleOpenNoticeComposer = useCallback((notice?: NoticeItem) => {
-    if (notice) {
-      setEditingNoticeId(notice.id);
-      setNoticeDraft({
-        title: notice.title,
-        content: notice.content,
-        isPinned: Boolean(notice.isPinned),
-        bookshelfEnabled: Boolean(notice.bookshelf),
-        bookshelfId: notice.bookshelf?.id ?? null,
-        pollEnabled: Boolean(notice.poll),
-        pollAnonymous: notice.poll?.anonymous ?? true,
-        pollAllowDuplicate: notice.poll?.allowDuplicate ?? false,
-        pollStartsAt: notice.poll?.startsAt ?? '2026.03.01 10:00',
-        pollEndsAt: notice.poll?.endsAt ?? '2026.03.08 22:00',
-        pollOptions: notice.poll?.options.map((option) => option.label) ?? ['', '', ''],
-        photos: notice.photos ?? [],
-      });
-    } else {
-      setEditingNoticeId(null);
-      setNoticeDraft(buildNoticeDraft());
-    }
     setNoticeMenuVisible(false);
     setNoticeBookSelectorVisible(false);
+
+    if (notice) {
+      const clubId = group.clubId;
+      const noticeId = notice.remoteId;
+
+      const open = async () => {
+        let editableNotice = notice;
+
+        if (typeof clubId === 'number' && typeof noticeId === 'number') {
+          try {
+            const detail = await fetchClubNoticeDetail(clubId, noticeId);
+            if (detail) {
+              const merged = mergeNoticeDetail(notice, detail);
+              const detailKey = `${clubId}:${noticeId}`;
+              enrichedNoticeDetailKeysRef.current.add(detailKey);
+              editableNotice = merged;
+              setNoticeItems((prev) =>
+                sortNoticeItems(prev.map((item) => (item.id === notice.id ? merged : item))),
+              );
+              if (merged.poll) {
+                setNoticePollOptionsById((prev) => ({
+                  ...prev,
+                  [merged.id]: merged.poll?.options ?? [],
+                }));
+              }
+            } else if (notice.content.trim().length === 0) {
+              showToast('공지 상세 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주십시오.');
+              return;
+            }
+          } catch (error) {
+            logMeetingAction('notice_edit_detail_load_failure', {
+              clubId,
+              noticeId,
+              message: error instanceof Error ? error.message : String(error),
+            });
+            if (notice.content.trim().length === 0) {
+              showToast('공지 상세 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주십시오.');
+              return;
+            }
+          }
+        }
+
+        setEditingNoticeId(editableNotice.id);
+        setNoticeDraft(buildNoticeDraftFromNotice(editableNotice));
+        setNoticeComposerVisible(true);
+      };
+
+      void open();
+      return;
+    }
+
+    setEditingNoticeId(null);
+    setNoticeDraft(buildNoticeDraft());
     setNoticeComposerVisible(true);
-  }, []);
+  }, [group.clubId]);
 
   const handleCloseNoticeComposer = useCallback(() => {
     setNoticeComposerVisible(false);
@@ -790,13 +977,23 @@ export function useNoticeState({
       return;
     }
 
-    const bookshelfAttachment =
-      noticeDraft.bookshelfEnabled && noticeDraft.bookshelfId
-        ? bookshelfItems.find((book) => book.id === noticeDraft.bookshelfId)
-        : null;
+    const editingNotice = editingNoticeId
+      ? noticeItems.find((item) => item.id === editingNoticeId)
+      : null;
+    const bookshelfMeetingId = resolveNoticeBookshelfMeetingId(
+      noticeDraft,
+      bookshelfItems,
+      editingNotice,
+    );
     const pollOptions = noticeDraft.pollOptions
       .map((option) => option.trim())
       .filter((option) => option.length > 0);
+
+    if (noticeDraft.bookshelfEnabled && typeof bookshelfMeetingId !== 'number') {
+      showToast('연결할 책장을 선택해야 합니다.');
+      setNoticeBookSelectorVisible(true);
+      return;
+    }
 
     if (noticeDraft.pollEnabled && pollOptions.length < 2) {
       showToast('투표 항목은 2개 이상 필요합니다.');
@@ -806,7 +1003,6 @@ export function useNoticeState({
     const submit = async () => {
       try {
         if (editingNoticeId) {
-          const editingNotice = noticeItems.find((item) => item.id === editingNoticeId);
           if (!editingNotice?.remoteId) {
             showToast('수정할 공지 정보를 찾을 수 없습니다.');
             return;
@@ -814,7 +1010,7 @@ export function useNoticeState({
           await updateClubNotice(group.clubId as number, editingNotice.remoteId, {
             title,
             content,
-            meetingId: bookshelfAttachment?.remoteMeetingId,
+            meetingId: bookshelfMeetingId,
             imageUrls: noticeDraft.photos.length > 0 ? noticeDraft.photos : undefined,
             vote: noticeDraft.pollEnabled
               ? { deadline: toApiDateTime(noticeDraft.pollEndsAt.trim()) ?? getCurrentKstApiDateTime() }
@@ -825,7 +1021,7 @@ export function useNoticeState({
           await createClubNotice(group.clubId as number, {
             title,
             content,
-            meetingId: bookshelfAttachment?.remoteMeetingId,
+            meetingId: bookshelfMeetingId,
             imageUrls: noticeDraft.photos.length > 0 ? noticeDraft.photos : undefined,
             vote: noticeDraft.pollEnabled
               ? {
@@ -849,18 +1045,19 @@ export function useNoticeState({
           });
         }
 
-        const [refreshed, latestNotice] = await Promise.all([
-          fetchClubNotices(group.clubId as number, 1),
+        const [mapped, latestNotice] = await Promise.all([
+          fetchClubNoticeBoardItems(group.clubId as number),
           fetchClubLatestNotice(group.clubId as number, { suppressErrorToast: true }),
         ]);
-        const mapped = sortNoticeItems([
-          ...refreshed.pinnedNotices.map(mapNoticePreviewToNoticeItem),
-          ...refreshed.normalNotices.map(mapNoticePreviewToNoticeItem),
-        ]);
         setNoticeItems(mapped);
+        setNoticePage(1);
+        setSelectedNoticeId(null);
+        setNoticeCommentInput('');
+        setEditingNoticeCommentId(null);
+        setNoticeMenuVisible(false);
         setLatestNoticeId(typeof latestNotice?.id === 'number' ? latestNotice.id : null);
         setManagedGroup((prev) => ({ ...prev, notice: latestNotice?.title }));
-        setSelectedNoticeId(mapped[0]?.id ?? null);
+        onNoticeSubmitSuccess?.();
         setNoticeComposerVisible(false);
         setEditingNoticeId(null);
         setNoticeDraft(buildNoticeDraft());
@@ -869,7 +1066,7 @@ export function useNoticeState({
           clubId: group.clubId,
           mode: editingNoticeId ? 'edit' : 'create',
           hasVote: noticeDraft.pollEnabled,
-          hasBookshelfAttachment: Boolean(bookshelfAttachment?.remoteMeetingId),
+          hasBookshelfAttachment: typeof bookshelfMeetingId === 'number',
         });
       } catch (error) {
         logMeetingAction('notice_submit_failure', {
@@ -891,6 +1088,7 @@ export function useNoticeState({
     group.clubId,
     noticeDraft,
     noticeItems,
+    onNoticeSubmitSuccess,
     setLatestNoticeId,
     setManagedGroup,
   ]);
@@ -907,16 +1105,13 @@ export function useNoticeState({
     const remove = async () => {
       try {
         await deleteClubNotice(clubId, noticeId);
-        const [refreshed, latestNotice] = await Promise.all([
-          fetchClubNotices(clubId, 1),
+        const [mapped, latestNotice] = await Promise.all([
+          fetchClubNoticeBoardItems(clubId),
           fetchClubLatestNotice(clubId, { suppressErrorToast: true }),
         ]);
-        setNoticeItems(
-          sortNoticeItems([
-            ...refreshed.pinnedNotices.map(mapNoticePreviewToNoticeItem),
-            ...refreshed.normalNotices.map(mapNoticePreviewToNoticeItem),
-          ]),
-        );
+        setNoticeItems(mapped);
+        setNoticePage(1);
+        setSelectedNoticeId(null);
         setLatestNoticeId(typeof latestNotice?.id === 'number' ? latestNotice.id : null);
         setManagedGroup((prev) => ({ ...prev, notice: latestNotice?.title }));
         setNoticeCommentsById((prev) => {

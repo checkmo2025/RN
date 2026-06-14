@@ -86,7 +86,7 @@ import { useAccountSettingsState, type ReportHistoryItem } from './mypage/useAcc
 import { SkeletonBox } from '../components/common/SkeletonBox';
 
 const tabs = ['내 책 이야기', '내 서재', '내 모임', '내 알림'] as const;
-const reportContentBreakInterval = 12;
+const reportContentBreakInterval = 28;
 const softBreak = String.fromCharCode(8203);
 
 function formatReportContent(content: string): string {
@@ -1910,11 +1910,7 @@ export function MyPageScreen() {
                     <Text style={styles.reportDate}>{report.createdAtLabel}</Text>
                   ) : null}
                 </View>
-                <Text
-                  style={styles.reportText}
-                  lineBreakStrategyIOS="hangul-word"
-                  textBreakStrategy="balanced"
-                >
+                <Text style={styles.reportText}>
                   {formatReportContent(report.content)}
                 </Text>
               </View>

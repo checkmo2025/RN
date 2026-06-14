@@ -43,6 +43,8 @@ import {
 const MGMT_SHEET_DRAG_START = 6;
 const MGMT_SHEET_DISMISS_DISTANCE = 100;
 const MGMT_SHEET_DISMISS_VELOCITY = 0.5;
+const MGMT_SHEET_EXPAND_DISTANCE = 120;
+const MGMT_SHEET_EXPAND_TRIGGER = 48;
 
 export type ManagementStateParams = {
   group: Group;
@@ -81,31 +83,55 @@ export function useManagementState({
 }: ManagementStateParams) {
   const [managementMenuVisible, setManagementMenuVisible] = useState(false);
   const managementSheetY = useRef(new Animated.Value(0)).current;
+  const managementSheetPositionRef = useRef(0);
+  const managementSheetDragStartRef = useRef(0);
 
   const managementHandlePanResponder = useRef(
     PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_evt, gestureState) =>
-        gestureState.dy > MGMT_SHEET_DRAG_START &&
+        Math.abs(gestureState.dy) > MGMT_SHEET_DRAG_START &&
         Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
+      onPanResponderGrant: () => {
+        managementSheetDragStartRef.current = managementSheetPositionRef.current;
+      },
       onPanResponderMove: (_evt, gestureState) => {
-        if (gestureState.dy > 0) managementSheetY.setValue(gestureState.dy);
+        const nextY = Math.min(
+          Math.max(
+            managementSheetDragStartRef.current + gestureState.dy,
+            -MGMT_SHEET_EXPAND_DISTANCE,
+          ),
+          600,
+        );
+        managementSheetY.setValue(nextY);
       },
       onPanResponderRelease: (_evt, gestureState) => {
+        const releasedY = managementSheetDragStartRef.current + gestureState.dy;
         if (
-          gestureState.dy > MGMT_SHEET_DISMISS_DISTANCE ||
+          releasedY > MGMT_SHEET_DISMISS_DISTANCE ||
           gestureState.vy > MGMT_SHEET_DISMISS_VELOCITY
         ) {
           Animated.timing(managementSheetY, {
             toValue: 600,
             duration: motion.duration.sheet,
             useNativeDriver: true,
-          }).start(() => setManagementMenuVisible(false));
+          }).start(() => {
+            managementSheetPositionRef.current = 0;
+            setManagementMenuVisible(false);
+            managementSheetY.setValue(0);
+          });
         } else {
+          const targetY =
+            releasedY < -MGMT_SHEET_EXPAND_TRIGGER || gestureState.vy < -MGMT_SHEET_DISMISS_VELOCITY
+              ? -MGMT_SHEET_EXPAND_DISTANCE
+              : 0;
           Animated.spring(managementSheetY, {
-            toValue: 0,
+            toValue: targetY,
             useNativeDriver: true,
             bounciness: 6,
-          }).start();
+          }).start(() => {
+            managementSheetPositionRef.current = targetY;
+          });
         }
       },
     }),
@@ -138,12 +164,17 @@ export function useManagementState({
   }, [group]);
 
   useEffect(() => {
-    if (managementMenuVisible) managementSheetY.setValue(0);
+    if (managementMenuVisible) {
+      managementSheetPositionRef.current = 0;
+      managementSheetY.setValue(0);
+    }
   }, [managementMenuVisible, managementSheetY]);
 
   const closeManagementMenu = useCallback(() => {
+    managementSheetPositionRef.current = 0;
+    managementSheetY.setValue(0);
     setManagementMenuVisible(false);
-  }, []);
+  }, [managementSheetY]);
 
   const closeContactModal = useCallback(() => {
     setContactModalVisible(false);

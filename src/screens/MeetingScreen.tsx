@@ -23,6 +23,7 @@ import type {
   LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  TextInputContentSizeChangeEventData,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import {
@@ -176,6 +177,10 @@ const MEETING_TAB_DOUBLE_TAP_WINDOW_MS = 450;
 const GROUP_TITLE_FOCUS_TOP_OFFSET = spacing.xs;
 const GROUP_TITLE_FOCUS_SCROLL_SAFETY = spacing.md;
 const BOOKSHELF_DETAIL_FOCUS_TOP_OFFSET = spacing.sm;
+const NOTICE_TITLE_INPUT_MIN_HEIGHT = 48;
+const NOTICE_TITLE_INPUT_MAX_HEIGHT = 112;
+const NOTICE_CONTENT_INPUT_MIN_HEIGHT = 180;
+const NOTICE_CONTENT_INPUT_MAX_HEIGHT = 360;
 
 
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
@@ -221,6 +226,25 @@ function isMissingClubMembershipError(error: ApiError) {
     error.code === 'CLUB_MEMBER_404' ||
     (error.status === 404 && error.message.includes('해당 클럽 회원'))
   );
+}
+
+function getNoticeInputHeight(contentHeight: number, minHeight: number, maxHeight: number) {
+  const measuredHeight = Math.ceil(contentHeight);
+  return Math.min(Math.max(measuredHeight, minHeight), maxHeight);
+}
+
+function getStableNoticeInputHeight(
+  text: string,
+  contentHeight: number,
+  minHeight: number,
+  maxHeight: number,
+) {
+  if (text.length === 0) return minHeight;
+  return getNoticeInputHeight(contentHeight, minHeight, maxHeight);
+}
+
+function shouldUpdateNoticeInputHeight(currentHeight: number, nextHeight: number) {
+  return Math.abs(currentHeight - nextHeight) > 1;
 }
 
 
@@ -875,12 +899,49 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const bookshelfTabScrollRef = useRef(false);
   const [groupHomeRefreshing, setGroupHomeRefreshing] = useState(false);
   const [latestNoticeId, setLatestNoticeId] = useState<number | null>(null);
+  const [noticeTitleInputHeight, setNoticeTitleInputHeight] = useState(
+    NOTICE_TITLE_INPUT_MIN_HEIGHT,
+  );
+  const [noticeContentInputHeight, setNoticeContentInputHeight] = useState(
+    NOTICE_CONTENT_INPUT_MIN_HEIGHT,
+  );
   const clubWorkspaceRequestIdRef = useRef(0);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(!isManagedClub);
+
+  const handleNoticeTitleContentSizeChange = useCallback(
+    (event: NativeSyntheticEvent<TextInputContentSizeChangeEventData>, text: string) => {
+      const nextHeight = getStableNoticeInputHeight(
+        text,
+        event.nativeEvent.contentSize.height,
+        NOTICE_TITLE_INPUT_MIN_HEIGHT,
+        NOTICE_TITLE_INPUT_MAX_HEIGHT,
+      );
+      setNoticeTitleInputHeight((currentHeight) =>
+        shouldUpdateNoticeInputHeight(currentHeight, nextHeight) ? nextHeight : currentHeight,
+      );
+    },
+    [],
+  );
+
+  const handleNoticeContentSizeChange = useCallback(
+    (event: NativeSyntheticEvent<TextInputContentSizeChangeEventData>, text: string) => {
+      const nextHeight = getStableNoticeInputHeight(
+        text,
+        event.nativeEvent.contentSize.height,
+        NOTICE_CONTENT_INPUT_MIN_HEIGHT,
+        NOTICE_CONTENT_INPUT_MAX_HEIGHT,
+      );
+      setNoticeContentInputHeight((currentHeight) =>
+        shouldUpdateNoticeInputHeight(currentHeight, nextHeight) ? nextHeight : currentHeight,
+      );
+    },
+    [],
+  );
 
   const setReportModalRef = useRef<Dispatch<SetStateAction<ReportMemberModalState | null>>>(() => {});
   const setActiveManagementScreenRef = useRef<(s: GroupManagementScreen | null) => void>(() => {});
   const handleOpenNoticeComposerRef = useRef<() => void>(() => {});
+  const showNoticeListAfterSubmitRef = useRef<() => void>(() => {});
   const setReportModalProxy = useCallback<Dispatch<SetStateAction<ReportMemberModalState | null>>>(
     (m) => setReportModalRef.current(m),
     [],
@@ -890,6 +951,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     [],
   );
   const handleOpenNoticeComposerProxy = useCallback(() => handleOpenNoticeComposerRef.current(), []);
+  const showNoticeListAfterSubmitProxy = useCallback(() => showNoticeListAfterSubmitRef.current(), []);
 
   const bookshelfState = useBookshelfState({
     group,
@@ -915,6 +977,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     setLatestNoticeId,
     setReportModal: setReportModalProxy,
     openBookshelfTopicByMeetingId: bookshelfState.openBookshelfTopicByMeetingId,
+    onNoticeSubmitSuccess: showNoticeListAfterSubmitProxy,
   });
 
   const mgmtState = useManagementState({
@@ -1102,6 +1165,26 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     resetNoticeOnGroupChange,
   } = noticeState;
 
+  const handleChangeNoticeTitle = useCallback(
+    (text: string) => {
+      setNoticeDraft((prev) => ({ ...prev, title: text }));
+      if (text.length === 0) {
+        setNoticeTitleInputHeight(NOTICE_TITLE_INPUT_MIN_HEIGHT);
+      }
+    },
+    [setNoticeDraft],
+  );
+
+  const handleChangeNoticeContent = useCallback(
+    (text: string) => {
+      setNoticeDraft((prev) => ({ ...prev, content: text }));
+      if (text.length === 0) {
+        setNoticeContentInputHeight(NOTICE_CONTENT_INPUT_MIN_HEIGHT);
+      }
+    },
+    [setNoticeDraft],
+  );
+
   const {
     managementMenuVisible, setManagementMenuVisible,
     managementSheetY,
@@ -1141,6 +1224,13 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     handleOpenContactLink,
     handleOpenNoticeComposerFromManagement,
   } = mgmtState;
+
+  useEffect(() => {
+    if (noticeComposerVisible) return;
+    setNoticeTitleInputHeight(NOTICE_TITLE_INPUT_MIN_HEIGHT);
+    setNoticeContentInputHeight(NOTICE_CONTENT_INPUT_MIN_HEIGHT);
+  }, [noticeComposerVisible]);
+
   const contactLinks = useMemo(
     () => normalizeClubContacts(managedGroup.links),
     [managedGroup.links],
@@ -1345,6 +1435,12 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     },
     [flushPendingGroupTitleFocus],
   );
+
+  const showNoticeListAfterSubmit = useCallback(() => {
+    setActiveTab('notice');
+    focusGroupTitle(true);
+  }, [focusGroupTitle]);
+  showNoticeListAfterSubmitRef.current = showNoticeListAfterSubmit;
 
   const flushPendingBookshelfDetailFocus = useCallback(() => {
     const targetY = pendingBookshelfDetailFocusYRef.current;
@@ -1722,7 +1818,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               onPress={handlePressTopNotice}
             >
               <MaterialIcons name="campaign" size={18} color={colors.primary1} />
-              <Text style={styles.noticeText}>{managedGroup.notice}</Text>
+              <Text style={styles.noticeText} numberOfLines={1} ellipsizeMode="tail">
+                {managedGroup.notice}
+              </Text>
             </Pressable>
           ) : null}
 
@@ -2432,20 +2530,37 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               <Text style={styles.noticeComposerLabel}>제목</Text>
               <TextInput
                 value={noticeDraft.title}
-                onChangeText={(text) => setNoticeDraft((prev) => ({ ...prev, title: text }))}
+                onChangeText={handleChangeNoticeTitle}
                 placeholder="제목을 입력해야 합니다."
                 placeholderTextColor={colors.gray3}
-                style={styles.input}
+                style={[
+                  styles.input,
+                  styles.noticeComposerTitleInput,
+                  { height: noticeTitleInputHeight },
+                ]}
+                multiline
+                scrollEnabled={noticeTitleInputHeight >= NOTICE_TITLE_INPUT_MAX_HEIGHT}
+                onContentSizeChange={(event) =>
+                  handleNoticeTitleContentSizeChange(event, noticeDraft.title)
+                }
               />
 
               <Text style={styles.noticeComposerLabel}>내용</Text>
               <TextInput
                 value={noticeDraft.content}
-                onChangeText={(text) => setNoticeDraft((prev) => ({ ...prev, content: text }))}
+                onChangeText={handleChangeNoticeContent}
                 placeholder="내용을 입력해야 합니다."
                 placeholderTextColor={colors.gray3}
-                style={[styles.input, styles.noticeComposerTextArea]}
+                style={[
+                  styles.input,
+                  styles.noticeComposerTextArea,
+                  { height: noticeContentInputHeight },
+                ]}
                 multiline
+                scrollEnabled={noticeContentInputHeight >= NOTICE_CONTENT_INPUT_MAX_HEIGHT}
+                onContentSizeChange={(event) =>
+                  handleNoticeContentSizeChange(event, noticeDraft.content)
+                }
               />
 
               <View style={styles.noticeComposerPinRow}>
@@ -2756,51 +2871,59 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               <Text style={styles.primaryButtonText}>{editingNoticeId ? '수정하기' : '등록하기'}</Text>
             </Pressable>
           </View>
+
+          {noticeBookSelectorVisible ? (
+            <View style={styles.noticeBookSelectorInlineOverlay}>
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => setNoticeBookSelectorVisible(false)}
+                disableFeedback
+              />
+              <View style={styles.noticeBookSelectorCard}>
+                <View style={styles.managementModalHeader}>
+                  <Text style={styles.managementModalTitle}>책장 선택</Text>
+                  <Pressable onPress={() => setNoticeBookSelectorVisible(false)} hitSlop={8}>
+                    <MaterialIcons name="close" size={20} color={colors.gray6} />
+                  </Pressable>
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.noticeBookSelectorList}
+                >
+                  {bookshelfItems.map((book) => (
+                    <Pressable
+                      key={`notice-book-${book.id}`}
+                      style={({ pressed }) => [
+                        styles.noticeBookSelectorItem,
+                        noticeDraft.bookshelfId === book.id && styles.noticeBookSelectorItemActive,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => handleSelectNoticeBookshelf(book.id)}
+                    >
+                      <Image
+                        source={{ uri: book.coverImage }}
+                        style={styles.noticeBookSelectorCover}
+                      />
+                      <Text style={styles.noticeBookSelectorTitle} numberOfLines={1}>
+                        {book.title}
+                      </Text>
+                      <Text style={styles.noticeBookSelectorMeta} numberOfLines={1}>
+                        {book.author}
+                      </Text>
+                    </Pressable>
+                  ))}
+                  {bookshelfItems.length === 0 ? (
+                    <View style={styles.managementEmptyCard}>
+                      <Text style={styles.managementEmptyText}>연결할 책장이 없습니다.</Text>
+                    </View>
+                  ) : null}
+                </ScrollView>
+              </View>
+            </View>
+          ) : null}
         </KeyboardAvoidingView>
       </Modal>
-      <DialogOverlay
-        visible={noticeBookSelectorVisible}
-        onClose={() => setNoticeBookSelectorVisible(false)}
-        overlayStyle={styles.managementOverlay}
-        cardStyle={styles.noticeBookSelectorCard}
-      >
-            <View style={styles.managementModalHeader}>
-              <Text style={styles.managementModalTitle}>책장 선택</Text>
-              <Pressable onPress={() => setNoticeBookSelectorVisible(false)} hitSlop={8}>
-                <MaterialIcons name="close" size={20} color={colors.gray6} />
-              </Pressable>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.noticeBookSelectorList}
-            >
-              {bookshelfItems.map((book) => (
-                <Pressable
-                  key={`notice-book-${book.id}`}
-                  style={({ pressed }) => [
-                    styles.noticeBookSelectorItem,
-                    noticeDraft.bookshelfId === book.id && styles.noticeBookSelectorItemActive,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() => handleSelectNoticeBookshelf(book.id)}
-                >
-                  <Image source={{ uri: book.coverImage }} style={styles.noticeBookSelectorCover} />
-                  <Text style={styles.noticeBookSelectorTitle} numberOfLines={1}>
-                    {book.title}
-                  </Text>
-                  <Text style={styles.noticeBookSelectorMeta} numberOfLines={1}>
-                    {book.author}
-                  </Text>
-                </Pressable>
-              ))}
-              {bookshelfItems.length === 0 ? (
-                <View style={styles.managementEmptyCard}>
-                  <Text style={styles.managementEmptyText}>연결할 책장이 없습니다.</Text>
-                </View>
-              ) : null}
-            </ScrollView>
-      </DialogOverlay>
       <Modal
         visible={noticeMenuVisible}
         transparent
