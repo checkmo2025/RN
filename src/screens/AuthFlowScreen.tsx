@@ -39,8 +39,6 @@ import { showToast } from '../utils/toast';
 import { CATEGORY_OPTIONS } from '../constants/domain/category';
 import { useEmailVerificationFlow } from '../hooks/useEmailVerificationFlow';
 
-declare const __DEV__: boolean;
-
 type Step =
   | 'login'
   | 'findId'
@@ -101,7 +99,6 @@ function resolveNicknameFormatError(value: string): string {
 export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const ev = useEmailVerificationFlow();
   const [step, setStep] = useState<Step>('login');
-  const [signUpUiPreview, setSignUpUiPreview] = useState(false);
   const [exitSignupConfirmVisible, setExitSignupConfirmVisible] = useState(false);
 
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -219,7 +216,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   };
 
   const resetSignUpFlow = () => {
-    setSignUpUiPreview(false);
     setAgreeService(false);
     setAgreeCheckmo(false);
     setAgreeThirdParty(false);
@@ -247,7 +243,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   };
 
   const goToLogin = () => {
-    setSignUpUiPreview(false);
     setStep('login');
     setActiveTermsModalKey(null);
     setVerificationCode('');
@@ -257,26 +252,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const startSignUp = () => {
     resetSignUpFlow();
     setStep('terms');
-  };
-
-  const openSignUpUiPreview = () => {
-    resetSignUpFlow();
-    setSignUpUiPreview(true);
-    setAgreeService(true);
-    setAgreeCheckmo(true);
-    setAgreeThirdParty(true);
-    setAgreeMarketing(true);
-    setSignUpEmail('dev-checkmo@example.com');
-    setSignUpPassword('checkmo!');
-    setSignUpPasswordConfirm('checkmo!');
-    setNickname('bookbook');
-    setNicknameChecked({ value: 'bookbook', duplicate: false });
-    setNicknameLengthExceeded(false);
-    setDescription('안녕하세요');
-    setName('홍길동');
-    setPhoneNumber('010-1234-5678');
-    setSelectedCategories(CATEGORY_OPTIONS.slice(0, 2).map((category) => category.code));
-    setStep('emailVerification');
   };
 
   const completeAuthFlow = useCallback((nextToast?: string) => {
@@ -316,24 +291,12 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       showToast('올바른 이메일 형식이어야 합니다.');
       return;
     }
-    if (__DEV__ && signUpUiPreview) {
-      ev.startLocalVerification('개발용 인증은 임의의 6자리 숫자로 진행할 수 있습니다.');
-      return;
-    }
     await ev.sendCode(email, 'SIGN_UP');
   };
 
   const handleConfirmVerificationCode = async () => {
     const email = signUpEmail.trim();
     const code = verificationCode.trim();
-    if (__DEV__ && signUpUiPreview) {
-      if (/^\d{6}$/.test(code)) {
-        ev.verifyLocally();
-      } else {
-        showToast('인증 코드가 일치하지 않습니다.');
-      }
-      return;
-    }
     if (!ev.sent) {
       showToast('먼저 인증번호를 발송해야 합니다.');
       return;
@@ -489,13 +452,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const handleSubmitSignUp = async () => {
     if (selectedCategories.length === 0) {
       showToast('관심 카테고리를 1개 이상 선택해야 합니다.');
-      return;
-    }
-
-    if (__DEV__ && signUpUiPreview) {
-      setProfileImageUrl(selectedProfileImage?.uri ?? profileImageUrl.trim());
-      showToast('회원가입에 성공했습니다');
-      setStep('signupComplete');
       return;
     }
 
@@ -1472,14 +1428,6 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         <Pressable onPress={startSignUp}>
           <Text style={styles.linkText}>아직 회원이 아니신가요? 회원가입하러가기</Text>
         </Pressable>
-        {__DEV__ ? (
-          <Pressable
-            style={({ pressed }) => [styles.devPreviewButton, pressed && styles.pressed]}
-            onPress={openSignUpUiPreview}
-          >
-            <Text style={styles.devPreviewButtonText}>UI 보기(개발용)</Text>
-          </Pressable>
-        ) : null}
       </View>
       <Pressable onPress={() => Linking.openURL(PUBLIC_ENV.SUPPORT_FORM_URL).catch(() => null)}>
         <Text style={styles.linkText}>고객센터/문의하기</Text>
@@ -1948,18 +1896,6 @@ const styles = StyleSheet.create({
     ...typography.body1_3,
     color: colors.gray5,
     textDecorationLine: 'underline',
-  },
-  devPreviewButton: {
-    borderWidth: 1,
-    borderColor: colors.primary1,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xxs,
-    backgroundColor: colors.white,
-  },
-  devPreviewButtonText: {
-    ...typography.body2_3,
-    color: colors.primary1,
   },
   linkDivider: {
     width: 1,

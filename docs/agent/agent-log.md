@@ -2769,3 +2769,9 @@ export const interactionOpacity = {
 - 사용자 실기기 확인 결과 4건 통과 → TODO ✅ 전환: 공지 작성/수정·투표 QA, 모임 정보 수정 사진/책장 버튼, 책이야기 글 작성/수정 화면 꺼짐, 책장 수정 진입 크래시
 - 잔여(나중): 뒤로가기 액션 QA, 공지 리스트 로딩, 회원가입/모임 생성 로직 — 심사 전 회원가입·모임 생성 스모크 테스트 권장
 - iOS 제출은 datetimepicker pod 포함된 신규 EAS 빌드 산출물로 진행(옛 빌드 재활용 금지)
+
+# 2026-06-14 23:28:18 KST 회원가입 개발용 UI(미리보기) 제거
+
+- AuthFlowScreen에서 "UI 보기(개발용)" 버튼 및 `signUpUiPreview` 미리보기 메커니즘 전면 제거(상태/openSignUpUiPreview 핸들러/`__DEV__` 분기 3곳/더미 데이터 프리필/전용 스타일)
+- 미사용이 된 `declare const __DEV__` 선언 제거, 회원가입은 실제 이메일 인증/제출 경로만 남김
+- 검증: `npx tsc --noEmit` 통과, eslint 에러 0, `signUpUiPreview` 잔존 0
