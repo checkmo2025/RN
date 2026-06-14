@@ -14,9 +14,7 @@ import {
   Text,
   TextInput,
   View,
-  LayoutAnimation,
   Platform,
-  UIManager,
   useWindowDimensions,
   Image,
 } from 'react-native';
@@ -288,9 +286,6 @@ export function StoryScreen() {
   const { requireAuth, isLoggedIn } = useAuthGate();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-  }
 
   const [selectedFilterKey, setSelectedFilterKey] = useState(ALL_STORY_TAB.key);
   const [myClubTabs, setMyClubTabs] = useState<Array<{ clubId: number; clubName: string }>>([]);
@@ -389,7 +384,10 @@ export function StoryScreen() {
   }, [editingStoryId, isComposing, selectedStory?.id, selectedStory?.remoteId, submittingStory]);
 
   const animateTransition = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    // New Architecture(Fabric)에서 LayoutAnimation은 화면 전환(상세↔작성) 시
+    // 이미 unregister된 뷰를 마운트하려다 "RCTComponentViewRegistry: Attempt to
+    // query unregistered component" 네이티브 크래시를 일으킨다. 전환 애니메이션을
+    // 비활성화해 크래시를 막는다.
   }, []);
 
   const closeStoryDetail = useCallback(() => {
@@ -1445,13 +1443,15 @@ export function StoryScreen() {
       showToast('책을 선택해야 합니다.');
       return;
     }
-    if (currentEditingStoryId !== null && !nextDescription) {
+    if (currentEditingStoryId !== null && (!nextTitle || !nextDescription)) {
       storyLog.warn('submit_validation_failed', {
         mode: 'edit',
-        reason: 'missing_body',
+        reason: 'missing_title_or_body',
         editingStoryId: currentEditingStoryId,
+        hasTitle: Boolean(nextTitle),
+        hasBody: Boolean(nextDescription),
       });
-      showToast('내용을 입력해야 합니다.');
+      showToast('제목과 내용을 입력해야 합니다.');
       return;
     }
     if (currentEditingStoryId === null && (!nextTitle || !nextDescription)) {
@@ -1478,9 +1478,14 @@ export function StoryScreen() {
           if (currentEditingStoryId !== null) {
             storyLog.info('edit_update_start', {
               remoteId: currentEditingStoryId,
+              titleLength: nextTitle.length,
               bodyLength: nextDescription.length,
             });
-            await updateBookStory(currentEditingStoryId, { description: nextDescription });
+            // 서버가 수정 시에도 title을 필수로 요구하므로 (읽기 전용) 원본 제목을 함께 전송한다.
+            await updateBookStory(currentEditingStoryId, {
+              title: nextTitle || undefined,
+              description: nextDescription,
+            });
             storyLog.info('edit_update_success', { remoteId: currentEditingStoryId });
             try {
               const detail = await fetchBookStoryDetail(currentEditingStoryId, {
@@ -2452,7 +2457,7 @@ export function StoryScreen() {
             )}
             {isEditingStory ? (
               <Text style={styles.bookReadOnlyGuide}>
-                수정 모드에서는 책과 제목을 변경할 수 없고 본문만 수정됩니다.
+                수정 모드에서는 책은 변경할 수 없고 제목과 본문만 수정됩니다.
               </Text>
             ) : null}
           </View>
@@ -2463,9 +2468,7 @@ export function StoryScreen() {
               onChangeText={handleChangeStoryTitle}
               placeholder="제목을 입력해야 합니다."
               placeholderTextColor={colors.gray3}
-              style={[styles.titleInput, isEditingStory && styles.titleInputReadOnly]}
-              editable={!isEditingStory}
-              selectTextOnFocus={!isEditingStory}
+              style={styles.titleInput}
               autoFocus={!isEditingStory}
             />
             <FormTextInput
@@ -3105,9 +3108,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.gray2,
     paddingBottom: spacing.xs,
-  },
-  titleInputReadOnly: {
-    color: colors.gray4,
   },
   bodyInput: {
     ...typography.body1_3,

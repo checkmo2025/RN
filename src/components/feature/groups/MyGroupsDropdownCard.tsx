@@ -1,11 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
 import {
-  LayoutAnimation,
-  Platform,
   StyleSheet,
   Text,
-  UIManager,
   View,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -37,12 +34,6 @@ export function MyGroupsDropdownCard<T extends MyGroupSummary>({
 }: Props<T>) {
   const [expanded, setExpanded] = useState(false);
 
-  useEffect(() => {
-    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-      UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
-  }, []);
-
   const showToggle = groups.length > visibleCount;
 
   const visibleGroups = useMemo(
@@ -68,7 +59,8 @@ export function MyGroupsDropdownCard<T extends MyGroupSummary>({
         <Pressable
           style={styles.toggleButton}
           onPress={() => {
-            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            // Fabric에서 LayoutAnimation은 펼침/접힘 중 unregister된 행 뷰를 마운트하려다
+            // 네이티브 크래시(RCTComponentViewRegistry)를 일으킬 수 있어 제거한다.
             setExpanded((prev) => !prev);
           }}
         >

@@ -4,14 +4,11 @@ import {
   FlatList,
   Image,
   ImageBackground,
-  LayoutAnimation,
-  Platform,
   ScrollView,
   RefreshControl,
   StyleSheet,
   Text,
   View,
-  UIManager,
   useWindowDimensions,
   Linking,
 } from 'react-native';
@@ -170,10 +167,6 @@ function toStandaloneNewsItem(detail: RemoteNewsDetail): NewsItem {
 }
 
 export function NewsScreen() {
-  if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-  }
-
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ News: NewsRouteParams }, 'News'>>();
   const { width } = useWindowDimensions();
@@ -192,7 +185,9 @@ export function NewsScreen() {
   const detailTranslateX = useRef(new Animated.Value(0)).current;
 
   const animateTransition = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    // New Architecture(Fabric)에서 LayoutAnimation은 상세↔목록 전환 중 unregister된
+    // 뷰를 마운트하려다 "RCTComponentViewRegistry: Attempt to query unregistered
+    // component" 네이티브 크래시를 일으킨다. 전환 애니메이션을 비활성화한다.
   }, []);
 
   const closeSelectedDetail = useCallback(() => {

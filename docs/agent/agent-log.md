@@ -2742,3 +2742,10 @@ export const interactionOpacity = {
 - 책이야기 수정 진입 시 마운트 즉시 `autoFocus`로 인한 iOS first-responder 충돌 크래시 추정, 자동 포커스 제거 유지
 - 본문 입력칸에 `bodyInputRef` 연결 후 `InteractionManager.runAfterInteractions`로 전환 완료 뒤 수동 포커스 처리해 UX 보존
 - 검증: `npx tsc --noEmit` 통과
+
+# 2026-06-14 17:26:03 KST 책이야기 수정 크래시 근본 원인 해결 + 제목 수정 허용
+
+- iOS 크래시 근본 원인이 Fabric(New Arch) + `LayoutAnimation`(`RCTComponentViewRegistry`)으로 확정되어 StoryScreen/NewsScreen/MyGroupsDropdownCard의 전환 LayoutAnimation 제거
+- 책이야기 수정 저장 시 서버가 title 필수 요구 → `updateBookStory`에 제목 전송하도록 수정하고, 수정 모드에서 제목 입력 잠금 해제(책만 변경 불가)
+- 크래시 추적용 임시 로그(menu_action/edit_step/render_compose/render_detail 등) 제거
+- 검증: `npx tsc --noEmit` 통과
