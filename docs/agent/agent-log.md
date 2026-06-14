@@ -2736,3 +2736,9 @@ export const interactionOpacity = {
 - 공지 내용 입력칸 고정 높이 내부 스크롤, 투표 옵션 3번 이후 삭제 버튼 추가
 - 책장 생성/수정 제출 로그와 ISBN13 정규화 보강, 책이야기 수정 진입 자동 포커스 제거
 - 실기기 통과/잔여 항목을 TODO에 반영하고 `npm run check` 검증
+
+# 2026-06-14 17:10:58 KST 책이야기 수정 진입 크래시(iOS) 대응
+
+- 책이야기 수정 진입 시 마운트 즉시 `autoFocus`로 인한 iOS first-responder 충돌 크래시 추정, 자동 포커스 제거 유지
+- 본문 입력칸에 `bodyInputRef` 연결 후 `InteractionManager.runAfterInteractions`로 전환 완료 뒤 수동 포커스 처리해 UX 보존
+- 검증: `npx tsc --noEmit` 통과

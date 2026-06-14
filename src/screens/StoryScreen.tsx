@@ -4,6 +4,7 @@ import {
   Animated,
   FlatList,
   GestureResponderEvent,
+  InteractionManager,
   KeyboardAvoidingView,
   LayoutChangeEvent,
   ScrollView,
@@ -338,6 +339,7 @@ export function StoryScreen() {
   const detailScrollRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
   const inlineReplyInputRef = useRef<TextInput>(null);
+  const bodyInputRef = useRef<TextInput>(null);
   const commentSectionYRef = useRef(0);
   const pendingDetailFocusRef = useRef<'comments' | null>(null);
   const isComposingRef = useRef(false);
@@ -1003,6 +1005,10 @@ export function StoryScreen() {
       setStoryMenu(null);
       animateTransition();
       setIsComposing(true);
+      // 모달 dismiss/화면 전환이 끝난 뒤에 포커스해야 iOS first-responder 충돌 크래시를 피한다.
+      InteractionManager.runAfterInteractions(() => {
+        bodyInputRef.current?.focus();
+      });
     },
     [animateTransition],
   );
@@ -2463,6 +2469,7 @@ export function StoryScreen() {
               autoFocus={!isEditingStory}
             />
             <FormTextInput
+              ref={bodyInputRef}
               value={body}
               onChangeText={handleChangeStoryBody}
               placeholder={`자신의 책이야기를 들려주세요. (최대 ${INPUT_LIMITS.BOOK_STORY_CONTENT}자)`}
