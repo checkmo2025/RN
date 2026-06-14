@@ -45,6 +45,7 @@ const MGMT_SHEET_DISMISS_DISTANCE = 100;
 const MGMT_SHEET_DISMISS_VELOCITY = 0.5;
 const MGMT_SHEET_EXPAND_DISTANCE = 120;
 const MGMT_SHEET_EXPAND_TRIGGER = 48;
+const MGMT_SHEET_CLOSED_Y = 600;
 
 export type ManagementStateParams = {
   group: Group;
@@ -85,6 +86,42 @@ export function useManagementState({
   const managementSheetY = useRef(new Animated.Value(0)).current;
   const managementSheetPositionRef = useRef(0);
   const managementSheetDragStartRef = useRef(0);
+  const managementMenuClosingRef = useRef(false);
+
+  const openManagementMenu = useCallback(() => {
+    managementSheetY.stopAnimation();
+    managementMenuClosingRef.current = false;
+    managementSheetPositionRef.current = 0;
+    managementSheetDragStartRef.current = 0;
+    managementSheetY.setValue(0);
+    setManagementMenuVisible(true);
+  }, [managementSheetY]);
+
+  const closeManagementMenuImmediately = useCallback(() => {
+    managementSheetY.stopAnimation();
+    managementMenuClosingRef.current = false;
+    managementSheetPositionRef.current = 0;
+    managementSheetDragStartRef.current = 0;
+    managementSheetY.setValue(0);
+    setManagementMenuVisible(false);
+  }, [managementSheetY]);
+
+  const closeManagementMenu = useCallback(() => {
+    if (managementMenuClosingRef.current) return;
+    managementMenuClosingRef.current = true;
+    managementSheetY.stopAnimation(() => {
+      Animated.timing(managementSheetY, {
+        toValue: MGMT_SHEET_CLOSED_Y,
+        duration: motion.duration.sheet,
+        useNativeDriver: true,
+      }).start(() => {
+        managementMenuClosingRef.current = false;
+        managementSheetPositionRef.current = 0;
+        managementSheetDragStartRef.current = 0;
+        setManagementMenuVisible(false);
+      });
+    });
+  }, [managementSheetY]);
 
   const managementHandlePanResponder = useRef(
     PanResponder.create({
@@ -111,15 +148,7 @@ export function useManagementState({
           releasedY > MGMT_SHEET_DISMISS_DISTANCE ||
           gestureState.vy > MGMT_SHEET_DISMISS_VELOCITY
         ) {
-          Animated.timing(managementSheetY, {
-            toValue: 600,
-            duration: motion.duration.sheet,
-            useNativeDriver: true,
-          }).start(() => {
-            managementSheetPositionRef.current = 0;
-            setManagementMenuVisible(false);
-            managementSheetY.setValue(0);
-          });
+          closeManagementMenu();
         } else {
           const targetY =
             releasedY < -MGMT_SHEET_EXPAND_TRIGGER || gestureState.vy < -MGMT_SHEET_DISMISS_VELOCITY
@@ -155,13 +184,13 @@ export function useManagementState({
     setContactModalVisible(false);
     setJoinRequests([]);
     setMembers([]);
-    setManagementMenuVisible(false);
+    closeManagementMenuImmediately();
     setActiveManagementScreen(null);
     setSelectedJoinRequestActionId(null);
     setSelectedJoinRequestMessage(null);
     setSelectedMemberActionId(null);
     setEditDraft(toEditDraft(group));
-  }, [group]);
+  }, [closeManagementMenuImmediately, group]);
 
   useEffect(() => {
     if (managementMenuVisible) {
@@ -170,22 +199,16 @@ export function useManagementState({
     }
   }, [managementMenuVisible, managementSheetY]);
 
-  const closeManagementMenu = useCallback(() => {
-    managementSheetPositionRef.current = 0;
-    managementSheetY.setValue(0);
-    setManagementMenuVisible(false);
-  }, [managementSheetY]);
-
   const closeContactModal = useCallback(() => {
     setContactModalVisible(false);
   }, []);
 
   const runAfterClosingManagementMenu = useCallback(
     (callback: () => void) => {
-      closeManagementMenu();
+      closeManagementMenuImmediately();
       callback();
     },
-    [closeManagementMenu],
+    [closeManagementMenuImmediately],
   );
 
   const handleOpenManagementScreen = useCallback(
@@ -593,7 +616,7 @@ export function useManagementState({
 
   return {
     managementMenuVisible,
-    setManagementMenuVisible,
+    openManagementMenu,
     managementSheetY,
     managementHandlePanResponder,
     activeManagementScreen,

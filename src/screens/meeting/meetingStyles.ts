@@ -1968,6 +1968,12 @@ export const styles = StyleSheet.create({
     ...typography.body1_2,
     color: colors.gray6,
   },
+  noticeComposerFieldHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
   noticeComposerTitleInput: {
     minHeight: 48,
     textAlignVertical: 'top',
@@ -2139,12 +2145,6 @@ export const styles = StyleSheet.create({
   noticeComposerCounter: {
     ...typography.body2_3,
     color: colors.gray4,
-  },
-  noticeComposerContentCounter: {
-    ...typography.body2_3,
-    color: colors.gray4,
-    textAlign: 'right',
-    marginTop: spacing.xxs,
   },
   noticeComposerFooter: {
     flexDirection: 'row',
