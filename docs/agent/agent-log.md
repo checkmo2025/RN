@@ -2688,3 +2688,10 @@ export const interactionOpacity = {
 - 공지 상세보기 태그를 리스트와 동일한 `renderNoticeTag` 로직으로 렌더링
 - 기존 `category` 텍스트 단일 핀 스타일(진한 갈색) → 고정/일반/투표/모임 태그별 색상 일치
 - 검증: `npm run typecheck` 통과
+
+# 2026-06-14 13:04:35 KST 공지 입력 글자수 제한 추가
+
+- `INPUT_LIMITS`에 `NOTICE_TITLE`(50) / `NOTICE_CONTENT`(2000) 추가
+- 공지 내용 입력창: maxLength 2000 + 우측 하단 `현재/2000` 글자수 카운터 표시
+- 공지 제목: 50자 초과 입력 시 토스트 안내 + 초과 입력 차단(ref 가드로 토스트 스팸 방지)
+- 검증: `npm run typecheck` 통과

@@ -905,6 +905,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [noticeContentInputHeight, setNoticeContentInputHeight] = useState(
     NOTICE_CONTENT_INPUT_MIN_HEIGHT,
   );
+  const noticeTitleLimitToastShownRef = useRef(false);
   const clubWorkspaceRequestIdRef = useRef(0);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(!isManagedClub);
 
@@ -1167,6 +1168,14 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
   const handleChangeNoticeTitle = useCallback(
     (text: string) => {
+      if (text.length > INPUT_LIMITS.NOTICE_TITLE) {
+        if (!noticeTitleLimitToastShownRef.current) {
+          showToast(`공지 제목은 ${INPUT_LIMITS.NOTICE_TITLE}자 이하여야 합니다.`);
+          noticeTitleLimitToastShownRef.current = true;
+        }
+        return;
+      }
+      noticeTitleLimitToastShownRef.current = false;
       setNoticeDraft((prev) => ({ ...prev, title: text }));
       if (text.length === 0) {
         setNoticeTitleInputHeight(NOTICE_TITLE_INPUT_MIN_HEIGHT);
@@ -2557,11 +2566,15 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   { height: noticeContentInputHeight },
                 ]}
                 multiline
+                maxLength={INPUT_LIMITS.NOTICE_CONTENT}
                 scrollEnabled={noticeContentInputHeight >= NOTICE_CONTENT_INPUT_MAX_HEIGHT}
                 onContentSizeChange={(event) =>
                   handleNoticeContentSizeChange(event, noticeDraft.content)
                 }
               />
+              <Text style={styles.noticeComposerContentCounter}>
+                {noticeDraft.content.length}/{INPUT_LIMITS.NOTICE_CONTENT}
+              </Text>
 
               <View style={styles.noticeComposerPinRow}>
                 <Text style={styles.noticeAttachmentTitle}>상단 고정</Text>

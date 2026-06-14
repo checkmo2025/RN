@@ -2140,6 +2140,12 @@ export const styles = StyleSheet.create({
     ...typography.body2_3,
     color: colors.gray4,
   },
+  noticeComposerContentCounter: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textAlign: 'right',
+    marginTop: spacing.xxs,
+  },
   noticeComposerFooter: {
     flexDirection: 'row',
     gap: spacing.sm,
