@@ -157,6 +157,11 @@ export type ClubManagedMemberList = {
 
 export type ClubNoticeTagCode = 'PIN' | 'VOTE' | 'MEETING' | string;
 
+export type ClubNoticeTagItem = {
+  code?: ClubNoticeTagCode;
+  description?: string;
+};
+
 export type ClubNoticePreview = {
   id: number;
   title: string;
@@ -164,6 +169,7 @@ export type ClubNoticePreview = {
   isPinned: boolean;
   tagCode?: ClubNoticeTagCode;
   tagDescription?: string;
+  tagItems: ClubNoticeTagItem[];
   authorNickname?: string;
   authorProfileImageUrl?: string;
 };
@@ -231,6 +237,7 @@ export type ClubNoticeDetail = {
   isPinned: boolean;
   tagCode?: ClubNoticeTagCode;
   tagDescription?: string;
+  tagItems: ClubNoticeTagItem[];
   imageUrls: string[];
   meetingDetail?: ClubNoticeMeetingDetail;
   voteDetail?: ClubNoticeVoteDetail;
@@ -657,6 +664,25 @@ function normalizeClubNoticeTag(raw: unknown): {
   };
 }
 
+function normalizeClubNoticeTags(...rawValues: unknown[]): ClubNoticeTagItem[] {
+  const tags: ClubNoticeTagItem[] = [];
+
+  rawValues.forEach((raw) => {
+    if (Array.isArray(raw)) {
+      raw.forEach((item) => {
+        const tag = normalizeClubNoticeTag(item);
+        if (tag.code || tag.description) tags.push(tag);
+      });
+      return;
+    }
+
+    const tag = normalizeClubNoticeTag(raw);
+    if (tag.code || tag.description) tags.push(tag);
+  });
+
+  return tags;
+}
+
 function normalizeClubNoticePreview(raw: unknown): ClubNoticePreview | null {
   const record = asRecord(raw);
   if (!record) return null;
@@ -664,7 +690,15 @@ function normalizeClubNoticePreview(raw: unknown): ClubNoticePreview | null {
   const id = toNumberValue(record.id);
   if (!id) return null;
 
-  const tag = normalizeClubNoticeTag(firstDefined(record.tagItem, record.tag));
+  const tagItems = normalizeClubNoticeTags(
+    record.tagItems,
+    record.tags,
+    record.noticeTags,
+    record.tagItem,
+    record.tag,
+    firstDefined(record.tagCode, record.type),
+  );
+  const primaryTag = tagItems[0];
   const authorInfo = normalizeOptionalMemberInfo(
     firstDefined(
       record.authorInfo,
@@ -691,8 +725,9 @@ function normalizeClubNoticePreview(raw: unknown): ClubNoticePreview | null {
     title: toStringValue(record.title) ?? '공지사항',
     createdAt: toStringValue(record.createdAt),
     isPinned: toBooleanValue(record.isPinned) ?? false,
-    tagCode: tag.code,
-    tagDescription: tag.description,
+    tagCode: primaryTag?.code,
+    tagDescription: primaryTag?.description,
+    tagItems,
     authorNickname:
       authorNickname && authorNickname.length > 0 ? authorNickname : undefined,
     authorProfileImageUrl: authorInfo.profileImageUrl,
@@ -794,7 +829,15 @@ function normalizeClubNoticeDetail(raw: unknown): ClubNoticeDetail | null {
   const id = toNumberValue(record.id);
   if (!id) return null;
 
-  const tag = normalizeClubNoticeTag(firstDefined(record.tag, record.tagItem));
+  const tagItems = normalizeClubNoticeTags(
+    record.tagItems,
+    record.tags,
+    record.noticeTags,
+    record.tag,
+    record.tagItem,
+    firstDefined(record.tagCode, record.type),
+  );
+  const primaryTag = tagItems[0];
   const authorInfo = normalizeOptionalMemberInfo(
     firstDefined(
       record.authorInfo,
@@ -827,8 +870,9 @@ function normalizeClubNoticeDetail(raw: unknown): ClubNoticeDetail | null {
     content: toStringValue(record.content) ?? '',
     createdAt: toStringValue(record.createdAt),
     isPinned: toBooleanValue(record.isPinned) ?? false,
-    tagCode: tag.code,
-    tagDescription: tag.description,
+    tagCode: primaryTag?.code,
+    tagDescription: primaryTag?.description,
+    tagItems,
     imageUrls,
     meetingDetail: normalizeNoticeMeetingDetail(record.meetingDetail),
     voteDetail: normalizeClubNoticeVoteDetail(record.voteDetail),
@@ -1954,4 +1998,3 @@ export async function fetchClubMeetingTeamTopics(
     nextCursor: toNumberValue(result.nextCursor) ?? null,
   };
 }
-

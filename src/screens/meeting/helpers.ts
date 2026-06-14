@@ -45,6 +45,7 @@ import type {
   GroupMemberRole,
   NoticeDraft,
   NoticeItem,
+  NoticeTag,
   NoticeComment,
   NoticePoll,
   RegularMeetingGroupItem,
@@ -336,28 +337,73 @@ export function getClubHomeTagTone(tag: string): 'amber' | 'coral' | 'sky' | 'vi
   return clubHomeTagToneByLabel[tag] ?? 'amber';
 }
 
+function resolveNoticeTagKind(
+  tagCode?: string,
+  tagDescription?: string,
+): NoticeTag | null {
+  const normalized = `${tagCode ?? ''} ${tagDescription ?? ''}`.trim().toUpperCase();
+  if (!normalized) return null;
+  if (normalized.includes('PIN') || normalized.includes('고정')) return 'PIN';
+  if (normalized.includes('VOTE') || normalized.includes('투표')) return 'VOTE';
+  if (
+    normalized.includes('MEETING') ||
+    normalized.includes('MEET') ||
+    normalized.includes('모임') ||
+    normalized.includes('정기')
+  ) return 'MEETING';
+  return 'GENERAL';
+}
+
+function addNoticeTag(tags: NoticeTag[], tag: NoticeTag) {
+  if (!tags.includes(tag)) tags.push(tag);
+}
+
+function getPrimaryNoticeCategory(tags: NoticeTag[]): NoticeItem['category'] {
+  if (tags.includes('VOTE')) return '투표';
+  if (tags.includes('MEETING')) return '모임';
+  return '일반';
+}
+
 export function toNoticeTags(options: {
   tagCode?: string;
+  tagDescription?: string;
+  tagItems?: Array<{ code?: string; description?: string }>;
   hasPoll?: boolean;
   hasMeeting?: boolean;
-}): Array<'PIN' | 'VOTE' | 'MEETING'> {
-  const tags: Array<'PIN' | 'VOTE' | 'MEETING'> = [];
-  const hasVoteTag = options.hasPoll ?? options.tagCode === 'VOTE';
-  const hasMeetingTag = options.hasMeeting ?? options.tagCode === 'MEETING';
-  if (hasVoteTag) tags.push('VOTE');
-  if (hasMeetingTag) tags.push('MEETING');
+  isPinned?: boolean;
+}): NoticeTag[] {
+  const tags: NoticeTag[] = [];
+  if (options.isPinned) addNoticeTag(tags, 'PIN');
+
+  const explicitTags = [
+    ...(options.tagItems ?? []),
+    { code: options.tagCode, description: options.tagDescription },
+  ];
+  explicitTags.forEach((item) => {
+    const tag = resolveNoticeTagKind(item.code, item.description);
+    if (tag) addNoticeTag(tags, tag);
+  });
+
+  if (options.hasPoll) addNoticeTag(tags, 'VOTE');
+  if (options.hasMeeting) addNoticeTag(tags, 'MEETING');
+  if (!tags.some((tag) => tag !== 'PIN')) addNoticeTag(tags, 'GENERAL');
   return tags;
 }
 
 export function mapNoticePreviewToNoticeItem(item: ClubNoticePreview): NoticeItem {
-  const tags = toNoticeTags({ tagCode: item.tagCode });
+  const tags = toNoticeTags({
+    tagCode: item.tagCode,
+    tagDescription: item.tagDescription,
+    tagItems: item.tagItems,
+    isPinned: item.isPinned,
+  });
   return {
     id: `notice-${item.id}`,
     remoteId: item.id,
     title: item.title,
     date: formatDotDate(item.createdAt),
     tags,
-    category: item.tagCode === 'VOTE' ? '투표' : item.tagCode === 'MEETING' ? '모임' : '일반',
+    category: getPrimaryNoticeCategory(tags),
     content: '',
     authorNickname: item.authorNickname,
     authorProfileImageUrl: item.authorProfileImageUrl,
@@ -383,18 +429,22 @@ export function mergeNoticeDetail(
           rating: 0,
         }
       : undefined;
+  const tags = toNoticeTags({
+    tagCode: detail.tagCode,
+    tagDescription: detail.tagDescription,
+    tagItems: detail.tagItems,
+    hasPoll: Boolean(detail.voteDetail),
+    hasMeeting: Boolean(detail.meetingDetail),
+    isPinned: detail.isPinned,
+  });
 
   return {
     id: `notice-${detail.id}`,
     remoteId: detail.id,
     title: detail.title,
     date: formatDotDate(detail.createdAt),
-    tags: toNoticeTags({
-      tagCode: detail.tagCode,
-      hasPoll: Boolean(detail.voteDetail),
-      hasMeeting: Boolean(detail.meetingDetail),
-    }),
-    category: detail.voteDetail ? '투표' : detail.meetingDetail ? '모임' : '일반',
+    tags,
+    category: getPrimaryNoticeCategory(tags),
     content: detail.content,
     authorNickname: detail.authorNickname ?? baseNotice?.authorNickname,
     authorProfileImageUrl:

@@ -20,7 +20,7 @@ export type Group = {
 
 export type CreateStep = 1 | 2 | 3 | 4;
 
-export type NoticeTag = 'PIN' | 'VOTE' | 'MEETING';
+export type NoticeTag = 'PIN' | 'GENERAL' | 'VOTE' | 'MEETING';
 
 export type NoticeBookshelfAttachment = {
   id: string;

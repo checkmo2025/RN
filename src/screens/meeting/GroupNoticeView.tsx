@@ -37,7 +37,7 @@ function getBookshelfCategoryBadgeStyle(category: string) {
   }
 }
 
-function renderNoticeTag(tag: 'PIN' | 'VOTE' | 'MEETING', key: string) {
+function renderNoticeTag(tag: NoticeItem['tags'][number], key: string) {
   if (tag === 'PIN') {
     return (
       <View key={key} style={[styles.noticeTag, styles.noticeTagPin]}>
@@ -52,9 +52,16 @@ function renderNoticeTag(tag: 'PIN' | 'VOTE' | 'MEETING', key: string) {
       </View>
     );
   }
+  if (tag === 'MEETING') {
+    return (
+      <View key={key} style={[styles.noticeTag, styles.noticeTagMeeting]}>
+        <Text style={styles.noticeTagText}>모임</Text>
+      </View>
+    );
+  }
   return (
-    <View key={key} style={[styles.noticeTag, styles.noticeTagMeeting]}>
-      <Text style={styles.noticeTagText}>모임</Text>
+    <View key={key} style={[styles.noticeTag, styles.noticeTagGeneral]}>
+      <Text style={styles.noticeTagText}>일반</Text>
     </View>
   );
 }

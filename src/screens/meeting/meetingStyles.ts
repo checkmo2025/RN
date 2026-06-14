@@ -1581,6 +1581,9 @@ export const styles = StyleSheet.create({
     minWidth: 36,
     paddingHorizontal: spacing.xs,
   },
+  noticeTagGeneral: {
+    backgroundColor: colors.secondary1,
+  },
   noticeTagVote: {
     backgroundColor: colors.secondary3,
   },
