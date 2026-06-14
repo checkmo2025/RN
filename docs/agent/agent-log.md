@@ -2709,3 +2709,10 @@ export const interactionOpacity = {
 - 긴 공지 내용 입력 시 내부 스크롤이 먼저 켜지도록 입력 높이 계산 여유값 조정
 - 운영진 관리 바텀시트 닫힘을 애니메이션 완료 후 숨김 처리로 변경해 깜빡임 완화
 - 실기기 통과 항목을 `docs/agent/todo.md`에 완료 반영
+
+# 2026-06-14 15:58:55 KST 편집 중 이탈 경고 통일
+
+- 공용 `useUnsavedChangesGuard` 훅을 추가하고 공지/발제/모임정보/책장 편집 플로우에 적용
+- 책이야기 글/댓글, 회원가입 프로필 단계, 마이페이지 이메일/비밀번호 변경의 이탈 경고 보강
+- `edit-discard-warning-audit.md` 적용 결과와 TODO 실기기 QA 항목 갱신
+- 검증: `npm run check` 통과

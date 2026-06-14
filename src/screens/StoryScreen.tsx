@@ -177,6 +177,12 @@ type StoryRouteParams = {
   openDraftBook?: unknown;
 };
 
+type ComposeInitialDraft = {
+  title: string;
+  body: string;
+  bookKey: string | null;
+};
+
 const ALL_STORY_TAB: StoryFilterTab = {
   key: 'ALL',
   label: '전체',
@@ -196,6 +202,11 @@ const DETAIL_BACK_ACTIVATE_MAX_DY = 16;
 const DETAIL_BACK_TRIGGER_MAX_DY = 60;
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
 const ISBN13_REGEX = /^\d{13}$/;
+const EMPTY_COMPOSE_INITIAL_DRAFT: ComposeInitialDraft = {
+  title: '',
+  body: '',
+  bookKey: null,
+};
 
 async function waitForMinimumLoading(startedAt: number, minimumMs = MIN_BOOK_FLIP_LOADING_MS) {
   const elapsed = Date.now() - startedAt;
@@ -250,6 +261,23 @@ function mapBookItemToBook(item: BookItem): Book {
   };
 }
 
+function getComposeBookKey(book: Book | null) {
+  if (!book) return null;
+  return [book.id.trim(), book.title.trim(), book.author.trim()].join('|');
+}
+
+function buildComposeInitialDraft(
+  book: Book | null,
+  title: string,
+  body: string,
+): ComposeInitialDraft {
+  return {
+    title,
+    body,
+    bookKey: getComposeBookKey(book),
+  };
+}
+
 const STORY_FEED_ERROR_OVERRIDES = { 401: '로그인 상태를 확인해 주십시오.', 403: '접근 권한이 없습니다.', 404: '요청한 책이야기를 찾을 수 없습니다.' } as const;
 
 export function StoryScreen() {
@@ -276,6 +304,8 @@ export function StoryScreen() {
   const [bookSearchKeyword, setBookSearchKeyword] = useState('');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [composeInitialDraft, setComposeInitialDraft] =
+    useState<ComposeInitialDraft>(EMPTY_COMPOSE_INITIAL_DRAFT);
   const [stories, setStories] = useState<Story[]>([]);
   const [hasNext, setHasNext] = useState(false);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
@@ -291,6 +321,7 @@ export function StoryScreen() {
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [commentInput, setCommentInput] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editingCommentOriginalText, setEditingCommentOriginalText] = useState('');
   const [replyTarget, setReplyTarget] = useState<{
     commentId?: number;
     commentKey: string;
@@ -326,6 +357,7 @@ export function StoryScreen() {
     setCommentMenu(null);
     setStoryMenu(null);
     setCommentInput('');
+    setEditingCommentOriginalText('');
     pendingDetailFocusRef.current = null;
     commentSectionYRef.current = 0;
   }, [animateTransition, detailTranslateX]);
@@ -359,19 +391,6 @@ export function StoryScreen() {
     [scrollToCommentSection],
   );
 
-  const detailBackSwipeResponder = useEdgeBackSwipe({
-    isActive: !!selectedStory,
-    translateX: detailTranslateX,
-    screenWidth,
-    onClose: closeStoryDetail,
-    edgeWidth: DETAIL_BACK_EDGE_WIDTH,
-    activateDistance: DETAIL_BACK_ACTIVATE_DISTANCE,
-    activateMaxDy: DETAIL_BACK_ACTIVATE_MAX_DY,
-    triggerDistance: DETAIL_BACK_TRIGGER_DISTANCE,
-    triggerMaxDy: DETAIL_BACK_TRIGGER_MAX_DY,
-    requireHorizontalDominance: true,
-  });
-
   const runBookSearch = useCallback(async (keyword: string) => {
     const trimmed = keyword.trim();
     if (!trimmed) {
@@ -400,44 +419,68 @@ export function StoryScreen() {
 
   const openCompose = useCallback((initialBook?: Book, draft?: { id: number; title: string; body: string }) => {
     requireAuth(() => {
+      const nextTitle = draft?.title ?? '';
+      const nextBody = draft?.body ?? '';
+      const nextBook = initialBook ?? null;
       setSelectedStory(null);
       setEditingStoryId(null);
       setDraftStoryId(draft?.id ?? null);
-      setTitle(draft?.title ?? '');
-      setBody(draft?.body ?? '');
-      setSelectedBook(initialBook ?? null);
+      setTitle(nextTitle);
+      setBody(nextBody);
+      setSelectedBook(nextBook);
+      setComposeInitialDraft(buildComposeInitialDraft(nextBook, nextTitle, nextBody));
       setShowBookPicker(false);
       setBookSearchQuery(initialBook?.title ?? draft?.title ?? '');
       setBookSearchResults([]);
       setBookSearchLoading(false);
       setBookSearchSearched(false);
       setBookSearchKeyword('');
+      setCommentInput('');
+      setEditingCommentId(null);
+      setEditingCommentOriginalText('');
       setReplyTarget(null);
       setCommentMenu(null);
       setStoryMenu(null);
       animateTransition();
       setIsComposing(true);
     });
-  }, [requireAuth]);
+  }, [animateTransition, requireAuth]);
 
-  const closeCompose = () => {
+  const closeCompose = useCallback(() => {
     animateTransition();
     setIsComposing(false);
     setEditingStoryId(null);
     setDraftStoryId(null);
+    setComposeInitialDraft(EMPTY_COMPOSE_INITIAL_DRAFT);
     setShowBookPicker(false);
     setReplyTarget(null);
     setCommentMenu(null);
     setStoryMenu(null);
-  };
+  }, [animateTransition]);
 
   const hasUnsavedStoryChanges = useMemo(() => {
     const composingDraft =
       isComposing &&
-      (title.trim().length > 0 || body.trim().length > 0 || selectedBook !== null);
-    const commentDraft = Boolean(selectedStory) && commentInput.trim().length > 0;
+      (title !== composeInitialDraft.title ||
+        body !== composeInitialDraft.body ||
+        getComposeBookKey(selectedBook) !== composeInitialDraft.bookKey);
+    const commentDraft =
+      Boolean(selectedStory) &&
+      (editingCommentId !== null
+        ? commentInput !== editingCommentOriginalText
+        : commentInput.trim().length > 0);
     return composingDraft || commentDraft;
-  }, [body, commentInput, isComposing, selectedBook, selectedStory, title]);
+  }, [
+    body,
+    commentInput,
+    composeInitialDraft,
+    editingCommentId,
+    editingCommentOriginalText,
+    isComposing,
+    selectedBook,
+    selectedStory,
+    title,
+  ]);
   const isCommentSubmitDisabled = commentInput.trim().length === 0;
 
 
@@ -460,10 +503,28 @@ export function StoryScreen() {
     showDiscardStoryAlert(closeCompose);
   }, [closeCompose, showDiscardStoryAlert]);
 
+  const requestCloseStoryDetail = useCallback(() => {
+    showDiscardStoryAlert(closeStoryDetail);
+  }, [closeStoryDetail, showDiscardStoryAlert]);
+
+  const detailBackSwipeResponder = useEdgeBackSwipe({
+    isActive: !!selectedStory,
+    translateX: detailTranslateX,
+    screenWidth,
+    onClose: requestCloseStoryDetail,
+    edgeWidth: DETAIL_BACK_EDGE_WIDTH,
+    activateDistance: DETAIL_BACK_ACTIVATE_DISTANCE,
+    activateMaxDy: DETAIL_BACK_ACTIVATE_MAX_DY,
+    triggerDistance: DETAIL_BACK_TRIGGER_DISTANCE,
+    triggerMaxDy: DETAIL_BACK_TRIGGER_MAX_DY,
+    requireHorizontalDominance: true,
+  });
+
   const handlePressHeaderLogo = useCallback(() => {
     const goHome = () => {
       setCommentInput('');
       setEditingCommentId(null);
+      setEditingCommentOriginalText('');
       setReplyTarget(null);
       setCommentMenu(null);
       setStoryMenu(null);
@@ -774,8 +835,10 @@ export function StoryScreen() {
       });
       setIsComposing(false);
       setEditingStoryId(null);
+      setComposeInitialDraft(EMPTY_COMPOSE_INITIAL_DRAFT);
       setCommentInput('');
       setEditingCommentId(null);
+      setEditingCommentOriginalText('');
       setReplyTarget(null);
       setCommentMenu(null);
       setStoryMenu(null);
@@ -804,21 +867,28 @@ export function StoryScreen() {
     [animateTransition, detailTranslateX, isLoggedIn],
   );
 
-  const startEditStory = useCallback((story: Story) => {
-    if (typeof story.remoteId !== 'number') return;
-    setEditingStoryId(story.remoteId);
-    setTitle(story.title);
-    setBody(story.fullText || story.body);
-    setSelectedBook(story.book ?? null);
-    setSelectedStory(null);
-    setEditingCommentId(null);
-    setCommentInput('');
-    setReplyTarget(null);
-    setCommentMenu(null);
-    setStoryMenu(null);
-    animateTransition();
-    setIsComposing(true);
-  }, []);
+  const startEditStory = useCallback(
+    (story: Story) => {
+      if (typeof story.remoteId !== 'number') return;
+      const nextBody = story.fullText || story.body;
+      const nextBook = story.book ?? null;
+      setEditingStoryId(story.remoteId);
+      setTitle(story.title);
+      setBody(nextBody);
+      setSelectedBook(nextBook);
+      setComposeInitialDraft(buildComposeInitialDraft(nextBook, story.title, nextBody));
+      setSelectedStory(null);
+      setEditingCommentId(null);
+      setEditingCommentOriginalText('');
+      setCommentInput('');
+      setReplyTarget(null);
+      setCommentMenu(null);
+      setStoryMenu(null);
+      animateTransition();
+      setIsComposing(true);
+    },
+    [animateTransition],
+  );
 
   const handleDeleteStory = useCallback(
     (story: Story) => {
@@ -966,6 +1036,7 @@ export function StoryScreen() {
     if (typeof comment.remoteId !== 'number') return;
     setCommentMenu(null);
     setEditingCommentId(comment.remoteId);
+    setEditingCommentOriginalText(comment.deleted ? '' : comment.text);
     setReplyTarget(null);
     setCommentInput(comment.deleted ? '' : comment.text);
     requestAnimationFrame(() => {
@@ -997,6 +1068,7 @@ export function StoryScreen() {
       };
       applyStoryUpdate(nextStory);
       setEditingCommentId(null);
+      setEditingCommentOriginalText('');
       setReplyTarget(null);
       setCommentInput('');
       setCommentMenu(null);
@@ -1052,6 +1124,7 @@ export function StoryScreen() {
       }
 
       setEditingCommentId(null);
+      setEditingCommentOriginalText('');
       setReplyTarget({
         commentId: current.remoteId,
         commentKey: current.id,
@@ -1361,8 +1434,10 @@ export function StoryScreen() {
         detailTranslateX.setValue(0);
       });
       setIsComposing(false);
+      setComposeInitialDraft(EMPTY_COMPOSE_INITIAL_DRAFT);
       setSelectedStory(story);
       setEditingCommentId(null);
+      setEditingCommentOriginalText('');
       setReplyTarget(null);
       setCommentMenu(null);
       setStoryMenu(null);
@@ -1494,6 +1569,7 @@ export function StoryScreen() {
       applyStoryUpdate(updated);
       setCommentInput('');
       setEditingCommentId(null);
+      setEditingCommentOriginalText('');
       setReplyTarget(null);
       setCommentMenu(null);
 
@@ -1535,7 +1611,9 @@ export function StoryScreen() {
         setSelectedStory(null);
         setIsComposing(false);
         setEditingStoryId(null);
+        setComposeInitialDraft(EMPTY_COMPOSE_INITIAL_DRAFT);
         setEditingCommentId(null);
+        setEditingCommentOriginalText('');
         setReplyTarget(null);
         setCommentMenu(null);
         setStoryMenu(null);
@@ -1644,6 +1722,7 @@ export function StoryScreen() {
             onPress: () => {
               setCommentInput('');
               setEditingCommentId(null);
+              setEditingCommentOriginalText('');
               setReplyTarget(null);
               setCommentMenu(null);
               setStoryMenu(null);
@@ -1674,6 +1753,7 @@ export function StoryScreen() {
             onPress: () => {
               setCommentInput('');
               setEditingCommentId(null);
+              setEditingCommentOriginalText('');
               setReplyTarget(null);
               setCommentMenu(null);
               setStoryMenu(null);
@@ -1730,7 +1810,7 @@ export function StoryScreen() {
           <View style={styles.breadcrumbRow}>
             <Pressable
               style={styles.breadcrumbButton}
-              onPress={closeStoryDetail}
+              onPress={requestCloseStoryDetail}
             >
               <Text style={styles.breadcrumbText}>책이야기</Text>
               <MaterialIcons

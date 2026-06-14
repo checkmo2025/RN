@@ -21,6 +21,7 @@ import {
 } from '../../services/api/clubApi';
 import { getCurrentKstApiDateTime } from '../../utils/date';
 import { showToast } from '../../utils/toast';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import type {
   BookshelfItem,
   CursorPageState,
@@ -84,6 +85,30 @@ function buildNoticeDraftFromNotice(notice: NoticeItem): NoticeDraft {
     pollOptions: notice.poll?.options.map((option) => option.label) ?? ['', '', ''],
     photos: notice.photos ?? [],
   };
+}
+
+function normalizeNoticeDraftForCompare(draft: NoticeDraft) {
+  return {
+    title: draft.title,
+    content: draft.content,
+    isPinned: draft.isPinned,
+    bookshelfEnabled: draft.bookshelfEnabled,
+    bookshelfId: draft.bookshelfId,
+    pollEnabled: draft.pollEnabled,
+    pollAnonymous: draft.pollAnonymous,
+    pollAllowDuplicate: draft.pollAllowDuplicate,
+    pollStartsAt: draft.pollStartsAt,
+    pollEndsAt: draft.pollEndsAt,
+    pollOptions: draft.pollOptions,
+    photos: draft.photos,
+  };
+}
+
+function areNoticeDraftsEqual(left: NoticeDraft, right: NoticeDraft) {
+  return (
+    JSON.stringify(normalizeNoticeDraftForCompare(left)) ===
+    JSON.stringify(normalizeNoticeDraftForCompare(right))
+  );
 }
 
 function getMeetingIdFromBookshelfId(bookshelfId?: string | null): number | undefined {
@@ -158,6 +183,9 @@ export function useNoticeState({
   const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
   const [noticeMenuVisible, setNoticeMenuVisible] = useState(false);
   const [noticeDraft, setNoticeDraft] = useState<NoticeDraft>(() => buildNoticeDraft());
+  const [noticeComposerInitialDraft, setNoticeComposerInitialDraft] = useState<NoticeDraft>(() =>
+    buildNoticeDraft(),
+  );
   const [selectedVoteOptionIdsByNotice, setSelectedVoteOptionIdsByNotice] = useState<
     Record<string, string[]>
   >({});
@@ -843,6 +871,26 @@ export function useNoticeState({
     voteEditEnabled,
   ]);
 
+  const closeNoticeComposerImmediately = useCallback(() => {
+    setNoticeComposerVisible(false);
+    setNoticeBookSelectorVisible(false);
+    setEditingNoticeId(null);
+    const emptyDraft = buildNoticeDraft();
+    setNoticeDraft(emptyDraft);
+    setNoticeComposerInitialDraft(emptyDraft);
+  }, []);
+
+  const noticeComposerDirty = useMemo(
+    () => !areNoticeDraftsEqual(noticeDraft, noticeComposerInitialDraft),
+    [noticeComposerInitialDraft, noticeDraft],
+  );
+
+  const { requestClose: handleCloseNoticeComposer } = useUnsavedChangesGuard({
+    enabled: noticeComposerVisible,
+    isDirty: noticeComposerDirty,
+    onConfirmLeave: closeNoticeComposerImmediately,
+  });
+
   const handleOpenNoticeComposer = useCallback((notice?: NoticeItem) => {
     setNoticeMenuVisible(false);
     setNoticeBookSelectorVisible(false);
@@ -889,7 +937,9 @@ export function useNoticeState({
         }
 
         setEditingNoticeId(editableNotice.id);
-        setNoticeDraft(buildNoticeDraftFromNotice(editableNotice));
+        const nextDraft = buildNoticeDraftFromNotice(editableNotice);
+        setNoticeDraft(nextDraft);
+        setNoticeComposerInitialDraft(nextDraft);
         setNoticeComposerVisible(true);
       };
 
@@ -898,16 +948,11 @@ export function useNoticeState({
     }
 
     setEditingNoticeId(null);
-    setNoticeDraft(buildNoticeDraft());
+    const emptyDraft = buildNoticeDraft();
+    setNoticeDraft(emptyDraft);
+    setNoticeComposerInitialDraft(emptyDraft);
     setNoticeComposerVisible(true);
   }, [group.clubId]);
-
-  const handleCloseNoticeComposer = useCallback(() => {
-    setNoticeComposerVisible(false);
-    setNoticeBookSelectorVisible(false);
-    setEditingNoticeId(null);
-    setNoticeDraft(buildNoticeDraft());
-  }, []);
 
   const handleAddNoticePhoto = useCallback(
     (pickAndUploadImage: (type: 'NOTICE') => Promise<string | null>) => {

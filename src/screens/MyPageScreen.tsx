@@ -75,6 +75,7 @@ import { pickAndUploadImage } from '../utils/imageUpload';
 import { collectAllCursorPages } from '../utils/pagination';
 import { resolveApiError } from '../utils/resolveApiError';
 import { useConsumeRouteParam } from '../hooks/useConsumeRouteParam';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import { BOOK_DEFAULT_IMAGE } from '../constants/defaultAssets';
 import {
@@ -769,6 +770,43 @@ export function MyPageScreen() {
     profileImageUrl,
     profileEditUseDefaultAvatar,
   ]);
+
+  const handleCloseSelectedSetting = useCallback(() => {
+    setSelectedSetting(null);
+  }, []);
+
+  const passwordUpdateDirty = useMemo(
+    () =>
+      passwordCurrent.length > 0 ||
+      passwordNext.length > 0 ||
+      passwordConfirm.length > 0,
+    [passwordConfirm, passwordCurrent, passwordNext],
+  );
+  const emailUpdateDirty = useMemo(
+    () =>
+      emailCurrent.trim().length > 0 ||
+      emailNext.trim().length > 0 ||
+      emailVerificationCode.trim().length > 0 ||
+      emailVerificationSent ||
+      emailVerified,
+    [emailCurrent, emailNext, emailVerificationCode, emailVerificationSent, emailVerified],
+  );
+  const accountUpdateGuardEnabled =
+    selectedSetting === '비밀번호 변경' || selectedSetting === '이메일 변경';
+
+  const { requestClose: handleAccountUpdateBack } = useUnsavedChangesGuard({
+    enabled: accountUpdateGuardEnabled,
+    isDirty:
+      selectedSetting === '비밀번호 변경'
+        ? passwordUpdateDirty
+        : selectedSetting === '이메일 변경'
+          ? emailUpdateDirty
+          : false,
+    onConfirmLeave: handleCloseSelectedSetting,
+    title: '변경사항',
+    message: '변경된 내용이 저장되지 않습니다.',
+    confirmText: '나가기',
+  });
 
   useEffect(() => {
     if (selectedSetting !== '프로필 편집') return;
@@ -1592,7 +1630,7 @@ export function MyPageScreen() {
     const back = (
       <Pressable
         style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
-        onPress={() => setSelectedSetting(null)}
+        onPress={accountUpdateGuardEnabled ? handleAccountUpdateBack : handleCloseSelectedSetting}
       >
         <MaterialIcons name="chevron-left" size={18} color={colors.gray4} />
         <Text style={styles.breadcrumbText}>뒤로가기</Text>

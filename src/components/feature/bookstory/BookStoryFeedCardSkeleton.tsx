@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   },
   meta: {
     flex: 1,
-    gap: 4,
+    gap: spacing.xxs,
   },
   authorLine: {
     width: 80,

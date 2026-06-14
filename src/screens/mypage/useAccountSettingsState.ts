@@ -71,6 +71,16 @@ export function useAccountSettingsState({
     ev.reset();
   }, [selectedSetting]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (selectedSetting === '비밀번호 변경') return;
+    setPasswordCurrent('');
+    setPasswordNext('');
+    setPasswordConfirm('');
+    setShowPasswordCurrent(false);
+    setShowPasswordNext(false);
+    setShowPasswordConfirm(false);
+  }, [selectedSetting]);
+
   const mapReportItems = useCallback((items: ReportItem[]): ReportHistoryItem[] => {
     return items.map((item, index) => {
       const reportId =

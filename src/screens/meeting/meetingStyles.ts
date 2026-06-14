@@ -1975,7 +1975,7 @@ export const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   noticeComposerTitleInput: {
-    minHeight: 48,
+    minHeight: 96,
     textAlignVertical: 'top',
   },
   noticeComposerTextArea: {

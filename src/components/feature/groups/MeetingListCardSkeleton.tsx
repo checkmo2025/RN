@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   metaWrap: {
     flex: 1,
     gap: 6,
-    paddingTop: 4,
+    paddingTop: spacing.xxs,
   },
   metaLine: {
     height: 14,

@@ -41,6 +41,7 @@ import type { TabParamList } from '../navigation/types';
 import { buttonSize, colors, interactionOpacity, layers, motion, radius, spacing, typography } from '../theme';
 import { navigateToHome, parsePositiveIntParam } from '../navigation/navigateToHome';
 import { useConsumeRouteParam } from '../hooks/useConsumeRouteParam';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
@@ -157,6 +158,7 @@ import {
   formatAverageRating,
   getClubHomeTagTone,
   toNoticeTags,
+  toEditDraft,
   mergeNoticeDetail,
   mapNoticeCommentToUi,
   mapMeetingToRegularMeetingInfo,
@@ -169,6 +171,51 @@ import {
 
 type LinkItem = { text: string; url: string };
 
+function normalizeStringListForCompare(items: string[]) {
+  return [...items].map((item) => item.trim()).sort();
+}
+
+function normalizeBookSourceForCompare(source: BookshelfCreateDraft['sourceBook']) {
+  if (!source) return null;
+  return {
+    isbn: source.isbn.trim(),
+    title: source.title.trim(),
+    author: source.author.trim(),
+    coverImage: source.coverImage ?? '',
+    publisher: source.publisher ?? '',
+  };
+}
+
+function areGroupEditDraftsEqual(left: GroupEditDraft, right: GroupEditDraft) {
+  return (
+    left.name.trim() === right.name.trim() &&
+    left.description.trim() === right.description.trim() &&
+    left.region.trim() === right.region.trim() &&
+    left.isPrivate === right.isPrivate &&
+    (left.imageUrl ?? '') === (right.imageUrl ?? '') &&
+    JSON.stringify(normalizeStringListForCompare(left.categories)) ===
+      JSON.stringify(normalizeStringListForCompare(right.categories)) &&
+    JSON.stringify(normalizeStringListForCompare(left.targets)) ===
+      JSON.stringify(normalizeStringListForCompare(right.targets))
+  );
+}
+
+function areBookshelfCreateDraftsEqual(
+  left: BookshelfCreateDraft,
+  right: BookshelfCreateDraft,
+) {
+  return (
+    JSON.stringify(normalizeBookSourceForCompare(left.sourceBook)) ===
+      JSON.stringify(normalizeBookSourceForCompare(right.sourceBook)) &&
+    left.session.trim() === right.session.trim() &&
+    left.regularMeetingName.trim() === right.regularMeetingName.trim() &&
+    left.meetingLocation.trim() === right.meetingLocation.trim() &&
+    left.meetingDate.trim() === right.meetingDate.trim() &&
+    JSON.stringify(normalizeStringListForCompare(left.categories)) ===
+      JSON.stringify(normalizeStringListForCompare(right.categories))
+  );
+}
+
 const BOOKSHELF_MEETING_TITLE_MAX_LENGTH = 12;
 const BOOKSHELF_MEETING_LOCATION_MAX_LENGTH = 12;
 const ISBN13_REGEX = /^\d{13}$/;
@@ -177,8 +224,8 @@ const MEETING_TAB_DOUBLE_TAP_WINDOW_MS = 450;
 const GROUP_TITLE_FOCUS_TOP_OFFSET = spacing.xs;
 const GROUP_TITLE_FOCUS_SCROLL_SAFETY = spacing.md;
 const BOOKSHELF_DETAIL_FOCUS_TOP_OFFSET = spacing.sm;
-const NOTICE_TITLE_INPUT_MIN_HEIGHT = 48;
-const NOTICE_TITLE_INPUT_MAX_HEIGHT = 112;
+const NOTICE_TITLE_INPUT_MIN_HEIGHT = 96;
+const NOTICE_TITLE_INPUT_MAX_HEIGHT = 152;
 const NOTICE_CONTENT_INPUT_MIN_HEIGHT = 180;
 const NOTICE_CONTENT_INPUT_MAX_HEIGHT = 360;
 const NOTICE_INPUT_HEIGHT_SAFETY = spacing.sm;
@@ -1230,6 +1277,86 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     handleOpenNoticeComposerFromManagement,
   } = mgmtState;
 
+  const [bookshelfCreateBaselineDraft, setBookshelfCreateBaselineDraft] =
+    useState<BookshelfCreateDraft | null>(null);
+
+  useEffect(() => {
+    if (activeManagementScreen !== 'BOOKSHELF_CREATE') {
+      if (bookshelfCreateBaselineDraft) setBookshelfCreateBaselineDraft(null);
+      return;
+    }
+    if (!bookshelfCreateBaselineDraft) {
+      setBookshelfCreateBaselineDraft(bookshelfCreateDraft);
+    }
+  }, [activeManagementScreen, bookshelfCreateBaselineDraft, bookshelfCreateDraft]);
+
+  const bookshelfComposerDirty = useMemo(() => {
+    if (!bookshelfComposerType) return false;
+    if (editingBookshelfPost?.type === bookshelfComposerType) {
+      const originalRating =
+        bookshelfComposerType === 'REVIEW' ? (editingBookshelfPost.rating ?? 0) : 0;
+      return (
+        bookshelfComposerInput !== editingBookshelfPost.content ||
+        bookshelfComposerRating !== originalRating
+      );
+    }
+    return (
+      bookshelfComposerInput.trim().length > 0 ||
+      (bookshelfComposerType === 'REVIEW' && bookshelfComposerRating > 0)
+    );
+  }, [
+    bookshelfComposerInput,
+    bookshelfComposerRating,
+    bookshelfComposerType,
+    editingBookshelfPost,
+  ]);
+
+  const { requestClose: requestCloseBookshelfComposer } = useUnsavedChangesGuard({
+    enabled: Boolean(bookshelfComposerType),
+    isDirty: bookshelfComposerDirty,
+    onConfirmLeave: closeBookshelfComposer,
+  });
+
+  const groupEditDirty = useMemo(() => {
+    if (activeManagementScreen !== 'EDIT') return false;
+    return !areGroupEditDraftsEqual(editDraft, toEditDraft(managedGroup));
+  }, [activeManagementScreen, editDraft, managedGroup]);
+
+  const bookshelfCreateDirty = useMemo(() => {
+    if (activeManagementScreen !== 'BOOKSHELF_CREATE' || !bookshelfCreateBaselineDraft) {
+      return false;
+    }
+    return !areBookshelfCreateDraftsEqual(bookshelfCreateDraft, bookshelfCreateBaselineDraft);
+  }, [activeManagementScreen, bookshelfCreateBaselineDraft, bookshelfCreateDraft]);
+
+  const managementEditDirty = groupEditDirty || bookshelfCreateDirty;
+  const managementEditGuardEnabled =
+    activeManagementScreen === 'EDIT' || activeManagementScreen === 'BOOKSHELF_CREATE';
+
+  const { requestClose: requestCloseManagementScreen } = useUnsavedChangesGuard({
+    enabled: managementEditGuardEnabled,
+    isDirty: managementEditDirty,
+    onConfirmLeave: handleCloseManagementScreen,
+  });
+
+  const handleCloseManagementLayerWithGuard = useCallback(() => {
+    if (bookshelfBookSelectorVisible) {
+      closeBookshelfBookSelector();
+      return;
+    }
+    if (activeManagementScreen) {
+      requestCloseManagementScreen();
+      return;
+    }
+    handleCloseManagementLayer();
+  }, [
+    activeManagementScreen,
+    bookshelfBookSelectorVisible,
+    closeBookshelfBookSelector,
+    handleCloseManagementLayer,
+    requestCloseManagementScreen,
+  ]);
+
   useEffect(() => {
     if (noticeComposerVisible) return;
     setNoticeTitleInputHeight(NOTICE_TITLE_INPUT_MIN_HEIGHT);
@@ -1681,7 +1808,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     }
 
     if (activeManagementScreen) {
-      handleCloseManagementScreen();
+      requestCloseManagementScreen();
       return;
     }
 
@@ -1699,7 +1826,6 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     closeBookshelfBookSelector,
     closeBookshelfCalendar,
     contactModalVisible,
-    handleCloseManagementScreen,
     handleCloseNoticeComposer,
     managementMenuVisible,
     closeManagementMenu,
@@ -1707,6 +1833,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     noticeComposerVisible,
     noticeMenuVisible,
     onBack,
+    requestCloseManagementScreen,
     selectedJoinRequestActionId,
     selectedJoinRequestMessage,
     selectedMemberActionId,
@@ -2279,7 +2406,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
       </Modal>
       <DialogOverlay
         visible={Boolean(bookshelfComposerType)}
-        onClose={closeBookshelfComposer}
+        onClose={requestCloseBookshelfComposer}
         overlayStyle={styles.bookshelfComposerOverlay}
         cardStyle={styles.bookshelfComposerCard}
         withKeyboard
@@ -2294,7 +2421,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 	                      ? '한줄평 수정하기'
 	                      : '한줄평 추가하기'}
 	                </Text>
-	                <Pressable onPress={closeBookshelfComposer} hitSlop={8}>
+	                <Pressable onPress={requestCloseBookshelfComposer} hitSlop={8}>
 	                  <MaterialIcons name="close" size={22} color={colors.gray5} />
 	                </Pressable>
 	              </View>
@@ -2373,7 +2500,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     submittingBookshelfComposer && styles.primaryButtonDisabled,
                     pressed && !submittingBookshelfComposer && styles.pressed,
                   ]}
-                  onPress={closeBookshelfComposer}
+                  onPress={requestCloseBookshelfComposer}
                   disabled={submittingBookshelfComposer}
                 >
                   <Text style={styles.secondaryText}>취소</Text>
@@ -2419,8 +2546,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         uploadingClubImage={uploadingClubImage}
         managementSheetY={managementSheetY}
         managementHandlePanResponder={managementHandlePanResponder}
-        handleCloseManagementLayer={handleCloseManagementLayer}
-        handleCloseManagementScreen={handleCloseManagementScreen}
+        handleCloseManagementLayer={handleCloseManagementLayerWithGuard}
+        handleCloseManagementScreen={requestCloseManagementScreen}
         closeManagementMenu={closeManagementMenu}
         setSelectedJoinRequestMessage={setSelectedJoinRequestMessage}
         setSelectedJoinRequestActionId={setSelectedJoinRequestActionId}
@@ -2549,6 +2676,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   { height: noticeTitleInputHeight },
                 ]}
                 multiline
+                numberOfLines={4}
                 maxLength={INPUT_LIMITS.NOTICE_TITLE}
                 overLimitMessage={`공지 제목은 ${INPUT_LIMITS.NOTICE_TITLE}자 이하여야 합니다.`}
                 scrollEnabled={noticeTitleInputHeight >= NOTICE_TITLE_INPUT_SCROLL_HEIGHT}

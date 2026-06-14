@@ -665,9 +665,15 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       showTopBackButton?: boolean;
       equalHeight?: 'sm' | 'lg';
       hideClose?: boolean;
-      confirmClose?: boolean;
+      confirmClose?: boolean | (() => boolean);
     },
-  ) => (
+  ) => {
+    const shouldConfirmClose =
+      typeof options?.confirmClose === 'function'
+        ? options.confirmClose()
+        : Boolean(options?.confirmClose);
+
+    return (
     <View style={styles.container}>
       <KeyboardAvoidingView
         style={styles.container}
@@ -704,14 +710,14 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
               ) : null}
               {!options?.hideClose ? (
                 <Pressable
-                  onPress={options?.confirmClose ? () => setExitSignupConfirmVisible(true) : onClose}
+                  onPress={shouldConfirmClose ? () => setExitSignupConfirmVisible(true) : onClose}
                   hitSlop={8}
                 >
                   <MaterialIcons name="close" size={30} color={colors.primary1} />
                 </Pressable>
               ) : null}
             </View>
-            {options?.confirmClose ? (
+            {shouldConfirmClose ? (
               <DialogOverlay
                 visible={exitSignupConfirmVisible}
                 onClose={() => setExitSignupConfirmVisible(false)}
@@ -749,7 +755,20 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
-  );
+    );
+  };
+
+  const hasProfileBasicDraft = () =>
+    nickname.trim().length > 0 ||
+    description.trim().length > 0 ||
+    name.trim().length > 0 ||
+    phoneNumber.trim().length > 0;
+  const hasProfileExtraDraft = () =>
+    Boolean(selectedProfileImage) ||
+    profileImageUrl.trim().length > 0 ||
+    defaultProfileConfirmed ||
+    selectedCategories.length > 0;
+  const hasSignupProfileDraft = () => hasProfileBasicDraft() || hasProfileExtraDraft();
 
   if (step === 'terms') {
     const toggleAll = () => {
@@ -1187,7 +1206,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           <AppButton label="다음" fullWidth onPress={handleProfileBasicNext} />
         </View>
       </>,
-      { equalHeight: 'lg' },
+      { equalHeight: 'lg', confirmClose: hasProfileBasicDraft },
     );
   }
 
@@ -1280,7 +1299,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           />
         </View>
       </>,
-      { equalHeight: 'lg' },
+      { equalHeight: 'lg', confirmClose: hasSignupProfileDraft },
     );
   }
 
@@ -1717,11 +1736,11 @@ const styles = StyleSheet.create({
   passwordHintRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xxs,
     marginTop: 2,
   },
   passwordHintText: {
-    fontSize: 12,
+    ...typography.body2_3,
     color: colors.gray3,
   },
   passwordHintTextOk: {

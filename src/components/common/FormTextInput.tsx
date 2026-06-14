@@ -1,7 +1,9 @@
-import { forwardRef, useCallback, useRef } from 'react';
+import { forwardRef, useCallback, useEffect, useRef } from 'react';
 import {
   TextInput,
   type KeyboardTypeOptions,
+  type NativeSyntheticEvent,
+  type TextInputKeyPressEventData,
   type TextInputProps,
 } from 'react-native';
 
@@ -77,6 +79,8 @@ export const FormTextInput = forwardRef<TextInput, Props>(function FormTextInput
     enforceMaxLength = true,
     overLimitMessage = '입력 가능한 길이를 초과했습니다.',
     onChangeText,
+    onKeyPress,
+    value,
     keyboardType,
     autoCapitalize,
     autoCorrect,
@@ -88,6 +92,24 @@ export const FormTextInput = forwardRef<TextInput, Props>(function FormTextInput
   const exceededNotifiedRef = useRef(false);
   const typeOptions = FIELD_TYPE_OPTIONS[fieldType];
 
+  const notifyOverLimit = useCallback(() => {
+    if (exceededNotifiedRef.current) return;
+    showToast(overLimitMessage);
+    exceededNotifiedRef.current = true;
+  }, [overLimitMessage]);
+
+  useEffect(() => {
+    if (
+      enforceMaxLength &&
+      typeof maxLength === 'number' &&
+      maxLength >= 0 &&
+      typeof value === 'string' &&
+      value.length < maxLength
+    ) {
+      exceededNotifiedRef.current = false;
+    }
+  }, [enforceMaxLength, maxLength, value]);
+
   const handleChangeText = useCallback(
     (nextText: string) => {
       if (
@@ -97,10 +119,7 @@ export const FormTextInput = forwardRef<TextInput, Props>(function FormTextInput
         nextText.length > maxLength
       ) {
         const clampedText = nextText.slice(0, maxLength);
-        if (!exceededNotifiedRef.current) {
-          showToast(overLimitMessage);
-          exceededNotifiedRef.current = true;
-        }
+        notifyOverLimit();
         onChangeText(clampedText);
         return;
       }
@@ -108,13 +127,33 @@ export const FormTextInput = forwardRef<TextInput, Props>(function FormTextInput
       exceededNotifiedRef.current = false;
       onChangeText(nextText);
     },
-    [enforceMaxLength, maxLength, onChangeText, overLimitMessage],
+    [enforceMaxLength, maxLength, notifyOverLimit, onChangeText],
+  );
+
+  const handleKeyPress = useCallback(
+    (event: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+      onKeyPress?.(event);
+      if (
+        !enforceMaxLength ||
+        typeof maxLength !== 'number' ||
+        maxLength < 0 ||
+        typeof value !== 'string' ||
+        value.length < maxLength ||
+        event.nativeEvent.key === 'Backspace'
+      ) {
+        return;
+      }
+      notifyOverLimit();
+    },
+    [enforceMaxLength, maxLength, notifyOverLimit, onKeyPress, value],
   );
 
   return (
     <TextInput
       ref={ref}
+      value={value}
       onChangeText={handleChangeText}
+      onKeyPress={handleKeyPress}
       keyboardType={keyboardType ?? typeOptions.keyboardType}
       autoCapitalize={autoCapitalize ?? typeOptions.autoCapitalize}
       autoCorrect={autoCorrect ?? typeOptions.autoCorrect}
@@ -123,4 +162,3 @@ export const FormTextInput = forwardRef<TextInput, Props>(function FormTextInput
     />
   );
 });
-
