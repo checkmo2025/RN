@@ -2682,3 +2682,9 @@ export const interactionOpacity = {
 - 관리 메뉴 바텀시트: ScrollView로 감싸 위로 끌어 확장 / 당겨서 닫기 제스처 지원
 - 상단 공지 텍스트 1줄 말줄임 처리, 마이페이지 신고 내역 줄바꿈 간격(12→28) 및 강제 break 속성 제거
 - 검증: `npm run typecheck` 통과
+
+# 2026-06-14 13:01:14 KST 공지 상세 태그 색상 통일
+
+- 공지 상세보기 태그를 리스트와 동일한 `renderNoticeTag` 로직으로 렌더링
+- 기존 `category` 텍스트 단일 핀 스타일(진한 갈색) → 고정/일반/투표/모임 태그별 색상 일치
+- 검증: `npm run typecheck` 통과

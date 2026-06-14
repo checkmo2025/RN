@@ -208,8 +208,10 @@ export function GroupNoticeView({
 
         <View style={styles.noticeDetailTopRow}>
           <View style={styles.noticeDetailCategoryRow}>
-            <View style={[styles.noticeTag, styles.noticeTagPin]}>
-              <Text style={styles.noticeTagText}>{selectedNotice.category}</Text>
+            <View style={styles.noticeTagRow}>
+              {selectedNotice.tags.map((tag, index) =>
+                renderNoticeTag(tag, `${selectedNotice.id}-${tag}-${index}`),
+              )}
             </View>
             <Text style={styles.noticeDetailDate}>{selectedNotice.date}</Text>
           </View>
