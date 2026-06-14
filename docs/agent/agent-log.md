@@ -2716,3 +2716,9 @@ export const interactionOpacity = {
 - 책이야기 글/댓글, 회원가입 프로필 단계, 마이페이지 이메일/비밀번호 변경의 이탈 경고 보강
 - `edit-discard-warning-audit.md` 적용 결과와 TODO 실기기 QA 항목 갱신
 - 검증: `npm run check` 통과
+
+# 2026-06-14 16:03:50 KST 작업 산출물 문서 3종 추가
+
+- `2nd-review-changelog.md`: 2차 심사(version-2) 변경사항(버그 7·기능 7·개선 7) 정리 문서 추가
+- `bottomsheet-unification-plan.md`: 바텀시트 3종 구현 현황 및 공용 컴포넌트 통일 계획 추가
+- `ux-consistency-audit.md`: 바텀시트/이탈 경고/파괴적 삭제 등 UX 일관성·치명 이슈 전수 감사 문서 추가
