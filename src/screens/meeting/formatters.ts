@@ -3,6 +3,7 @@ import {
   formatKstDateTimeLabel,
   getCurrentKstDateLabel,
   toKstApiDateTime,
+  toKstApiLocalDateTime,
 } from '../../utils/date';
 
 export function formatDotDateValue(date: Date): string {
@@ -22,6 +23,37 @@ export function formatDotDateTime(value?: string): string {
 
 export function toApiDateTime(value: string): string | undefined {
   return toKstApiDateTime(value);
+}
+
+/**
+ * 투표 시작/마감처럼 백엔드 `LocalDateTime`(오프셋 없는 ISO)로 보내야 하는 값 변환.
+ */
+export function toApiLocalDateTime(value: string): string | undefined {
+  return toKstApiLocalDateTime(value);
+}
+
+/** 저장 문자열(점 표기 또는 API 포맷)을 datepicker 초기값용 Date(벽시계 기준)로 변환. */
+export function dotDateTimeToDate(value: string): Date | null {
+  const api = toKstApiDateTime(value);
+  if (!api) return null;
+  const match = api.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!match) return null;
+  return new Date(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    Number(match[4]),
+    Number(match[5]),
+  );
+}
+
+/** datepicker가 고른 Date를 저장/표시용 점 표기 문자열("YYYY.MM.DD HH:mm")로 변환. */
+export function dateToDotDateTime(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())}` +
+    ` ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
 }
 
 export function toTeamLabel(teamNumber?: number): string {

@@ -47,6 +47,7 @@ import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar'
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
+import { DateTimeField } from '../components/common/DateTimeField';
 import { DialogOverlay } from '../components/common/DialogOverlay';
 import { FormTextInput } from '../components/common/FormTextInput';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
@@ -81,6 +82,8 @@ import {
   buildCalendarDays,
   formatCalendarMonthLabel,
   formatDotDate,
+  dateToDotDateTime,
+  dotDateTimeToDate,
   formatDotDateValue,
   formatDotDateTime,
   formatGenerationLabel,
@@ -231,8 +234,6 @@ const NOTICE_CONTENT_INPUT_MAX_HEIGHT = NOTICE_CONTENT_INPUT_MIN_HEIGHT;
 const NOTICE_INPUT_HEIGHT_SAFETY = spacing.sm;
 const NOTICE_CONTENT_SCROLL_CHAR_THRESHOLD = 220;
 const NOTICE_CONTENT_SCROLL_LINE_THRESHOLD = 8;
-const NOTICE_TITLE_INPUT_SCROLL_HEIGHT =
-  NOTICE_TITLE_INPUT_MAX_HEIGHT - NOTICE_INPUT_HEIGHT_SAFETY;
 
 
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
@@ -2768,7 +2769,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 numberOfLines={4}
                 maxLength={INPUT_LIMITS.NOTICE_TITLE}
                 overLimitMessage={`공지 제목은 ${INPUT_LIMITS.NOTICE_TITLE}자 이하여야 합니다.`}
-                scrollEnabled={noticeTitleInputHeight >= NOTICE_TITLE_INPUT_SCROLL_HEIGHT}
+                scrollEnabled
                 onContentSizeChange={(event) =>
                   handleNoticeTitleContentSizeChange(event, noticeDraft.title)
                 }
@@ -2797,7 +2798,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 textAlignVertical="top"
                 maxLength={INPUT_LIMITS.NOTICE_CONTENT}
                 overLimitMessage={`공지 내용은 ${INPUT_LIMITS.NOTICE_CONTENT}자 이하여야 합니다.`}
-                scrollEnabled={noticeContentInputScrollEnabled}
+                scrollEnabled
                 onFocus={() => setNoticeContentInputFocused(true)}
                 onBlur={() => setNoticeContentInputFocused(false)}
                 onContentSizeChange={(event) =>
@@ -3071,23 +3072,29 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                     </Pressable>
                   </View>
                   <View style={styles.noticeComposerDateRow}>
-                    <TextInput
-                      value={noticeDraft.pollStartsAt}
-                      onChangeText={(text) =>
-                        setNoticeDraft((prev) => ({ ...prev, pollStartsAt: text }))
+                    <DateTimeField
+                      value={dotDateTimeToDate(noticeDraft.pollStartsAt)}
+                      onChange={(date) =>
+                        setNoticeDraft((prev) => ({
+                          ...prev,
+                          pollStartsAt: dateToDotDateTime(date),
+                        }))
                       }
                       placeholder="시작 시간"
-                      placeholderTextColor={colors.gray3}
-                      style={[styles.input, styles.noticeComposerDateInput]}
+                      minimumDate={new Date()}
+                      style={styles.noticeComposerDateInput}
                     />
-                    <TextInput
-                      value={noticeDraft.pollEndsAt}
-                      onChangeText={(text) =>
-                        setNoticeDraft((prev) => ({ ...prev, pollEndsAt: text }))
+                    <DateTimeField
+                      value={dotDateTimeToDate(noticeDraft.pollEndsAt)}
+                      onChange={(date) =>
+                        setNoticeDraft((prev) => ({
+                          ...prev,
+                          pollEndsAt: dateToDotDateTime(date),
+                        }))
                       }
                       placeholder="종료 시간"
-                      placeholderTextColor={colors.gray3}
-                      style={[styles.input, styles.noticeComposerDateInput]}
+                      minimumDate={dotDateTimeToDate(noticeDraft.pollStartsAt) ?? new Date()}
+                      style={styles.noticeComposerDateInput}
                     />
                   </View>
                 </View>

@@ -148,6 +148,17 @@ export function toKstApiDateTime(value: string): string | undefined {
   );
 }
 
+/**
+ * 백엔드 `LocalDateTime` 필드(타임존 오프셋 없는 ISO)에 보낼 값으로 변환한다.
+ * `toKstApiDateTime`의 KST 벽시계 값을 그대로 쓰되 `+09:00` 오프셋만 제거한다.
+ * 예) "2026.06.14 10:00" -> "2026-06-14T10:00:00"
+ */
+export function toKstApiLocalDateTime(value: string): string | undefined {
+  const withOffset = toKstApiDateTime(value);
+  if (!withOffset) return undefined;
+  return withOffset.replace(/[+-]\d{2}:\d{2}$/, '');
+}
+
 export function toKstTimeAgoLabel(value?: string, nowMillis = Date.now()): string {
   if (!value) return '방금 전';
 

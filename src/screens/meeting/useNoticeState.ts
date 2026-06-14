@@ -40,7 +40,7 @@ import {
   mergeNoticeDetail,
   sortNoticeItems,
 } from './helpers';
-import { toApiDateTime } from './formatters';
+import { toApiLocalDateTime } from './formatters';
 
 const NOTICE_PAGE_SIZE = 8;
 const NOTICE_LIST_PAGE_FETCH_LIMIT = 20;
@@ -1045,10 +1045,10 @@ export function useNoticeState({
       .map((option) => option.trim())
       .filter((option) => option.length > 0);
     const pollStartTime = noticeDraft.pollEnabled
-      ? toApiDateTime(noticeDraft.pollStartsAt.trim())
+      ? toApiLocalDateTime(noticeDraft.pollStartsAt.trim())
       : undefined;
     const pollDeadline = noticeDraft.pollEnabled
-      ? toApiDateTime(noticeDraft.pollEndsAt.trim())
+      ? toApiLocalDateTime(noticeDraft.pollEndsAt.trim())
       : undefined;
 
     logMeetingAction('notice_submit_press', {

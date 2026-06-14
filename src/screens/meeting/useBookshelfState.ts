@@ -69,7 +69,7 @@ import {
   parseGenerationNumber,
   parseDotDate,
   sanitizeGenerationInput,
-  toApiDateTime,
+  toApiLocalDateTime,
 } from './formatters';
 import { resolveBookshelfActionErrorMessage } from './mappers';
 import { useRegularGroupStomp } from '../../services/websocket/useRegularGroupStomp';
@@ -1880,7 +1880,7 @@ export function useBookshelfState({
       else setCreatingBookshelf(true);
 
       try {
-        const meetingTime = meetingDate ? toApiDateTime(meetingDate) : undefined;
+        const meetingTime = meetingDate ? toApiLocalDateTime(meetingDate) : undefined;
         if (meetingDate && !meetingTime) {
           logMeetingAction('bookshelf_submit_validation_failed', {
             mode,

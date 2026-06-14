@@ -2749,3 +2749,10 @@ export const interactionOpacity = {
 - 책이야기 수정 저장 시 서버가 title 필수 요구 → `updateBookStory`에 제목 전송하도록 수정하고, 수정 모드에서 제목 입력 잠금 해제(책만 변경 불가)
 - 크래시 추적용 임시 로그(menu_action/edit_step/render_compose/render_detail 등) 제거
 - 검증: `npx tsc --noEmit` 통과
+
+# 2026-06-14 20:48:43 KST 공지/책장 날짜 LocalDateTime 포맷 수정 + 네이티브 datepicker 도입
+
+- 투표(공지)·책장 `meetingTime`이 `+09:00` 오프셋으로 전송돼 백엔드 `LocalDateTime` 파싱 실패(400) → `toKstApiLocalDateTime`/`toApiLocalDateTime` 추가로 오프셋 없는 포맷 전송하도록 수정(useNoticeState/useBookshelfState)
+- 투표 기간 입력을 기기 네이티브 `DateTimeField`(iOS 스피너 모달 / Android 날짜·시간 다이얼로그)로 교체, `@react-native-community/datetimepicker` 도입(app.json plugin + iOS pod 링크)
+- 공지 컴포저 제목/내용 입력 `scrollEnabled` 항상 true로 변경해 iOS 고정높이 multiline 진동(jitter) 제거
+- 검증: `npx tsc --noEmit` 통과, eslint 0 error / 네이티브 모듈이라 `npx expo run:ios` 재빌드 필요
