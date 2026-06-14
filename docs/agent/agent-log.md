@@ -2695,3 +2695,10 @@ export const interactionOpacity = {
 - 공지 내용 입력창: maxLength 2000 + 우측 하단 `현재/2000` 글자수 카운터 표시
 - 공지 제목: 50자 초과 입력 시 토스트 안내 + 초과 입력 차단(ref 가드로 토스트 스팸 방지)
 - 검증: `npm run typecheck` 통과
+
+# 2026-06-14 13:28:27 KST 모임 생성 공개여부 안내 + 회원가입 기본 프로필 버튼 상태 수정
+
+- 모임 생성 공개여부 섹션 아래 "나중에 모임 관리 화면에서 변경 가능" 안내 문구 추가
+- 회원가입 프로필 설정: 진입 시 기본 프로필 버튼 미선택(secondary), 경고창 확인 후에만 선택(primary)로 전환되도록 `defaultProfileConfirmed` 상태 도입(사진 업로드 시 해제)
+- `docs/agent/todo.md` `👀 버그수정 육안 확인`에 위 2건 추가, 원복된 책 검색 실시간 항목 제거
+- 검증: `npm run typecheck` 통과

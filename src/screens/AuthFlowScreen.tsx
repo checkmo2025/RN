@@ -137,6 +137,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [selectedProfileImage, setSelectedProfileImage] = useState<LocalProfileImage | null>(null);
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
+  const [defaultProfileConfirmed, setDefaultProfileConfirmed] = useState(false);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [signUpSubmitting, setSignUpSubmitting] = useState(false);
@@ -476,11 +477,13 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       mimeType: asset.mimeType,
     });
     setProfileImageUrl('');
+    setDefaultProfileConfirmed(false);
   };
 
   const useDefaultProfileImage = () => {
     setProfileImageUrl('');
     setSelectedProfileImage(null);
+    setDefaultProfileConfirmed(true);
   };
 
   const handleSubmitSignUp = async () => {
@@ -1192,7 +1195,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     const profileExtraPreviewUri = normalizeDisplayImageUri(
       selectedProfileImage?.uri ?? profileImageUrl,
     );
-    const defaultProfileSelected = !profileExtraPreviewUri;
+    const defaultProfileSelected = defaultProfileConfirmed && !profileExtraPreviewUri;
     return renderCard(
       <>
         <Text style={styles.title}>프로필 설정</Text>

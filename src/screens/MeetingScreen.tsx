@@ -3572,6 +3572,10 @@ function MeetingCreateFlow({
                   );
                 })}
               </View>
+
+              <Text style={[styles.createProfileHint, { marginTop: spacing.sm }]}>
+                공개여부는 나중에 모임 관리 화면에서 다시 변경할 수 있습니다.
+              </Text>
             </View>
           )}
 
