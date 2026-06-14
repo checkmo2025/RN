@@ -2070,6 +2070,29 @@ export const styles = StyleSheet.create({
   noticeComposerPollOptionList: {
     gap: spacing.xs,
   },
+  noticeComposerPollOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+  },
+  noticeComposerPollOptionInput: {
+    flex: 1,
+    minHeight: 48,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.xs,
+    paddingVertical: spacing.sm,
+    ...typography.body1_3,
+    color: colors.gray6,
+  },
+  noticeComposerPollOptionRemove: {
+    width: 42,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   noticeComposerAddOptionButton: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -84,6 +84,12 @@ const ISBN13_REGEX = /^\d{13}$/;
 const makeRegularGroupPendingKey = (groupId: string, postId: string) =>
   `${groupId}:${postId}`;
 
+function normalizeIsbn13(value?: string | null): string {
+  const digits = value?.replace(/\D/g, '') ?? '';
+  if (digits.length < 13) return '';
+  return digits.slice(-13);
+}
+
 export type BookshelfStateParams = {
   group: Group;
   isManagedClub: boolean;
@@ -1760,16 +1766,49 @@ export function useBookshelfState({
   );
 
   const handleSubmitBookshelfCreate = useCallback(() => {
-    if (creatingBookshelf || updatingBookshelf || deletingBookshelf) return;
     const editingMeetingId = editingBookshelfMeetingId;
     const isEditMode = typeof editingMeetingId === 'number';
+    const mode = isEditMode ? 'edit' : 'create';
+    const clubId = group.clubId;
+    const sourceBook = bookshelfCreateDraft.sourceBook;
+    const sourceBookIsbn = normalizeIsbn13(sourceBook?.isbn);
 
-    if (!isEditMode && !bookshelfCreateDraft.sourceBook) {
+    if (creatingBookshelf || updatingBookshelf || deletingBookshelf) {
+      logMeetingAction('bookshelf_submit_ignored_busy', {
+        mode,
+        clubId,
+        editingMeetingId,
+      });
+      return;
+    }
+
+    logMeetingAction('bookshelf_submit_press', {
+      mode,
+      clubId,
+      editingMeetingId,
+      hasSourceBook: Boolean(sourceBook),
+      sourceBookIsbnLength: sourceBookIsbn.length,
+      session: bookshelfCreateDraft.session,
+      categoryCount: bookshelfCreateDraft.categories.length,
+      hasMeetingDate: Boolean(bookshelfCreateDraft.meetingDate.trim()),
+    });
+
+    if (!isEditMode && !sourceBook) {
+      logMeetingAction('bookshelf_submit_validation_failed', {
+        mode,
+        clubId,
+        reason: 'missing_source_book',
+      });
       showToast('책을 선택해야 합니다.');
       return;
     }
-    const clubId = group.clubId;
     if (!canManageClub || typeof clubId !== 'number') {
+      logMeetingAction('bookshelf_submit_validation_failed', {
+        mode,
+        clubId,
+        reason: 'unavailable_permission_or_club',
+        canManageClub,
+      });
       showToast(
         isEditMode
           ? '책장 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'
@@ -1780,6 +1819,12 @@ export function useBookshelfState({
 
     const generation = parseGenerationNumber(bookshelfCreateDraft.session);
     if (!generation) {
+      logMeetingAction('bookshelf_submit_validation_failed', {
+        mode,
+        clubId,
+        reason: 'invalid_generation',
+        session: bookshelfCreateDraft.session,
+      });
       showToast('기수를 숫자로 입력해야 합니다.');
       return;
     }
@@ -1788,20 +1833,43 @@ export function useBookshelfState({
     const meetingLocation = bookshelfCreateDraft.meetingLocation.trim();
     const meetingDate = bookshelfCreateDraft.meetingDate.trim();
     if (regularMeetingName.length > BOOKSHELF_MEETING_TITLE_MAX_LENGTH) {
+      logMeetingAction('bookshelf_submit_validation_failed', {
+        mode,
+        clubId,
+        reason: 'meeting_title_too_long',
+        length: regularMeetingName.length,
+      });
       showToast(`정기모임 이름은 ${BOOKSHELF_MEETING_TITLE_MAX_LENGTH}자 이하여야 합니다.`);
       return;
     }
     if (meetingLocation.length > BOOKSHELF_MEETING_LOCATION_MAX_LENGTH) {
+      logMeetingAction('bookshelf_submit_validation_failed', {
+        mode,
+        clubId,
+        reason: 'meeting_location_too_long',
+        length: meetingLocation.length,
+      });
       showToast(`모임 장소는 ${BOOKSHELF_MEETING_LOCATION_MAX_LENGTH}자 이하여야 합니다.`);
       return;
     }
-    const sourceBook = bookshelfCreateDraft.sourceBook;
     if (isEditMode && !sourceBook) {
+      logMeetingAction('bookshelf_submit_validation_failed', {
+        mode,
+        clubId,
+        reason: 'missing_edit_source_book',
+        editingMeetingId,
+      });
       showToast('수정할 책장 정보를 다시 불러와주세요.');
       return;
     }
-    const sourceBookIsbn = sourceBook?.isbn.trim() ?? '';
     if (!isEditMode && !ISBN13_REGEX.test(sourceBookIsbn)) {
+      logMeetingAction('bookshelf_submit_validation_failed', {
+        mode,
+        clubId,
+        reason: 'invalid_isbn13',
+        rawIsbn: sourceBook?.isbn ?? null,
+        normalizedIsbnLength: sourceBookIsbn.length,
+      });
       showToast('책 정보 형식이 올바르지 않습니다.');
       return;
     }
@@ -1814,9 +1882,24 @@ export function useBookshelfState({
       try {
         const meetingTime = meetingDate ? toApiDateTime(meetingDate) : undefined;
         if (meetingDate && !meetingTime) {
+          logMeetingAction('bookshelf_submit_validation_failed', {
+            mode,
+            clubId,
+            reason: 'invalid_meeting_date',
+            meetingDate,
+          });
           showToast('올바른 모임 날짜를 선택해야 합니다.');
           return;
         }
+
+        logMeetingAction('bookshelf_submit_start', {
+          mode,
+          clubId,
+          editingMeetingId,
+          generation,
+          hasMeetingTime: Boolean(meetingTime),
+          hasCategory: Boolean(primaryCategory),
+        });
 
         if (isEditMode && typeof editingMeetingId === 'number') {
           await updateClubBookshelf(clubId, editingMeetingId, {
@@ -1877,7 +1960,20 @@ export function useBookshelfState({
           setBookshelfCreateDraft(buildBookshelfCreateDraft(String(generation)));
           showToast('책장이 생성되었습니다.');
         }
+        logMeetingAction('bookshelf_submit_success', {
+          mode,
+          clubId,
+          editingMeetingId,
+          generation,
+        });
       } catch (error) {
+        logMeetingAction('bookshelf_submit_failure', {
+          mode,
+          clubId,
+          editingMeetingId,
+          message: error instanceof Error ? error.message : String(error),
+          status: error instanceof ApiError ? error.status : undefined,
+        });
         showToast(
           resolveBookshelfActionErrorMessage(
             error,
@@ -1887,6 +1983,11 @@ export function useBookshelfState({
       } finally {
         if (isEditMode) setUpdatingBookshelf(false);
         else setCreatingBookshelf(false);
+        logMeetingAction('bookshelf_submit_finished', {
+          mode,
+          clubId,
+          editingMeetingId,
+        });
       }
     };
     void submit();

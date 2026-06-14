@@ -24,7 +24,7 @@ import { PARTICIPANT_CODE_TO_LABEL } from '../../constants/domain/participant';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { BOOK_DEFAULT_IMAGE } from '../../constants/defaultAssets';
 import { normalizeRemoteImageUrl } from '../../utils/image';
-import { parseApiDateMillis } from '../../utils/date';
+import { getCurrentKstApiDateTime, parseApiDateMillis } from '../../utils/date';
 import {
   formatDotDate,
   formatDotDateTime,
@@ -74,6 +74,23 @@ const clubHomeTagToneByLabel: Record<string, 'amber' | 'coral' | 'sky' | 'violet
   '예술/대중문화': 'violet',
 };
 
+const DEFAULT_NOTICE_POLL_START_DELAY_MS = 10 * 60 * 1000;
+const DEFAULT_NOTICE_POLL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function buildDefaultNoticePollDateRange(nowMillis = Date.now()): {
+  startsAt: string;
+  endsAt: string;
+} {
+  return {
+    startsAt: formatDotDateTime(
+      getCurrentKstApiDateTime(nowMillis + DEFAULT_NOTICE_POLL_START_DELAY_MS),
+    ),
+    endsAt: formatDotDateTime(
+      getCurrentKstApiDateTime(nowMillis + DEFAULT_NOTICE_POLL_DURATION_MS),
+    ),
+  };
+}
+
 export function buildBookshelfCreateDraft(defaultSession = '7'): BookshelfCreateDraft {
   return {
     sourceBook: null,
@@ -86,6 +103,8 @@ export function buildBookshelfCreateDraft(defaultSession = '7'): BookshelfCreate
 }
 
 export function buildNoticeDraft(): NoticeDraft {
+  const defaultPollRange = buildDefaultNoticePollDateRange();
+
   return {
     title: '',
     content: '',
@@ -95,8 +114,8 @@ export function buildNoticeDraft(): NoticeDraft {
     pollEnabled: false,
     pollAnonymous: true,
     pollAllowDuplicate: false,
-    pollStartsAt: '2026.03.01 10:00',
-    pollEndsAt: '2026.03.08 22:00',
+    pollStartsAt: defaultPollRange.startsAt,
+    pollEndsAt: defaultPollRange.endsAt,
     pollOptions: ['', '', ''],
     photos: [],
   };

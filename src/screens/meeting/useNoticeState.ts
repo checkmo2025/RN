@@ -19,7 +19,6 @@ import {
   createClubNotice,
   type ClubNoticeList,
 } from '../../services/api/clubApi';
-import { getCurrentKstApiDateTime } from '../../utils/date';
 import { showToast } from '../../utils/toast';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import type {
@@ -33,17 +32,19 @@ import type {
   NoticePollOption,
 } from './types';
 import {
+  buildDefaultNoticePollDateRange,
   buildNoticeDraft,
+  logMeetingAction,
   mapNoticeCommentToUi,
   mapNoticePreviewToNoticeItem,
   mergeNoticeDetail,
   sortNoticeItems,
 } from './helpers';
 import { toApiDateTime } from './formatters';
-import { logMeetingAction } from './helpers';
 
 const NOTICE_PAGE_SIZE = 8;
 const NOTICE_LIST_PAGE_FETCH_LIMIT = 20;
+const NOTICE_POLL_OPTION_MAX_LENGTH = 255;
 
 function mapClubNoticeListToItems(
   noticeList: Pick<ClubNoticeList, 'pinnedNotices' | 'normalNotices'>,
@@ -71,6 +72,8 @@ async function fetchClubNoticeBoardItems(clubId: number) {
 }
 
 function buildNoticeDraftFromNotice(notice: NoticeItem): NoticeDraft {
+  const defaultPollRange = buildDefaultNoticePollDateRange();
+
   return {
     title: notice.title,
     content: notice.content,
@@ -80,8 +83,8 @@ function buildNoticeDraftFromNotice(notice: NoticeItem): NoticeDraft {
     pollEnabled: Boolean(notice.poll),
     pollAnonymous: notice.poll?.anonymous ?? true,
     pollAllowDuplicate: notice.poll?.allowDuplicate ?? false,
-    pollStartsAt: notice.poll?.startsAt ?? '2026.03.01 10:00',
-    pollEndsAt: notice.poll?.endsAt ?? '2026.03.08 22:00',
+    pollStartsAt: notice.poll?.startsAt ?? defaultPollRange.startsAt,
+    pollEndsAt: notice.poll?.endsAt ?? defaultPollRange.endsAt,
     pollOptions: notice.poll?.options.map((option) => option.label) ?? ['', '', ''],
     photos: notice.photos ?? [],
   };
@@ -997,6 +1000,18 @@ export function useNoticeState({
     setNoticeDraft((prev) => ({ ...prev, pollOptions: [...prev.pollOptions, ''] }));
   }, []);
 
+  const handleRemoveNoticePollOption = useCallback((index: number) => {
+    if (index < 2) return;
+
+    setNoticeDraft((prev) => {
+      if (prev.pollOptions.length <= 2 || index >= prev.pollOptions.length) return prev;
+      return {
+        ...prev,
+        pollOptions: prev.pollOptions.filter((_, currentIndex) => currentIndex !== index),
+      };
+    });
+  }, []);
+
   const handleSelectNoticeBookshelf = useCallback((bookId: string) => {
     setNoticeDraft((prev) => ({ ...prev, bookshelfEnabled: true, bookshelfId: bookId }));
     setNoticeBookSelectorVisible(false);
@@ -1029,15 +1044,76 @@ export function useNoticeState({
     const pollOptions = noticeDraft.pollOptions
       .map((option) => option.trim())
       .filter((option) => option.length > 0);
+    const pollStartTime = noticeDraft.pollEnabled
+      ? toApiDateTime(noticeDraft.pollStartsAt.trim())
+      : undefined;
+    const pollDeadline = noticeDraft.pollEnabled
+      ? toApiDateTime(noticeDraft.pollEndsAt.trim())
+      : undefined;
+
+    logMeetingAction('notice_submit_press', {
+      clubId: group.clubId,
+      mode: isEditingNotice ? 'edit' : 'create',
+      hasVote: noticeDraft.pollEnabled,
+      pollOptionCount: pollOptions.length,
+      hasBookshelfAttachment: typeof bookshelfMeetingId === 'number',
+      titleLength: title.length,
+      contentLength: content.length,
+    });
 
     if (noticeDraft.bookshelfEnabled && typeof bookshelfMeetingId !== 'number') {
+      logMeetingAction('notice_submit_validation_failed', {
+        reason: 'missing_bookshelf',
+        clubId: group.clubId,
+      });
       showToast('연결할 책장을 선택해야 합니다.');
       setNoticeBookSelectorVisible(true);
       return;
     }
 
     if (noticeDraft.pollEnabled && pollOptions.length < 2) {
+      logMeetingAction('notice_submit_validation_failed', {
+        reason: 'not_enough_poll_options',
+        clubId: group.clubId,
+        pollOptionCount: pollOptions.length,
+      });
       showToast('투표 항목은 2개 이상 필요합니다.');
+      return;
+    }
+
+    if (noticeDraft.pollEnabled && pollOptions.some((option) => option.length > NOTICE_POLL_OPTION_MAX_LENGTH)) {
+      logMeetingAction('notice_submit_validation_failed', {
+        reason: 'poll_option_too_long',
+        clubId: group.clubId,
+      });
+      showToast(`투표 항목은 ${NOTICE_POLL_OPTION_MAX_LENGTH}자 이하여야 합니다.`);
+      return;
+    }
+
+    if (noticeDraft.pollEnabled && (!pollStartTime || !pollDeadline)) {
+      logMeetingAction('notice_submit_validation_failed', {
+        reason: 'invalid_poll_date',
+        clubId: group.clubId,
+        pollStartsAt: noticeDraft.pollStartsAt,
+        pollEndsAt: noticeDraft.pollEndsAt,
+      });
+      showToast('투표 기간을 올바르게 입력해야 합니다.');
+      return;
+    }
+
+    if (
+      noticeDraft.pollEnabled &&
+      pollStartTime &&
+      pollDeadline &&
+      Date.parse(pollDeadline) <= Date.parse(pollStartTime)
+    ) {
+      logMeetingAction('notice_submit_validation_failed', {
+        reason: 'poll_deadline_not_after_start',
+        clubId: group.clubId,
+        pollStartTime,
+        pollDeadline,
+      });
+      showToast('투표 종료일은 시작일 이후여야 합니다.');
       return;
     }
 
@@ -1055,7 +1131,7 @@ export function useNoticeState({
             meetingId: bookshelfMeetingId,
             imageUrls: noticeDraft.photos.length > 0 ? noticeDraft.photos : undefined,
             vote: noticeDraft.pollEnabled
-              ? { deadline: toApiDateTime(noticeDraft.pollEndsAt.trim()) ?? getCurrentKstApiDateTime() }
+              ? { deadline: pollDeadline! }
               : undefined,
             isPinned: noticeDraft.isPinned,
           });
@@ -1068,7 +1144,6 @@ export function useNoticeState({
             vote: noticeDraft.pollEnabled
               ? {
                   title,
-                  content,
                   item1: pollOptions[0] ?? '',
                   item2: pollOptions[1] ?? '',
                   item3: pollOptions[2],
@@ -1077,10 +1152,8 @@ export function useNoticeState({
                   item6: pollOptions[5],
                   anonymity: noticeDraft.pollAnonymous,
                   duplication: noticeDraft.pollAllowDuplicate,
-                  startTime:
-                    toApiDateTime(noticeDraft.pollStartsAt.trim()) ?? getCurrentKstApiDateTime(),
-                  deadline:
-                    toApiDateTime(noticeDraft.pollEndsAt.trim()) ?? getCurrentKstApiDateTime(),
+                  startTime: pollStartTime!,
+                  deadline: pollDeadline!,
                 }
               : undefined,
             isPinned: noticeDraft.isPinned,
@@ -1305,6 +1378,7 @@ export function useNoticeState({
     handleRemoveNoticePhoto,
     handleUpdateNoticePollOption,
     handleAddNoticePollOption,
+    handleRemoveNoticePollOption,
     handleSelectNoticeBookshelf,
     handleSubmitNotice,
     handleDeleteNotice,

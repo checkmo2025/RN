@@ -226,15 +226,13 @@ const GROUP_TITLE_FOCUS_SCROLL_SAFETY = spacing.md;
 const BOOKSHELF_DETAIL_FOCUS_TOP_OFFSET = spacing.sm;
 const NOTICE_TITLE_INPUT_MIN_HEIGHT = 96;
 const NOTICE_TITLE_INPUT_MAX_HEIGHT = 152;
-const NOTICE_CONTENT_INPUT_MIN_HEIGHT = 180;
-const NOTICE_CONTENT_INPUT_MAX_HEIGHT = 360;
+const NOTICE_CONTENT_INPUT_MIN_HEIGHT = 280;
+const NOTICE_CONTENT_INPUT_MAX_HEIGHT = NOTICE_CONTENT_INPUT_MIN_HEIGHT;
 const NOTICE_INPUT_HEIGHT_SAFETY = spacing.sm;
 const NOTICE_CONTENT_SCROLL_CHAR_THRESHOLD = 220;
 const NOTICE_CONTENT_SCROLL_LINE_THRESHOLD = 8;
 const NOTICE_TITLE_INPUT_SCROLL_HEIGHT =
   NOTICE_TITLE_INPUT_MAX_HEIGHT - NOTICE_INPUT_HEIGHT_SAFETY;
-const NOTICE_CONTENT_INPUT_SCROLL_HEIGHT =
-  NOTICE_CONTENT_INPUT_MAX_HEIGHT - NOTICE_INPUT_HEIGHT_SAFETY;
 
 
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
@@ -1226,6 +1224,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     handleRemoveNoticePhoto,
     handleUpdateNoticePollOption,
     handleAddNoticePollOption,
+    handleRemoveNoticePollOption,
     handleSelectNoticeBookshelf,
     handleSubmitNotice,
     handleDeleteNotice,
@@ -1246,18 +1245,14 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const handleChangeNoticeContent = useCallback(
     (text: string) => {
       setNoticeDraft((prev) => ({ ...prev, content: text }));
-      if (text.length === 0) {
-        setNoticeContentInputHeight(NOTICE_CONTENT_INPUT_MIN_HEIGHT);
-      } else if (shouldEnableNoticeContentInputScroll(text)) {
-        setNoticeContentInputHeight(NOTICE_CONTENT_INPUT_MAX_HEIGHT);
-      }
+      setNoticeContentInputHeight(NOTICE_CONTENT_INPUT_MIN_HEIGHT);
     },
     [setNoticeDraft],
   );
 
-  const noticeContentInputScrollEnabled =
-    noticeContentInputHeight >= NOTICE_CONTENT_INPUT_SCROLL_HEIGHT ||
-    shouldEnableNoticeContentInputScroll(noticeDraft.content);
+  const noticeContentInputScrollEnabled = shouldEnableNoticeContentInputScroll(
+    noticeDraft.content,
+  );
 
   const {
     managementMenuVisible, openManagementMenu,
@@ -2976,16 +2971,38 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 <View style={styles.noticeComposerSection}>
                   <Text style={styles.noticeAttachmentTitle}>투표</Text>
                   <View style={styles.noticeComposerPollOptionList}>
-                    {noticeDraft.pollOptions.map((option, index) => (
-                      <TextInput
-                        key={`notice-poll-option-${index}`}
-                        value={option}
-                        onChangeText={(text) => handleUpdateNoticePollOption(index, text)}
-                        placeholder={`투표 항목 ${index + 1}`}
-                        placeholderTextColor={colors.gray3}
-                        style={styles.input}
-                      />
-                    ))}
+                    {noticeDraft.pollOptions.map((option, index) => {
+                      const removable = index >= 2;
+
+                      return (
+                        <View
+                          key={`notice-poll-option-${index}`}
+                          style={styles.noticeComposerPollOptionRow}
+                        >
+                          <TextInput
+                            value={option}
+                            onChangeText={(text) => handleUpdateNoticePollOption(index, text)}
+                            placeholder={`투표 항목 ${index + 1}`}
+                            placeholderTextColor={colors.gray3}
+                            style={styles.noticeComposerPollOptionInput}
+                          />
+                          {removable ? (
+                            <Pressable
+                              style={({ pressed }) => [
+                                styles.noticeComposerPollOptionRemove,
+                                pressed && styles.pressed,
+                              ]}
+                              onPress={() => handleRemoveNoticePollOption(index)}
+                              hitSlop={8}
+                              accessibilityRole="button"
+                              accessibilityLabel={`투표 항목 ${index + 1} 삭제`}
+                            >
+                              <MaterialIcons name="close" size={18} color={colors.gray4} />
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      );
+                    })}
                     <Pressable
                       style={({ pressed }) => [styles.noticeComposerAddOptionButton, pressed && styles.pressed]}
                       onPress={handleAddNoticePollOption}

@@ -86,6 +86,7 @@ import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
 import { resolveApiError } from '../utils/resolveApiError';
+import { createLogger } from '../utils/logger';
 import { useEdgeBackSwipe } from '../hooks/useEdgeBackSwipe';
 
 type Book = {
@@ -206,6 +207,7 @@ const EMPTY_COMPOSE_INITIAL_DRAFT: ComposeInitialDraft = {
   body: '',
   bookKey: null,
 };
+const storyLog = createLogger('story');
 
 async function waitForMinimumLoading(startedAt: number, minimumMs = MIN_BOOK_FLIP_LOADING_MS) {
   const elapsed = Date.now() - startedAt;
@@ -371,6 +373,18 @@ export function StoryScreen() {
     selectedStory,
     title,
   ]);
+
+  useEffect(() => {
+    storyLog.debug('screen_state', {
+      isComposing,
+      editingStoryId,
+      selectedStoryId: selectedStory?.id ?? null,
+      selectedStoryRemoteId: selectedStory?.remoteId ?? null,
+      submittingStory,
+      titleLength: title.length,
+      bodyLength: body.length,
+    });
+  }, [editingStoryId, isComposing, selectedStory?.id, selectedStory?.remoteId, submittingStory]);
 
   const animateTransition = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -957,6 +971,15 @@ export function StoryScreen() {
       const nextBody = story.fullText || story.body;
       const nextBook = story.book ?? null;
       const nextInitialDraft = buildComposeInitialDraft(nextBook, story.title, nextBody);
+      storyLog.info('edit_start', {
+        storyId: story.id,
+        remoteId: story.remoteId,
+        titleLength: story.title.length,
+        bodyLength: nextBody.length,
+        hasBook: Boolean(nextBook),
+        wasComposing: isComposingRef.current,
+        selectedStoryId: selectedStoryValueRef.current?.id ?? null,
+      });
       selectedStoryValueRef.current = null;
       isComposingRef.current = true;
       titleValueRef.current = story.title;
@@ -1094,6 +1117,12 @@ export function StoryScreen() {
 
       if (action === 'edit') {
         if (!isLoggedIn || !selectedStory.mine) return;
+        storyLog.info('edit_menu_press', {
+          storyId: selectedStory.id,
+          remoteId: selectedStory.remoteId ?? null,
+          titleLength: selectedStory.title.length,
+          bodyLength: (selectedStory.fullText || selectedStory.body).length,
+        });
         startEditStory(selectedStory);
         return;
       }
@@ -1376,43 +1405,95 @@ export function StoryScreen() {
   }, [requireAuth, submittingStory, title, body, selectedBook, draftStoryId, navigation]);
 
   const handleSubmit = () => {
-    if (submittingStory) return;
+    if (submittingStory) {
+      storyLog.warn('submit_ignored_while_submitting', {
+        editingStoryId,
+        draftStoryId,
+      });
+      return;
+    }
 
     const nextTitle = title.trim();
     const nextDescription = body.trim();
     const currentEditingStoryId = editingStoryId;
     const currentDraftStoryId = draftStoryId;
     const currentSelectedBook = selectedBook;
+    storyLog.info('submit_press', {
+      mode:
+        currentEditingStoryId !== null
+          ? 'edit'
+          : currentDraftStoryId !== null
+            ? 'draft_publish'
+            : 'create',
+      editingStoryId: currentEditingStoryId,
+      draftStoryId: currentDraftStoryId,
+      titleLength: nextTitle.length,
+      bodyLength: nextDescription.length,
+      hasBook: Boolean(currentSelectedBook),
+      selectedStoryId: selectedStoryValueRef.current?.id ?? null,
+      isComposing: isComposingRef.current,
+    });
 
     if (currentEditingStoryId === null && !currentSelectedBook) {
+      storyLog.warn('submit_validation_failed', { reason: 'missing_book' });
       showToast('책을 선택해야 합니다.');
       return;
     }
     if (currentEditingStoryId !== null && !nextDescription) {
+      storyLog.warn('submit_validation_failed', {
+        mode: 'edit',
+        reason: 'missing_body',
+        editingStoryId: currentEditingStoryId,
+      });
       showToast('내용을 입력해야 합니다.');
       return;
     }
     if (currentEditingStoryId === null && (!nextTitle || !nextDescription)) {
+      storyLog.warn('submit_validation_failed', {
+        mode: 'create',
+        reason: 'missing_title_or_body',
+        hasTitle: Boolean(nextTitle),
+        hasBody: Boolean(nextDescription),
+      });
       showToast('제목과 내용을 입력해야 합니다.');
       return;
     }
     requireAuth(() => {
       const post = async () => {
         const loadingStartedAt = Date.now();
+        storyLog.info('submit_start', {
+          editingStoryId: currentEditingStoryId,
+          draftStoryId: currentDraftStoryId,
+        });
         setSubmittingStory(true);
         try {
           let updatedEditedStory: Story | null = null;
 
           if (currentEditingStoryId !== null) {
+            storyLog.info('edit_update_start', {
+              remoteId: currentEditingStoryId,
+              bodyLength: nextDescription.length,
+            });
             await updateBookStory(currentEditingStoryId, { description: nextDescription });
+            storyLog.info('edit_update_success', { remoteId: currentEditingStoryId });
             try {
               const detail = await fetchBookStoryDetail(currentEditingStoryId, {
                 viewerAuthenticated: isLoggedIn,
               });
               if (detail) {
                 updatedEditedStory = mapRemoteDetailToStory(detail);
+                storyLog.info('edit_detail_refetch_success', {
+                  remoteId: currentEditingStoryId,
+                  commentCount: detail.commentList.length,
+                });
+              } else {
+                storyLog.warn('edit_detail_refetch_empty', { remoteId: currentEditingStoryId });
               }
-            } catch {
+            } catch (detailError) {
+              storyLog.warn('edit_detail_refetch_failed', {
+                remoteId: currentEditingStoryId,
+                error: detailError,
+              });
               updatedEditedStory = null;
             }
             showToast('책이야기를 수정했습니다.');
@@ -1445,6 +1526,10 @@ export function StoryScreen() {
           }
 
           await loadStories({ reset: true });
+          storyLog.info('feed_reload_success_after_submit', {
+            editingStoryId: currentEditingStoryId,
+            hasUpdatedEditedStory: Boolean(updatedEditedStory),
+          });
 
           titleValueRef.current = '';
           bodyValueRef.current = '';
@@ -1456,6 +1541,10 @@ export function StoryScreen() {
           setBody('');
           setSelectedBook(null);
           setEditingStoryId(null);
+          storyLog.info('close_compose_after_submit', {
+            editingStoryId: currentEditingStoryId,
+            willOpenEditedDetail: Boolean(updatedEditedStory),
+          });
           closeCompose();
 
           if (updatedEditedStory) {
@@ -1468,6 +1557,10 @@ export function StoryScreen() {
               );
             });
             setSelectedStory(updatedEditedStory);
+            storyLog.info('edited_detail_restored', {
+              storyId: updatedEditedStory.id,
+              remoteId: updatedEditedStory.remoteId ?? null,
+            });
             requestAnimationFrame(() => {
               scrollDetailToTop(false);
             });
@@ -1476,6 +1569,11 @@ export function StoryScreen() {
             listRef.current?.scrollToOffset({ offset: 0, animated: true });
           }
         } catch (error) {
+          storyLog.error('submit_failed', {
+            editingStoryId: currentEditingStoryId,
+            draftStoryId: currentDraftStoryId,
+            error,
+          });
           if (!(error instanceof ApiError)) {
             showToast(
               currentEditingStoryId !== null
@@ -1486,6 +1584,10 @@ export function StoryScreen() {
         } finally {
           await waitForMinimumLoading(loadingStartedAt);
           setSubmittingStory(false);
+          storyLog.info('submit_finished', {
+            editingStoryId: currentEditingStoryId,
+            elapsedMs: Date.now() - loadingStartedAt,
+          });
         }
       };
 
@@ -2369,7 +2471,6 @@ export function StoryScreen() {
               multiline
               textAlignVertical="top"
               maxLength={INPUT_LIMITS.BOOK_STORY_CONTENT}
-              autoFocus={isEditingStory}
             />
             <Text style={styles.bodyCounterText}>
               {body.length}/{INPUT_LIMITS.BOOK_STORY_CONTENT}
@@ -2438,7 +2539,7 @@ export function StoryScreen() {
                     style={styles.bookSearchInput}
                     onSubmitEditing={handleSubmitBookSearch}
                     returnKeyType="search"
-                    autoFocus
+                    autoFocus={showBookPicker}
                   />
                   {bookSearchQuery.length > 0 ? (
                     <IconButton
