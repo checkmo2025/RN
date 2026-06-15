@@ -2834,3 +2834,10 @@ export const interactionOpacity = {
 - 미완성 프로필 `AUTH_403` 문구를 `프로필을 완성해 주세요.`로 통일하고 보호 API 복귀 흐름에 연결
 - 고객센터 URL 기본값과 `.env.example`을 `https://www.checkmo.co.kr/support`로 통일
 - 검증: `npm run check` 통과
+
+# 2026-06-15 21:30:10 KST API per-endpoint 버전 오버라이드 추가
+
+- 공용 HTTP 레이어에 `apiVersion` 옵션을 추가해 호출별로 `/api/v{n}` 경로를 선택할 수 있게 함 (미지정 시 기본 `v1`)
+- `buildApiUrl`이 origin 대신 버전 루트(`.../api`)를 기준으로 조립하도록 변경해 서브패스 배포 경로를 보존하고, 잘못된 버전 값은 `v1`으로 안전 폴백
+- 기존 호출부는 무변경(backward-safe), 향후 특정 API만 `v2`로 이전 시 `apiVersion: 'v2'`만 지정하면 됨
+- 검증: `npm run typecheck`, `eslint http.ts`, URL 조립 스모크 통과
