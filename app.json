@@ -55,9 +55,7 @@
       }
     },
     "owner": "yhi9839",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.1",
     "updates": {
       "url": "https://u.expo.dev/429392b9-bdb4-4d90-9bb5-1cec1fe58fcd"
     }
