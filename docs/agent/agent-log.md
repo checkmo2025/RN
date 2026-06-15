@@ -2841,3 +2841,9 @@ export const interactionOpacity = {
 - `buildApiUrl`이 origin 대신 버전 루트(`.../api`)를 기준으로 조립하도록 변경해 서브패스 배포 경로를 보존하고, 잘못된 버전 값은 `v1`으로 안전 폴백
 - 기존 호출부는 무변경(backward-safe), 향후 특정 API만 `v2`로 이전 시 `apiVersion: 'v2'`만 지정하면 됨
 - 검증: `npm run typecheck`, `eslint http.ts`, URL 조립 스모크 통과
+
+# 2026-06-15 21:38:36 KST EAS production 빌드 컨텍스트 정리
+
+- EAS 업로드에서 참고용 BE/FE 디렉터리와 Codex/IDE 로컬 파일을 제외하도록 `.easignore` 추가
+- `version-2`를 main에 fast-forward merge 후 main 기준 EAS production iOS 빌드 진행 예정
+- 검증: `npm run check` 통과

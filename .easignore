@@ -1,0 +1,12 @@
+.codex/
+.idea/
+.claude/
+.vscode/
+checkmo_be2/
+checkmo_fe2/
+skills/
+npx
+node_modules/
+dist/
+.expo/
+.DS_Store
