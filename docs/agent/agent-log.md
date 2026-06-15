@@ -2796,3 +2796,9 @@ export const interactionOpacity = {
 - 앱 로그인/로그아웃을 `/auth/app/*`로 전환하고 SecureStore refresh token 저장소 및 silent refresh single-flight 추가
 - 앱 시작 401 refresh 복구, 직접 fetch 호출(news/닉네임/next meeting), 이미지 URL origin 기준 정규화 반영
 - 검증: `npm run check` 통과
+
+# 2026-06-15 12:04:26 KST 회원가입 중단 계정 재진입 처리 보강
+
+- 회원가입 `AUTH_411` 응답에서만 기존 생성 계정 로그인 후 프로필 완성 단계로 이어가도록 조정
+- 완성된 기존 계정(`AUTH_402`)은 로그인 또는 비밀번호 찾기 안내로 분리
+- 흡수 완료된 `feature/auth-silent-refresh` 브랜치 로컬/원격 삭제

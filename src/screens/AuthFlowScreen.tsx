@@ -470,12 +470,16 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         if (!(error instanceof ApiError)) {
           throw error;
         }
-        if (error.status !== 409) {
+        if (error.code === 'AUTH_411') {
+          // 이전 시도에서 계정만 생성된 케이스는 로그인 후 프로필 완성 단계로 이어갑니다.
+          resumedFromExistingAccount = true;
+        } else if (error.code === 'AUTH_402') {
+          showToast('이미 가입된 이메일입니다. 로그인 또는 비밀번호 찾기를 이용하십시오.');
+          return;
+        } else {
           showToast(error.message || '회원가입에 실패했습니다.');
           return;
         }
-        // 이전 시도에서 계정이 생성된 케이스를 고려해 로그인 단계부터 이어서 진행합니다.
-        resumedFromExistingAccount = true;
       }
 
       try {
