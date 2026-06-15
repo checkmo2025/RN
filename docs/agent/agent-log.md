@@ -2814,3 +2814,10 @@ export const interactionOpacity = {
 - 로그인 화면 하단 `아직 회원이 아니신가요?`와 `고객센터/문의하기` 링크를 같은 세로 묶음으로 정리
 - 두 링크의 첫 글자 시작 위치가 맞도록 내부 왼쪽 정렬 적용
 - 검증: `npm run check` 통과
+
+# 2026-06-15 16:50:36 KST 미완성 프로필 복귀 플로우 RN-only 처리
+
+- RN 인증 상태를 `loggedOut`/`profileIncomplete`/`loggedIn`으로 분리하고 `AUTH_403` 기반 프로필 생성 화면 진입을 연결
+- 회원가입 비밀번호 단계에서 계정 생성/앱 로그인 세션을 확보하고, 프로필 단계는 추가정보 제출만 수행하도록 정리
+- 보호 API에서 `AUTH_403` 발생 시 AuthGate가 프로필 생성 화면을 열도록 공용 API 레이어 이벤트 추가
+- 검증: `npm run check`, BE targeted test, BE `./gradlew test` 통과

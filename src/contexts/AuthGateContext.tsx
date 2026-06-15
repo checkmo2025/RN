@@ -1,14 +1,23 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-import { ApiError } from '../services/api/http';
-import { fetchLoginStatusSilently, silentRefreshSession } from '../services/api/authApi';
+import { ApiError, subscribeProfileIncompleteSession } from '../services/api/http';
+import {
+  clearStoredAuthSession,
+  fetchLoginStatusSilently,
+  silentRefreshSession,
+} from '../services/api/authApi';
 
 const AUTH_TRANSITION_MS = 1000;
+
+export type AuthPageMode = 'login' | 'profileCompletion';
+type AuthSessionState = 'loggedOut' | 'profileIncomplete' | 'loggedIn';
 
 type AuthGateContextValue = {
   isReady: boolean;
   isLoggedIn: boolean;
+  isProfileIncomplete: boolean;
   authPageVisible: boolean;
+  authPageMode: AuthPageMode;
   authTransitionLoading: boolean;
   authTransitionVariant: 'default' | 'authRequired';
   requireAuth: (onAuthed?: () => void) => void;
@@ -23,11 +32,20 @@ type Props = {
   children: React.ReactNode;
 };
 
+function isProfileIncompleteError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 403 && error.code === 'AUTH_403';
+}
+
+function isSessionExpiredError(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 401 || error.code === 'AUTH_405');
+}
+
 export function AuthGateProvider({ children }: Props) {
   const [isReady, setIsReady] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const isLoggedInRef = useRef(false);
+  const [authSessionState, setAuthSessionStateValue] = useState<AuthSessionState>('loggedOut');
+  const authSessionStateRef = useRef<AuthSessionState>('loggedOut');
   const [authPageVisible, setAuthPageVisible] = useState(false);
+  const [authPageMode, setAuthPageMode] = useState<AuthPageMode>('login');
   const [authTransitionLoading, setAuthTransitionLoading] = useState(false);
   const [authTransitionVariant, setAuthTransitionVariant] = useState<'default' | 'authRequired'>(
     'default',
@@ -52,10 +70,38 @@ export function AuthGateProvider({ children }: Props) {
     [],
   );
 
-  const setLoginState = useCallback((next: boolean) => {
-    isLoggedInRef.current = next;
-    setIsLoggedIn(next);
+  const setAuthSessionState = useCallback((next: AuthSessionState) => {
+    authSessionStateRef.current = next;
+    setAuthSessionStateValue(next);
   }, []);
+
+  const openProfileCompletion = useCallback(() => {
+    setAuthSessionState('profileIncomplete');
+    setAuthPageMode('profileCompletion');
+    setAuthPageVisible(true);
+  }, [setAuthSessionState]);
+
+  const applyLoginStatus = useCallback(
+    (status: Awaited<ReturnType<typeof fetchLoginStatusSilently>> | null) => {
+      if (status) {
+        setAuthSessionState('loggedIn');
+        setAuthPageVisible(false);
+        return;
+      }
+
+      setAuthSessionState('loggedOut');
+      setAuthPageVisible(false);
+    },
+    [setAuthSessionState],
+  );
+
+  const clearSessionState = useCallback(async () => {
+    await clearStoredAuthSession();
+    setAuthSessionState('loggedOut');
+    setAuthPageMode('login');
+    setAuthPageVisible(false);
+    pendingActionRef.current = null;
+  }, [setAuthSessionState]);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,11 +110,16 @@ export function AuthGateProvider({ children }: Props) {
       try {
         const status = await fetchLoginStatusSilently(true);
         if (!cancelled) {
-          setLoginState(status !== null);
+          applyLoginStatus(status);
           setIsReady(true);
         }
       } catch (error) {
         if (cancelled) return;
+        if (isProfileIncompleteError(error)) {
+          openProfileCompletion();
+          setIsReady(true);
+          return;
+        }
         if (error instanceof ApiError && error.status === 401) {
           const refreshed = await silentRefreshSession();
           if (cancelled) return;
@@ -77,18 +128,25 @@ export function AuthGateProvider({ children }: Props) {
             try {
               const status = await fetchLoginStatusSilently(true);
               if (!cancelled) {
-                setLoginState(status !== null);
+                applyLoginStatus(status);
               }
-            } catch {
+            } catch (refreshStatusError) {
               if (!cancelled) {
-                setLoginState(false);
+                if (isProfileIncompleteError(refreshStatusError)) {
+                  openProfileCompletion();
+                } else {
+                  await clearSessionState();
+                }
               }
             }
           } else {
-            setLoginState(false);
+            await clearSessionState();
           }
+        } else if (isSessionExpiredError(error)) {
+          await clearSessionState();
         } else {
-          setLoginState(false);
+          setAuthSessionState('loggedOut');
+          setAuthPageVisible(false);
         }
         setIsReady(true);
       }
@@ -99,7 +157,7 @@ export function AuthGateProvider({ children }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [setLoginState]);
+  }, [applyLoginStatus, clearSessionState, openProfileCompletion, setAuthSessionState]);
 
   useEffect(() => {
     return () => {
@@ -109,28 +167,39 @@ export function AuthGateProvider({ children }: Props) {
     };
   }, []);
 
+  useEffect(() => {
+    return subscribeProfileIncompleteSession(() => {
+      openProfileCompletion();
+    });
+  }, [openProfileCompletion]);
+
   const closeAuthPage = useCallback(() => {
+    if (authSessionStateRef.current === 'profileIncomplete') {
+      return;
+    }
     setAuthPageVisible(false);
     pendingActionRef.current = null;
   }, []);
 
   const completeLogin = useCallback(() => {
     startAuthTransitionLoading('default');
-    setLoginState(true);
+    setAuthSessionState('loggedIn');
     setAuthPageVisible(false);
+    setAuthPageMode('login');
     const callback = pendingActionRef.current;
     pendingActionRef.current = null;
     callback?.();
-  }, [setLoginState, startAuthTransitionLoading]);
+  }, [setAuthSessionState, startAuthTransitionLoading]);
 
   const requireAuth = useCallback(
     (onAuthed?: () => void) => {
-      if (isLoggedInRef.current) {
+      if (authSessionStateRef.current === 'loggedIn') {
         onAuthed?.();
         return;
       }
       startAuthTransitionLoading('authRequired');
       pendingActionRef.current = onAuthed ?? null;
+      setAuthPageMode(authSessionStateRef.current === 'profileIncomplete' ? 'profileCompletion' : 'login');
       setAuthPageVisible(true);
     },
     [startAuthTransitionLoading],
@@ -138,16 +207,22 @@ export function AuthGateProvider({ children }: Props) {
 
   const logout = useCallback(() => {
     startAuthTransitionLoading('default');
-    setLoginState(false);
+    setAuthSessionState('loggedOut');
     setAuthPageVisible(false);
+    setAuthPageMode('login');
     pendingActionRef.current = null;
-  }, [setLoginState, startAuthTransitionLoading]);
+  }, [setAuthSessionState, startAuthTransitionLoading]);
+
+  const isLoggedIn = authSessionState === 'loggedIn';
+  const isProfileIncomplete = authSessionState === 'profileIncomplete';
 
   const value = useMemo<AuthGateContextValue>(
     () => ({
       isReady,
       isLoggedIn,
+      isProfileIncomplete,
       authPageVisible,
+      authPageMode,
       authTransitionLoading,
       authTransitionVariant,
       requireAuth,
@@ -157,12 +232,14 @@ export function AuthGateProvider({ children }: Props) {
     }),
     [
       isReady,
+      authPageMode,
       authPageVisible,
       authTransitionLoading,
       authTransitionVariant,
       closeAuthPage,
       completeLogin,
       isLoggedIn,
+      isProfileIncomplete,
       requireAuth,
       logout,
     ],

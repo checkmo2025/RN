@@ -13,6 +13,7 @@ function AppRoutes() {
   const {
     isReady,
     authPageVisible,
+    authPageMode,
     authTransitionLoading,
     authTransitionVariant,
     closeAuthPage,
@@ -25,7 +26,7 @@ function AppRoutes() {
 
       {authPageVisible ? (
         <View style={styles.authPageOverlay}>
-          <AuthFlowScreen onClose={closeAuthPage} onLoginSuccess={completeLogin} />
+          <AuthFlowScreen mode={authPageMode} onClose={closeAuthPage} onLoginSuccess={completeLogin} />
         </View>
       ) : null}
 

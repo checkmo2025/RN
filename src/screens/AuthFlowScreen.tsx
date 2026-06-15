@@ -27,6 +27,7 @@ import { FeedbackPressable as Pressable } from '../components/common/FeedbackPre
 import { FormTextInput } from '../components/common/FormTextInput';
 import {
   checkNicknameDuplicate,
+  fetchLoginStatusSilently,
   findEmailByNamePhone,
   loginByIdentifier,
   issueProfileImageUploadUrl,
@@ -52,6 +53,7 @@ type Step =
   | 'signupComplete';
 
 type Props = {
+  mode?: 'login' | 'profileCompletion';
   onClose?: () => void;
   onLoginSuccess?: () => void;
 };
@@ -61,6 +63,8 @@ type LocalProfileImage = {
   fileName?: string;
   mimeType?: string;
 };
+
+declare const __DEV__: boolean;
 
 const logoUri = LOGO_PRIMARY_URI;
 const topLogoUri = MOBILE_HEADER_LOGO_URI;
@@ -96,11 +100,36 @@ function resolveNicknameFormatError(value: string): string {
   return '';
 }
 
+function normalizeNicknameInput(value: string): { value: string; error: string } {
+  const lowercased = value.toLowerCase();
+  const hasWhitespace = /\s/.test(lowercased);
+  const hasKorean = /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(lowercased);
+  const withoutKoreanAndSpaces = lowercased
+    .replace(/\s/g, '')
+    .replace(/[ㄱ-ㅎㅏ-ㅣ가-힣]/g, '');
+  const normalized = Array.from(withoutKoreanAndSpaces)
+    .filter((character) => nicknameRegex.test(character))
+    .join('');
 
+  if (hasWhitespace) {
+    return { value: normalized, error: '아이디에는 띄어쓰기를 사용할 수 없습니다.' };
+  }
+  if (hasKorean) {
+    return { value: normalized, error: '아이디에는 한글을 사용할 수 없습니다.' };
+  }
+  if (normalized !== withoutKoreanAndSpaces) {
+    return { value: normalized, error: '아이디는 영문 소문자, 숫자, 특수문자만 사용할 수 있습니다.' };
+  }
+  return { value: normalized, error: '' };
+}
 
-export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
+export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Props) {
+  const startsInProfileCompletion = mode === 'profileCompletion';
   const ev = useEmailVerificationFlow();
-  const [step, setStep] = useState<Step>('login');
+  const [step, setStep] = useState<Step>(startsInProfileCompletion ? 'profileBasic' : 'login');
+  const [profileCompletionMode, setProfileCompletionMode] = useState(startsInProfileCompletion);
+  const [signUpSessionReady, setSignUpSessionReady] = useState(startsInProfileCompletion);
+  const [signUpUiPreview, setSignUpUiPreview] = useState(false);
   const [exitSignupConfirmVisible, setExitSignupConfirmVisible] = useState(false);
 
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -123,6 +152,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   const [showSignUpPasswordConfirm, setShowSignUpPasswordConfirm] = useState(false);
 
   const [nickname, setNickname] = useState('');
+  const [nicknameInputError, setNicknameInputError] = useState('');
   const [nicknameChecked, setNicknameChecked] = useState<{
     value: string;
     duplicate: boolean;
@@ -140,6 +170,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [signUpSubmitting, setSignUpSubmitting] = useState(false);
+  const [accountCreating, setAccountCreating] = useState(false);
   const [findName, setFindName] = useState('');
   const [findPhoneNumber, setFindPhoneNumber] = useState('');
   const [foundEmail, setFoundEmail] = useState('');
@@ -166,6 +197,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     step === 'signupComplete';
   const activeTermsModalDocument =
     activeTermsModalKey ? termsDocuments[activeTermsModalKey] : null;
+  const isProfileCompletionFlow = profileCompletionMode || signUpSessionReady;
 
   const toggleCategory = (code: string) => {
     setSelectedCategories((prev) => {
@@ -218,6 +250,9 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   };
 
   const resetSignUpFlow = () => {
+    setProfileCompletionMode(false);
+    setSignUpSessionReady(false);
+    setSignUpUiPreview(false);
     setAgreeService(false);
     setAgreeCheckmo(false);
     setAgreeThirdParty(false);
@@ -231,6 +266,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     setShowSignUpPassword(false);
     setShowSignUpPasswordConfirm(false);
     setNickname('');
+    setNicknameInputError('');
     setNicknameChecked(null);
     setNicknameLengthExceeded(false);
     setDescription('');
@@ -242,9 +278,13 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
     setSelectedCategories([]);
     setSignUpSubmitting(false);
+    setAccountCreating(false);
   };
 
   const goToLogin = () => {
+    setProfileCompletionMode(false);
+    setSignUpSessionReady(false);
+    setSignUpUiPreview(false);
     setStep('login');
     setActiveTermsModalKey(null);
     setVerificationCode('');
@@ -253,6 +293,30 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
   const startSignUp = () => {
     resetSignUpFlow();
+    setStep('terms');
+  };
+
+  const enterProfileCompletionFlow = () => {
+    setProfileCompletionMode(true);
+    setSignUpSessionReady(true);
+    setSignUpUiPreview(false);
+    setStep('profileBasic');
+  };
+
+  const openSignUpUiPreview = () => {
+    resetSignUpFlow();
+    setSignUpUiPreview(true);
+    setAgreeService(true);
+    setAgreeCheckmo(true);
+    setAgreeThirdParty(true);
+    setAgreeMarketing(true);
+    setSignUpEmail('dev-checkmo@example.com');
+    setSignUpPassword('checkmo!');
+    setSignUpPasswordConfirm('checkmo!');
+    setName('홍길동');
+    setPhoneNumber('010-1234-5678');
+    setDescription('입력 동작 확인용 프로필입니다.');
+    setSelectedCategories(CATEGORY_OPTIONS.slice(0, 2).map((category) => category.code));
     setStep('terms');
   };
 
@@ -277,10 +341,16 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     setLoginSubmitting(true);
     try {
       await loginByIdentifier(identifier, password);
+      await fetchLoginStatusSilently(true);
       showToast('로그인에 성공했습니다.');
       completeAuthFlow();
     } catch (error) {
-      showToast(error instanceof ApiError ? error.message : '로그인에 실패했습니다.');
+      if (error instanceof ApiError && error.status === 403 && error.code === 'AUTH_403') {
+        showToast('프로필 정보를 입력해야 가입이 완료됩니다.');
+        enterProfileCompletionFlow();
+      } else {
+        showToast(error instanceof ApiError ? error.message : '로그인에 실패했습니다.');
+      }
     } finally {
       setLoginSubmitting(false);
     }
@@ -291,6 +361,10 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     const email = signUpEmail.trim();
     if (!emailRegex.test(email)) {
       showToast('올바른 이메일 형식이어야 합니다.');
+      return;
+    }
+    if (__DEV__ && signUpUiPreview) {
+      ev.startLocalVerification('개발용 UI에서는 임의의 6자리 숫자로 인증할 수 있습니다.');
       return;
     }
     await ev.sendCode(email, 'SIGN_UP');
@@ -311,6 +385,14 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       showToast('인증번호를 입력해야 합니다.');
       return;
     }
+    if (__DEV__ && signUpUiPreview) {
+      if (/^\d{6}$/.test(code)) {
+        ev.verifyLocally();
+      } else {
+        showToast('인증 코드는 6자리 숫자로 입력해야 합니다.');
+      }
+      return;
+    }
     await ev.confirmCode(email, code);
   };
 
@@ -319,11 +401,12 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   };
 
   const handleNicknameChange = (value: string) => {
-    const nextNickname = value.slice(0, INPUT_LIMITS.NICKNAME);
-    setNicknameLengthExceeded(value.length > INPUT_LIMITS.NICKNAME);
+    const normalized = normalizeNicknameInput(value);
+    const nextNickname = normalized.value.slice(0, INPUT_LIMITS.NICKNAME);
+    setNicknameInputError(normalized.error);
+    setNicknameLengthExceeded(normalized.value.length > INPUT_LIMITS.NICKNAME);
     setNickname(nextNickname);
-    const trimmed = nextNickname.trim();
-    if (nicknameChecked && nicknameChecked.value !== trimmed) {
+    if (nicknameChecked && nicknameChecked.value !== nextNickname) {
       setNicknameChecked(null);
     }
   };
@@ -334,7 +417,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     ev.reset();
   };
 
-  const handlePasswordStepNext = () => {
+  const handlePasswordStepNext = async () => {
     const password = signUpPassword.trim();
     const passwordConfirm = signUpPasswordConfirm.trim();
 
@@ -350,7 +433,58 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       showToast('비밀번호와 비밀번호 확인이 일치하지 않습니다.');
       return;
     }
-    setStep('profileBasic');
+
+    if (__DEV__ && signUpUiPreview) {
+      setStep('profileBasic');
+      return;
+    }
+
+    const normalizedEmail = signUpEmail.trim();
+    setAccountCreating(true);
+    let resumedFromExistingAccount = false;
+    try {
+      try {
+        await signUpByEmail(normalizedEmail, password, { suppressErrorToast: true });
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          throw error;
+        }
+        if (error.code === 'AUTH_411') {
+          resumedFromExistingAccount = true;
+        } else if (error.code === 'AUTH_402') {
+          showToast('이미 가입된 이메일입니다. 로그인 또는 비밀번호 찾기를 이용하십시오.');
+          return;
+        } else {
+          showToast(error.message || '회원가입에 실패했습니다.');
+          return;
+        }
+      }
+
+      try {
+        await loginByIdentifier(normalizedEmail, password, {
+          suppressErrorToast: resumedFromExistingAccount,
+        });
+      } catch (error) {
+        if (
+          resumedFromExistingAccount &&
+          error instanceof ApiError &&
+          (error.status === 400 || error.status === 401)
+        ) {
+          showToast('이미 가입된 이메일입니다. 로그인 또는 비밀번호 찾기를 이용하십시오.');
+          return;
+        }
+        throw error;
+      }
+
+      setProfileCompletionMode(true);
+      setSignUpSessionReady(true);
+      setStep('profileBasic');
+    } catch (error) {
+      showToast(error instanceof ApiError ? error.message : '회원가입에 실패했습니다.');
+      return;
+    } finally {
+      setAccountCreating(false);
+    }
   };
 
   const handleCheckNickname = async () => {
@@ -365,6 +499,12 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
     }
     if (!nicknameRegex.test(normalized)) {
       showToast('닉네임은 영어 소문자/숫자/특수문자만 사용할 수 있습니다.');
+      return;
+    }
+    if (__DEV__ && signUpUiPreview) {
+      setNicknameInputError('');
+      setNicknameChecked({ value: normalized, duplicate: false });
+      showToast('개발용 UI에서 사용 가능한 닉네임으로 처리했습니다.');
       return;
     }
 
@@ -456,50 +596,60 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       showToast('관심 카테고리를 1개 이상 선택해야 합니다.');
       return;
     }
+    if (__DEV__ && signUpUiPreview) {
+      setProfileImageUrl(selectedProfileImage?.uri ?? profileImageUrl.trim());
+      showToast('개발용 UI 확인을 완료했습니다.');
+      setStep('signupComplete');
+      return;
+    }
 
-    const normalizedEmail = signUpEmail.trim();
-    const normalizedPassword = signUpPassword.trim();
     setSignUpSubmitting(true);
+    const profileSessionReady = isProfileCompletionFlow;
     let signUpCreatedNow = false;
     let resumedFromExistingAccount = false;
-    let loginCompleted = false;
+    let loginCompleted = profileSessionReady;
 
     try {
-      try {
-        await signUpByEmail(normalizedEmail, normalizedPassword, { suppressErrorToast: true });
-        signUpCreatedNow = true;
-      } catch (error) {
-        if (!(error instanceof ApiError)) {
+      if (!profileSessionReady) {
+        const normalizedEmail = signUpEmail.trim();
+        const normalizedPassword = signUpPassword.trim();
+
+        try {
+          await signUpByEmail(normalizedEmail, normalizedPassword, { suppressErrorToast: true });
+          signUpCreatedNow = true;
+        } catch (error) {
+          if (!(error instanceof ApiError)) {
+            throw error;
+          }
+          if (error.code === 'AUTH_411') {
+            resumedFromExistingAccount = true;
+          } else if (error.code === 'AUTH_402') {
+            showToast('이미 가입된 이메일입니다. 로그인 또는 비밀번호 찾기를 이용하십시오.');
+            return;
+          } else {
+            showToast(error.message || '회원가입에 실패했습니다.');
+            return;
+          }
+        }
+
+        try {
+          await loginByIdentifier(normalizedEmail, normalizedPassword, {
+            suppressErrorToast: resumedFromExistingAccount,
+          });
+          loginCompleted = true;
+          setProfileCompletionMode(true);
+          setSignUpSessionReady(true);
+        } catch (error) {
+          if (
+            resumedFromExistingAccount &&
+            error instanceof ApiError &&
+            (error.status === 400 || error.status === 401)
+          ) {
+            showToast('이미 가입된 이메일입니다. 로그인 또는 비밀번호 찾기를 이용하십시오.');
+            return;
+          }
           throw error;
         }
-        if (error.code === 'AUTH_411') {
-          // 이전 시도에서 계정만 생성된 케이스는 로그인 후 프로필 완성 단계로 이어갑니다.
-          resumedFromExistingAccount = true;
-        } else if (error.code === 'AUTH_402') {
-          showToast('이미 가입된 이메일입니다. 로그인 또는 비밀번호 찾기를 이용하십시오.');
-          return;
-        } else {
-          showToast(error.message || '회원가입에 실패했습니다.');
-          return;
-        }
-      }
-
-      try {
-        // 이메일 회원가입 직후 세션 보장을 위해 로그인까지 수행합니다.
-        await loginByIdentifier(normalizedEmail, normalizedPassword, {
-          suppressErrorToast: resumedFromExistingAccount,
-        });
-        loginCompleted = true;
-      } catch (error) {
-        if (
-          resumedFromExistingAccount &&
-          error instanceof ApiError &&
-          (error.status === 400 || error.status === 401)
-        ) {
-          showToast('이미 가입된 이메일입니다. 로그인 또는 비밀번호 찾기를 이용하십시오.');
-          return;
-        }
-        throw error;
       }
 
       let uploadedProfileImageUrl = profileImageUrl.trim() || undefined;
@@ -549,6 +699,8 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         categories: selectedCategories,
       });
       setProfileImageUrl(uploadedProfileImageUrl ?? '');
+      setProfileCompletionMode(false);
+      setSignUpSessionReady(false);
 
       showToast('회원가입에 성공했습니다');
       setStep('signupComplete');
@@ -1080,7 +1232,13 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
 
         <View style={styles.buttonRow}>
           <AppButton variant="secondary" label="이전" onPress={() => setStep('emailVerification')} />
-          <AppButton label="다음" fullWidth onPress={handlePasswordStepNext} />
+          <AppButton
+            label="다음"
+            fullWidth
+            loading={accountCreating}
+            loadingLabel="계정 생성 중..."
+            onPress={() => { void handlePasswordStepNext(); }}
+          />
         </View>
       </>,
       { equalHeight: 'sm', confirmClose: true },
@@ -1088,7 +1246,7 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
   }
 
   if (step === 'profileBasic') {
-    const nicknameFormatError = resolveNicknameFormatError(nickname);
+    const nicknameFormatError = nicknameInputError || resolveNicknameFormatError(nickname);
 
     return renderCard(
       <>
@@ -1182,11 +1340,17 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         </View>
 
         <View style={styles.buttonRow}>
-          <AppButton variant="secondary" label="이전" onPress={() => setStep('passwordSet')} />
+          {!isProfileCompletionFlow ? (
+            <AppButton variant="secondary" label="이전" onPress={() => setStep('passwordSet')} />
+          ) : null}
           <AppButton label="다음" fullWidth onPress={handleProfileBasicNext} />
         </View>
       </>,
-      { equalHeight: 'lg', confirmClose: hasProfileBasicDraft },
+      {
+        equalHeight: 'lg',
+        confirmClose: !isProfileCompletionFlow && hasProfileBasicDraft,
+        hideClose: isProfileCompletionFlow,
+      },
     );
   }
 
@@ -1269,7 +1433,9 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         </View>
 
         <View style={styles.buttonRow}>
-          <AppButton variant="secondary" label="이전" onPress={() => setStep('profileBasic')} />
+          {!isProfileCompletionFlow ? (
+            <AppButton variant="secondary" label="이전" onPress={() => setStep('profileBasic')} />
+          ) : null}
           <AppButton
             label="다음"
             fullWidth
@@ -1279,7 +1445,11 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           />
         </View>
       </>,
-      { equalHeight: 'lg', confirmClose: hasSignupProfileDraft },
+      {
+        equalHeight: 'lg',
+        confirmClose: !isProfileCompletionFlow && hasSignupProfileDraft,
+        hideClose: isProfileCompletionFlow,
+      },
     );
   }
 
@@ -1455,6 +1625,11 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         <Pressable onPress={() => Linking.openURL(PUBLIC_ENV.SUPPORT_FORM_URL).catch(() => null)}>
           <Text style={styles.linkText}>고객센터/문의하기</Text>
         </Pressable>
+        {__DEV__ ? (
+          <Pressable onPress={openSignUpUiPreview}>
+            <Text style={styles.linkText}>개발용 UI 보기</Text>
+          </Pressable>
+        ) : null}
       </View>
     </>,
   );

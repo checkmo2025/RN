@@ -53,6 +53,23 @@ type RefreshTokenResponse = {
   refreshToken?: string;
 };
 
+type ProfileIncompleteSessionListener = () => void;
+
+const profileIncompleteSessionListeners = new Set<ProfileIncompleteSessionListener>();
+
+export function subscribeProfileIncompleteSession(
+  listener: ProfileIncompleteSessionListener,
+): () => void {
+  profileIncompleteSessionListeners.add(listener);
+  return () => {
+    profileIncompleteSessionListeners.delete(listener);
+  };
+}
+
+function notifyProfileIncompleteSession(): void {
+  profileIncompleteSessionListeners.forEach((listener) => listener());
+}
+
 function normalizeApiBaseUrl(rawBaseUrl: string): string {
   const trimmed = rawBaseUrl.trim() || DEFAULT_API_BASE_URL;
 
@@ -149,6 +166,12 @@ function getParsedCode(parsed: unknown): string | undefined {
     return code || undefined;
   }
   return undefined;
+}
+
+function notifyProfileIncompleteSessionIfNeeded(status: number, parsed: unknown): void {
+  if (status === 403 && getParsedCode(parsed) === 'AUTH_403') {
+    notifyProfileIncompleteSession();
+  }
 }
 
 async function parseResponseBody(response: Response): Promise<unknown> {
@@ -320,6 +343,11 @@ async function requestJsonInternal<T>(
     const message = getParsedMessage(parsed, toDefaultHttpErrorMessage(response.status));
     const code = getParsedCode(parsed);
 
+    if (code === 'AUTH_405') {
+      await deleteStoredRefreshToken();
+    }
+    notifyProfileIncompleteSessionIfNeeded(response.status, parsed);
+
     if (!suppressErrorToast) {
       showToast(message);
     }
@@ -334,6 +362,7 @@ async function requestJsonInternal<T>(
   ) {
     const message = getParsedMessage(parsed, '요청에 실패했습니다.');
     const code = getParsedCode(parsed);
+    notifyProfileIncompleteSessionIfNeeded(response.status, parsed);
     if (!suppressErrorToast) {
       showToast(message);
     }
@@ -374,12 +403,30 @@ export async function fetchApi(path: string, options: FetchApiOptions = {}): Pro
     (await silentRefreshSession())
   ) {
     try {
-      return await fetch(buildApiUrl(path, query), {
+      const retryResponse = await fetch(buildApiUrl(path, query), {
         ...fetchOptions,
         credentials,
       });
+      if (retryResponse.status === 403) {
+        try {
+          const parsed = await parseResponseBody(retryResponse.clone());
+          notifyProfileIncompleteSessionIfNeeded(retryResponse.status, parsed);
+        } catch {
+          // Ignore notification parsing failures; callers still receive the original response.
+        }
+      }
+      return retryResponse;
     } catch (error) {
       throw new ApiError('네트워크 연결을 확인해 주십시오.', 0, 'NETWORK_ERROR', error);
+    }
+  }
+
+  if (response.status === 403) {
+    try {
+      const parsed = await parseResponseBody(response.clone());
+      notifyProfileIncompleteSessionIfNeeded(response.status, parsed);
+    } catch {
+      // Ignore notification parsing failures; callers still receive the original response.
     }
   }
 
