@@ -2776,6 +2776,13 @@ export const interactionOpacity = {
 - 미사용이 된 `declare const __DEV__` 선언 제거, 회원가입은 실제 이메일 인증/제출 경로만 남김
 - 검증: `npx tsc --noEmit` 통과, eslint 에러 0, `signUpUiPreview` 잔존 0
 
+# 2026-06-15 10:55:09 KST 공용 바텀시트 드래그 닫기 핸들 + 바텀시트 메뉴 QA 통과
+
+- 공용 `BottomSheet`에 PanResponder 기반 드래그-다운 닫기 핸들 추가(임계 거리/속도, reset/dismiss 애니메이션). 핸들을 공용 컴포넌트로 승격
+- `BottomSheetActionMenu`의 개별 핸들/스타일 제거(공용 BottomSheet 핸들로 일원화)
+- TODO: 책이야기/공지/책장 상세 바텀시트 메뉴 + 댓글/발제·한줄평 앵커 메뉴 유지 QA 5건 실기기 통과 → ✅
+- 검증: `npx tsc --noEmit` 통과
+
 # 2026-06-15 00:50:40 KST 모달/경고창/바텀시트 액션 메뉴 통일
 
 - `BottomSheet` 기본 백드롭/시트 스타일과 safe-area 하단 패딩을 추가하고, `BottomSheetActionMenu` 공용 컴포넌트를 생성함

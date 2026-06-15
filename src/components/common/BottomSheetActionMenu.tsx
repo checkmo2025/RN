@@ -34,7 +34,6 @@ export function BottomSheetActionMenu({
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <View style={styles.handle} />
       <Text style={styles.title}>{title}</Text>
       <View style={styles.list}>
         {normalizedActions.map((action, index) => {
@@ -81,14 +80,6 @@ export function BottomSheetActionMenu({
 }
 
 const styles = StyleSheet.create({
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.gray2,
-    marginBottom: spacing.md,
-  },
   title: {
     ...typography.subhead4_1,
     color: colors.gray6,
