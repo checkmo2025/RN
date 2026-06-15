@@ -18,8 +18,6 @@ export type EmailVerificationFlow = {
   confirming: boolean;
   sendCode: (email: string, type: EmailVerificationType) => Promise<void>;
   confirmCode: (email: string, code: string) => Promise<void>;
-  startLocalVerification: (toastMessage?: string) => void;
-  verifyLocally: () => void;
   reset: () => void;
 };
 
@@ -93,21 +91,6 @@ export function useEmailVerificationFlow(): EmailVerificationFlow {
     }
   };
 
-  const startLocalVerification = (toastMessage = '인증번호를 발송했습니다.') => {
-    setSent(true);
-    setVerified(false);
-    setRemainingSeconds(COUNTDOWN_SECONDS);
-    setDeadline(Date.now() + COUNTDOWN_SECONDS * 1000);
-    showToast(toastMessage);
-  };
-
-  const verifyLocally = () => {
-    setVerified(true);
-    setDeadline(null);
-    setRemainingSeconds(0);
-    showToast('인증이 완료되었습니다.');
-  };
-
   const reset = () => {
     setSent(false);
     setVerified(false);
@@ -126,8 +109,6 @@ export function useEmailVerificationFlow(): EmailVerificationFlow {
     confirming,
     sendCode,
     confirmCode,
-    startLocalVerification,
-    verifyLocally,
     reset,
   };
 }

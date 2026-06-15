@@ -2827,3 +2827,10 @@ export const interactionOpacity = {
 - 미완성 프로필 복귀 플로우 실기기 확인 후 `회원가입 로직 수정` TODO를 완료 상태로 갱신
 - RN 작업 변경분은 기존 커밋 `5ff14c8`에 반영되어 있고, 이번 변경은 TODO/agent-log 정리만 포함
 - 검증: `npm run check` 통과
+
+# 2026-06-15 21:27:26 KST 배포 전 회원가입/고객센터 정리
+
+- AuthFlowScreen 개발용 UI 보기와 회원가입 preview 우회 로직 제거
+- 미완성 프로필 `AUTH_403` 문구를 `프로필을 완성해 주세요.`로 통일하고 보호 API 복귀 흐름에 연결
+- 고객센터 URL 기본값과 `.env.example`을 `https://www.checkmo.co.kr/support`로 통일
+- 검증: `npm run check` 통과

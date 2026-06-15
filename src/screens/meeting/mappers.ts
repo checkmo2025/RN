@@ -1,5 +1,9 @@
 import type { ClubContact } from '../../services/api/clubApi';
-import { ApiError } from '../../services/api/http';
+import {
+  ApiError,
+  PROFILE_INCOMPLETE_MESSAGE,
+  isProfileIncompleteApiError,
+} from '../../services/api/http';
 
 export function toLabelList(
   values: unknown,
@@ -94,6 +98,7 @@ export function resolveMeetingSearchErrorMessage(
 
   if (error.status === 401) return '로그인 상태를 확인해 주십시오.';
   if (error.status === 400) return '검색 조건을 다시 확인해야 합니다.';
+  if (isProfileIncompleteApiError(error)) return PROFILE_INCOMPLETE_MESSAGE;
   if (error.status === 403) return '접근 권한이 없습니다.';
   if (error.status === 404) return '요청한 모임 정보를 찾을 수 없습니다.';
 
@@ -107,6 +112,7 @@ export function resolveBookshelfActionErrorMessage(error: unknown, fallback: str
 
   if (error.status === 400) return '입력 값을 다시 확인해야 합니다.';
   if (error.status === 401) return '로그인 상태를 확인해 주십시오.';
+  if (isProfileIncompleteApiError(error)) return PROFILE_INCOMPLETE_MESSAGE;
   if (error.status === 403) return '권한이 없습니다.';
   if (error.status === 404) return '요청한 책장 정보를 찾을 수 없습니다.';
 

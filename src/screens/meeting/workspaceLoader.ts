@@ -8,7 +8,7 @@ import {
   fetchClubMembers,
   type ClubBookshelfItem,
 } from '../../services/api/clubApi';
-import { ApiError } from '../../services/api/http';
+import { ApiError, isProfileIncompleteApiError } from '../../services/api/http';
 import {
   mapManagedClubDetailToGroup,
   mapApiBookshelfToItem,
@@ -80,6 +80,7 @@ export async function fetchClubWorkspaceData(
     fetchClubLatestNotice(clubId, { suppressErrorToast: true }),
     isLoggedIn
       ? fetchClubMyMembership(clubId, { suppressErrorToast: true }).catch((e: unknown) => {
+          if (isProfileIncompleteApiError(e)) throw e;
           if (e instanceof ApiError && (e.status === 404 || e.status === 403)) return null;
           throw e;
         })

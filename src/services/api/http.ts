@@ -19,6 +19,8 @@ export type ApiEnvelope<T> = {
   result?: T;
 };
 
+export const PROFILE_INCOMPLETE_MESSAGE = '프로필을 완성해 주세요.';
+
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -33,6 +35,10 @@ export class ApiError extends Error {
   }
 }
 
+export function isProfileIncompleteApiError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 403 && error.code === 'AUTH_403';
+}
+
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   query?: Record<string, QueryValue>;
@@ -42,11 +48,13 @@ type RequestOptions = {
   suppressErrorToast?: boolean;
   timeoutMs?: number;
   retryOnUnauthorized?: boolean;
+  apiVersion?: string;
 };
 
 type FetchApiOptions = RequestInit & {
   query?: Record<string, QueryValue>;
   retryOnUnauthorized?: boolean;
+  apiVersion?: string;
 };
 
 type RefreshTokenResponse = {
@@ -106,6 +114,16 @@ function normalizeApiBaseUrl(rawBaseUrl: string): string {
 export const API_BASE_URL = normalizeApiBaseUrl(PUBLIC_ENV.API_BASE_URL);
 export const API_ORIGIN_URL = new URL(API_BASE_URL).origin;
 
+const DEFAULT_API_VERSION = 'v1';
+// API_BASE_URL은 '.../api/v1' 형태이므로 버전 세그먼트만 떼어 루트('.../api')를 확보한다.
+// origin이 아닌 이 루트를 기준으로 조립해야 서브패스 배포('/backend/api/v1')도 보존된다.
+const API_BASE_ROOT = API_BASE_URL.replace(/\/v\d+$/i, '');
+
+function resolveApiVersion(version?: string): string {
+  // 'v2', 'v10'만 허용하고, 오타 등 그 외 값은 기본 버전으로 안전하게 폴백한다.
+  return version && /^v\d+$/i.test(version) ? version.toLowerCase() : DEFAULT_API_VERSION;
+}
+
 function normalizeApiPath(path: string): string {
   return path
     .trim()
@@ -114,8 +132,13 @@ function normalizeApiPath(path: string): string {
     .replace(/^v\d+\//i, '');
 }
 
-export function buildApiUrl(path: string, query?: Record<string, QueryValue>): string {
-  const url = new URL(normalizeApiPath(path), `${API_BASE_URL}/`);
+export function buildApiUrl(
+  path: string,
+  query?: Record<string, QueryValue>,
+  version: string = DEFAULT_API_VERSION,
+): string {
+  const base = `${API_BASE_ROOT}/${resolveApiVersion(version)}/`;
+  const url = new URL(normalizeApiPath(path), base);
 
   if (query) {
     Object.entries(query).forEach(([key, value]) => {
@@ -274,7 +297,7 @@ async function fetchWithTimeout(
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    return await fetch(buildApiUrl(path, options.query), {
+    return await fetch(buildApiUrl(path, options.query, options.apiVersion), {
       method: options.method ?? 'GET',
       headers,
       body: typeof options.body !== 'undefined' ? JSON.stringify(options.body) : undefined,
@@ -340,8 +363,11 @@ async function requestJsonInternal<T>(
   const parsed = await parseResponseBody(response);
 
   if (!response.ok) {
-    const message = getParsedMessage(parsed, toDefaultHttpErrorMessage(response.status));
     const code = getParsedCode(parsed);
+    const message =
+      code === 'AUTH_403'
+        ? PROFILE_INCOMPLETE_MESSAGE
+        : getParsedMessage(parsed, toDefaultHttpErrorMessage(response.status));
 
     if (code === 'AUTH_405') {
       await deleteStoredRefreshToken();
@@ -360,8 +386,9 @@ async function requestJsonInternal<T>(
     'isSuccess' in parsed &&
     (parsed as { isSuccess?: unknown }).isSuccess === false
   ) {
-    const message = getParsedMessage(parsed, '요청에 실패했습니다.');
     const code = getParsedCode(parsed);
+    const message =
+      code === 'AUTH_403' ? PROFILE_INCOMPLETE_MESSAGE : getParsedMessage(parsed, '요청에 실패했습니다.');
     notifyProfileIncompleteSessionIfNeeded(response.status, parsed);
     if (!suppressErrorToast) {
       showToast(message);
@@ -381,12 +408,13 @@ export async function fetchApi(path: string, options: FetchApiOptions = {}): Pro
     query,
     retryOnUnauthorized = true,
     credentials = 'include',
+    apiVersion,
     ...fetchOptions
   } = options;
 
   let response: Response;
   try {
-    response = await fetch(buildApiUrl(path, query), {
+    response = await fetch(buildApiUrl(path, query, apiVersion), {
       ...fetchOptions,
       credentials,
     });
@@ -403,7 +431,7 @@ export async function fetchApi(path: string, options: FetchApiOptions = {}): Pro
     (await silentRefreshSession())
   ) {
     try {
-      const retryResponse = await fetch(buildApiUrl(path, query), {
+      const retryResponse = await fetch(buildApiUrl(path, query, apiVersion), {
         ...fetchOptions,
         credentials,
       });

@@ -1,10 +1,19 @@
 type ToastListener = (message: string) => void;
 
 const listeners = new Set<ToastListener>();
+const DUPLICATE_TOAST_WINDOW_MS = 1200;
+let lastToastMessage = '';
+let lastToastTime = 0;
 
 export function showToast(message: string) {
   const trimmed = message.trim();
   if (!trimmed) return;
+  const now = Date.now();
+  if (trimmed === lastToastMessage && now - lastToastTime < DUPLICATE_TOAST_WINDOW_MS) {
+    return;
+  }
+  lastToastMessage = trimmed;
+  lastToastTime = now;
   listeners.forEach((listener) => listener(trimmed));
 }
 

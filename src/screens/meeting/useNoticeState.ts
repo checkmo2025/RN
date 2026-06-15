@@ -4,7 +4,11 @@ import { Alert } from 'react-native';
 import type { GestureResponderEvent } from 'react-native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import type { ReportMemberModalState } from '../../components/common/ReportMemberModal';
-import { ApiError } from '../../services/api/http';
+import {
+  ApiError,
+  PROFILE_INCOMPLETE_MESSAGE,
+  isProfileIncompleteApiError,
+} from '../../services/api/http';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
 import {
   createClubNoticeComment,
@@ -444,7 +448,9 @@ export function useNoticeState({
       } catch (error) {
         if (cancelled) return;
         if (error instanceof ApiError) {
-          if (error.status === 403) {
+          if (isProfileIncompleteApiError(error)) {
+            showToast(PROFILE_INCOMPLETE_MESSAGE);
+          } else if (error.status === 403) {
             showToast('공지 열람 권한이 없습니다.');
           } else if (error.status !== 401) {
             showToast(error.message || '공지 상세를 불러오지 못했습니다.');
@@ -511,7 +517,9 @@ export function useNoticeState({
           [noticeKey]: { ...pageState, loadingMore: false },
         }));
         if (error instanceof ApiError) {
-          if (error.status === 403) {
+          if (isProfileIncompleteApiError(error)) {
+            showToast(PROFILE_INCOMPLETE_MESSAGE);
+          } else if (error.status === 403) {
             showToast('댓글 열람 권한이 없습니다.');
           } else if (error.status !== 401) {
             showToast(error.message || '댓글을 추가로 불러오지 못했습니다.');

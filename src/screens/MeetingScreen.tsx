@@ -60,7 +60,11 @@ import { MeetingListCardSkeleton } from '../components/feature/groups/MeetingLis
 import { MyGroupsDropdownCard } from '../components/feature/groups/MyGroupsDropdownCard';
 import { MyGroupsDropdownCardSkeleton } from '../components/feature/groups/MyGroupsDropdownCardSkeleton';
 import { useAuthGate } from '../contexts/AuthGateContext';
-import { ApiError } from '../services/api/http';
+import {
+  ApiError,
+  PROFILE_INCOMPLETE_MESSAGE,
+  isProfileIncompleteApiError,
+} from '../services/api/http';
 import { issueImageUploadUrl } from '../services/api/authApi';
 import { useMeetingDiscover } from './meeting/useMeetingDiscover';
 import { fetchClubWorkspaceData } from './meeting/workspaceLoader';
@@ -546,7 +550,9 @@ export function MeetingScreen() {
               if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
                 lastVisitedClubIdRef.current = null;
                 showToast(
-                  error.status === 404
+                  isProfileIncompleteApiError(error)
+                    ? PROFILE_INCOMPLETE_MESSAGE
+                    : error.status === 404
                     ? '이전에 방문한 모임을 찾을 수 없습니다.'
                     : '이전에 방문한 모임에 접근할 수 없습니다.',
                 );
@@ -1563,6 +1569,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
           } else if (isMissingClubMembershipError(error)) {
             // 가입 직후에는 클럽 멤버 row가 없을 수 있어 배경 로드 실패를 조용히 흡수합니다.
             return;
+          } else if (isProfileIncompleteApiError(error) && !options?.suppressErrorToast) {
+            showToast(PROFILE_INCOMPLETE_MESSAGE);
           } else if (error.status === 403 && !options?.suppressErrorToast) {
             showToast('공지사항 및 책장 정보는 모임 회원만 조회 가능합니다. 모임 가입 신청을 완료해주세요.');
           } else if (error.status !== 401 && !options?.suppressErrorToast) {

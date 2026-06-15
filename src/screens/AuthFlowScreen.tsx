@@ -35,7 +35,11 @@ import {
   signUpByEmail,
   submitAdditionalInfo,
 } from '../services/api/authApi';
-import { ApiError } from '../services/api/http';
+import {
+  ApiError,
+  PROFILE_INCOMPLETE_MESSAGE,
+  isProfileIncompleteApiError,
+} from '../services/api/http';
 import { showToast } from '../utils/toast';
 import { CATEGORY_OPTIONS } from '../constants/domain/category';
 import { useEmailVerificationFlow } from '../hooks/useEmailVerificationFlow';
@@ -63,8 +67,6 @@ type LocalProfileImage = {
   fileName?: string;
   mimeType?: string;
 };
-
-declare const __DEV__: boolean;
 
 const logoUri = LOGO_PRIMARY_URI;
 const topLogoUri = MOBILE_HEADER_LOGO_URI;
@@ -129,7 +131,6 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   const [step, setStep] = useState<Step>(startsInProfileCompletion ? 'profileBasic' : 'login');
   const [profileCompletionMode, setProfileCompletionMode] = useState(startsInProfileCompletion);
   const [signUpSessionReady, setSignUpSessionReady] = useState(startsInProfileCompletion);
-  const [signUpUiPreview, setSignUpUiPreview] = useState(false);
   const [exitSignupConfirmVisible, setExitSignupConfirmVisible] = useState(false);
 
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -252,7 +253,6 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   const resetSignUpFlow = () => {
     setProfileCompletionMode(false);
     setSignUpSessionReady(false);
-    setSignUpUiPreview(false);
     setAgreeService(false);
     setAgreeCheckmo(false);
     setAgreeThirdParty(false);
@@ -284,7 +284,6 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   const goToLogin = () => {
     setProfileCompletionMode(false);
     setSignUpSessionReady(false);
-    setSignUpUiPreview(false);
     setStep('login');
     setActiveTermsModalKey(null);
     setVerificationCode('');
@@ -299,25 +298,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   const enterProfileCompletionFlow = () => {
     setProfileCompletionMode(true);
     setSignUpSessionReady(true);
-    setSignUpUiPreview(false);
     setStep('profileBasic');
-  };
-
-  const openSignUpUiPreview = () => {
-    resetSignUpFlow();
-    setSignUpUiPreview(true);
-    setAgreeService(true);
-    setAgreeCheckmo(true);
-    setAgreeThirdParty(true);
-    setAgreeMarketing(true);
-    setSignUpEmail('dev-checkmo@example.com');
-    setSignUpPassword('checkmo!');
-    setSignUpPasswordConfirm('checkmo!');
-    setName('홍길동');
-    setPhoneNumber('010-1234-5678');
-    setDescription('입력 동작 확인용 프로필입니다.');
-    setSelectedCategories(CATEGORY_OPTIONS.slice(0, 2).map((category) => category.code));
-    setStep('terms');
   };
 
   const completeAuthFlow = useCallback((nextToast?: string) => {
@@ -345,8 +326,8 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
       showToast('로그인에 성공했습니다.');
       completeAuthFlow();
     } catch (error) {
-      if (error instanceof ApiError && error.status === 403 && error.code === 'AUTH_403') {
-        showToast('프로필 정보를 입력해야 가입이 완료됩니다.');
+      if (isProfileIncompleteApiError(error)) {
+        showToast(PROFILE_INCOMPLETE_MESSAGE);
         enterProfileCompletionFlow();
       } else {
         showToast(error instanceof ApiError ? error.message : '로그인에 실패했습니다.');
@@ -361,10 +342,6 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     const email = signUpEmail.trim();
     if (!emailRegex.test(email)) {
       showToast('올바른 이메일 형식이어야 합니다.');
-      return;
-    }
-    if (__DEV__ && signUpUiPreview) {
-      ev.startLocalVerification('개발용 UI에서는 임의의 6자리 숫자로 인증할 수 있습니다.');
       return;
     }
     await ev.sendCode(email, 'SIGN_UP');
@@ -383,14 +360,6 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     }
     if (!code) {
       showToast('인증번호를 입력해야 합니다.');
-      return;
-    }
-    if (__DEV__ && signUpUiPreview) {
-      if (/^\d{6}$/.test(code)) {
-        ev.verifyLocally();
-      } else {
-        showToast('인증 코드는 6자리 숫자로 입력해야 합니다.');
-      }
       return;
     }
     await ev.confirmCode(email, code);
@@ -431,11 +400,6 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     }
     if (password !== passwordConfirm) {
       showToast('비밀번호와 비밀번호 확인이 일치하지 않습니다.');
-      return;
-    }
-
-    if (__DEV__ && signUpUiPreview) {
-      setStep('profileBasic');
       return;
     }
 
@@ -501,13 +465,6 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
       showToast('닉네임은 영어 소문자/숫자/특수문자만 사용할 수 있습니다.');
       return;
     }
-    if (__DEV__ && signUpUiPreview) {
-      setNicknameInputError('');
-      setNicknameChecked({ value: normalized, duplicate: false });
-      showToast('개발용 UI에서 사용 가능한 닉네임으로 처리했습니다.');
-      return;
-    }
-
     setCheckingNickname(true);
     try {
       const duplicate = await checkNicknameDuplicate(normalized);
@@ -594,12 +551,6 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   const handleSubmitSignUp = async () => {
     if (selectedCategories.length === 0) {
       showToast('관심 카테고리를 1개 이상 선택해야 합니다.');
-      return;
-    }
-    if (__DEV__ && signUpUiPreview) {
-      setProfileImageUrl(selectedProfileImage?.uri ?? profileImageUrl.trim());
-      showToast('개발용 UI 확인을 완료했습니다.');
-      setStep('signupComplete');
       return;
     }
 
@@ -1625,11 +1576,6 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
         <Pressable onPress={() => Linking.openURL(PUBLIC_ENV.SUPPORT_FORM_URL).catch(() => null)}>
           <Text style={styles.linkText}>고객센터/문의하기</Text>
         </Pressable>
-        {__DEV__ ? (
-          <Pressable onPress={openSignUpUiPreview}>
-            <Text style={styles.linkText}>개발용 UI 보기</Text>
-          </Pressable>
-        ) : null}
       </View>
     </>,
   );

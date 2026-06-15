@@ -35,7 +35,11 @@ import { triggerSelectionHaptic } from '../utils/haptics';
 import { BOOK_DEFAULT_IMAGE } from '../constants/defaultAssets';
 import { useEdgeBackSwipe } from '../hooks/useEdgeBackSwipe';
 import { showToast } from '../utils/toast';
-import { ApiError } from '../services/api/http';
+import {
+  ApiError,
+  PROFILE_INCOMPLETE_MESSAGE,
+  isProfileIncompleteApiError,
+} from '../services/api/http';
 import { fetchAllMemberLikedBooks, type MemberLikedBookItem } from '../services/api/bookApi';
 import { fetchMemberClubs, type ClubCategoryCode } from '../services/api/clubApi';
 import { CATEGORY_CODE_TO_LABEL } from '../constants/domain/category';
@@ -158,6 +162,7 @@ function resolveStoryFeedErrorMessage(error: unknown, fallback: string): string 
   if (!(error instanceof ApiError)) return fallback;
 
   if (error.status === 401) return '로그인 상태를 확인해 주십시오.';
+  if (isProfileIncompleteApiError(error)) return PROFILE_INCOMPLETE_MESSAGE;
   if (error.status === 403) return '접근 권한이 없습니다.';
   if (error.status === 404) return '요청한 책이야기를 찾을 수 없습니다.';
 

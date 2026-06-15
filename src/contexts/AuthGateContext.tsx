@@ -1,11 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-import { ApiError, subscribeProfileIncompleteSession } from '../services/api/http';
+import {
+  ApiError,
+  PROFILE_INCOMPLETE_MESSAGE,
+  isProfileIncompleteApiError,
+  subscribeProfileIncompleteSession,
+} from '../services/api/http';
 import {
   clearStoredAuthSession,
   fetchLoginStatusSilently,
   silentRefreshSession,
 } from '../services/api/authApi';
+import { showToast } from '../utils/toast';
 
 const AUTH_TRANSITION_MS = 1000;
 
@@ -31,10 +37,6 @@ const AuthGateContext = createContext<AuthGateContextValue | null>(null);
 type Props = {
   children: React.ReactNode;
 };
-
-function isProfileIncompleteError(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 403 && error.code === 'AUTH_403';
-}
 
 function isSessionExpiredError(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 401 || error.code === 'AUTH_405');
@@ -75,10 +77,13 @@ export function AuthGateProvider({ children }: Props) {
     setAuthSessionStateValue(next);
   }, []);
 
-  const openProfileCompletion = useCallback(() => {
+  const openProfileCompletion = useCallback((options?: { notify?: boolean }) => {
     setAuthSessionState('profileIncomplete');
     setAuthPageMode('profileCompletion');
     setAuthPageVisible(true);
+    if (options?.notify) {
+      showToast(PROFILE_INCOMPLETE_MESSAGE);
+    }
   }, [setAuthSessionState]);
 
   const applyLoginStatus = useCallback(
@@ -115,8 +120,8 @@ export function AuthGateProvider({ children }: Props) {
         }
       } catch (error) {
         if (cancelled) return;
-        if (isProfileIncompleteError(error)) {
-          openProfileCompletion();
+        if (isProfileIncompleteApiError(error)) {
+          openProfileCompletion({ notify: true });
           setIsReady(true);
           return;
         }
@@ -132,8 +137,8 @@ export function AuthGateProvider({ children }: Props) {
               }
             } catch (refreshStatusError) {
               if (!cancelled) {
-                if (isProfileIncompleteError(refreshStatusError)) {
-                  openProfileCompletion();
+                if (isProfileIncompleteApiError(refreshStatusError)) {
+                  openProfileCompletion({ notify: true });
                 } else {
                   await clearSessionState();
                 }
@@ -169,7 +174,7 @@ export function AuthGateProvider({ children }: Props) {
 
   useEffect(() => {
     return subscribeProfileIncompleteSession(() => {
-      openProfileCompletion();
+      openProfileCompletion({ notify: true });
     });
   }, [openProfileCompletion]);
 
