@@ -1448,14 +1448,14 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
         loadingLabel="로그인 중..."
         onPress={() => { void handleLogin(); }}
       />
-      <View style={styles.signUpActionRow}>
+      <View style={styles.loginFooterLinks}>
         <Pressable onPress={startSignUp}>
           <Text style={styles.linkText}>아직 회원이 아니신가요? 회원가입하러가기</Text>
         </Pressable>
+        <Pressable onPress={() => Linking.openURL(PUBLIC_ENV.SUPPORT_FORM_URL).catch(() => null)}>
+          <Text style={styles.linkText}>고객센터/문의하기</Text>
+        </Pressable>
       </View>
-      <Pressable onPress={() => Linking.openURL(PUBLIC_ENV.SUPPORT_FORM_URL).catch(() => null)}>
-        <Text style={styles.linkText}>고객센터/문의하기</Text>
-      </Pressable>
     </>,
   );
 }
@@ -1909,11 +1909,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  signUpActionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'center',
+  loginFooterLinks: {
+    alignSelf: 'center',
+    alignItems: 'flex-start',
     gap: spacing.xs,
   },
   linkText: {
