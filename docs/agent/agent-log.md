@@ -2821,3 +2821,9 @@ export const interactionOpacity = {
 - 회원가입 비밀번호 단계에서 계정 생성/앱 로그인 세션을 확보하고, 프로필 단계는 추가정보 제출만 수행하도록 정리
 - 보호 API에서 `AUTH_403` 발생 시 AuthGate가 프로필 생성 화면을 열도록 공용 API 레이어 이벤트 추가
 - 검증: `npm run check`, BE targeted test, BE `./gradlew test` 통과
+
+# 2026-06-15 17:00:21 KST 회원가입 로직 수정 TODO 완료 처리
+
+- 미완성 프로필 복귀 플로우 실기기 확인 후 `회원가입 로직 수정` TODO를 완료 상태로 갱신
+- RN 작업 변경분은 기존 커밋 `5ff14c8`에 반영되어 있고, 이번 변경은 TODO/agent-log 정리만 포함
+- 검증: `npm run check` 통과
