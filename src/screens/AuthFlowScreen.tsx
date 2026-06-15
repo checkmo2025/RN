@@ -64,6 +64,8 @@ type LocalProfileImage = {
 
 const logoUri = LOGO_PRIMARY_URI;
 const topLogoUri = MOBILE_HEADER_LOGO_URI;
+const PROFILE_IMAGE_UPLOAD_URL_FAILED = 'PROFILE_IMAGE_UPLOAD_URL_FAILED';
+const PROFILE_IMAGE_UPLOAD_FAILED = 'PROFILE_IMAGE_UPLOAD_FAILED';
 
 
 function formatPhoneNumberInput(value: string): string {
@@ -504,26 +506,36 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
       if (selectedProfileImage?.uri) {
         setUploadingProfileImage(true);
         const contentType = inferMimeType(selectedProfileImage.fileName, selectedProfileImage.mimeType);
-        const uploadMeta = await issueProfileImageUploadUrl(
-          selectedProfileImage.fileName ?? `profile_${Date.now()}.jpg`,
-          contentType,
-        );
+        const profileImageFileName = selectedProfileImage.fileName ?? `profile_${Date.now()}.jpg`;
+        let uploadMeta: Awaited<ReturnType<typeof issueProfileImageUploadUrl>>;
+        try {
+          uploadMeta = await issueProfileImageUploadUrl(profileImageFileName, contentType);
+        } catch (error) {
+          if (error instanceof ApiError) {
+            throw new Error(PROFILE_IMAGE_UPLOAD_URL_FAILED);
+          }
+          throw error;
+        }
         if (!uploadMeta?.presignedUrl || !uploadMeta.imageUrl) {
-          throw new Error('PROFILE_IMAGE_UPLOAD_URL_FAILED');
+          throw new Error(PROFILE_IMAGE_UPLOAD_URL_FAILED);
         }
 
-        const fileResponse = await fetch(selectedProfileImage.uri);
-        const blob = await fileResponse.blob();
-        const uploadResponse = await fetch(uploadMeta.presignedUrl, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': contentType,
-          },
-          body: blob,
-        });
+        try {
+          const fileResponse = await fetch(selectedProfileImage.uri);
+          const blob = await fileResponse.blob();
+          const uploadResponse = await fetch(uploadMeta.presignedUrl, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': contentType,
+            },
+            body: blob,
+          });
 
-        if (!uploadResponse.ok) {
-          throw new Error('PROFILE_IMAGE_UPLOAD_FAILED');
+          if (!uploadResponse.ok) {
+            throw new Error(PROFILE_IMAGE_UPLOAD_FAILED);
+          }
+        } catch {
+          throw new Error(PROFILE_IMAGE_UPLOAD_FAILED);
         }
         uploadedProfileImageUrl = uploadMeta.imageUrl;
       }
@@ -551,6 +563,14 @@ export function AuthFlowScreen({ onClose, onLoginSuccess }: Props) {
           return;
         }
         showToast(error.message || '회원가입에 실패했습니다.');
+        return;
+      }
+      if (error instanceof Error && error.message === PROFILE_IMAGE_UPLOAD_URL_FAILED) {
+        showToast('프로필 이미지 업로드 준비에 실패했습니다. 잠시 후 다시 시도해 주십시오.');
+        return;
+      }
+      if (error instanceof Error && error.message === PROFILE_IMAGE_UPLOAD_FAILED) {
+        showToast('프로필 이미지 업로드에 실패했습니다. 잠시 후 다시 시도해 주십시오.');
         return;
       }
       if (loginCompleted || signUpCreatedNow) {
