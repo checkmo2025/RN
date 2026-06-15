@@ -2857,3 +2857,8 @@ export const interactionOpacity = {
 
 - bare workflow에서 지원되지 않는 `runtimeVersion` 정책 설정을 문자열 `1.0.1`로 변경
 - iOS 1.0.1 production EAS 빌드가 `expo config` 이후 런타임 버전 단계에서 실패하지 않도록 정리
+
+# 2026-06-15 23:19:13 KST 앱 네이티브 버전 1.0.1 정리
+
+- iOS 바이너리가 읽는 `CFBundleShortVersionString`과 Xcode `MARKETING_VERSION`을 `1.0.1`로 변경
+- JS/package 및 Android `versionName`도 `1.0.1`로 맞춰 앱 소유 버전 표기를 통일
