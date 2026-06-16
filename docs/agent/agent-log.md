@@ -2862,3 +2862,8 @@ export const interactionOpacity = {
 
 - iOS 바이너리가 읽는 `CFBundleShortVersionString`과 Xcode `MARKETING_VERSION`을 `1.0.1`로 변경
 - JS/package 및 Android `versionName`도 `1.0.1`로 맞춰 앱 소유 버전 표기를 통일
+
+# 2026-06-16 09:05:12 KST iOS iPhone 전용 타깃 정리
+
+- App Store Connect가 iPad 스크린샷을 요구하지 않도록 Xcode `TARGETED_DEVICE_FAMILY`를 iPhone 전용 `1`로 변경
+- `app.json`의 `supportsTablet: false`와 실제 iOS 네이티브 빌드 설정을 일치시킴
