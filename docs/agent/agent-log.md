@@ -2847,3 +2847,23 @@ export const interactionOpacity = {
 - EAS 업로드에서 참고용 BE/FE 디렉터리와 Codex/IDE 로컬 파일을 제외하도록 `.easignore` 추가
 - `version-2`를 main에 fast-forward merge 후 main 기준 EAS production iOS 빌드 진행 예정
 - 검증: `npm run check` 통과
+
+# 2026-06-15 22:58:07 KST iOS 1.0.1 빌드 버전 문자열 수정
+
+- `app.json`의 Expo 앱 버전을 App Store Connect 제출 버전과 맞춰 `1.0.1`로 정리
+- 잘못 포함된 터미널 명령 문자열을 제거해 `expo config` 실패 원인을 수정
+
+# 2026-06-15 23:05:28 KST EAS bare workflow runtimeVersion 수정
+
+- bare workflow에서 지원되지 않는 `runtimeVersion` 정책 설정을 문자열 `1.0.1`로 변경
+- iOS 1.0.1 production EAS 빌드가 `expo config` 이후 런타임 버전 단계에서 실패하지 않도록 정리
+
+# 2026-06-15 23:19:13 KST 앱 네이티브 버전 1.0.1 정리
+
+- iOS 바이너리가 읽는 `CFBundleShortVersionString`과 Xcode `MARKETING_VERSION`을 `1.0.1`로 변경
+- JS/package 및 Android `versionName`도 `1.0.1`로 맞춰 앱 소유 버전 표기를 통일
+
+# 2026-06-16 09:05:12 KST iOS iPhone 전용 타깃 정리
+
+- App Store Connect가 iPad 스크린샷을 요구하지 않도록 Xcode `TARGETED_DEVICE_FAMILY`를 iPhone 전용 `1`로 변경
+- `app.json`의 `supportsTablet: false`와 실제 iOS 네이티브 빌드 설정을 일치시킴
