@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 import { showToast } from './toast';
 
 export function inferMimeType(fileName?: string, fallback?: string): string {
@@ -57,10 +58,12 @@ export async function pickAndUploadImage(
   getPresignedUrl: GetPresignedUrl,
   fileNamePrefix = 'image',
 ): Promise<string | null> {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    showToast('사진 접근 권한이 필요합니다.');
-    return null;
+  if (Platform.OS !== 'android') {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      showToast('사진 접근 권한이 필요합니다.');
+      return null;
+    }
   }
 
   const result = await ImagePicker.launchImageLibraryAsync({

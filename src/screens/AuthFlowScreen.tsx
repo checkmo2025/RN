@@ -518,10 +518,12 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   const handlePickProfileImage = async () => {
     if (uploadingProfileImage) return;
 
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      showToast('사진 접근 권한이 필요합니다.');
-      return;
+    if (Platform.OS !== 'android') {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        showToast('사진 접근 권한이 필요합니다.');
+        return;
+      }
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
