@@ -2867,3 +2867,9 @@ export const interactionOpacity = {
 
 - App Store Connect가 iPad 스크린샷을 요구하지 않도록 Xcode `TARGETED_DEVICE_FAMILY`를 iPhone 전용 `1`로 변경
 - `app.json`의 `supportsTablet: false`와 실제 iOS 네이티브 빌드 설정을 일치시킴
+
+# 2026-06-16 10:51:03 KST 플레이스토어 제출 준비 정리
+
+- Android Play 제출용 권한 정리, dev-client 제거, 시스템 picker 기반 이미지 선택 반영
+- `bundleRelease` 성공 및 최종 manifest에서 민감 권한 제거 확인
+- TODO에 플레이스토어 사용자 준비/Android 실기기 QA 항목 추가
