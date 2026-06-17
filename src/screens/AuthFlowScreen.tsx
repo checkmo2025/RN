@@ -315,7 +315,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     const password = loginPassword.trim();
 
     if (!identifier || !password) {
-      showToast('아이디(이메일/닉네임)와 비밀번호를 입력해야 합니다.');
+      showToast('이메일 또는 닉네임과 비밀번호를 입력해야 합니다.');
       return;
     }
 
@@ -330,7 +330,13 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
         showToast(PROFILE_INCOMPLETE_MESSAGE);
         enterProfileCompletionFlow();
       } else {
-        showToast(error instanceof ApiError ? error.message : '로그인에 실패했습니다.');
+        showToast(
+          error instanceof ApiError && error.code === 'AUTH_404'
+            ? '이메일/닉네임 또는 비밀번호가 일치하지 않습니다.'
+            : error instanceof ApiError
+              ? error.message
+              : '로그인에 실패했습니다.',
+        );
       }
     } finally {
       setLoginSubmitting(false);
@@ -1524,10 +1530,10 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
         <FormTextInput
           value={loginIdentifier}
           onChangeText={setLoginIdentifier}
-          placeholder="아이디(이메일/닉네임)"
+          placeholder="이메일 또는 닉네임"
           style={[styles.input, styles.inputDescenderSafe]}
           placeholderTextColor={colors.gray3}
-          fieldType="nickname"
+          fieldType="identifier"
         />
         <View style={styles.passwordInputRow}>
           <FormTextInput

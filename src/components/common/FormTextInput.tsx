@@ -11,6 +11,7 @@ import { showToast } from '../../utils/toast';
 
 type FieldType =
   | 'text'
+  | 'identifier'
   | 'nickname'
   | 'name'
   | 'email'
@@ -29,6 +30,10 @@ type FieldTypeOptions = {
 
 const FIELD_TYPE_OPTIONS: Record<FieldType, FieldTypeOptions> = {
   text: {},
+  identifier: {
+    autoCapitalize: 'none',
+    autoCorrect: false,
+  },
   nickname: {
     autoCapitalize: 'none',
     autoCorrect: false,
