@@ -530,6 +530,7 @@ export function GroupManagementOverlay({
                     style={[styles.input, styles.textArea]}
                     multiline
                     maxLength={INPUT_LIMITS.CLUB_DESCRIPTION}
+                    overLimitMessage={`모임 소개글은 ${INPUT_LIMITS.CLUB_DESCRIPTION}자 이하여야 합니다.`}
                   />
                   <Text style={styles.bookshelfComposerCounter}>
                     {editDraft.description.length}/{INPUT_LIMITS.CLUB_DESCRIPTION}

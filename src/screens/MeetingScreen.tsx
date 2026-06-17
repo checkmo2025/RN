@@ -238,7 +238,7 @@ const BOOKSHELF_DETAIL_FOCUS_TOP_OFFSET = spacing.sm;
 const NOTICE_TITLE_INPUT_MIN_HEIGHT = 96;
 const NOTICE_TITLE_INPUT_MAX_HEIGHT = 152;
 const NOTICE_CONTENT_INPUT_MIN_HEIGHT = 280;
-const NOTICE_CONTENT_INPUT_MAX_HEIGHT = NOTICE_CONTENT_INPUT_MIN_HEIGHT;
+const NOTICE_CONTENT_INPUT_MAX_HEIGHT = 360;
 const NOTICE_INPUT_HEIGHT_SAFETY = spacing.sm;
 const NOTICE_CONTENT_SCROLL_CHAR_THRESHOLD = 220;
 const NOTICE_CONTENT_SCROLL_LINE_THRESHOLD = 8;
@@ -2619,8 +2619,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   placeholderTextColor={colors.gray3}
                   style={[styles.input, styles.textArea, styles.bookshelfComposerInput]}
                   multiline
-                  textAlignVertical="top"
                   maxLength={INPUT_LIMITS.BOOKSHELF_COMPOSER}
+                  overLimitMessage={`내용은 ${INPUT_LIMITS.BOOKSHELF_COMPOSER}자 이하여야 합니다.`}
                 />
                 <Text style={styles.bookshelfComposerCounter}>
                   {bookshelfComposerInput.length}/{INPUT_LIMITS.BOOKSHELF_COMPOSER}
@@ -3706,6 +3706,7 @@ function MeetingCreateFlow({
                 style={[styles.input, styles.textArea]}
                 multiline
                 maxLength={INPUT_LIMITS.CLUB_DESCRIPTION}
+                overLimitMessage={`모임 소개글은 ${INPUT_LIMITS.CLUB_DESCRIPTION}자 이하여야 합니다.`}
               />
               <Text style={styles.bookshelfComposerCounter}>
                 {desc.length}/{INPUT_LIMITS.CLUB_DESCRIPTION}

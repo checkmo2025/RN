@@ -137,7 +137,7 @@ export function ReportMemberModal({
                 style={styles.contentInput}
                 multiline
                 maxLength={INPUT_LIMITS.REPORT_CONTENT}
-                textAlignVertical="top"
+                overLimitMessage={`신고 내용은 ${INPUT_LIMITS.REPORT_CONTENT}자 이하여야 합니다.`}
               />
             </View>
             <Text style={styles.contentCounterText}>
@@ -272,6 +272,7 @@ const styles = StyleSheet.create({
     ...typography.body1_3,
     color: colors.gray6,
     minHeight: 200,
+    maxHeight: 220,
   },
   contentCounterText: {
     ...typography.body2_3,

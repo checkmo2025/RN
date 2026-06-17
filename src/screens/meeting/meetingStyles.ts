@@ -291,6 +291,7 @@ export const styles = StyleSheet.create({
   },
   textArea: {
     height: 124,
+    maxHeight: 180,
     textAlignVertical: 'top',
   },
   logoRow: {
@@ -2840,6 +2841,7 @@ export const styles = StyleSheet.create({
   },
   bookshelfComposerInput: {
     height: 140,
+    maxHeight: 180,
   },
   bookshelfComposerCounter: {
     ...typography.body2_3,

@@ -85,6 +85,9 @@ export const FormTextInput = forwardRef<TextInput, Props>(function FormTextInput
     autoCapitalize,
     autoCorrect,
     secureTextEntry,
+    multiline,
+    scrollEnabled,
+    textAlignVertical,
     ...rest
   },
   ref,
@@ -158,6 +161,9 @@ export const FormTextInput = forwardRef<TextInput, Props>(function FormTextInput
       autoCapitalize={autoCapitalize ?? typeOptions.autoCapitalize}
       autoCorrect={autoCorrect ?? typeOptions.autoCorrect}
       secureTextEntry={secureTextEntry ?? typeOptions.secureTextEntry}
+      multiline={multiline}
+      scrollEnabled={scrollEnabled ?? (multiline ? true : undefined)}
+      textAlignVertical={textAlignVertical ?? (multiline ? 'top' : undefined)}
       {...rest}
     />
   );

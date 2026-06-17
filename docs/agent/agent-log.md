@@ -2873,3 +2873,9 @@ export const interactionOpacity = {
 - Android Play 제출용 권한 정리, dev-client 제거, 시스템 picker 기반 이미지 선택 반영
 - `bundleRelease` 성공 및 최종 manifest에서 민감 권한 제거 확인
 - TODO에 플레이스토어 사용자 준비/Android 실기기 QA 항목 추가
+
+# 2026-06-17 11:28:19 KST 텍스트 입력 스크롤/글자수 제한 정리
+
+- 멀티라인 `FormTextInput` 기본 스크롤/상단 정렬 동작을 보강
+- 책이야기 댓글/대댓글 포커스 시 키보드에 가려지지 않도록 댓글 영역 자동 스크롤 추가
+- 긴 입력 필드의 내부 스크롤 높이와 글자수 초과 토스트 문구 정리

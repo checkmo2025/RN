@@ -418,6 +418,15 @@ export function StoryScreen() {
     return true;
   }, []);
 
+  const scrollToCommentInput = useCallback(() => {
+    requestAnimationFrame(() => {
+      scrollToCommentSection(true);
+      setTimeout(() => {
+        scrollToCommentSection(true);
+      }, 260);
+    });
+  }, [scrollToCommentSection]);
+
   const scrollDetailToTop = useCallback((animated = true) => {
     detailScrollRef.current?.scrollTo({ y: 0, animated });
   }, []);
@@ -1167,9 +1176,10 @@ export function StoryScreen() {
     setReplyTarget(null);
     setCommentInput(nextCommentText);
     requestAnimationFrame(() => {
+      scrollToCommentInput();
       commentInputRef.current?.focus();
     });
-  }, []);
+  }, [scrollToCommentInput]);
 
   const deleteComment = useCallback(
     (comment: Comment) => {
@@ -1269,10 +1279,11 @@ export function StoryScreen() {
       });
       setCommentInput('');
       requestAnimationFrame(() => {
+        scrollToCommentInput();
         inlineReplyInputRef.current?.focus();
       });
     },
-    [beginEditComment, commentMenu, deleteComment, openReportModal],
+    [beginEditComment, commentMenu, deleteComment, openReportModal, scrollToCommentInput],
   );
 
   const commentMenuItems = useMemo<ActionMenuItem[]>(() => {
@@ -2248,7 +2259,7 @@ export function StoryScreen() {
             )}
             {(editingCommentId || !replyTarget) && (
               <View style={styles.commentInputRow}>
-                <TextInput
+                <FormTextInput
                   ref={commentInputRef}
                   style={styles.commentInput}
                   placeholder={editingCommentId ? '댓글 수정' : '댓글 내용'}
@@ -2256,7 +2267,7 @@ export function StoryScreen() {
                   value={commentInput}
                   onChangeText={handleChangeCommentInput}
                   multiline
-                  textAlignVertical="top"
+                  onFocus={scrollToCommentInput}
                 />
                 <Pressable
                   style={[
@@ -2315,7 +2326,7 @@ export function StoryScreen() {
                     <Text style={styles.commentText}>{comment.text}</Text>
                     {!editingCommentId && replyTarget?.commentKey === comment.id && (
                       <View style={styles.inlineReplyRow}>
-                        <TextInput
+                        <FormTextInput
                           ref={inlineReplyInputRef}
                           style={styles.commentInput}
                           placeholder="대댓글 내용"
@@ -2323,7 +2334,7 @@ export function StoryScreen() {
                           value={commentInput}
                           onChangeText={handleChangeCommentInput}
                           multiline
-                          textAlignVertical="top"
+                          onFocus={scrollToCommentInput}
                         />
                         <Pressable
                           style={[
@@ -2480,8 +2491,8 @@ export function StoryScreen() {
               placeholderTextColor={colors.gray3}
               style={styles.bodyInput}
               multiline
-              textAlignVertical="top"
               maxLength={INPUT_LIMITS.BOOK_STORY_CONTENT}
+              overLimitMessage={`책이야기 본문은 ${INPUT_LIMITS.BOOK_STORY_CONTENT}자 이하여야 합니다.`}
             />
             <Text style={styles.bodyCounterText}>
               {body.length}/{INPUT_LIMITS.BOOK_STORY_CONTENT}
@@ -3114,6 +3125,7 @@ const styles = StyleSheet.create({
     ...typography.body1_3,
     color: colors.gray6,
     minHeight: 160,
+    maxHeight: 320,
     paddingTop: spacing.sm,
   },
   bodyCounterText: {

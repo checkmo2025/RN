@@ -120,7 +120,7 @@ export function MeetingListCard({
             placeholderTextColor={colors.gray3}
             multiline
             maxLength={INPUT_LIMITS.APPLY_REASON}
-            textAlignVertical="top"
+            overLimitMessage={`신청 사유는 ${INPUT_LIMITS.APPLY_REASON}자 이하여야 합니다.`}
             style={styles.applyInput}
           />
           <Text style={styles.applyCounterText}>
@@ -296,6 +296,7 @@ const styles = StyleSheet.create({
   },
   applyInput: {
     height: 148,
+    maxHeight: 180,
     borderRadius: radius.md,
     backgroundColor: colors.gray1,
     paddingHorizontal: spacing.md,
