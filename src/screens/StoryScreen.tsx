@@ -2475,14 +2475,19 @@ export function StoryScreen() {
           </View>
 
           <View style={styles.formCard}>
-            <TextInput
+            <FormTextInput
               value={title}
               onChangeText={handleChangeStoryTitle}
               placeholder="제목을 입력해야 합니다."
               placeholderTextColor={colors.gray3}
               style={styles.titleInput}
               autoFocus={!isEditingStory}
+              maxLength={INPUT_LIMITS.BOOK_STORY_TITLE}
+              overLimitMessage={`책이야기 제목은 ${INPUT_LIMITS.BOOK_STORY_TITLE}자 이하여야 합니다.`}
             />
+            <Text style={styles.titleCounterText}>
+              {title.length}/{INPUT_LIMITS.BOOK_STORY_TITLE}
+            </Text>
             <FormTextInput
               ref={bodyInputRef}
               value={body}
@@ -3120,6 +3125,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.gray2,
     paddingBottom: spacing.xs,
+  },
+  titleCounterText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textAlign: 'right',
   },
   bodyInput: {
     ...typography.body1_3,

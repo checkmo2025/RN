@@ -1,5 +1,12 @@
-import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import {
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type LayoutChangeEvent,
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../../theme';
@@ -20,6 +27,8 @@ type Props = {
   applyReason?: string;
   onPressApply?: () => void;
   onChangeApplyReason?: (value: string) => void;
+  onApplyInputFocus?: () => void;
+  onApplyInputLayout?: (event: LayoutChangeEvent) => void;
   onSubmitApply?: () => void;
   onPressVisit?: () => void;
 };
@@ -61,10 +70,22 @@ export function MeetingListCard({
   applyReason,
   onPressApply,
   onChangeApplyReason,
+  onApplyInputFocus,
+  onApplyInputLayout,
   onSubmitApply,
   onPressVisit,
 }: Props) {
+  const applyInputRef = useRef<TextInput>(null);
   const canSubmit = (applyReason ?? '').trim().length > 0;
+
+  useEffect(() => {
+    if (!applyOpen) return;
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        applyInputRef.current?.focus();
+      }, 120);
+    });
+  }, [applyOpen]);
 
   return (
     <View style={styles.card}>
@@ -112,10 +133,12 @@ export function MeetingListCard({
       </View>
 
       {applyOpen ? (
-        <View style={styles.applySection}>
+        <View style={styles.applySection} onLayout={onApplyInputLayout}>
           <FormTextInput
+            ref={applyInputRef}
             value={applyReason}
             onChangeText={(text) => onChangeApplyReason?.(text)}
+            onFocus={onApplyInputFocus}
             placeholder="신청 사유를 입력해보세요(300자 제한)"
             placeholderTextColor={colors.gray3}
             multiline

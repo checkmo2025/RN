@@ -236,6 +236,7 @@ const MEETING_TAB_DOUBLE_TAP_WINDOW_MS = 450;
 const GROUP_TITLE_FOCUS_TOP_OFFSET = spacing.xs;
 const GROUP_TITLE_FOCUS_SCROLL_SAFETY = spacing.md;
 const BOOKSHELF_DETAIL_FOCUS_TOP_OFFSET = spacing.sm;
+const APPLY_INPUT_FOCUS_TOP_OFFSET = spacing.sm;
 const NOTICE_TITLE_INPUT_MIN_HEIGHT = 96;
 const NOTICE_TITLE_INPUT_MAX_HEIGHT = 152;
 const NOTICE_CONTENT_INPUT_MIN_HEIGHT = 280;
@@ -338,6 +339,8 @@ function createPendingClubGroup(clubId: number): Group {
 
 export function MeetingScreen() {
   const meetingScrollRef = useRef<ScrollView>(null);
+  const applyCardYByIdRef = useRef<Record<string, number>>({});
+  const applyInputOffsetByIdRef = useRef<Record<string, number>>({});
   useScrollToTop(meetingScrollRef);
   const navigation = useNavigation<NavigationProp<TabParamList, 'Meeting'>>();
   const route = useRoute<RouteProp<TabParamList, 'Meeting'>>();
@@ -405,6 +408,28 @@ export function MeetingScreen() {
       meetingScrollRef.current?.scrollTo({ y: 0, animated });
     });
   }, []);
+
+  const scrollToApplyCard = useCallback((groupId: string, animated = true) => {
+    const cardY = applyCardYByIdRef.current[groupId];
+    if (typeof cardY !== 'number') return;
+    const inputOffsetY = applyInputOffsetByIdRef.current[groupId] ?? 0;
+    meetingScrollRef.current?.scrollTo({
+      y: Math.max(0, cardY + inputOffsetY - APPLY_INPUT_FOCUS_TOP_OFFSET),
+      animated,
+    });
+  }, []);
+
+  const focusApplyCard = useCallback((groupId: string) => {
+    requestAnimationFrame(() => {
+      scrollToApplyCard(groupId, true);
+      setTimeout(() => {
+        scrollToApplyCard(groupId, true);
+      }, 320);
+      setTimeout(() => {
+        scrollToApplyCard(groupId, true);
+      }, 520);
+    });
+  }, [scrollToApplyCard]);
 
   const handlePressHeaderLogo = useCallback(() => {
     showLeaveDraftAlert(() => {
@@ -681,9 +706,30 @@ export function MeetingScreen() {
 
   const handleOpenApply = (groupId: string) => {
     requireAuth(() => {
-      setApplyOpenId((prev) => (prev === groupId ? null : groupId));
+      const willOpen = applyOpenId !== groupId;
+      setApplyOpenId(willOpen ? groupId : null);
+      if (willOpen) {
+        focusApplyCard(groupId);
+      }
     });
   };
+
+  const handleApplyCardLayout = useCallback(
+    (groupId: string, event: LayoutChangeEvent) => {
+      applyCardYByIdRef.current[groupId] = event.nativeEvent.layout.y;
+    },
+    [],
+  );
+
+  const handleApplyInputLayout = useCallback(
+    (groupId: string, event: LayoutChangeEvent) => {
+      applyInputOffsetByIdRef.current[groupId] = event.nativeEvent.layout.y;
+      if (applyOpenId === groupId) {
+        focusApplyCard(groupId);
+      }
+    },
+    [applyOpenId, focusApplyCard],
+  );
 
   const handleChangeApplyReason = (groupId: string, value: string) => {
     setApplyReasonById((prev) => ({ ...prev, [groupId]: value }));
@@ -768,18 +814,23 @@ export function MeetingScreen() {
 
   return (
     <ScreenLayout title="모임" onPressLogo={handlePressHeaderLogo}>
-      <ScrollView
-        ref={meetingScrollRef}
+      <KeyboardAvoidingView
         style={styles.container}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-          />
-        }
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        <ScrollView
+          ref={meetingScrollRef}
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+            />
+          }
+        >
       <Text style={styles.sectionTitle}>독서모임</Text>
       <Pressable
         style={({ pressed }) => [styles.createButton, pressed && styles.pressed]}
@@ -909,22 +960,28 @@ export function MeetingScreen() {
 
       <View style={styles.groupList}>
         {visibleDiscoverGroups.map((group) => (
-          <MeetingListCard
+          <View
             key={group.id}
-            name={group.name}
-            tags={group.tags}
-            topic={group.topic}
-            region={group.region}
-            profileImageUrl={group.profileImageUrl}
-            isPrivate={group.isPrivate}
-            applicationStatus={group.applicationStatus}
-            applyOpen={applyOpenId === group.id}
-            applyReason={applyReasonById[group.id] ?? ''}
-            onPressApply={() => handleOpenApply(group.id)}
-            onChangeApplyReason={(value) => handleChangeApplyReason(group.id, value)}
-            onSubmitApply={() => handleSubmitApply(group)}
-            onPressVisit={() => openGroupHome(group)}
-          />
+            onLayout={(event) => handleApplyCardLayout(group.id, event)}
+          >
+            <MeetingListCard
+              name={group.name}
+              tags={group.tags}
+              topic={group.topic}
+              region={group.region}
+              profileImageUrl={group.profileImageUrl}
+              isPrivate={group.isPrivate}
+              applicationStatus={group.applicationStatus}
+              applyOpen={applyOpenId === group.id}
+              applyReason={applyReasonById[group.id] ?? ''}
+              onPressApply={() => handleOpenApply(group.id)}
+              onChangeApplyReason={(value) => handleChangeApplyReason(group.id, value)}
+              onApplyInputFocus={() => focusApplyCard(group.id)}
+              onApplyInputLayout={(event) => handleApplyInputLayout(group.id, event)}
+              onSubmitApply={() => handleSubmitApply(group)}
+              onPressVisit={() => openGroupHome(group)}
+            />
+          </View>
         ))}
         {discoverLoading && visibleDiscoverGroups.length === 0 ? (
           <>
@@ -939,7 +996,8 @@ export function MeetingScreen() {
           </View>
         ) : null}
       </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenLayout>
   );
 }
