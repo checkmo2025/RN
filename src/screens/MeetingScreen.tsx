@@ -55,6 +55,7 @@ import { DateTimeField } from '../components/common/DateTimeField';
 import { DialogOverlay } from '../components/common/DialogOverlay';
 import { FormTextInput } from '../components/common/FormTextInput';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
+import { ToastHost } from '../components/common/ToastHost';
 import { MeetingListCard } from '../components/feature/groups/MeetingListCard';
 import { MeetingListCardSkeleton } from '../components/feature/groups/MeetingListCardSkeleton';
 import { MyGroupsDropdownCard } from '../components/feature/groups/MyGroupsDropdownCard';
@@ -3271,6 +3272,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
             </View>
           ) : null}
         </KeyboardAvoidingView>
+        <ToastHost />
       </Modal>
       <BottomSheetActionMenu
         visible={noticeMenuVisible}

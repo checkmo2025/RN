@@ -3127,6 +3127,7 @@ const styles = StyleSheet.create({
     minHeight: 160,
     maxHeight: 320,
     paddingTop: spacing.sm,
+    paddingRight: spacing.lg,
   },
   bodyCounterText: {
     ...typography.body2_3,

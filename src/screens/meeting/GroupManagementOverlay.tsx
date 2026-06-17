@@ -22,6 +22,7 @@ import { colors, spacing } from '../../theme';
 import { DefaultProfileAvatar } from '../../components/common/DefaultProfileAvatar';
 import { FeedbackPressable as Pressable } from '../../components/common/FeedbackPressable';
 import { FormTextInput } from '../../components/common/FormTextInput';
+import { ToastHost } from '../../components/common/ToastHost';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { CLUB_DEFAULT_IMAGE } from '../../constants/defaultAssets';
 import {
@@ -1358,6 +1359,7 @@ export function GroupManagementOverlay({
           </Animated.View>
         </Pressable>
       )}
+      <ToastHost />
     </Modal>
   );
 }

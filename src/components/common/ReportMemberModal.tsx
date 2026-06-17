@@ -16,6 +16,7 @@ import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
 import { DefaultProfileAvatar } from './DefaultProfileAvatar';
 import { FormTextInput } from './FormTextInput';
+import { ToastHost } from './ToastHost';
 import type { ReportReason } from '../../services/api/memberApi';
 
 export type ReportMemberModalState = {
@@ -157,6 +158,7 @@ export function ReportMemberModal({
         ) : null}
       </Pressable>
       </KeyboardAvoidingView>
+      <ToastHost />
     </Modal>
   );
 }
@@ -273,6 +275,7 @@ const styles = StyleSheet.create({
     color: colors.gray6,
     minHeight: 200,
     maxHeight: 220,
+    paddingRight: spacing.md,
   },
   contentCounterText: {
     ...typography.body2_3,
