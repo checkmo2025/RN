@@ -376,7 +376,7 @@
 - `My` 탭은 비로그인 사용자가 직접 진입할 수 없음(탭 클릭 시 로그인 유도).
 - 모든 신고는 작성자(MEMBER) 단위로만 호출됨. 글/공지/댓글 단위 신고(`CLUB_NOTICE` 등)는 BE 지원이나 RN UI 미연결(1.4 참고).
 - 모임 조별 채팅은 RN에서 제거됨(BE에는 잔존, 앱 미사용 — 4.10 참고).
-- 소셜 로그인: **BE는 OAuth2(Google/Kakao/Naver) 구현됨** — Spring Security `oauth2Login` 웹 리다이렉트 방식(`/login/oauth2/code/{provider}`, 성공 시 `/api/v1/auth/redirect/oauth2`로 리다이렉트). **RN 앱에는 소셜 로그인 UI 미연결**(이메일/닉네임 로그인만). Apple은 BE provider에 없고 기획 문서(`docs/documents/apple-login-*`, `docs/social-login-reintegration-plan.md`)만 존재.
+- 소셜 로그인: **BE는 OAuth2(Google/Kakao/Naver) 구현됨** — Spring Security `oauth2Login` 웹 리다이렉트 방식(`/login/oauth2/code/{provider}`, 성공 시 `/api/v1/auth/redirect/oauth2`로 리다이렉트). **RN 앱에는 소셜 로그인 UI 미연결**(이메일/닉네임 로그인만). Apple은 BE provider에 없고 기획 문서(`docs/documents/apple-login-*`, `docs/documents/social-login-reintegration-plan.md`)만 존재.
 - 마이페이지 버전 정보 텍스트는 하드코딩(`2026.06.14`).
 - 일부 비로그인 상태 화면은 실제 API 대신 폴백 데이터 표시(마이페이지).
 

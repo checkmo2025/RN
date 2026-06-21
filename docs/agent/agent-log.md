@@ -2920,3 +2920,10 @@ export const interactionOpacity = {
 
 - 그동안 untracked로 남아있던 기획 문서 3건 추적 시작: apple-login-rn-plan, social-login-reintegration-plan, checkmo-usage-chatbot-system-prompt
 - apple-login-backend-plan.md 미커밋 수정분 반영
+
+# 2026-06-21 18:36:26 KST 문서 위치 정리 + docs/agent 완료 문서 아카이브
+
+- docs 루트 md 2건(push-notification-implementation, social-login-reintegration-plan)을 docs/documents/로 이동
+- docs/agent 완료 문서 2건에 (done) 붙여 archive로 이동: edit-discard-warning-audit(useUnsavedChangesGuard 적용 확인), meet-split-design(MeetingScreen 4073줄 < 목표 5000)
+- issue-fetch(미완료 20건)·bottomsheet-unification-plan(미반영)·ux-consistency-audit(미완료)는 미완료로 판정해 유지
+- 이동에 따른 todo.md/ux-consistency-audit.md/functional-spec.md 링크 경로 갱신(agent-log 과거 기록은 유지)
