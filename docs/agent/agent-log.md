@@ -2909,3 +2909,9 @@ export const interactionOpacity = {
 - `(done)` 문서 42개를 `docs/archive/`로 이동하고, 코드 검증으로 완료 확인된 4개(차단/임시저장 API, 모달 시각 토큰, silent refresh, RN STOMP 디버깅)에 `(done)` 접두어 붙여 함께 아카이브
 - 이동으로 깨진 todo.md의 문서 링크 36건+1건을 `docs/archive/` 경로로 갱신(agent-log 과거 기록은 유지)
 - functional-spec.md 보충: 신고 API(createReport)·앱 토큰 로테이션·채팅 제거·차단 기능·소셜 로그인(BE 구현/RN 미연결)·버전 표기 현행화
+
+# 2026-06-21 18:05:51 KST 레퍼런스 코드 디렉토리 정리(reference_code)
+
+- BE/FE 중복 클론을 정리해 `reference_code/BE`(develop), `reference_code/FE`(fix-381-signup)로 통합하고 wrapper(checkmo_be2/checkmo_fe2) 삭제
+- `.gitignore`에 `/reference_code` 추가 — RN에서 절대 커밋/푸시되지 않도록 격리(각자 다른 GitHub 레포 BE.git/FE.git와 연결된 독립 클론)
+- `tsconfig.json` exclude를 `reference_code`로 정리 — tsc 컴파일 대상 0건 확인, RN 빌드/타입체크 영향 없음

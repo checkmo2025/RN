@@ -5,10 +5,6 @@
   },
   "exclude": [
     "node_modules",
-    "checkmo_fe2",
-    "checkmo_be 2",
-    "checkmo_be",
-    "FE",
-    "BE"
+    "reference_code"
   ]
 }
