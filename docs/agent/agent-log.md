@@ -2950,3 +2950,8 @@ export const interactionOpacity = {
 
 - BE는 기존 v1을 유지하고 breaking API만 v2로 추가하는 정책 정리
 - 웹·RN은 기본 v1을 유지하면서 변경된 endpoint만 v2로 전환하는 방법과 배포 순서 문서화
+
+# 2026-06-21 23:23:39 KST 관리자 신고목록 계획 문서 커밋 + 애플 키 TODO
+
+- TODO 🔜 구현 예정에 "웹 애플로그인 키 발급"(Services ID/Key.p8/Key ID/Team ID/redirect 등록) 항목 추가
+- 관리자 회원 신고 목록 계획 문서 2건 추적 시작: admin-member-report-list-backend-plan, admin-member-report-list-frontend-plan
