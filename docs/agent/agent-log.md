@@ -2955,3 +2955,9 @@ export const interactionOpacity = {
 
 - TODO 🔜 구현 예정에 "웹 애플로그인 키 발급"(Services ID/Key.p8/Key ID/Team ID/redirect 등록) 항목 추가
 - 관리자 회원 신고 목록 계획 문서 2건 추적 시작: admin-member-report-list-backend-plan, admin-member-report-list-frontend-plan
+
+# 2026-06-21 23:29:56 KST 모임 회원 로스터 공개 계획 문서 작성
+
+- 일반(가입) 회원도 모임 회원 목록(프로필/닉네임/역할)을 볼 수 있게 하는 계획 확정: 노출범위 ①ACTIVE 가입 회원만
+- 기존 /members(운영진+PII)는 재활용 불가 판정 → BE 신규 슬림 엔드포인트 GET /clubs/{clubId}/members/roster 설계
+- docs/documents/club-member-roster-plan.md 신규 작성(BE/RN 체크리스트·DoD 포함)
