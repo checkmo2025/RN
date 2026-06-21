@@ -2939,3 +2939,9 @@ export const interactionOpacity = {
 - 홈에서 열 수 있는 5장 온보딩 미리보기 화면과 슬라이드 상수 추가
 - 약관 동의 매핑 BE·웹 FE·RN 구현 계획서 3종 작성
 - 약관 DB·API 계약과 회원가입·재동의·철회, 단계적 배포·검증 기준 정리
+
+# 2026-06-21 21:45:55 KST Apple 로그인 구현 계획 문서화
+
+- `reference_code/BE`, `reference_code/FE`, RN 현재 인증 구조를 기준으로 Apple 로그인 백엔드·웹 FE·RN 계획서 3종 작성
+- iOS·웹 공통 `APPLE + sub` 회원 매핑, client별 token 검증·해지, 약관 후 프로필 흐름과 배포·테스트 기준 정리
+- Apple Developer 키 다운로드 및 웹 인증 도메인·Return URL 설정 화면을 문서 에셋으로 추가
