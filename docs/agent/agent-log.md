@@ -2967,3 +2967,9 @@ export const interactionOpacity = {
 - StoryScreen 책 검색을 BottomSheet → 풀스크린 Modal로 교체(하단 레이아웃 깨짐 해결)
 - 결과 리스트 maxHeight:420 → flex:1, safe-area 하단 패딩, KeyboardAvoidingView로 키보드 가림 방지
 - 미사용 BottomSheet import 및 전용 스타일 3개 제거, 검색 로직/선택 동작은 그대로
+
+# 2026-06-22 00:12:36 KST 타인 프로필 모임 메뉴를 방문하기로 변경
+
+- 다른 사람 프로필 > 모임 행의 ⋮ 메뉴를 신고하기/차단하기 → 단일 "방문하기"로 교체
+- 방문하기 클릭 시 navigation.navigate('Meeting', { openClubId })로 해당 모임 이동(GroupItem에 clubId 추가)
+- 프로필 헤더의 신고/차단 메뉴는 그대로 유지

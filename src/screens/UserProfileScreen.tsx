@@ -86,6 +86,7 @@ type BookCard = {
 
 type GroupItem = {
   id: string;
+  clubId: number;
   name: string;
 };
 
@@ -197,6 +198,7 @@ export function UserProfileScreen() {
   const [reportModal, setReportModal] = useState<ReportMemberModalState | null>(null);
   const [showBlockReportModal, setShowBlockReportModal] = useState(false);
   const [groupMenuAnchor, setGroupMenuAnchor] = useState<{ pageX: number; pageY: number } | null>(null);
+  const [groupMenuClubId, setGroupMenuClubId] = useState<number | null>(null);
   const memberNickname =
     typeof route.params?.memberNickname === 'string' && route.params.memberNickname.trim().length > 0
       ? route.params.memberNickname.trim()
@@ -305,6 +307,7 @@ export function UserProfileScreen() {
       setGroups(
         items.map((club) => ({
           id: `club-${club.clubId}`,
+          clubId: club.clubId,
           name: club.clubName,
         })),
       );
@@ -548,29 +551,33 @@ export function UserProfileScreen() {
     );
   }, [memberNickname, profileName, navigation]);
 
-  const handleOpenGroupMenu = useCallback((pageX: number, pageY: number) => {
+  const handleOpenGroupMenu = useCallback((pageX: number, pageY: number, clubId: number) => {
+    setGroupMenuClubId(clubId);
     setGroupMenuAnchor({ pageX, pageY });
   }, []);
 
   const handleCloseGroupMenu = useCallback(() => {
     setGroupMenuAnchor(null);
+    setGroupMenuClubId(null);
   }, []);
+
+  const handleVisitGroup = useCallback(() => {
+    const clubId = groupMenuClubId;
+    setGroupMenuAnchor(null);
+    setGroupMenuClubId(null);
+    if (typeof clubId !== 'number') return;
+    navigation.navigate('Meeting', { openClubId: clubId });
+  }, [groupMenuClubId, navigation]);
 
   const groupMenuItems = useMemo<ActionMenuItem[]>(
     () => [
       {
-        key: 'report',
-        label: '신고하기',
-        onPress: handleOpenReportModal,
-      },
-      {
-        key: 'block',
-        label: '차단하기',
-        destructive: true,
-        onPress: handleConfirmBlockMember,
+        key: 'visit',
+        label: '방문하기',
+        onPress: handleVisitGroup,
       },
     ],
-    [handleConfirmBlockMember, handleOpenReportModal],
+    [handleVisitGroup],
   );
 
   const handleCloseReportModal = useCallback(() => {
@@ -747,7 +754,9 @@ export function UserProfileScreen() {
           <Pressable
             style={styles.groupMenuButton}
             hitSlop={8}
-            onPress={(event) => handleOpenGroupMenu(event.nativeEvent.pageX, event.nativeEvent.pageY)}
+            onPress={(event) =>
+              handleOpenGroupMenu(event.nativeEvent.pageX, event.nativeEvent.pageY, group.clubId)
+            }
           >
             <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
           </Pressable>
