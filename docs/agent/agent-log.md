@@ -2927,3 +2927,9 @@ export const interactionOpacity = {
 - docs/agent 완료 문서 2건에 (done) 붙여 archive로 이동: edit-discard-warning-audit(useUnsavedChangesGuard 적용 확인), meet-split-design(MeetingScreen 4073줄 < 목표 5000)
 - issue-fetch(미완료 20건)·bottomsheet-unification-plan(미반영)·ux-consistency-audit(미완료)는 미완료로 판정해 유지
 - 이동에 따른 todo.md/ux-consistency-audit.md/functional-spec.md 링크 경로 갱신(agent-log 과거 기록은 유지)
+
+# 2026-06-21 18:46:18 KST 온보딩 구현 계획 확정 문서화
+
+- 온보딩 캐러셀 계획 확정: 5장(헤더는 홈에 흡수)·하이브리드 비주얼·첫 실행 즉시 노출(로그인 무관)·건너뛰기·다시보기
+- 업계 표준(3~5장, 첫 슬라이드 가치 제안) 리서치 반영, docs/documents/onboarding-plan.md 신규 작성
+- TODO 🔜 구현 예정에 "온보딩(첫 사용자 가이드) 추가" 항목 등록(구현 대기)
