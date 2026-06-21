@@ -2915,3 +2915,8 @@ export const interactionOpacity = {
 - BE/FE 중복 클론을 정리해 `reference_code/BE`(develop), `reference_code/FE`(fix-381-signup)로 통합하고 wrapper(checkmo_be2/checkmo_fe2) 삭제
 - `.gitignore`에 `/reference_code` 추가 — RN에서 절대 커밋/푸시되지 않도록 격리(각자 다른 GitHub 레포 BE.git/FE.git와 연결된 독립 클론)
 - `tsconfig.json` exclude를 `reference_code`로 정리 — tsc 컴파일 대상 0건 확인, RN 빌드/타입체크 영향 없음
+
+# 2026-06-21 18:10:13 KST 미추적 기획 문서 커밋 정리
+
+- 그동안 untracked로 남아있던 기획 문서 3건 추적 시작: apple-login-rn-plan, social-login-reintegration-plan, checkmo-usage-chatbot-system-prompt
+- apple-login-backend-plan.md 미커밋 수정분 반영
