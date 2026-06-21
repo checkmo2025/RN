@@ -2945,3 +2945,8 @@ export const interactionOpacity = {
 - `reference_code/BE`, `reference_code/FE`, RN 현재 인증 구조를 기준으로 Apple 로그인 백엔드·웹 FE·RN 계획서 3종 작성
 - iOS·웹 공통 `APPLE + sub` 회원 매핑, client별 token 검증·해지, 약관 후 프로필 흐름과 배포·테스트 기준 정리
 - Apple Developer 키 다운로드 및 웹 인증 도메인·Return URL 설정 화면을 문서 에셋으로 추가
+
+# 2026-06-21 21:52:32 KST API 버전 관리 가이드 문서화
+
+- BE는 기존 v1을 유지하고 breaking API만 v2로 추가하는 정책 정리
+- 웹·RN은 기본 v1을 유지하면서 변경된 endpoint만 v2로 전환하는 방법과 배포 순서 문서화
