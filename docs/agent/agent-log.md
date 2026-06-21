@@ -2961,3 +2961,9 @@ export const interactionOpacity = {
 - 일반(가입) 회원도 모임 회원 목록(프로필/닉네임/역할)을 볼 수 있게 하는 계획 확정: 노출범위 ①ACTIVE 가입 회원만
 - 기존 /members(운영진+PII)는 재활용 불가 판정 → BE 신규 슬림 엔드포인트 GET /clubs/{clubId}/members/roster 설계
 - docs/documents/club-member-roster-plan.md 신규 작성(BE/RN 체크리스트·DoD 포함)
+
+# 2026-06-21 23:52:36 KST 책이야기 책 검색 풀스크린 모달 전환
+
+- StoryScreen 책 검색을 BottomSheet → 풀스크린 Modal로 교체(하단 레이아웃 깨짐 해결)
+- 결과 리스트 maxHeight:420 → flex:1, safe-area 하단 패딩, KeyboardAvoidingView로 키보드 가림 방지
+- 미사용 BottomSheet import 및 전용 스타일 3개 제거, 검색 로직/선택 동작은 그대로

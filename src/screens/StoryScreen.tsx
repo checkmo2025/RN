@@ -7,6 +7,7 @@ import {
   InteractionManager,
   KeyboardAvoidingView,
   LayoutChangeEvent,
+  Modal,
   ScrollView,
   RefreshControl,
   Share,
@@ -44,7 +45,6 @@ import { FloatingActionButton } from '../components/common/FloatingActionButton'
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { IconButton } from '../components/common/IconButton';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
-import { BottomSheet } from '../components/common/BottomSheet';
 import {
   BottomSheetActionMenu,
   type BottomSheetActionMenuItem,
@@ -2537,13 +2537,12 @@ export function StoryScreen() {
             </View>
           </View>
         </ScrollView>
-        <BottomSheet
+        <Modal
           visible={showBookPicker}
-          onClose={closeBookPicker}
-          backdropStyle={styles.bookPickerBackdrop}
-          sheetStyle={styles.bookPickerSheet}
-          keyboardBehavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          animationType="slide"
+          onRequestClose={closeBookPicker}
         >
+          <View style={[styles.bookPickerModalContainer, { paddingTop: insets.top + spacing.sm }]}>
                 <View style={styles.bookPickerHeaderRow}>
                   <Text style={styles.bookPickerHeaderText}>책 검색</Text>
                   <IconButton
@@ -2595,40 +2594,49 @@ export function StoryScreen() {
                   <Text style={styles.bookSearchGuideText}>검색어를 입력하고 책을 선택해야 합니다.</Text>
                 )}
 
-                <ScrollView
-                  style={styles.bookPickerScroll}
-                  contentContainerStyle={styles.bookPickerContent}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={false}
+                <KeyboardAvoidingView
+                  style={styles.bookPickerListArea}
+                  behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 >
-                  {bookSearchSearched && !bookSearchLoading && bookSearchResults.length === 0 ? (
-                    <Text style={styles.bookPickerEmptyText}>검색 결과가 없습니다.</Text>
-                  ) : null}
+                  <ScrollView
+                    style={styles.bookPickerScroll}
+                    contentContainerStyle={[
+                      styles.bookPickerContent,
+                      { paddingBottom: insets.bottom + spacing.lg },
+                    ]}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                  >
+                    {bookSearchSearched && !bookSearchLoading && bookSearchResults.length === 0 ? (
+                      <Text style={styles.bookPickerEmptyText}>검색 결과가 없습니다.</Text>
+                    ) : null}
 
-                  {bookSearchResults.map((bookItem, index) => (
-                    <Pressable
-                      key={`${bookItem.isbn}-${index}`}
-                      onPress={() => handleSelectBookFromSearch(bookItem)}
-                      style={styles.bookOption}
-                    >
-                      {bookItem.imgUrl ? (
-                        <Image source={{ uri: bookItem.imgUrl }} style={styles.bookThumb} />
-                      ) : (
-                        <View style={styles.bookThumb} />
-                      )}
-                      <View style={styles.bookInfo}>
-                        <Text style={styles.bookTitle} numberOfLines={2}>
-                          {bookItem.title}
-                        </Text>
-                        <Text style={styles.bookAuthor}>{bookItem.author}</Text>
-                        <Text style={styles.bookDescription} numberOfLines={2}>
-                          {bookItem.description || bookItem.publisher || '책 설명이 없습니다.'}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-        </BottomSheet>
+                    {bookSearchResults.map((bookItem, index) => (
+                      <Pressable
+                        key={`${bookItem.isbn}-${index}`}
+                        onPress={() => handleSelectBookFromSearch(bookItem)}
+                        style={styles.bookOption}
+                      >
+                        {bookItem.imgUrl ? (
+                          <Image source={{ uri: bookItem.imgUrl }} style={styles.bookThumb} />
+                        ) : (
+                          <View style={styles.bookThumb} />
+                        )}
+                        <View style={styles.bookInfo}>
+                          <Text style={styles.bookTitle} numberOfLines={2}>
+                            {bookItem.title}
+                          </Text>
+                          <Text style={styles.bookAuthor}>{bookItem.author}</Text>
+                          <Text style={styles.bookDescription} numberOfLines={2}>
+                            {bookItem.description || bookItem.publisher || '책 설명이 없습니다.'}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </KeyboardAvoidingView>
+          </View>
+        </Modal>
         </KeyboardAvoidingView>
       </ScreenLayout>
     );
@@ -3012,21 +3020,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     alignItems: 'flex-start',
   },
-  bookPickerBackdrop: {
+  bookPickerModalContainer: {
     flex: 1,
-    backgroundColor: colors.overlay30,
-    justifyContent: 'flex-end',
-  },
-  bookPickerModalRoot: {
-    flex: 1,
-  },
-  bookPickerSheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: radius.md,
-    borderTopRightRadius: radius.md,
-    padding: spacing.md,
-    maxHeight: '78%',
+    paddingHorizontal: spacing.md,
     gap: spacing.sm,
+  },
+  bookPickerListArea: {
+    flex: 1,
   },
   bookPickerHeaderRow: {
     flexDirection: 'row',
@@ -3057,11 +3058,10 @@ const styles = StyleSheet.create({
     color: colors.gray4,
   },
   bookPickerScroll: {
-    maxHeight: 420,
+    flex: 1,
   },
   bookPickerContent: {
     gap: spacing.sm,
-    paddingBottom: spacing.sm,
   },
   bookPickerEmptyText: {
     ...typography.body1_3,
