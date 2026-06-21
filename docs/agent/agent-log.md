@@ -2903,3 +2903,9 @@ export const interactionOpacity = {
 - 사용자 실기기 QA 메모 10건을 TODO에 `🗒 2026-06-18 QA 수집` 신규 섹션으로 원문 기록
 - 모임 생성/소식 날짜/모임 사람들/댓글 프로필/임시저장/알림 빨간색/댓글 최대개수/신고하기/공지 댓글 placeholder/알림 이동 항목 추가(상세 설명 대기)
 - TODO 섹션 목록 인덱스 갱신 및 마지막 업데이트 날짜 2026-06-21로 반영
+
+# 2026-06-21 17:58:04 KST 완료 문서 아카이브 정리 + 기능명세서 보충
+
+- `(done)` 문서 42개를 `docs/archive/`로 이동하고, 코드 검증으로 완료 확인된 4개(차단/임시저장 API, 모달 시각 토큰, silent refresh, RN STOMP 디버깅)에 `(done)` 접두어 붙여 함께 아카이브
+- 이동으로 깨진 todo.md의 문서 링크 36건+1건을 `docs/archive/` 경로로 갱신(agent-log 과거 기록은 유지)
+- functional-spec.md 보충: 신고 API(createReport)·앱 토큰 로테이션·채팅 제거·차단 기능·소셜 로그인(BE 구현/RN 미연결)·버전 표기 현행화

@@ -1,7 +1,8 @@
 # checkmo_rn 기능명세서 (코드 기준)
 
 - 작성일: 2026-04-25
-- 기준 코드: `src/screens/*`, `src/components/common/AppHeader.tsx`, `src/services/api/*`
+- 갱신일: 2026-06-21 (RN/BE 코드 대조 후 보충: 신고 API, 채팅 제거, 차단 기능, 앱 토큰 로테이션, 버전 표기)
+- 기준 코드: `src/screens/*`, `src/components/common/AppHeader.tsx`, `src/services/api/*`, BE `develop`
 - 목적: 현재 앱에 구현된 기능의 동작/권한/API 연동 범위를 정리
 
 ## 1) 공통 정책
@@ -26,6 +27,16 @@
 - 일부 토글 액션은 낙관적 업데이트 후 실패 시 롤백
 - 스크롤 화면 대부분 Pull-to-refresh 지원
 - 여러 상세 화면에서 스와이프 백 제스처 제공(Story/News/UserProfile)
+
+### 1.4 신고 공통 정책 (`REPORT-01`)
+
+- 공통 함수: `createReport({ targetType, targetId, reason, content? })` (`memberApi.ts`)
+  - 구버전 `reportMember`는 폐기되어 코드에 없음
+- API: `POST /api/v1/reports`, 내 신고 목록: `GET /api/v1/reports/me`
+- `targetType`: `MEMBER`(targetId=닉네임) / `CLUB` / `BOOK_STORY` / `BOOK_STORY_COMMENT` / `CLUB_NOTICE` / `CLUB_NOTICE_COMMENT` / `CLUB_TOPIC` / `CLUB_BOOK_REVIEW` / `CHAT` (나머지 targetId=문자열화한 ID)
+- `reason`: `GENERAL`(일반) / `INSULT`(욕설·비방) / `INAPPROPRIATE_CONTENT`(음란·부적절) / `SPAM`(홍보·도배)
+- `content`: 선택, 최대 500자
+- 현재 RN 신고 진입점은 모두 **대상 작성자(MEMBER) 신고**로 호출(닉네임 기반). BE는 글/공지/댓글 단위(`BOOK_STORY`, `CLUB_NOTICE` 등) 신고도 지원하나 RN UI는 아직 작성자 신고만 연결.
 
 ## 2) 인증/계정
 
@@ -58,8 +69,10 @@
 
 ### 2.4 세션 동기화/로그아웃 (`AUTH-04`)
 
+- 앱 로그인: `POST /auth/app/login` — 응답의 `refreshToken`을 로컬에 저장
+- 토큰 로테이션: 401 응답 시 `POST /auth/app/refresh`로 access token 자동 재발급(`http.ts`), 갱신 실패 시 로컬 토큰 폐기
 - 앱 부팅 후 로그인 상태 확인: `fetchLoginStatusSilently`
-- 로그아웃: `logoutSession` + 로컬 인증 상태 초기화
+- 로그아웃: `POST /auth/app/logout` + 저장된 refresh token/로컬 인증 상태 초기화
 
 ## 3) Home (책모 홈)
 
@@ -132,7 +145,7 @@
   - 등록: `createClubNoticeComment`
   - 수정: `updateClubNoticeComment`
   - 삭제: `deleteClubNoticeComment`
-- 신고: 댓글/작성자 신고는 `reportMember` (공지 자체 신고는 "준비 중" 토스트)
+- 신고: 공지 메뉴의 "신고하기"는 **공지 작성자(MEMBER) 신고**로 동작 — `createReport({ targetType: 'MEMBER', targetId: 작성자닉네임 })`. 댓글 신고도 동일하게 작성자 기준. (공지 글 자체 신고 `CLUB_NOTICE`는 BE 지원, RN 미연결 — `준비 중` 토스트도 현재 없음). 1.4 참고
 
 ### 4.6 공지 투표 (`MTG-06`)
 
@@ -175,13 +188,10 @@
 - 정기모임 정보: `fetchClubMeeting`
 - 조별 참여자: `fetchClubMeetingMembers`
 - 조별 발제: `fetchClubMeetingTeamTopics`
-- 조별 채팅:
-  - 조회: `fetchClubMeetingTeamChatMessages`
-  - 전송: `sendClubMeetingTeamChatMessage`
+- 조별 채팅: **RN에서 제거됨** (`useMeetingChatStomp`/`fetchClubMeetingTeamChatMessages`/`sendClubMeetingTeamChatMessage` 모두 삭제). BE에는 `ChatHistoryController`/WebSocket 컨트롤러가 남아 있으나 앱은 호출하지 않음.
 - UI 기능:
   - 조 진입/참여자 펼침
   - 조 발제 완료 토글/정렬
-  - 채팅 조 선택 -> 채팅방
 
 ### 4.11 조 편성 관리 (운영진) (`MTG-11`)
 
@@ -236,8 +246,8 @@
 - 상세 조회: `fetchBookStoryDetail`
 - 좋아요: `toggleBookStoryLike` (낙관적 업데이트)
 - 작성자 구독: `setFollowingMember`
-- 공유: 웹 URL 클립보드 복사
-- 신고: `reportMember`
+- 공유: 시스템 공유 시트(`Share.share`, 글 웹 URL 전달)
+- 신고: `createReport`(작성자 MEMBER 기준, 1.4 참고)
 
 ### 5.4 댓글/대댓글 (`STORY-04`)
 
@@ -317,6 +327,7 @@
 
 - 내 소식 관리: `fetchMyNewsList`
 - 신고 관리: `fetchMyReports`
+- 차단 관리: `fetchBlockedMembers` 목록 + `unblockMember(nickname)` 해제 (최신순, 무한스크롤). 상세는 `block-feature-spec.md` 참고
 - 알림 관리:
   - 조회 `fetchNotificationSettings`
   - 토글 `toggleNotificationSetting`
@@ -332,10 +343,11 @@
 - 공개 서재: `fetchAllMemberLikedBooks`
 - 공개 모임: `fetchMemberClubs`
 
-### 8.2 팔로우/신고 (`UP-02`)
+### 8.2 팔로우/신고/차단 (`UP-02`)
 
 - 구독 토글: `setFollowingMember`
-- 신고: `reportMember`
+- 신고: `createReport`(작성자 MEMBER 기준, 1.4 참고)
+- 차단: `blockMember(nickname)` — 확인 모달 후 처리, 성공 시 이전 화면 복귀. 상세 정책은 `block-feature-spec.md` 참고
 
 ### 8.3 팔로우 페이지 (`UP-03`)
 
@@ -362,7 +374,9 @@
 ## 10) 구현 제약/주의사항
 
 - `My` 탭은 비로그인 사용자가 직접 진입할 수 없음(탭 클릭 시 로그인 유도).
-- 공지 자체 신고는 현재 미구현(“준비 중” 토스트).
-- 마이페이지 버전 정보 텍스트는 하드코딩(`2026.01.01`).
+- 모든 신고는 작성자(MEMBER) 단위로만 호출됨. 글/공지/댓글 단위 신고(`CLUB_NOTICE` 등)는 BE 지원이나 RN UI 미연결(1.4 참고).
+- 모임 조별 채팅은 RN에서 제거됨(BE에는 잔존, 앱 미사용 — 4.10 참고).
+- 소셜 로그인: **BE는 OAuth2(Google/Kakao/Naver) 구현됨** — Spring Security `oauth2Login` 웹 리다이렉트 방식(`/login/oauth2/code/{provider}`, 성공 시 `/api/v1/auth/redirect/oauth2`로 리다이렉트). **RN 앱에는 소셜 로그인 UI 미연결**(이메일/닉네임 로그인만). Apple은 BE provider에 없고 기획 문서(`docs/documents/apple-login-*`, `docs/social-login-reintegration-plan.md`)만 존재.
+- 마이페이지 버전 정보 텍스트는 하드코딩(`2026.06.14`).
 - 일부 비로그인 상태 화면은 실제 API 대신 폴백 데이터 표시(마이페이지).
 
