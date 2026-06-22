@@ -3015,3 +3015,8 @@ export const interactionOpacity = {
 - BookSearchResult에 totalResults 추가, normalizeBookList에서 서버 totalResults 파싱(없으면 items.length 폴백)
 - useBookSearch가 totalResults를 state/캐시로 노출
 - "총 N개" 표기를 length → totalResults로 교체(헤더/책이야기/책장 3곳). 책 검색 단축 Phase 0~3 전부 완료
+
+# 2026-06-22 22:34:19 KST 책 검색 성능 BE 공유용 요약 문서 작성
+
+- 백엔드팀 공유용 요약 작성: 측정 기반(캐시히트 1~30ms vs 미스 250~980ms), 앱 개선(prefetch+캐시+요청절감), 협조요청(totalResults 유지/인기검색어 워밍), 레이트리밋(IP→토큰) 검토
+- docs/documents/book-search-performance-be-summary.md 신규
