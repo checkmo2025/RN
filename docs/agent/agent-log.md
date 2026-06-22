@@ -2985,3 +2985,9 @@ export const interactionOpacity = {
 - 관리자 신고 목록 BE/FE 계획과 모임 포커싱 문서를 `(done)` 완료 문서로 `docs/archive/`에 이동
 - 모임 포커싱 완료 확인 내용을 반영하고 TODO의 관련 문서 링크를 archive 경로로 갱신
 - 로컬 BE/FE 레퍼런스 디렉터리를 `reference_code`에서 `ref_code`로 변경하고 설정·활성 문서 참조를 일괄 수정
+
+# 2026-06-22 11:51:42 KST Expo 푸시 알림 RN·BE 상세 계획 문서화
+
+- 기존 푸시 알림 조사 문서를 `(done)`으로 archive 이동하고 RN·Backend 구현 계획서를 각각 신규 작성
+- Expo Push Service, 최초 안내 후 권한 요청, 인앱·푸시 동시 토글 정책과 device API·영속 delivery·ticket/receipt 처리 확정
+- Alert 27건, DialogOverlay 6건, Modal 13건의 버튼 순서를 감사해 취소성 버튼이 모두 먼저 배치된 것을 확인
