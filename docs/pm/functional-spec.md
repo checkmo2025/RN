@@ -1,7 +1,7 @@
 # checkmo_rn 기능명세서 (코드 기준)
 
 - 작성일: 2026-04-25
-- 갱신일: 2026-06-21 (RN/BE 코드 대조 후 보충: 신고 API, 채팅 제거, 차단 기능, 앱 토큰 로테이션, 버전 표기)
+- 갱신일: 2026-06-22 (조별 채팅 재도입: REST 히스토리/STOMP 송수신/메시지 신고)
 - 기준 코드: `src/screens/*`, `src/components/common/AppHeader.tsx`, `src/services/api/*`, BE `develop`
 - 목적: 현재 앱에 구현된 기능의 동작/권한/API 연동 범위를 정리
 
@@ -188,7 +188,10 @@
 - 정기모임 정보: `fetchClubMeeting`
 - 조별 참여자: `fetchClubMeetingMembers`
 - 조별 발제: `fetchClubMeetingTeamTopics`
-- 조별 채팅: **RN에서 제거됨** (`useMeetingChatStomp`/`fetchClubMeetingTeamChatMessages`/`sendClubMeetingTeamChatMessage` 모두 삭제). BE에는 `ChatHistoryController`/WebSocket 컨트롤러가 남아 있으나 앱은 호출하지 않음.
+- 조별 채팅: 조 상세의 FAB → 권한별 조 선택 → 전체 화면 채팅방. 일반 회원은 소속 조만, 운영진·개설자는 모든 조를 선택할 수 있음.
+  - 히스토리: `fetchClubMeetingTeamChatMessages`로 최근 30개 조회 후 상단 스크롤 시 커서 기반 추가 로드
+  - 실시간: `useMeetingChatStomp`로 `/sub/.../chat/messages` 구독, `/pub/.../chat/message` 발행
+  - 안전 기능: 타인 메시지 박스는 `CHAT + messageId` 신고, 작성자 프로필 모달은 `MEMBER + 닉네임` 신고 및 타인 프로필 이동
 - UI 기능:
   - 조 진입/참여자 펼침
   - 조 발제 완료 토글/정렬
@@ -374,9 +377,8 @@
 ## 10) 구현 제약/주의사항
 
 - `My` 탭은 비로그인 사용자가 직접 진입할 수 없음(탭 클릭 시 로그인 유도).
-- 모든 신고는 작성자(MEMBER) 단위로만 호출됨. 글/공지/댓글 단위 신고(`CLUB_NOTICE` 등)는 BE 지원이나 RN UI 미연결(1.4 참고).
-- 모임 조별 채팅은 RN에서 제거됨(BE에는 잔존, 앱 미사용 — 4.10 참고).
+- 신고 API는 대상별 `targetType`/`targetId`를 사용하며, 조별 채팅은 메시지 ID 기준 `CHAT` 신고를 연결함.
+- 조별 채팅은 텍스트 송수신·히스토리·메시지 신고만 지원함. 첨부/수정/삭제/읽음/푸시 알림/채팅 내 직접 차단은 미지원.
 - 소셜 로그인: **BE는 OAuth2(Google/Kakao/Naver) 구현됨** — Spring Security `oauth2Login` 웹 리다이렉트 방식(`/login/oauth2/code/{provider}`, 성공 시 `/api/v1/auth/redirect/oauth2`로 리다이렉트). **RN 앱에는 소셜 로그인 UI 미연결**(이메일/닉네임 로그인만). Apple은 BE provider에 없고 기획 문서(`docs/documents/apple-login-*`, `docs/documents/social-login-reintegration-plan.md`)만 존재.
 - 마이페이지 버전 정보 텍스트는 하드코딩(`2026.06.14`).
 - 일부 비로그인 상태 화면은 실제 API 대신 폴백 데이터 표시(마이페이지).
-

@@ -26,6 +26,7 @@ import type {
   TextInputContentSizeChangeEventData,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { SvgUri } from 'react-native-svg';
 import {
   useNavigation,
   useRoute,
@@ -45,6 +46,7 @@ import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
+import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
 import {
@@ -87,6 +89,7 @@ import { pickAndUploadImage as pickAndUploadImageUtil } from '../utils/imageUplo
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import { CLUB_DEFAULT_IMAGE } from '../constants/defaultAssets';
+import { CHAT_ICON_URI } from '../constants/iconMap';
 import {
   buildCalendarDays,
   formatCalendarMonthLabel,
@@ -119,6 +122,8 @@ import { GroupManagementOverlay } from './meeting/GroupManagementOverlay';
 import { useNoticeState } from './meeting/useNoticeState';
 import { useBookshelfState } from './meeting/useBookshelfState';
 import { useManagementState } from './meeting/useManagementState';
+import { MeetingChatOverlay } from './meeting/MeetingChatOverlay';
+import { useMeetingChatState } from './meeting/useMeetingChatState';
 import type {
   Group,
   CreateStep,
@@ -1248,6 +1253,30 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     resetBookshelfOnGroupChange,
   } = bookshelfState;
 
+  const meetingChatState = useMeetingChatState({
+    clubId: group.clubId,
+    meetingId: selectedRegularMeetingId,
+    regularMeetingInfo,
+    canManageClub,
+    currentMemberNickname,
+  });
+
+  useEffect(() => {
+    if (
+      activeTab === 'bookshelf' &&
+      bookshelfViewMode === 'REGULAR_GROUP' &&
+      selectedRegularGroup
+    ) {
+      return;
+    }
+    meetingChatState.closeChat();
+  }, [
+    activeTab,
+    bookshelfViewMode,
+    meetingChatState.closeChat,
+    selectedRegularGroup,
+  ]);
+
   const {
     noticePage, setNoticePage,
     selectedNoticeId, setSelectedNoticeId,
@@ -2305,6 +2334,23 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         />
       ) : null}
       </ScrollView>
+      {activeTab === 'bookshelf' &&
+      bookshelfViewMode === 'REGULAR_GROUP' &&
+      selectedRegularGroup &&
+      isMember &&
+      !meetingChatState.pickerVisible &&
+      !meetingChatState.activeGroup ? (
+        <FloatingActionButton
+          onPress={meetingChatState.openPicker}
+          accessibilityLabel="채팅 조 선택"
+        >
+          <SvgUri uri={CHAT_ICON_URI} width={24} height={24} />
+        </FloatingActionButton>
+      ) : null}
+      <MeetingChatOverlay
+        state={meetingChatState}
+        currentMemberNickname={currentMemberNickname}
+      />
       <Modal
         visible={teamManageVisible}
         animationType="slide"

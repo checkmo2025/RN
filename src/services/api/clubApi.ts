@@ -442,6 +442,20 @@ export type ClubMeetingTeamTopics = {
   nextCursor: number | null;
 };
 
+export type ClubMeetingChatMessage = {
+  messageId: number;
+  content: string;
+  sendAt?: string;
+  senderNickname: string;
+  senderProfileImageUrl?: string;
+};
+
+export type ClubMeetingChatHistory = {
+  chats: ClubMeetingChatMessage[];
+  hasNext: boolean;
+  nextCursor: number | null;
+};
+
 
 export type ManageClubMeetingTeamsPayload = {
   teamMemberList: Array<{
@@ -517,6 +531,7 @@ type ApiResponseBookshelfReviews = ApiEnvelope<{
 type ApiResponseMeetingInfo = ApiEnvelope<unknown>;
 type ApiResponseMeetingMemberList = ApiEnvelope<unknown>;
 type ApiResponseMeetingTeamTopics = ApiEnvelope<unknown>;
+type ApiResponseMeetingChatHistory = ApiEnvelope<unknown>;
 
 function extractMeetingIdFromUrl(value?: string): number | undefined {
   if (!value) return undefined;
@@ -1088,6 +1103,39 @@ function normalizeMeetingTopic(raw: unknown): ClubMeetingTopic | null {
     authorNickname: authorInfo.nickname,
     authorProfileImageUrl: authorInfo.profileImageUrl,
     isSelected: toBooleanValue(record.isSelected) ?? false,
+  };
+}
+
+function normalizeMeetingChatMessage(raw: unknown): ClubMeetingChatMessage | null {
+  const record = asRecord(raw);
+  if (!record) return null;
+  const messageId = toNumberValue(firstDefined(record.messageId, record.id));
+  if (!messageId) return null;
+  const senderInfo = normalizeBasicMemberInfo(
+    firstDefined(record.sender, record.authorInfo, record.memberInfo, record.author),
+  );
+
+  return {
+    messageId,
+    content: toStringValue(record.content) ?? '',
+    sendAt: toStringValue(firstDefined(record.sendAt, record.createdAt)),
+    senderNickname: senderInfo.nickname,
+    senderProfileImageUrl: senderInfo.profileImageUrl,
+  };
+}
+
+function normalizeMeetingChatHistory(raw: unknown): ClubMeetingChatHistory {
+  const record = asRecord(raw);
+  const rawChats = firstDefined(record?.chats, record?.chatList, record?.chatHistoryList);
+
+  return {
+    chats: Array.isArray(rawChats)
+      ? rawChats
+          .map(normalizeMeetingChatMessage)
+          .filter((item): item is ClubMeetingChatMessage => Boolean(item))
+      : [],
+    hasNext: toBooleanValue(record?.hasNext) ?? false,
+    nextCursor: toNumberValue(record?.nextCursor) ?? null,
   };
 }
 
@@ -1991,4 +2039,23 @@ export async function fetchClubMeetingTeamTopics(
     hasNext: Boolean(result.hasNext),
     nextCursor: toNumberValue(result.nextCursor) ?? null,
   };
+}
+
+export async function fetchClubMeetingTeamChatMessages(
+  clubId: number,
+  meetingId: number,
+  teamId: number,
+  cursorId?: number,
+  options?: { suppressErrorToast?: boolean },
+): Promise<ClubMeetingChatHistory> {
+  const response = await requestJson<ApiResponseMeetingChatHistory>(
+    `/clubs/${clubId}/meetings/${meetingId}/teams/${teamId}/chat/messages`,
+    {
+      method: 'GET',
+      query: { cursorId },
+      suppressErrorToast: options?.suppressErrorToast,
+    },
+  );
+
+  return normalizeMeetingChatHistory(unwrapResult(response));
 }

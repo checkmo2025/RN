@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
-import { PUBLIC_ENV } from '../../constants/publicEnv';
+import { createCheckmoStompClient } from './createCheckmoStompClient';
 
 export type TopicUpdatePayload = {
   clubId: number;
@@ -53,22 +53,7 @@ export function useRegularGroupStomp({ clubId, meetingId, teamId, enabled, onTop
 
     const subDestination = `/sub/clubs/${clubId}/meetings/${meetingId}/teams/${teamId}/presentation`;
 
-    const client = new Client({
-      // iOS 네이티브 WebSocket은 User-Agent를 안 보내서 nginx 봇 차단(빈 UA=444)에 걸림.
-      // webSocketFactory로 직접 만들어 User-Agent 헤더를 붙인다. 서브프로토콜은 brokerURL 기본값과 동일하게 전달.
-      webSocketFactory: () =>
-        new (WebSocket as any)(
-          PUBLIC_ENV.WS_BASE_URL,
-          ['v12.stomp', 'v11.stomp', 'v10.stomp'],
-          { headers: { 'User-Agent': 'checkmo-app' } },
-        ),
-      heartbeatOutgoing: 25000,
-      heartbeatIncoming: 20000,
-      reconnectDelay: 5000,
-      // RN WebSocket은 text 프레임 전송 시 STOMP 종료 NULL(\0)을 잘라먹어 서버가 CONNECT를 못 받음.
-      // 바이너리 프레임으로 보내 \0까지 그대로 전송. appendMissingNULLonIncoming(수신측)과 짝으로 사용.
-      forceBinaryWSFrames: true,
-      appendMissingNULLonIncoming: true,
+    const client = createCheckmoStompClient({
       onConnect: () => {
         setIsConnected(true);
         console.log('[STOMP] connected, subscribing to', subDestination);

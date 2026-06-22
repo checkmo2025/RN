@@ -3020,3 +3020,16 @@ export const interactionOpacity = {
 
 - 백엔드팀 공유용 요약 작성: 측정 기반(캐시히트 1~30ms vs 미스 250~980ms), 앱 개선(prefetch+캐시+요청절감), 협조요청(totalResults 유지/인기검색어 워밍), 레이트리밋(IP→토큰) 검토
 - docs/documents/book-search-performance-be-summary.md 신규
+
+# 2026-06-22 22:47:48 KST 조별 채팅 기능 재도입
+
+- 정기모임 조 상세에 채팅 FAB·권한별 조 선택·전체 화면 채팅방을 복원하고 최근 30개/상단 커서 페이징을 구현
+- RN STOMP 공통 설정을 추출해 채팅 송수신·재연결 누락 병합과 기존 발제 실시간 동기화에 함께 적용
+- 타인 메시지 `CHAT + messageId` 신고, 작성자 프로필 요약 모달·타인 프로필 이동을 추가하고 기능 명세/TODO/CHAT-03 상태를 현행화
+- `npm run check` 통과(typography, spacing, typecheck, Expo Doctor 18/18)
+
+# 2026-06-22 23:10:01 KST 채팅 프로필·신고 상호작용 수정
+
+- 채팅 전체 화면 위 네이티브 모달 적층을 제거하고 프로필·신고를 채팅 화면 내부 오버레이로 전환
+- 작성자 클릭은 프로필 사진·아이디·사용자 신고·바로가기 모달, 타인 메시지 박스 클릭은 메시지 신고로 분리
+- 채팅 메시지의 불필요한 `⋮` 메뉴를 제거하고 `npm run check`·Expo Doctor 18/18 통과
