@@ -1,7 +1,7 @@
 # 관리자 회원 신고 목록 Web FE 구현 계획
 
 > 작성 기준일: 2026-06-21 KST
-> 기준 코드: `reference_code/FE`의 `fix-397-bug`
+> 기준 코드: `ref_code/FE`의 `fix-397-bug`
 > 선행 조건: BE 관리자 회원 신고 목록 API 배포
 
 ## 1. 목표

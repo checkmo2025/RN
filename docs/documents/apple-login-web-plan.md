@@ -1,7 +1,7 @@
 # Apple 로그인 웹 FE 구현 계획
 
 > 작성 기준일: 2026-06-21 KST
-> 기준 코드: `reference_code/FE` `fix-397-bug`
+> 기준 코드: `ref_code/FE` `fix-397-bug`
 > 상태: 구현 대기
 
 ## 1. 목표와 범위
@@ -101,7 +101,7 @@ sequenceDiagram
 
 ## 5. 환경변수와 provider 타입
 
-`reference_code/FE/.env`의 기존 provider 설정 옆에 추가한다.
+`ref_code/FE/.env`의 기존 provider 설정 옆에 추가한다.
 
 ```dotenv
 NEXT_PUBLIC_APPLE_AUTH_URL=https://api.checkmo.co.kr/oauth2/authorization/apple

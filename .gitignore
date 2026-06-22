@@ -43,4 +43,4 @@ yarn-error.*
 /android
 
 # reference-only clones (BE/FE) — separate GitHub repos, never commit/push from RN, excluded from build
-/reference_code
+/ref_code

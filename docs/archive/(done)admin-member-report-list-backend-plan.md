@@ -1,7 +1,7 @@
 # 관리자 회원 신고 목록 Backend 구현 계획
 
 > 작성 기준일: 2026-06-21 KST
-> 기준 코드: `reference_code/BE`의 `develop`
+> 기준 코드: `ref_code/BE`의 `develop`
 > 화면 의미: 관리자 회원 상세에서 **해당 회원이 제출한 신고**를 조회한다.
 
 ## 1. 목표
@@ -276,4 +276,3 @@ List<Report> findReportsByReporterId(
 ./gradlew test --tests checkmo.CheckmoApplicationTests
 ./gradlew test
 ```
-

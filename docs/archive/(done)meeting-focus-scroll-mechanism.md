@@ -89,8 +89,10 @@ const focusGroupTitle = useCallback((animated: boolean) => {
 
 ---
 
-## 현재 확인 필요 사항
+## 완료 확인
 
-- [ ] 탭 전환 시 `focusGroupTitle` 타이밍이 스켈레톤 로딩과 충돌하는지 확인
-- [ ] `shouldScrollToBookshelfDetailRef` 가 초기 로딩 스켈레톤 표시 중 트리거될 경우 스크롤 동작 확인
-- [ ] `hasFocusedGroupTitleRef` 리셋이 워크스페이스 재로드 시 올바르게 동작하는지 확인
+- [x] 탭 전환 시 `focusGroupTitle` 타이밍과 스켈레톤 로딩 간 충돌 없음
+- [x] `shouldScrollToBookshelfDetailRef` 초기 로딩 시 책장 상세 포커싱 정상 동작
+- [x] 워크스페이스 재로드 및 모임 변경 시 초기 포커싱 정상 동작
+
+> 2026-06-13 실기기 QA 완료. 모임 홈/공지/책장 탭은 그룹 타이틀 기준으로 포커싱하고, 책장 상세는 breadcrumb 기준으로 별도 포커싱한다.

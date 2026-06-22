@@ -5,6 +5,6 @@
   },
   "exclude": [
     "node_modules",
-    "reference_code"
+    "ref_code"
   ]
 }

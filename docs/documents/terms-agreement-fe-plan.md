@@ -1,7 +1,7 @@
 # 약관 동의 매핑 웹 FE 구현 계획
 
 > 작성 기준일: 2026-06-21 KST
-> 기준 코드: `reference_code/FE`
+> 기준 코드: `ref_code/FE`
 > 상태: 구현 대기
 > BE 계약 원본: `docs/documents/terms-agreement-backend-plan.md`
 

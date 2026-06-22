@@ -1,7 +1,7 @@
 # Apple 로그인 백엔드 구현 계획
 
 > 작성 기준일: 2026-06-21 KST
-> 기준 코드: `reference_code/BE` `develop`
+> 기준 코드: `ref_code/BE` `develop`
 > 연동 대상: 웹(`kr.co.checkmo.web`) + RN iOS(`kr.co.checkmo.app`)
 > 상태: 구현 대기
 

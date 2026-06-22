@@ -1,7 +1,7 @@
 # 모임 회원 목록(로스터) 공개 구현 계획 — 일반 회원용
 
 > 작성일: 2026-06-21 KST
-> 기준 코드: RN `checkmo_rn`(src/), BE `reference_code/BE`(develop)
+> 기준 코드: RN `checkmo_rn`(src/), BE `ref_code/BE`(develop)
 > 상태: ⬜ 계획 확정(구현 대기)
 > 목적: 지금은 운영진(STAFF/OWNER)만 볼 수 있는 모임 회원 목록을, **그 모임의 가입 회원이면 누구나** 볼 수 있게 한다. (프로필 사진·닉네임·역할, 탭하면 프로필 이동)
 
@@ -21,7 +21,7 @@
 - 관리용 상태(PENDING/WITHDRAWN/KICKED)까지 다루는 계약이라 공개용과 정책이 섞임.
 - → 가볍고 안전한 **별도 엔드포인트**가 맞음.
 
-## 1. BE 구현 (reference_code/BE)
+## 1. BE 구현 (ref_code/BE)
 
 ### 1.1 신규 엔드포인트
 ```
