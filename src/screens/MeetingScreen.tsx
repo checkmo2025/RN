@@ -2672,8 +2672,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   onChangeText={handleChangeBookshelfComposerInput}
                   placeholder={
                     bookshelfComposerType === 'TOPIC'
-                      ? '발제 내용을 입력해주세요'
-                      : '한줄평을 입력해주세요'
+                      ? `발제 내용을 입력해주세요. (최대 ${INPUT_LIMITS.BOOKSHELF_COMPOSER}자)`
+                      : `한줄평을 입력해주세요. (최대 ${INPUT_LIMITS.BOOKSHELF_COMPOSER}자)`
                   }
                   placeholderTextColor={colors.gray3}
                   style={[styles.input, styles.textArea, styles.bookshelfComposerInput]}
@@ -2867,7 +2867,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               <FormTextInput
                 value={noticeDraft.title}
                 onChangeText={handleChangeNoticeTitle}
-                placeholder="제목을 입력해야 합니다."
+                placeholder={`제목을 입력해야 합니다. (최대 ${INPUT_LIMITS.NOTICE_TITLE}자)`}
                 placeholderTextColor={colors.gray3}
                 style={[
                   styles.input,
@@ -2893,7 +2893,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               <FormTextInput
                 value={noticeDraft.content}
                 onChangeText={handleChangeNoticeContent}
-                placeholder="내용을 입력해야 합니다."
+                placeholder={`내용을 입력해야 합니다. (최대 ${INPUT_LIMITS.NOTICE_CONTENT}자)`}
                 placeholderTextColor={colors.gray3}
                 style={[
                   styles.input,

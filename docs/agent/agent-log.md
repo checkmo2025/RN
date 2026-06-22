@@ -2991,3 +2991,9 @@ export const interactionOpacity = {
 - 기존 푸시 알림 조사 문서를 `(done)`으로 archive 이동하고 RN·Backend 구현 계획서를 각각 신규 작성
 - Expo Push Service, 최초 안내 후 권한 요청, 인앱·푸시 동시 토글 정책과 device API·영속 delivery·ticket/receipt 처리 확정
 - Alert 27건, DialogOverlay 6건, Modal 13건의 버튼 순서를 감사해 취소성 버튼이 모두 먼저 배치된 것을 확인
+
+# 2026-06-22 14:06:12 KST 임시저장 삭제 + 입력 글자수 안내 보강
+
+- 마이페이지 임시저장 태그 옆에 삭제 버튼·확인 Alert를 추가하고 성공 시 목록 즉시 제거 및 중복 요청 차단
+- 공지사항 댓글의 BE 프로필 이미지 응답부터 RN 렌더링·기본 아바타·프로필 이동 연결을 확인하고 TODO 완료 처리
+- 발제·한줄평(300자), 공지 제목(50자), 공지 내용(2000자) placeholder에 최대 글자수 안내 추가

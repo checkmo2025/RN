@@ -51,7 +51,7 @@ import {
   toggleBookLikeByIsbn,
   type MemberLikedBookItem,
 } from '../services/api/bookApi';
-import { fetchMyBookStories } from '../services/api/bookStoryApi';
+import { deleteBookStory, fetchMyBookStories } from '../services/api/bookStoryApi';
 import { fetchMyClubs, leaveClub, type ClubCategoryCode } from '../services/api/clubApi';
 import { CATEGORY_CODE_TO_LABEL, CATEGORY_CHIP_COLOR } from '../constants/domain/category';
 import {
@@ -307,6 +307,7 @@ export function MyPageScreen() {
   const [showSettings, setShowSettings] = useState(false);
   const [selectedSetting, setSelectedSetting] = useState<string | null>(null);
   const [stories, setStories] = useState<StoryCard[]>([]);
+  const [deletingDraftStoryId, setDeletingDraftStoryId] = useState<number | null>(null);
   const [blockedMembers, setBlockedMembers] = useState<BlockedMember[]>([]);
   const [loadingBlockedMembers, setLoadingBlockedMembers] = useState(false);
   const [books, setBooks] = useState<BookCard[]>([]);
@@ -1007,6 +1008,51 @@ export function MyPageScreen() {
     void submit();
   }, [books]);
 
+  const handleDeleteDraftStory = useCallback(
+    (story: StoryCard) => {
+      const storyId = story.remoteId;
+      if (story.status !== 'DRAFT' || typeof storyId !== 'number' || storyId <= 0) {
+        showToast('삭제할 임시저장을 찾을 수 없습니다.');
+        return;
+      }
+      if (deletingDraftStoryId === storyId) return;
+
+      Alert.alert(
+        '임시저장 삭제',
+        `'${story.title}' 임시저장을 삭제하시겠습니까?`,
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '삭제',
+            style: 'destructive',
+            onPress: () => {
+              setDeletingDraftStoryId(storyId);
+              const submit = async () => {
+                try {
+                  await deleteBookStory(storyId);
+                  setStories((prev) => prev.filter((item) => item.remoteId !== storyId));
+                  showToast('임시저장을 삭제했습니다.');
+                } catch (error) {
+                  showToast(
+                    resolveApiError(
+                      error,
+                      STORY_FEED_ERROR_OVERRIDES,
+                      '임시저장을 삭제하지 못했습니다.',
+                    ),
+                  );
+                } finally {
+                  setDeletingDraftStoryId((prev) => (prev === storyId ? null : prev));
+                }
+              };
+              void submit();
+            },
+          },
+        ],
+      );
+    },
+    [deletingDraftStoryId],
+  );
+
   const renderStories = () => (
     <View style={[styles.gridContent, styles.cardWrap]}>
       {loadingStories ? (
@@ -1036,6 +1082,7 @@ export function MyPageScreen() {
         <Pressable
           key={item.id}
           style={({ pressed }) => [styles.storyCard, pressed && styles.pressed]}
+          disabled={deletingDraftStoryId === item.remoteId}
           onPress={() => {
             if (typeof item.remoteId !== 'number' || item.remoteId <= 0) {
               showToast('해당 책이야기를 찾을 수 없습니다.');
@@ -1068,7 +1115,27 @@ export function MyPageScreen() {
           </View>
           <View style={styles.storyActions}>
             {item.status === 'DRAFT' ? (
-              <Text style={styles.draftBadge}>임시저장</Text>
+              <View style={styles.draftActions}>
+                <Text style={styles.draftBadge}>임시저장</Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.draftDeleteButton,
+                    deletingDraftStoryId === item.remoteId && styles.draftDeleteButtonDisabled,
+                    pressed && deletingDraftStoryId !== item.remoteId && styles.pressed,
+                  ]}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    handleDeleteDraftStory(item);
+                  }}
+                  disabled={deletingDraftStoryId === item.remoteId}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.title} 임시저장 삭제`}
+                >
+                  <Text style={styles.draftDeleteButtonText}>
+                    {deletingDraftStoryId === item.remoteId ? '삭제 중...' : '삭제'}
+                  </Text>
+                </Pressable>
+              </View>
             ) : (
               <>
                 <View style={styles.inlineAction}>
@@ -3256,6 +3323,27 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
+  },
+  draftActions: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.xs,
+  },
+  draftDeleteButton: {
+    borderWidth: 1,
+    borderColor: colors.likeRed,
+    borderRadius: radius.xs,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xxs,
+  },
+  draftDeleteButtonDisabled: {
+    opacity: interactionOpacity.disabled,
+  },
+  draftDeleteButtonText: {
+    ...typography.body2_3,
+    color: colors.likeRed,
   },
   unblockButton: {
     ...typography.body2_3,
