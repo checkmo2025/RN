@@ -1035,6 +1035,10 @@ export const styles = StyleSheet.create({
     borderColor: colors.primary1,
     backgroundColor: colors.subbrown4,
   },
+  teamManageDropChipDragActive: {
+    borderColor: colors.green,
+    backgroundColor: colors.background,
+  },
   teamManageDropChipText: {
     ...typography.body2_2,
     color: colors.gray6,
@@ -1061,6 +1065,10 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.white,
     padding: spacing.md,
     gap: spacing.md,
+  },
+  teamManageCardDragActive: {
+    borderColor: colors.green,
+    backgroundColor: colors.background,
   },
   teamManageCardHeader: {
     flexDirection: 'row',

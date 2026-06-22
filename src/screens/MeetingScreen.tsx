@@ -100,7 +100,6 @@ import {
   formatDotDateTime,
   formatGenerationLabel,
   formatRegularGroupLabel,
-  getTeamManageTargetKey,
   parseDotDate,
   parseGenerationNumber,
   sanitizeGenerationInput,
@@ -120,7 +119,11 @@ import { GroupNoticeView } from './meeting/GroupNoticeView';
 import { GroupBookshelfView } from './meeting/GroupBookshelfView';
 import { GroupManagementOverlay } from './meeting/GroupManagementOverlay';
 import { useNoticeState } from './meeting/useNoticeState';
-import { useBookshelfState } from './meeting/useBookshelfState';
+import {
+  getTeamManageContentDropZoneId,
+  getTeamManageQuickDropZoneId,
+  useBookshelfState,
+} from './meeting/useBookshelfState';
 import { useManagementState } from './meeting/useManagementState';
 import { MeetingChatOverlay } from './meeting/MeetingChatOverlay';
 import { useMeetingChatState } from './meeting/useMeetingChatState';
@@ -1170,7 +1173,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     teamManageTeams,
     teamManageMembers,
     teamManageSelectedMemberId,
-    teamManageDropLayouts,
+    teamManageActiveDropZoneId,
     draggingTeamMemberId,
     draggingTeamMemberPosition,
     bookshelfCreateDraft, setBookshelfCreateDraft,
@@ -1205,11 +1208,9 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     teamManageUnassignedMembers,
     shouldScrollToBookshelfDetailRef,
     bookshelfMeetingDetailRequestIdRef,
-    teamManageDropRefs,
+    teamManageQuickDropRefs,
     teamManageScrollRef,
     teamManageScrollViewRef,
-    teamManageScrollOffsetRef,
-    teamManageScrollBoundsRef,
     reloadBookshelfMeetingDetail,
     loadMoreBookshelfTopics,
     closeBookshelfBookSelector,
@@ -1234,7 +1235,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     handleToggleRegularGroupPost,
     handleSortRegularGroupPosts,
     closeTeamManage,
-    refreshTeamManageDropLayouts,
+    refreshTeamManageQuickDropLayouts,
+    handleTeamManageContentDropLayout,
+    handleTeamManageScrollViewportLayout,
+    handleTeamManageScrollContentSizeChange,
+    handleTeamManageScroll,
     handlePressManageRegularGroups,
     handleAddTeamManageTeam,
     handleRemoveTeamManageTeam,
@@ -1242,6 +1247,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     handleTeamManageMemberGrant,
     handleTeamManageMemberMove,
     handleTeamManageMemberRelease,
+    cancelTeamManageDrag,
     handleSaveTeamManage,
     handleOpenBookshelfEdit,
     runBookshelfBookSearch,
@@ -2393,14 +2399,16 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               <View style={styles.teamManageDropBar}>
                 <View
                   ref={(node) => {
-                    teamManageDropRefs.current[getTeamManageTargetKey(null)] = node;
+                    teamManageQuickDropRefs.current[getTeamManageQuickDropZoneId(null)] = node;
                   }}
-                  onLayout={refreshTeamManageDropLayouts}
+                  onLayout={refreshTeamManageQuickDropLayouts}
                 >
                   <Pressable
                     style={({ pressed }) => [
                       styles.teamManageDropChip,
                       teamManageSelectedMemberId !== null && styles.teamManageDropChipActive,
+                      teamManageActiveDropZoneId === getTeamManageQuickDropZoneId(null) &&
+                        styles.teamManageDropChipDragActive,
                       pressed && styles.pressed,
                     ]}
                     onPress={() => handlePressTeamManageTarget(null)}
@@ -2414,14 +2422,19 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   <View
                     key={`team-manage-target-${team.teamNumber}`}
                     ref={(node) => {
-                      teamManageDropRefs.current[getTeamManageTargetKey(team.teamNumber)] = node;
+                      teamManageQuickDropRefs.current[
+                        getTeamManageQuickDropZoneId(team.teamNumber)
+                      ] = node;
                     }}
-                    onLayout={refreshTeamManageDropLayouts}
+                    onLayout={refreshTeamManageQuickDropLayouts}
                   >
                     <Pressable
                       style={({ pressed }) => [
                         styles.teamManageDropChip,
                         teamManageSelectedMemberId !== null && styles.teamManageDropChipActive,
+                        teamManageActiveDropZoneId ===
+                          getTeamManageQuickDropZoneId(team.teamNumber) &&
+                          styles.teamManageDropChipDragActive,
                         pressed && styles.pressed,
                       ]}
                       onPress={() => handlePressTeamManageTarget(team.teamNumber)}
@@ -2449,11 +2462,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
               <View
                 ref={teamManageScrollViewRef}
                 style={styles.managementScreenScroll}
-                onLayout={() => {
-                  teamManageScrollViewRef.current?.measureInWindow((_x, y, _w, height) => {
-                    teamManageScrollBoundsRef.current = { top: y, bottom: y + height };
-                  });
-                }}
+                onLayout={handleTeamManageScrollViewportLayout}
               >
               <ScrollView
                 ref={teamManageScrollRef}
@@ -2462,18 +2471,24 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 scrollEnabled={draggingTeamMemberId === null}
                 showsVerticalScrollIndicator={false}
                 scrollEventThrottle={16}
-                onScroll={(e) => {
-                  teamManageScrollOffsetRef.current = e.nativeEvent.contentOffset.y;
-                }}
+                onContentSizeChange={handleTeamManageScrollContentSizeChange}
+                onScroll={handleTeamManageScroll}
               >
                 {teamManageTeams.map((team) => (
                   <View
                     key={`team-manage-card-${team.teamNumber}`}
-                    ref={(node) => {
-                      teamManageDropRefs.current[getTeamManageTargetKey(team.teamNumber)] = node;
-                    }}
-                    onLayout={refreshTeamManageDropLayouts}
-                    style={styles.teamManageCard}
+                    onLayout={(event) =>
+                      handleTeamManageContentDropLayout(
+                        getTeamManageContentDropZoneId(team.teamNumber),
+                        event,
+                      )
+                    }
+                    style={[
+                      styles.teamManageCard,
+                      teamManageActiveDropZoneId ===
+                        getTeamManageContentDropZoneId(team.teamNumber) &&
+                        styles.teamManageCardDragActive,
+                    ]}
                   >
                     <View style={styles.teamManageCardHeader}>
                       <Text style={styles.teamManageCardTitle}>
@@ -2512,7 +2527,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                             }
                             onResponderMove={handleTeamManageMemberMove}
                             onResponderRelease={handleTeamManageMemberRelease}
-                            onResponderTerminate={handleTeamManageMemberRelease}
+                            onResponderTerminationRequest={() => false}
+                            onResponderTerminate={cancelTeamManageDrag}
                           >
                             <View style={styles.teamManageMemberAvatar}>
                               {member.profileImageUrl ? (
@@ -2539,11 +2555,17 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                 ))}
 
                 <View
-                  ref={(node) => {
-                    teamManageDropRefs.current[getTeamManageTargetKey(null)] = node;
-                  }}
-                  onLayout={refreshTeamManageDropLayouts}
-                  style={styles.teamManageCard}
+                  onLayout={(event) =>
+                    handleTeamManageContentDropLayout(
+                      getTeamManageContentDropZoneId(null),
+                      event,
+                    )
+                  }
+                  style={[
+                    styles.teamManageCard,
+                    teamManageActiveDropZoneId === getTeamManageContentDropZoneId(null) &&
+                      styles.teamManageCardDragActive,
+                  ]}
                 >
                   <View style={styles.teamManageCardHeader}>
                     <Text style={styles.teamManageCardTitle}>미배정 참여자</Text>
@@ -2568,7 +2590,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                           }
                           onResponderMove={handleTeamManageMemberMove}
                           onResponderRelease={handleTeamManageMemberRelease}
-                          onResponderTerminate={handleTeamManageMemberRelease}
+                          onResponderTerminationRequest={() => false}
+                          onResponderTerminate={cancelTeamManageDrag}
                         >
                           <View style={styles.teamManageMemberAvatar}>
                             {member.profileImageUrl ? (

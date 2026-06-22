@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, PanResponder, View } from 'react-native';
-import type { GestureResponderEvent } from 'react-native';
+import type {
+  GestureResponderEvent,
+  LayoutChangeEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+} from 'react-native';
 import type { ReportMemberModalState } from '../../components/common/ReportMemberModal';
 import { ApiError } from '../../services/api/http';
 import {
@@ -81,6 +86,38 @@ const MAX_REGULAR_GROUP_COUNT = 10;
 const BOOKSHELF_MEETING_TITLE_MAX_LENGTH = 12;
 const BOOKSHELF_MEETING_LOCATION_MAX_LENGTH = 12;
 const ISBN13_REGEX = /^\d{13}$/;
+const TEAM_MANAGE_DRAG_THRESHOLD = 6;
+const TEAM_MANAGE_AUTO_SCROLL_ZONE = 112;
+const TEAM_MANAGE_AUTO_SCROLL_MIN_SPEED = 180;
+const TEAM_MANAGE_AUTO_SCROLL_MAX_SPEED = 900;
+const TEAM_MANAGE_AUTO_SCROLL_MAX_DELTA_SECONDS = 0.05;
+
+type TeamManageDropLayout = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+type TeamManageScrollMetrics = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  contentHeight: number;
+  offset: number;
+};
+
+type TeamManageDropMatch = {
+  zoneId: string;
+  teamNumber: number | null;
+};
+
+export const getTeamManageQuickDropZoneId = (teamNumber: number | null) =>
+  `quick:${getTeamManageTargetKey(teamNumber)}`;
+
+export const getTeamManageContentDropZoneId = (teamNumber: number | null) =>
+  `content:${getTeamManageTargetKey(teamNumber)}`;
 
 const makeRegularGroupPendingKey = (groupId: string, postId: string) =>
   `${groupId}:${postId}`;
@@ -185,9 +222,7 @@ export function useBookshelfState({
   const [teamManageTeams, setTeamManageTeams] = useState<TeamManageTeamItem[]>([]);
   const [teamManageMembers, setTeamManageMembers] = useState<TeamManageMemberItem[]>([]);
   const [teamManageSelectedMemberId, setTeamManageSelectedMemberId] = useState<number | null>(null);
-  const [teamManageDropLayouts, setTeamManageDropLayouts] = useState<
-    Record<string, { x: number; y: number; width: number; height: number }>
-  >({});
+  const [teamManageActiveDropZoneId, setTeamManageActiveDropZoneId] = useState<string | null>(null);
   const [draggingTeamMemberId, setDraggingTeamMemberId] = useState<number | null>(null);
   const [draggingTeamMemberPosition, setDraggingTeamMemberPosition] = useState<{
     x: number;
@@ -230,7 +265,9 @@ export function useBookshelfState({
   const shouldScrollToBookshelfDetailRef = useRef(false);
   const bookshelfMeetingDetailRequestIdRef = useRef<Record<number, number>>({});
   const bookshelfDetailLoadingCountByMeetingIdRef = useRef<Record<number, number>>({});
-  const teamManageDropRefs = useRef<Record<string, View | null>>({});
+  const teamManageQuickDropRefs = useRef<Record<string, View | null>>({});
+  const teamManageQuickDropLayoutsRef = useRef<Record<string, TeamManageDropLayout>>({});
+  const teamManageContentDropLayoutsRef = useRef<Record<string, TeamManageDropLayout>>({});
   const dragStartRef = useRef<{
     memberId: number;
     pageX: number;
@@ -239,10 +276,17 @@ export function useBookshelfState({
   } | null>(null);
   const teamManageScrollRef = useRef<import('react-native').ScrollView>(null);
   const teamManageScrollViewRef = useRef<View>(null);
-  const teamManageScrollOffsetRef = useRef(0);
-  const teamManageScrollBoundsRef = useRef<{ top: number; bottom: number } | null>(null);
+  const teamManageScrollMetricsRef = useRef<TeamManageScrollMetrics>({
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+    contentHeight: 0,
+    offset: 0,
+  });
   const dragAutoScrollFrameRef = useRef<number | null>(null);
-  const dragCurrentPageYRef = useRef(0);
+  const dragAutoScrollLastTimestampRef = useRef<number | null>(null);
+  const dragCurrentPagePositionRef = useRef({ x: 0, y: 0 });
   const currentMemberNicknameRef = useRef(currentMemberNickname);
   const teamToGroupIdRef = useRef<Record<number, string>>({});
   const regularGroupPostsByIdRef = useRef(regularGroupPostsById);
@@ -497,7 +541,7 @@ export function useBookshelfState({
 
   useEffect(() => {
     if (!teamManageVisible) return;
-    refreshTeamManageDropLayouts();
+    refreshTeamManageQuickDropLayouts();
   }, [teamManageTeams, teamManageVisible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAllBookshelfReviewsForMeeting = useCallback(
@@ -1311,6 +1355,7 @@ export function useBookshelfState({
       cancelAnimationFrame(dragAutoScrollFrameRef.current);
       dragAutoScrollFrameRef.current = null;
     }
+    dragAutoScrollLastTimestampRef.current = null;
   }, []);
 
   const closeTeamManage = useCallback(() => {
@@ -1319,34 +1364,99 @@ export function useBookshelfState({
     setTeamManageSelectedMemberId(null);
     setDraggingTeamMemberId(null);
     setDraggingTeamMemberPosition(null);
-    setTeamManageDropLayouts({});
+    setTeamManageActiveDropZoneId(null);
     dragStartRef.current = null;
     stopDragAutoScroll();
-    teamManageScrollBoundsRef.current = null;
-    teamManageScrollOffsetRef.current = 0;
+    dragCurrentPagePositionRef.current = { x: 0, y: 0 };
+    teamManageQuickDropRefs.current = {};
+    teamManageQuickDropLayoutsRef.current = {};
+    teamManageContentDropLayoutsRef.current = {};
+    teamManageScrollMetricsRef.current = {
+      left: 0,
+      top: 0,
+      width: 0,
+      height: 0,
+      contentHeight: 0,
+      offset: 0,
+    };
   }, [stopDragAutoScroll, teamManageSaving]);
 
-  const refreshTeamManageDropLayouts = useCallback(() => {
+  const refreshTeamManageQuickDropLayouts = useCallback(() => {
     if (!teamManageVisible) return;
-    const entries = Object.entries(teamManageDropRefs.current).filter(([, node]) => Boolean(node));
+    const entries = Object.entries(teamManageQuickDropRefs.current).filter(([, node]) =>
+      Boolean(node),
+    );
     if (entries.length === 0) {
-      setTeamManageDropLayouts({});
+      teamManageQuickDropLayoutsRef.current = {};
       return;
     }
     requestAnimationFrame(() => {
-      const nextLayouts: Record<string, { x: number; y: number; width: number; height: number }> = {};
+      const nextLayouts: Record<string, TeamManageDropLayout> = {};
       let measuredCount = 0;
       entries.forEach(([key, node]) => {
         node?.measureInWindow((x, y, width, height) => {
           nextLayouts[key] = { x, y, width, height };
           measuredCount += 1;
           if (measuredCount === entries.length) {
-            setTeamManageDropLayouts(nextLayouts);
+            teamManageQuickDropLayoutsRef.current = nextLayouts;
           }
         });
       });
     });
   }, [teamManageVisible]);
+
+  const handleTeamManageContentDropLayout = useCallback(
+    (zoneId: string, event: LayoutChangeEvent) => {
+      const { x, y, width, height } = event.nativeEvent.layout;
+      teamManageContentDropLayoutsRef.current[zoneId] = { x, y, width, height };
+    },
+    [],
+  );
+
+  const handleTeamManageScrollViewportLayout = useCallback(() => {
+    teamManageScrollViewRef.current?.measureInWindow((left, top, width, height) => {
+      const maxOffset = Math.max(
+        0,
+        teamManageScrollMetricsRef.current.contentHeight - height,
+      );
+      const offset = Math.min(teamManageScrollMetricsRef.current.offset, maxOffset);
+      teamManageScrollMetricsRef.current = {
+        ...teamManageScrollMetricsRef.current,
+        left,
+        top,
+        width,
+        height,
+        offset,
+      };
+      teamManageScrollRef.current?.scrollTo({ y: offset, animated: false });
+    });
+  }, []);
+
+  const handleTeamManageScrollContentSizeChange = useCallback(
+    (_width: number, contentHeight: number) => {
+      teamManageScrollMetricsRef.current.contentHeight = contentHeight;
+      const maxOffset = Math.max(
+        0,
+        contentHeight - teamManageScrollMetricsRef.current.height,
+      );
+      teamManageScrollMetricsRef.current.offset = Math.min(
+        teamManageScrollMetricsRef.current.offset,
+        maxOffset,
+      );
+      teamManageScrollRef.current?.scrollTo({
+        y: teamManageScrollMetricsRef.current.offset,
+        animated: false,
+      });
+    },
+    [],
+  );
+
+  const handleTeamManageScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      teamManageScrollMetricsRef.current.offset = event.nativeEvent.contentOffset.y;
+    },
+    [],
+  );
 
   const moveTeamManageMemberToTarget = useCallback(
     (memberId: number, targetTeamNumber: number | null) => {
@@ -1372,22 +1482,57 @@ export function useBookshelfState({
     [],
   );
 
-  const findTeamManageDropTarget = useCallback(
-    (pageX: number, pageY: number) => {
-      const matchedEntry = Object.entries(teamManageDropLayouts).find(
+  const findTeamManageDropMatch = useCallback(
+    (pageX: number, pageY: number): TeamManageDropMatch | undefined => {
+      const resolveZone = (zoneId: string): TeamManageDropMatch | undefined => {
+        const key = zoneId.slice(zoneId.indexOf(':') + 1);
+        if (key === getTeamManageTargetKey(null)) return { zoneId, teamNumber: null };
+        const teamNumber = Number(key.replace('team-', ''));
+        if (!Number.isFinite(teamNumber)) return undefined;
+        return teamManageTeams.some((team) => team.teamNumber === teamNumber)
+          ? { zoneId, teamNumber }
+          : undefined;
+      };
+      const quickMatch = Object.entries(teamManageQuickDropLayoutsRef.current).find(
         ([, layout]) =>
           pageX >= layout.x &&
           pageX <= layout.x + layout.width &&
           pageY >= layout.y &&
           pageY <= layout.y + layout.height,
       );
-      if (!matchedEntry) return undefined;
-      const [key] = matchedEntry;
-      if (key === getTeamManageTargetKey(null)) return null;
-      const teamNumber = Number(key.replace('team-', ''));
-      return Number.isFinite(teamNumber) ? teamNumber : undefined;
+      if (quickMatch) return resolveZone(quickMatch[0]);
+
+      const metrics = teamManageScrollMetricsRef.current;
+      const contentX = pageX - metrics.left;
+      const contentY = pageY - metrics.top + metrics.offset;
+      const insideViewport =
+        pageX >= metrics.left &&
+        pageX <= metrics.left + metrics.width &&
+        pageY >= metrics.top &&
+        pageY <= metrics.top + metrics.height;
+      const contentMatch = insideViewport
+        ? Object.entries(teamManageContentDropLayoutsRef.current).find(
+            ([, layout]) =>
+              contentX >= layout.x &&
+              contentX <= layout.x + layout.width &&
+              contentY >= layout.y &&
+              contentY <= layout.y + layout.height,
+          )
+        : undefined;
+      if (!contentMatch) return undefined;
+      return resolveZone(contentMatch[0]);
     },
-    [teamManageDropLayouts],
+    [teamManageTeams],
+  );
+
+  const updateTeamManageActiveDropTarget = useCallback(
+    (pageX: number, pageY: number) => {
+      const nextZoneId = findTeamManageDropMatch(pageX, pageY)?.zoneId ?? null;
+      setTeamManageActiveDropZoneId((current) =>
+        current === nextZoneId ? current : nextZoneId,
+      );
+    },
+    [findTeamManageDropMatch],
   );
 
   const handlePressManageRegularGroups = useCallback(() => {
@@ -1455,11 +1600,16 @@ export function useBookshelfState({
         setTeamManageVisible(false);
       } finally {
         setTeamManageLoading(false);
-        setTimeout(refreshTeamManageDropLayouts, 0);
+        setTimeout(refreshTeamManageQuickDropLayouts, 0);
       }
     };
     void open();
-  }, [canManageClub, group.clubId, refreshTeamManageDropLayouts, selectedRegularMeetingId]);
+  }, [
+    canManageClub,
+    group.clubId,
+    refreshTeamManageQuickDropLayouts,
+    selectedRegularMeetingId,
+  ]);
 
   const handleAddTeamManageTeam = useCallback(() => {
     setTeamManageTeams((prev) => {
@@ -1477,8 +1627,8 @@ export function useBookshelfState({
         (a, b) => a.teamNumber - b.teamNumber,
       );
     });
-    setTimeout(refreshTeamManageDropLayouts, 0);
-  }, [refreshTeamManageDropLayouts]);
+    setTimeout(refreshTeamManageQuickDropLayouts, 0);
+  }, [refreshTeamManageQuickDropLayouts]);
 
   const handleRemoveTeamManageTeam = useCallback(
     (teamNumber: number) => {
@@ -1489,9 +1639,9 @@ export function useBookshelfState({
         }
         return prev.filter((team) => team.teamNumber !== teamNumber);
       });
-      setTimeout(refreshTeamManageDropLayouts, 0);
+      setTimeout(refreshTeamManageQuickDropLayouts, 0);
     },
-    [refreshTeamManageDropLayouts],
+    [refreshTeamManageQuickDropLayouts],
   );
 
   const handlePressTeamManageTarget = useCallback(
@@ -1504,45 +1654,72 @@ export function useBookshelfState({
 
   const startDragAutoScroll = useCallback(() => {
     if (dragAutoScrollFrameRef.current !== null) return;
-    const ZONE = 80;
-    const MAX_SPEED = 10;
-    const tick = () => {
-      const bounds = teamManageScrollBoundsRef.current;
+    dragAutoScrollLastTimestampRef.current = null;
+    const tick = (timestamp: number) => {
+      const dragState = dragStartRef.current;
+      const metrics = teamManageScrollMetricsRef.current;
       const scrollRef = teamManageScrollRef.current;
-      if (!bounds || !scrollRef) {
+      if (!dragState?.moved || !scrollRef || metrics.height <= 0) {
         dragAutoScrollFrameRef.current = null;
+        dragAutoScrollLastTimestampRef.current = null;
         return;
       }
-      const pageY = dragCurrentPageYRef.current;
-      if (pageY < bounds.top + ZONE) {
-        const ratio = Math.max(0, 1 - (pageY - bounds.top) / ZONE);
-        teamManageScrollOffsetRef.current = Math.max(
-          0,
-          teamManageScrollOffsetRef.current - MAX_SPEED * ratio,
-        );
-        scrollRef.scrollTo({ y: teamManageScrollOffsetRef.current, animated: false });
-        dragAutoScrollFrameRef.current = requestAnimationFrame(tick);
-      } else if (pageY > bounds.bottom - ZONE) {
-        const ratio = Math.max(0, (pageY - (bounds.bottom - ZONE)) / ZONE);
-        teamManageScrollOffsetRef.current += MAX_SPEED * ratio;
-        scrollRef.scrollTo({ y: teamManageScrollOffsetRef.current, animated: false });
-        dragAutoScrollFrameRef.current = requestAnimationFrame(tick);
-      } else {
+      const { x: pageX, y: pageY } = dragCurrentPagePositionRef.current;
+      const bottom = metrics.top + metrics.height;
+      const topIntensity = Math.max(
+        0,
+        Math.min(1, (metrics.top + TEAM_MANAGE_AUTO_SCROLL_ZONE - pageY) / TEAM_MANAGE_AUTO_SCROLL_ZONE),
+      );
+      const bottomIntensity = Math.max(
+        0,
+        Math.min(1, (pageY - (bottom - TEAM_MANAGE_AUTO_SCROLL_ZONE)) / TEAM_MANAGE_AUTO_SCROLL_ZONE),
+      );
+      const direction = topIntensity > 0 ? -1 : bottomIntensity > 0 ? 1 : 0;
+      const intensity = direction < 0 ? topIntensity : bottomIntensity;
+      if (direction === 0) {
         dragAutoScrollFrameRef.current = null;
+        dragAutoScrollLastTimestampRef.current = null;
+        return;
       }
+
+      const previousTimestamp = dragAutoScrollLastTimestampRef.current;
+      const deltaSeconds =
+        previousTimestamp === null
+          ? 1 / 60
+          : Math.min(
+              TEAM_MANAGE_AUTO_SCROLL_MAX_DELTA_SECONDS,
+              Math.max(0, (timestamp - previousTimestamp) / 1000),
+            );
+      dragAutoScrollLastTimestampRef.current = timestamp;
+      const speed =
+        TEAM_MANAGE_AUTO_SCROLL_MIN_SPEED +
+        (TEAM_MANAGE_AUTO_SCROLL_MAX_SPEED - TEAM_MANAGE_AUTO_SCROLL_MIN_SPEED) * intensity;
+      const maxOffset = Math.max(0, metrics.contentHeight - metrics.height);
+      const nextOffset = Math.max(
+        0,
+        Math.min(maxOffset, metrics.offset + direction * speed * deltaSeconds),
+      );
+      if (Math.abs(nextOffset - metrics.offset) < 0.5) {
+        dragAutoScrollFrameRef.current = null;
+        dragAutoScrollLastTimestampRef.current = null;
+        return;
+      }
+
+      metrics.offset = nextOffset;
+      scrollRef.scrollTo({ y: nextOffset, animated: false });
+      updateTeamManageActiveDropTarget(pageX, pageY);
+      dragAutoScrollFrameRef.current = requestAnimationFrame(tick);
     };
     dragAutoScrollFrameRef.current = requestAnimationFrame(tick);
-  }, []);
+  }, [updateTeamManageActiveDropTarget]);
 
   const finishTeamManageDrag = useCallback(
     (pageX: number, pageY: number) => {
       const dragState = dragStartRef.current;
       if (!dragState) return;
-      const targetTeamNumber = findTeamManageDropTarget(pageX, pageY);
+      const target = findTeamManageDropMatch(pageX, pageY);
       if (dragState.moved) {
-        if (typeof targetTeamNumber !== 'undefined') {
-          moveTeamManageMemberToTarget(dragState.memberId, targetTeamNumber);
-        }
+        if (target) moveTeamManageMemberToTarget(dragState.memberId, target.teamNumber);
       } else {
         setTeamManageSelectedMemberId((prev) =>
           prev === dragState.memberId ? null : dragState.memberId,
@@ -1550,11 +1727,22 @@ export function useBookshelfState({
       }
       stopDragAutoScroll();
       dragStartRef.current = null;
+      dragCurrentPagePositionRef.current = { x: 0, y: 0 };
+      setTeamManageActiveDropZoneId(null);
       setDraggingTeamMemberId(null);
       setDraggingTeamMemberPosition(null);
     },
-    [findTeamManageDropTarget, moveTeamManageMemberToTarget, stopDragAutoScroll],
+    [findTeamManageDropMatch, moveTeamManageMemberToTarget, stopDragAutoScroll],
   );
+
+  const cancelTeamManageDrag = useCallback(() => {
+    stopDragAutoScroll();
+    dragStartRef.current = null;
+    dragCurrentPagePositionRef.current = { x: 0, y: 0 };
+    setTeamManageActiveDropZoneId(null);
+    setDraggingTeamMemberId(null);
+    setDraggingTeamMemberPosition(null);
+  }, [stopDragAutoScroll]);
 
   const handleTeamManageMemberGrant = useCallback(
     (memberId: number, event: GestureResponderEvent) => {
@@ -1563,6 +1751,10 @@ export function useBookshelfState({
         pageX: event.nativeEvent.pageX,
         pageY: event.nativeEvent.pageY,
         moved: false,
+      };
+      dragCurrentPagePositionRef.current = {
+        x: event.nativeEvent.pageX,
+        y: event.nativeEvent.pageY,
       };
       setDraggingTeamMemberId(memberId);
       setDraggingTeamMemberPosition({
@@ -1579,20 +1771,28 @@ export function useBookshelfState({
       if (!dragState) return;
       const dx = Math.abs(event.nativeEvent.pageX - dragState.pageX);
       const dy = Math.abs(event.nativeEvent.pageY - dragState.pageY);
-      if (dx > 6 || dy > 6) dragState.moved = true;
+      if (dx > TEAM_MANAGE_DRAG_THRESHOLD || dy > TEAM_MANAGE_DRAG_THRESHOLD) {
+        dragState.moved = true;
+      }
       const { pageX, pageY } = event.nativeEvent;
-      dragCurrentPageYRef.current = pageY;
+      dragCurrentPagePositionRef.current = { x: pageX, y: pageY };
       setDraggingTeamMemberPosition({ x: pageX, y: pageY });
       if (dragState.moved) {
-        const bounds = teamManageScrollBoundsRef.current;
-        if (bounds && (pageY < bounds.top + 80 || pageY > bounds.bottom - 80)) {
+        updateTeamManageActiveDropTarget(pageX, pageY);
+        const metrics = teamManageScrollMetricsRef.current;
+        const bottom = metrics.top + metrics.height;
+        if (
+          metrics.height > 0 &&
+          (pageY < metrics.top + TEAM_MANAGE_AUTO_SCROLL_ZONE ||
+            pageY > bottom - TEAM_MANAGE_AUTO_SCROLL_ZONE)
+        ) {
           startDragAutoScroll();
         } else {
           stopDragAutoScroll();
         }
       }
     },
-    [startDragAutoScroll, stopDragAutoScroll],
+    [startDragAutoScroll, stopDragAutoScroll, updateTeamManageActiveDropTarget],
   );
 
   const handleTeamManageMemberRelease = useCallback(
@@ -2101,7 +2301,7 @@ export function useBookshelfState({
     teamManageTeams,
     teamManageMembers,
     teamManageSelectedMemberId,
-    teamManageDropLayouts,
+    teamManageActiveDropZoneId,
     draggingTeamMemberId,
     draggingTeamMemberPosition,
     bookshelfCreateDraft, setBookshelfCreateDraft,
@@ -2136,11 +2336,9 @@ export function useBookshelfState({
     teamManageUnassignedMembers,
     shouldScrollToBookshelfDetailRef,
     bookshelfMeetingDetailRequestIdRef,
-    teamManageDropRefs,
+    teamManageQuickDropRefs,
     teamManageScrollRef,
     teamManageScrollViewRef,
-    teamManageScrollOffsetRef,
-    teamManageScrollBoundsRef,
     reloadBookshelfMeetingDetail,
     loadMoreBookshelfTopics,
     closeBookshelfBookSelector,
@@ -2165,7 +2363,11 @@ export function useBookshelfState({
     handleToggleRegularGroupPost,
     handleSortRegularGroupPosts,
     closeTeamManage,
-    refreshTeamManageDropLayouts,
+    refreshTeamManageQuickDropLayouts,
+    handleTeamManageContentDropLayout,
+    handleTeamManageScrollViewportLayout,
+    handleTeamManageScrollContentSizeChange,
+    handleTeamManageScroll,
     handlePressManageRegularGroups,
     handleAddTeamManageTeam,
     handleRemoveTeamManageTeam,
@@ -2173,6 +2375,7 @@ export function useBookshelfState({
     handleTeamManageMemberGrant,
     handleTeamManageMemberMove,
     handleTeamManageMemberRelease,
+    cancelTeamManageDrag,
     handleSaveTeamManage,
     handleOpenBookshelfEdit,
     runBookshelfBookSearch,

@@ -16,6 +16,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Clipboard from 'expo-clipboard';
 
 import { DefaultProfileAvatar } from '../../components/common/DefaultProfileAvatar';
 import { DialogOverlay } from '../../components/common/DialogOverlay';
@@ -35,6 +36,7 @@ import {
   spacing,
   typography,
 } from '../../theme';
+import { showToast } from '../../utils/toast';
 import { formatDotDateTime } from './formatters';
 import { ChatMessageReportModal } from './ChatMessageReportModal';
 import type { useMeetingChatState } from './useMeetingChatState';
@@ -60,6 +62,8 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const [profileMessage, setProfileMessage] = useState<ClubMeetingChatMessage | null>(null);
+  const [messageActionTarget, setMessageActionTarget] =
+    useState<ClubMeetingChatMessage | null>(null);
   const listRef = useRef<FlatList<ClubMeetingChatMessage>>(null);
   const nearBottomRef = useRef(true);
   const initialScrolledRef = useRef(false);
@@ -81,6 +85,7 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
     initialScrolledRef.current = false;
     nearBottomRef.current = true;
     setProfileMessage(null);
+    setMessageActionTarget(null);
   }, [state.activeGroup?.id, translateX]);
 
   useEffect(() => {
@@ -104,6 +109,18 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
     setProfileMessage(null);
     state.closeChat();
     navigation.navigate('UserProfile', { memberNickname: nickname, fromScreen: 'Meeting' });
+  };
+
+  const copyMessage = async () => {
+    if (!messageActionTarget) return;
+    const content = messageActionTarget.content;
+    setMessageActionTarget(null);
+    try {
+      await Clipboard.setStringAsync(content);
+      showToast('메시지를 복사했습니다.');
+    } catch {
+      showToast('메시지를 복사하지 못했습니다.');
+    }
   };
 
   return (
@@ -249,9 +266,8 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                           mine ? styles.bubbleMine : styles.bubbleOther,
                           !mine && pressed && styles.pressed,
                         ]}
-                        onPress={() => state.openMessageReport(item)}
-                        disabled={mine}
-                        accessibilityLabel={mine ? undefined : `${item.senderNickname} 메시지 신고`}
+                        onPress={() => setMessageActionTarget(item)}
+                        accessibilityLabel="메시지 메뉴 열기"
                       >
                         <Text style={styles.bubbleText}>{item.content}</Text>
                       </Pressable>
@@ -341,6 +357,50 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
               onClose={() => state.setReportTarget(null)}
               onSubmit={(payload) => void state.submitReport(payload)}
             />
+
+            {messageActionTarget ? (
+              <View style={styles.messageActionOverlay}>
+                <Pressable
+                  style={StyleSheet.absoluteFill}
+                  onPress={() => setMessageActionTarget(null)}
+                  disableFeedback
+                />
+                <View
+                  style={[
+                    styles.messageActionSheet,
+                    { paddingBottom: Math.max(insets.bottom, spacing.md) },
+                  ]}
+                >
+                  <Text style={styles.messageActionTitle}>메시지 메뉴</Text>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.messageActionItem,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => void copyMessage()}
+                  >
+                    <MaterialIcons name="content-copy" size={20} color={colors.gray5} />
+                    <Text style={styles.messageActionText}>복사하기</Text>
+                  </Pressable>
+                  {!isMine(messageActionTarget, currentMemberNickname) ? (
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.messageActionItem,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => {
+                        const message = messageActionTarget;
+                        setMessageActionTarget(null);
+                        state.openMessageReport(message);
+                      }}
+                    >
+                      <MaterialIcons name="flag" size={20} color={colors.gray5} />
+                      <Text style={styles.messageActionText}>신고하기</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
           </Animated.View>
         </KeyboardAvoidingView>
       </Modal>
@@ -493,6 +553,35 @@ const styles = StyleSheet.create({
     zIndex: layers.overlay,
     elevation: layers.overlay,
   },
+  messageActionOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.overlay30,
+    justifyContent: 'flex-end',
+    zIndex: layers.overlay,
+    elevation: layers.overlay,
+  },
+  messageActionSheet: {
+    width: '100%',
+    backgroundColor: colors.white,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+  messageActionTitle: {
+    ...typography.subhead4_1,
+    color: colors.gray6,
+    marginBottom: spacing.xs,
+  },
+  messageActionItem: {
+    minHeight: buttonSize.field,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.gray2,
+  },
+  messageActionText: { ...typography.body1_3, color: colors.gray6 },
   profileHeader: {
     width: '100%',
     flexDirection: 'row',

@@ -3033,3 +3033,16 @@ export const interactionOpacity = {
 - 채팅 전체 화면 위 네이티브 모달 적층을 제거하고 프로필·신고를 채팅 화면 내부 오버레이로 전환
 - 작성자 클릭은 프로필 사진·아이디·사용자 신고·바로가기 모달, 타인 메시지 박스 클릭은 메시지 신고로 분리
 - 채팅 메시지의 불필요한 `⋮` 메뉴를 제거하고 `npm run check`·Expo Doctor 18/18 통과
+
+# 2026-06-22 23:17:57 KST 채팅 메시지 복사·신고 메뉴 추가
+
+- 채팅 박스 클릭 시 채팅 화면 내부 액션 시트를 열어 내 메시지는 복사, 타인 메시지는 복사·신고 메뉴를 표시
+- `expo-clipboard`로 메시지 내용을 시스템 클립보드에 저장하고, 신고 선택 시에만 `CHAT + messageId` 신고 모달을 열도록 변경
+- 기능 명세·TODO·실기기 QA 항목 갱신, typography·spacing·typecheck·대상 ESLint 통과
+
+# 2026-06-22 23:26:25 KST 조 관리 드래그 자동 스크롤 안정화
+
+- 조 관리 ScrollView의 viewport/content 높이·offset·maxOffset을 추적하고 상·하단 112px 시간 기반 자동 스크롤(180~900px/s) 적용
+- 상단 빠른 조 칩과 스크롤 내부 카드의 drop zone 좌표를 분리하고 현재 대상 활성 피드백·정확한 스크롤 좌표 변환 추가
+- responder 종료 거부와 terminate 취소 경로를 분리해 드래그 중 스크롤 탈취·의도치 않은 배정을 방지
+- `npm run check` 통과(typography, spacing, typecheck, Expo Doctor 18/18), lint 0 errors
