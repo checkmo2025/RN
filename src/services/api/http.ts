@@ -49,6 +49,8 @@ type RequestOptions = {
   timeoutMs?: number;
   retryOnUnauthorized?: boolean;
   apiVersion?: string;
+  /** 호출자 측 취소용 외부 AbortSignal. 내부 timeout 컨트롤러와 연결된다. */
+  signal?: AbortSignal;
 };
 
 type FetchApiOptions = RequestInit & {
@@ -296,6 +298,17 @@ async function fetchWithTimeout(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+  // 외부 signal(호출자 취소)을 내부 timeout 컨트롤러와 연결
+  const externalSignal = options.signal;
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+    }
+  }
+
   try {
     return await fetch(buildApiUrl(path, options.query, options.apiVersion), {
       method: options.method ?? 'GET',
@@ -306,6 +319,7 @@ async function fetchWithTimeout(
     });
   } finally {
     clearTimeout(timeoutId);
+    externalSignal?.removeEventListener('abort', onExternalAbort);
   }
 }
 

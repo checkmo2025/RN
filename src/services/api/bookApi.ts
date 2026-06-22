@@ -210,13 +210,18 @@ export async function fetchRecommendedBooks(): Promise<BookItem[]> {
   return normalizeBookList(response).items;
 }
 
-export async function searchBooks(keyword: string, page = 1): Promise<BookSearchResult> {
+export async function searchBooks(
+  keyword: string,
+  page = 1,
+  options?: { signal?: AbortSignal },
+): Promise<BookSearchResult> {
   const response = await requestJson<BookListResponse>('/books/search', {
     method: 'GET',
     query: {
       keyword,
       page,
     },
+    signal: options?.signal,
   });
 
   return normalizeBookList(response);

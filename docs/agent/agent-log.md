@@ -2997,3 +2997,9 @@ export const interactionOpacity = {
 - 마이페이지 임시저장 태그 옆에 삭제 버튼·확인 Alert를 추가하고 성공 시 목록 즉시 제거 및 중복 요청 차단
 - 공지사항 댓글의 BE 프로필 이미지 응답부터 RN 렌더링·기본 아바타·프로필 이동 연결을 확인하고 TODO 완료 처리
 - 발제·한줄평(300자), 공지 제목(50자), 공지 내용(2000자) placeholder에 최대 글자수 안내 추가
+
+# 2026-06-22 22:13:25 KST 책 검색 체감 속도 단축 Phase 0~1
+
+- 공용 훅 useBookSearch 신설: debounce 400ms prefetch + 최소2자 + normalize/dedupe + AbortController + TTL 캐시(3분/30개), search()는 캐시 히트 시 즉시 표시
+- 인프라: requestJson 외부 AbortSignal을 내부 timeout 컨트롤러와 연결, searchBooks(kw, page, {signal}) 추가
+- AppHeader 검색을 훅으로 교체(중복 state/executeSearch/loadMore/resolveBookResultKey 제거), 계획서 book-search-latency-plan.md 작성

@@ -43,7 +43,6 @@ import {
   fetchAllMyLikedBooks,
   fetchBookDetail,
   fetchRecommendedBooks,
-  searchBooks,
   toggleBookLikeByIsbn,
   type BookItem,
 } from '../../services/api/bookApi';
@@ -60,6 +59,7 @@ import { toKstTimeAgoLabel } from '../../utils/date';
 import { formatNotificationText, resolveNotificationTarget } from '../../utils/notification';
 import { showToast } from '../../utils/toast';
 import { useConsumeRouteParam } from '../../hooks/useConsumeRouteParam';
+import { useBookSearch } from '../../hooks/useBookSearch';
 import BookStoryFeedCard from '../feature/bookstory/BookStoryFeedCard';
 import { SkeletonBox } from './SkeletonBox';
 
@@ -164,15 +164,6 @@ function resolveBookLikeId(book: Pick<BookItem, 'isbn' | 'bookId' | 'title'>): s
   return title ? `title:${title}` : null;
 }
 
-function resolveBookResultKey(book: Pick<BookItem, 'isbn' | 'bookId' | 'title' | 'author'>): string {
-  const likeId = resolveBookLikeId(book);
-  if (likeId) return likeId;
-
-  const title = book.title.trim();
-  const author = book.author.trim();
-  return `title:${title}|author:${author}`;
-}
-
 export function AppHeader(props: Props) {
   const { title, actions, onPressSearch, onPressBell, onPressLogo } = props;
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -190,14 +181,18 @@ export function AppHeader(props: Props) {
   const [showSearchPage, setShowSearchPage] = useState(false);
   const [searchStage, setSearchStage] = useState<SearchStage>('results');
 
-  const [query, setQuery] = useState('');
-  const [searched, setSearched] = useState(false);
-  const [searchedKeyword, setSearchedKeyword] = useState('');
-  const [searchResults, setSearchResults] = useState<BookItem[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchHasNext, setSearchHasNext] = useState(false);
-  const [searchCurrentPage, setSearchCurrentPage] = useState(1);
-  const [searchLoadingMore, setSearchLoadingMore] = useState(false);
+  const {
+    query,
+    setQuery,
+    searched,
+    searchedKeyword,
+    results: searchResults,
+    loading: searchLoading,
+    hasNext: searchHasNext,
+    search: executeSearch,
+    loadMore: loadMoreSearchResults,
+    reset: resetSearch,
+  } = useBookSearch();
 
   const [recommendedBooks, setRecommendedBooks] = useState<BookItem[]>([]);
   const [recommendLoading, setRecommendLoading] = useState(false);
@@ -495,80 +490,6 @@ export function AppHeader(props: Props) {
       showToast('내 서재 정보를 불러오지 못했습니다.');
     }
   }, [isLoggedIn]);
-
-  const executeSearch = useCallback(async (keyword: string) => {
-    if (!keyword) {
-      setSearched(false);
-      setSearchResults([]);
-      setSearchedKeyword('');
-      setSearchHasNext(false);
-      setSearchCurrentPage(1);
-      setSearchLoadingMore(false);
-      return;
-    }
-
-    setSearched(true);
-    setSearchedKeyword(keyword);
-    setSearchResults([]);
-    setSearchLoading(true);
-    setSearchHasNext(false);
-    setSearchCurrentPage(1);
-    setSearchLoadingMore(false);
-    try {
-      await new Promise((r) => setTimeout(r, 2000)); // TODO: remove
-      const result = await searchBooks(keyword, 1);
-      setSearchResults(result.items);
-      setSearchHasNext(result.hasNext);
-      setSearchCurrentPage(result.currentPage);
-    } catch (error) {
-      if (error instanceof ApiError) {
-        showToast(error.message || '책 검색에 실패했습니다.');
-      } else {
-        showToast('책 검색에 실패했습니다.');
-      }
-      setSearchResults([]);
-      setSearchHasNext(false);
-      setSearchCurrentPage(1);
-    } finally {
-      setSearchLoading(false);
-    }
-  }, []);
-
-  const loadMoreSearchResults = useCallback(async () => {
-    if (searchLoading || searchLoadingMore || !searchHasNext) return;
-    const keyword = searchedKeyword.trim();
-    if (!keyword) return;
-
-    const nextPage = Math.max(1, searchCurrentPage + 1);
-    setSearchLoadingMore(true);
-
-    try {
-      const result = await searchBooks(keyword, nextPage);
-      setSearchResults((prev) => {
-        const seen = new Set(prev.map((item) => resolveBookResultKey(item)));
-        const appended = result.items.filter((item) => {
-          const key = resolveBookResultKey(item);
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-        return appended.length > 0 ? [...prev, ...appended] : prev;
-      });
-
-      setSearchHasNext(result.hasNext);
-      setSearchCurrentPage(
-        result.currentPage > 0 ? result.currentPage : nextPage,
-      );
-    } catch (error) {
-      if (error instanceof ApiError) {
-        showToast(error.message || '검색 결과를 추가로 불러오지 못했습니다.');
-      } else {
-        showToast('검색 결과를 추가로 불러오지 못했습니다.');
-      }
-    } finally {
-      setSearchLoadingMore(false);
-    }
-  }, [searchCurrentPage, searchHasNext, searchLoading, searchLoadingMore, searchedKeyword]);
 
   const loadSelectedBookData = useCallback(async (book: BookItem) => {
     const requestId = Date.now();
@@ -1140,15 +1061,7 @@ export function AppHeader(props: Props) {
                         color={colors.gray4}
                         size={20}
                         accessibilityLabel="검색어 지우기"
-                        onPress={() => {
-                          setQuery('');
-                          setSearched(false);
-                          setSearchedKeyword('');
-                          setSearchResults([]);
-                          setSearchHasNext(false);
-                          setSearchCurrentPage(1);
-                          setSearchLoadingMore(false);
-                        }}
+                        onPress={resetSearch}
                       />
                     ) : null}
                     <Pressable
