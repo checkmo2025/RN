@@ -28,7 +28,8 @@ import type {
   ClubBookshelfReview,
   ClubMeetingTeamTopics,
 } from '../../services/api/clubApi';
-import { searchBooks, type BookItem } from '../../services/api/bookApi';
+import { type BookItem } from '../../services/api/bookApi';
+import { useBookSearch } from '../../hooks/useBookSearch';
 import { getCurrentKstDateLabel, getCurrentKstYearMonth } from '../../utils/date';
 import { showToast } from '../../utils/toast';
 import { triggerSelectionHaptic } from '../../utils/haptics';
@@ -209,11 +210,16 @@ export function useBookshelfState({
   >({});
   const [bookshelfPostMenu, setBookshelfPostMenu] = useState<BookshelfPostMenuState | null>(null);
   const [bookshelfBookSelectorVisible, setBookshelfBookSelectorVisible] = useState(false);
-  const [bookshelfBookSearchQuery, setBookshelfBookSearchQuery] = useState('');
-  const [bookshelfBookSearchKeyword, setBookshelfBookSearchKeyword] = useState('');
-  const [bookshelfBookSearchResults, setBookshelfBookSearchResults] = useState<BookItem[]>([]);
-  const [bookshelfBookSearchLoading, setBookshelfBookSearchLoading] = useState(false);
-  const [bookshelfBookSearchSearched, setBookshelfBookSearchSearched] = useState(false);
+  const {
+    query: bookshelfBookSearchQuery,
+    setQuery: setBookshelfBookSearchQuery,
+    searchedKeyword: bookshelfBookSearchKeyword,
+    results: bookshelfBookSearchResults,
+    loading: bookshelfBookSearchLoading,
+    searched: bookshelfBookSearchSearched,
+    search: runBookshelfBookSearch,
+    reset: resetBookshelfBookSearch,
+  } = useBookSearch();
   const [bookshelfCalendarVisible, setBookshelfCalendarVisible] = useState(false);
   const [bookshelfCalendarMonth, setBookshelfCalendarMonth] = useState(() => {
     const { year, month } = getCurrentKstYearMonth();
@@ -820,12 +826,8 @@ export function useBookshelfState({
 
   const closeBookshelfBookSelector = useCallback(() => {
     setBookshelfBookSelectorVisible(false);
-    setBookshelfBookSearchQuery('');
-    setBookshelfBookSearchKeyword('');
-    setBookshelfBookSearchResults([]);
-    setBookshelfBookSearchLoading(false);
-    setBookshelfBookSearchSearched(false);
-  }, []);
+    resetBookshelfBookSearch();
+  }, [resetBookshelfBookSearch]);
 
   const closeBookshelfCalendar = useCallback(() => {
     setBookshelfCalendarVisible(false);
@@ -1720,29 +1722,6 @@ export function useBookshelfState({
     setActiveManagementScreen,
   ]);
 
-  const runBookshelfBookSearch = useCallback(async (keyword: string) => {
-    const trimmed = keyword.trim();
-    if (!trimmed) {
-      setBookshelfBookSearchSearched(false);
-      setBookshelfBookSearchKeyword('');
-      setBookshelfBookSearchResults([]);
-      return;
-    }
-    setBookshelfBookSearchLoading(true);
-    setBookshelfBookSearchSearched(true);
-    setBookshelfBookSearchKeyword(trimmed);
-    setBookshelfBookSearchResults([]);
-    try {
-      const response = await searchBooks(trimmed, 1);
-      setBookshelfBookSearchResults(response.items);
-    } catch (error) {
-      showToast(resolveBookshelfActionErrorMessage(error, '책 검색에 실패했습니다.'));
-      setBookshelfBookSearchResults([]);
-    } finally {
-      setBookshelfBookSearchLoading(false);
-    }
-  }, []);
-
   const handleSubmitBookshelfBookSearch = useCallback(() => {
     void runBookshelfBookSearch(bookshelfBookSearchQuery);
   }, [bookshelfBookSearchQuery, runBookshelfBookSearch]);
@@ -2132,10 +2111,11 @@ export function useBookshelfState({
     bookshelfPostMenu, setBookshelfPostMenu,
     bookshelfBookSelectorVisible, setBookshelfBookSelectorVisible,
     bookshelfBookSearchQuery, setBookshelfBookSearchQuery,
-    bookshelfBookSearchKeyword, setBookshelfBookSearchKeyword,
-    bookshelfBookSearchResults, setBookshelfBookSearchResults,
+    bookshelfBookSearchKeyword,
+    bookshelfBookSearchResults,
     bookshelfBookSearchLoading,
-    bookshelfBookSearchSearched, setBookshelfBookSearchSearched,
+    bookshelfBookSearchSearched,
+    resetBookshelfBookSearch,
     bookshelfCalendarVisible,
     bookshelfCalendarMonth, setBookshelfCalendarMonth,
     bookshelfSessions,

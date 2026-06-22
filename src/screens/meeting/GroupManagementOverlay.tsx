@@ -116,9 +116,7 @@ export type GroupManagementOverlayProps = {
   // Bookshelf handlers
   closeBookshelfBookSelector: () => void;
   setBookshelfBookSearchQuery: (query: string) => void;
-  setBookshelfBookSearchKeyword: (keyword: string) => void;
-  setBookshelfBookSearchResults: (results: BookItem[]) => void;
-  setBookshelfBookSearchSearched: (searched: boolean) => void;
+  resetBookshelfBookSearch: () => void;
   handleSubmitBookshelfBookSearch: () => void;
   handleSelectBookshelfSourceBook: (book: BookItem) => void;
   setBookshelfBookSelectorVisible: Dispatch<SetStateAction<boolean>>;
@@ -178,9 +176,7 @@ export function GroupManagementOverlay({
   creatingBookshelf,
   closeBookshelfBookSelector,
   setBookshelfBookSearchQuery,
-  setBookshelfBookSearchKeyword,
-  setBookshelfBookSearchResults,
-  setBookshelfBookSearchSearched,
+  resetBookshelfBookSearch,
   handleSubmitBookshelfBookSearch,
   handleSelectBookshelfSourceBook,
   setBookshelfBookSelectorVisible,
@@ -245,12 +241,7 @@ export function GroupManagementOverlay({
               />
               {bookshelfBookSearchQuery.length > 0 ? (
                 <Pressable
-                  onPress={() => {
-                    setBookshelfBookSearchQuery('');
-                    setBookshelfBookSearchKeyword('');
-                    setBookshelfBookSearchResults([]);
-                    setBookshelfBookSearchSearched(false);
-                  }}
+                  onPress={resetBookshelfBookSearch}
                   hitSlop={8}
                 >
                   <MaterialIcons name="close" size={18} color={colors.gray4} />

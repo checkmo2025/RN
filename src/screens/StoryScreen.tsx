@@ -83,7 +83,7 @@ import {
   type ReportReason,
 } from '../services/api/memberApi';
 import { ApiError } from '../services/api/http';
-import { searchBooks, type BookItem } from '../services/api/bookApi';
+import { type BookItem } from '../services/api/bookApi';
 import { toKstTimeAgoLabel } from '../utils/date';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
@@ -91,6 +91,7 @@ import { showToast } from '../utils/toast';
 import { resolveApiError } from '../utils/resolveApiError';
 import { createLogger } from '../utils/logger';
 import { useEdgeBackSwipe } from '../hooks/useEdgeBackSwipe';
+import { useBookSearch } from '../hooks/useBookSearch';
 
 type Book = {
   id: string;
@@ -293,11 +294,16 @@ export function StoryScreen() {
   const [myProfileImageUrl, setMyProfileImageUrl] = useState<string | undefined>(undefined);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [showBookPicker, setShowBookPicker] = useState(false);
-  const [bookSearchQuery, setBookSearchQuery] = useState('');
-  const [bookSearchResults, setBookSearchResults] = useState<BookItem[]>([]);
-  const [bookSearchLoading, setBookSearchLoading] = useState(false);
-  const [bookSearchSearched, setBookSearchSearched] = useState(false);
-  const [bookSearchKeyword, setBookSearchKeyword] = useState('');
+  const {
+    query: bookSearchQuery,
+    setQuery: setBookSearchQuery,
+    searched: bookSearchSearched,
+    searchedKeyword: bookSearchKeyword,
+    results: bookSearchResults,
+    loading: bookSearchLoading,
+    search: runBookSearch,
+    reset: resetBookSearch,
+  } = useBookSearch();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [composeInitialDraft, setComposeInitialDraft] =
@@ -447,32 +453,6 @@ export function StoryScreen() {
     [scrollToCommentSection],
   );
 
-  const runBookSearch = useCallback(async (keyword: string) => {
-    const trimmed = keyword.trim();
-    if (!trimmed) {
-      setBookSearchSearched(false);
-      setBookSearchKeyword('');
-      setBookSearchResults([]);
-      return;
-    }
-
-    setBookSearchLoading(true);
-    setBookSearchSearched(true);
-    setBookSearchKeyword(trimmed);
-    setBookSearchResults([]);
-    try {
-      const response = await searchBooks(trimmed, 1);
-      setBookSearchResults(response.items);
-    } catch (error) {
-      if (!(error instanceof ApiError)) {
-        showToast('책 검색에 실패했습니다.');
-      }
-      setBookSearchResults([]);
-    } finally {
-      setBookSearchLoading(false);
-    }
-  }, []);
-
   const openCompose = useCallback((initialBook?: Book, draft?: { id: number; title: string; body: string }) => {
     requireAuth(() => {
       const nextTitle = draft?.title ?? '';
@@ -496,11 +476,8 @@ export function StoryScreen() {
       setSelectedBook(nextBook);
       setComposeInitialDraft(nextInitialDraft);
       setShowBookPicker(false);
+      resetBookSearch();
       setBookSearchQuery(initialBook?.title ?? draft?.title ?? '');
-      setBookSearchResults([]);
-      setBookSearchLoading(false);
-      setBookSearchSearched(false);
-      setBookSearchKeyword('');
       setCommentInput('');
       setEditingCommentId(null);
       setEditingCommentOriginalText('');
@@ -2573,12 +2550,7 @@ export function StoryScreen() {
                       color={colors.gray4}
                       size={18}
                       accessibilityLabel="검색어 지우기"
-                      onPress={() => {
-                        setBookSearchQuery('');
-                        setBookSearchSearched(false);
-                        setBookSearchKeyword('');
-                        setBookSearchResults([]);
-                      }}
+                      onPress={resetBookSearch}
                     />
                   ) : null}
                 </View>

@@ -3003,3 +3003,9 @@ export const interactionOpacity = {
 - 공용 훅 useBookSearch 신설: debounce 400ms prefetch + 최소2자 + normalize/dedupe + AbortController + TTL 캐시(3분/30개), search()는 캐시 히트 시 즉시 표시
 - 인프라: requestJson 외부 AbortSignal을 내부 timeout 컨트롤러와 연결, searchBooks(kw, page, {signal}) 추가
 - AppHeader 검색을 훅으로 교체(중복 state/executeSearch/loadMore/resolveBookResultKey 제거), 계획서 book-search-latency-plan.md 작성
+
+# 2026-06-22 22:21:13 KST 책 검색 통일 Phase 2 (책이야기·책장)
+
+- StoryScreen 책 선택 검색, 책장(useBookshelfState) 검색을 공용 useBookSearch 훅으로 교체
+- 각 화면 중복 검색 state/runBookSearch 제거, clear는 reset()로 통일
+- GroupManagementOverlay/MeetingScreen prop 정리(setter 3개 → resetBookshelfBookSearch). 헤더 포함 3곳 검색 로직 단일화. typecheck/lint 0 errors

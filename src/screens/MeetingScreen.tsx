@@ -1176,10 +1176,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     bookshelfPostMenu, setBookshelfPostMenu,
     bookshelfBookSelectorVisible, setBookshelfBookSelectorVisible,
     bookshelfBookSearchQuery, setBookshelfBookSearchQuery,
-    bookshelfBookSearchKeyword, setBookshelfBookSearchKeyword,
-    bookshelfBookSearchResults, setBookshelfBookSearchResults,
+    bookshelfBookSearchKeyword,
+    bookshelfBookSearchResults,
     bookshelfBookSearchLoading,
-    bookshelfBookSearchSearched, setBookshelfBookSearchSearched,
+    bookshelfBookSearchSearched,
+    resetBookshelfBookSearch,
     bookshelfCalendarVisible,
     bookshelfCalendarMonth, setBookshelfCalendarMonth,
     bookshelfSessions,
@@ -2771,9 +2772,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         creatingBookshelf={creatingBookshelf}
         closeBookshelfBookSelector={closeBookshelfBookSelector}
         setBookshelfBookSearchQuery={setBookshelfBookSearchQuery}
-        setBookshelfBookSearchKeyword={setBookshelfBookSearchKeyword}
-        setBookshelfBookSearchResults={setBookshelfBookSearchResults}
-        setBookshelfBookSearchSearched={setBookshelfBookSearchSearched}
+        resetBookshelfBookSearch={resetBookshelfBookSearch}
         handleSubmitBookshelfBookSearch={handleSubmitBookshelfBookSearch}
         handleSelectBookshelfSourceBook={handleSelectBookshelfSourceBook}
         setBookshelfBookSelectorVisible={setBookshelfBookSelectorVisible}
