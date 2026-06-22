@@ -301,6 +301,7 @@ export function StoryScreen() {
     searchedKeyword: bookSearchKeyword,
     results: bookSearchResults,
     loading: bookSearchLoading,
+    totalResults: bookSearchTotalResults,
     search: runBookSearch,
     reset: resetBookSearch,
   } = useBookSearch();
@@ -2559,7 +2560,7 @@ export function StoryScreen() {
                     <Text style={styles.bookSearchGuideText}>검색 중...</Text>
                   ) : (
                     <Text style={styles.bookSearchGuideText}>
-                      "{bookSearchKeyword}" 총 {bookSearchResults.length}개의 검색결과가 있습니다.
+                      "{bookSearchKeyword}" 총 {bookSearchTotalResults}개의 검색결과가 있습니다.
                     </Text>
                   )
                 ) : (

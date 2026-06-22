@@ -15,6 +15,7 @@ type CacheEntry = {
   items: BookItem[];
   hasNext: boolean;
   currentPage: number;
+  totalResults: number;
   ts: number;
 };
 
@@ -61,6 +62,7 @@ export function useBookSearch() {
   const [loading, setLoading] = useState(false);
   const [hasNext, setHasNext] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
 
   const requestRef = useRef<AbortController | null>(null);
@@ -87,6 +89,7 @@ export function useBookSearch() {
             items: result.items,
             hasNext: result.hasNext,
             currentPage: result.currentPage,
+            totalResults: result.totalResults,
             ts: Date.now(),
           });
         } catch {
@@ -108,6 +111,7 @@ export function useBookSearch() {
       setResults([]);
       setHasNext(false);
       setCurrentPage(1);
+      setTotalResults(0);
       setLoadingMore(false);
       return;
     }
@@ -123,6 +127,7 @@ export function useBookSearch() {
       setResults(cached.items);
       setHasNext(cached.hasNext);
       setCurrentPage(cached.currentPage);
+      setTotalResults(cached.totalResults);
       setLoading(false);
       return;
     }
@@ -131,6 +136,7 @@ export function useBookSearch() {
     setLoading(true);
     setHasNext(false);
     setCurrentPage(1);
+    setTotalResults(0);
 
     const controller = new AbortController();
     requestRef.current?.abort();
@@ -142,10 +148,12 @@ export function useBookSearch() {
       setResults(result.items);
       setHasNext(result.hasNext);
       setCurrentPage(result.currentPage);
+      setTotalResults(result.totalResults);
       writeCache(norm, {
         items: result.items,
         hasNext: result.hasNext,
         currentPage: result.currentPage,
+        totalResults: result.totalResults,
         ts: Date.now(),
       });
     } catch (error) {
@@ -158,6 +166,7 @@ export function useBookSearch() {
       setResults([]);
       setHasNext(false);
       setCurrentPage(1);
+      setTotalResults(0);
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
@@ -184,6 +193,7 @@ export function useBookSearch() {
       });
       setHasNext(result.hasNext);
       setCurrentPage(result.currentPage > 0 ? result.currentPage : nextPage);
+      if (result.totalResults > 0) setTotalResults(result.totalResults);
     } catch (error) {
       if (error instanceof ApiError) {
         showToast(error.message || '검색 결과를 추가로 불러오지 못했습니다.');
@@ -204,6 +214,7 @@ export function useBookSearch() {
     setResults([]);
     setHasNext(false);
     setCurrentPage(1);
+    setTotalResults(0);
     setLoadingMore(false);
   }, []);
 
@@ -215,6 +226,7 @@ export function useBookSearch() {
     results,
     loading,
     hasNext,
+    totalResults,
     loadingMore,
     search,
     loadMore,

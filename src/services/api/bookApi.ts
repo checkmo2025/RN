@@ -9,6 +9,7 @@ type BookListResult = {
   content?: unknown[];
   hasNext?: boolean;
   currentPage?: number;
+  totalResults?: number;
 };
 
 type LikedBookListResult = {
@@ -37,6 +38,8 @@ export type BookSearchResult = {
   items: BookItem[];
   hasNext: boolean;
   currentPage: number;
+  /** 서버가 주는 전체 검색결과 수. 없으면 현재 로드된 개수로 폴백. */
+  totalResults: number;
 };
 
 export type MemberLikedBookItem = {
@@ -116,16 +119,20 @@ function normalizeBookList(payload: unknown): BookSearchResult {
   const result = unwrapResult(payload as BookListResponse);
 
   if (Array.isArray(result)) {
+    const items = result
+      .map(normalizeBookItem)
+      .filter((item): item is BookItem => Boolean(item));
     return {
-      items: result.map(normalizeBookItem).filter((item): item is BookItem => Boolean(item)),
+      items,
       hasNext: false,
       currentPage: 1,
+      totalResults: items.length,
     };
   }
 
   const record = asRecord(result);
   if (!record) {
-    return { items: [], hasNext: false, currentPage: 1 };
+    return { items: [], hasNext: false, currentPage: 1, totalResults: 0 };
   }
 
   const rawList = firstDefined(
@@ -134,11 +141,13 @@ function normalizeBookList(payload: unknown): BookSearchResult {
     record.content,
   );
   const list = Array.isArray(rawList) ? rawList : [];
+  const items = list.map(normalizeBookItem).filter((item): item is BookItem => Boolean(item));
 
   return {
-    items: list.map(normalizeBookItem).filter((item): item is BookItem => Boolean(item)),
+    items,
     hasNext: toBoolean(record.hasNext) ?? false,
     currentPage: toNumber(record.currentPage) ?? 1,
+    totalResults: toNumber(record.totalResults) ?? items.length,
   };
 }
 

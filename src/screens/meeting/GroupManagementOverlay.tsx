@@ -98,6 +98,7 @@ export type GroupManagementOverlayProps = {
   bookshelfBookSearchLoading: boolean;
   bookshelfBookSearchKeyword: string;
   bookshelfBookSearchResults: BookItem[];
+  bookshelfBookSearchTotal: number;
   bookshelfCreateDraft: BookshelfCreateDraft;
   editingBookshelfMeetingId: number | null;
   bookshelfCalendarVisible: boolean;
@@ -166,6 +167,7 @@ export function GroupManagementOverlay({
   bookshelfBookSearchLoading,
   bookshelfBookSearchKeyword,
   bookshelfBookSearchResults,
+  bookshelfBookSearchTotal,
   bookshelfCreateDraft,
   editingBookshelfMeetingId,
   bookshelfCalendarVisible,
@@ -252,7 +254,7 @@ export function GroupManagementOverlay({
               <Text style={styles.bookshelfBookSearchGuide}>
                 {bookshelfBookSearchLoading
                   ? '검색 중...'
-                  : `"${bookshelfBookSearchKeyword}" 총 ${bookshelfBookSearchResults.length}개의 검색결과가 있습니다.`}
+                  : `"${bookshelfBookSearchKeyword}" 총 ${bookshelfBookSearchTotal}개의 검색결과가 있습니다.`}
               </Text>
             ) : (
               <Text style={styles.bookshelfBookSearchGuide}>

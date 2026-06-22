@@ -1180,6 +1180,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     bookshelfBookSearchResults,
     bookshelfBookSearchLoading,
     bookshelfBookSearchSearched,
+    bookshelfBookSearchTotal,
     resetBookshelfBookSearch,
     bookshelfCalendarVisible,
     bookshelfCalendarMonth, setBookshelfCalendarMonth,
@@ -2762,6 +2763,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
         bookshelfBookSearchLoading={bookshelfBookSearchLoading}
         bookshelfBookSearchKeyword={bookshelfBookSearchKeyword}
         bookshelfBookSearchResults={bookshelfBookSearchResults}
+        bookshelfBookSearchTotal={bookshelfBookSearchTotal}
         bookshelfCreateDraft={bookshelfCreateDraft}
         editingBookshelfMeetingId={editingBookshelfMeetingId}
         bookshelfCalendarVisible={bookshelfCalendarVisible}

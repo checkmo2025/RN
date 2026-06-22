@@ -3009,3 +3009,9 @@ export const interactionOpacity = {
 - StoryScreen 책 선택 검색, 책장(useBookshelfState) 검색을 공용 useBookSearch 훅으로 교체
 - 각 화면 중복 검색 state/runBookSearch 제거, clear는 reset()로 통일
 - GroupManagementOverlay/MeetingScreen prop 정리(setter 3개 → resetBookshelfBookSearch). 헤더 포함 3곳 검색 로직 단일화. typecheck/lint 0 errors
+
+# 2026-06-22 22:31:38 KST 책 검색 totalResults 표기 (Phase 3)
+
+- BookSearchResult에 totalResults 추가, normalizeBookList에서 서버 totalResults 파싱(없으면 items.length 폴백)
+- useBookSearch가 totalResults를 state/캐시로 노출
+- "총 N개" 표기를 length → totalResults로 교체(헤더/책이야기/책장 3곳). 책 검색 단축 Phase 0~3 전부 완료

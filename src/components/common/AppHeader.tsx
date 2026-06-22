@@ -189,6 +189,7 @@ export function AppHeader(props: Props) {
     results: searchResults,
     loading: searchLoading,
     hasNext: searchHasNext,
+    totalResults: searchTotalResults,
     search: executeSearch,
     loadMore: loadMoreSearchResults,
     reset: resetSearch,
@@ -1078,7 +1079,7 @@ export function AppHeader(props: Props) {
                       <Text style={styles.searchCount}>검색 중...</Text>
                     ) : (
                       <Text style={styles.searchCount}>
-                        "{searchedKeyword}" 총 {searchResults.length}개의 검색결과가 있습니다.
+                        "{searchedKeyword}" 총 {searchTotalResults}개의 검색결과가 있습니다.
                       </Text>
                     )
                   ) : (

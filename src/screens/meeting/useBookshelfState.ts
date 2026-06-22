@@ -217,6 +217,7 @@ export function useBookshelfState({
     results: bookshelfBookSearchResults,
     loading: bookshelfBookSearchLoading,
     searched: bookshelfBookSearchSearched,
+    totalResults: bookshelfBookSearchTotal,
     search: runBookshelfBookSearch,
     reset: resetBookshelfBookSearch,
   } = useBookSearch();
@@ -2115,6 +2116,7 @@ export function useBookshelfState({
     bookshelfBookSearchResults,
     bookshelfBookSearchLoading,
     bookshelfBookSearchSearched,
+    bookshelfBookSearchTotal,
     resetBookshelfBookSearch,
     bookshelfCalendarVisible,
     bookshelfCalendarMonth, setBookshelfCalendarMonth,
