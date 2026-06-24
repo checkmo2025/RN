@@ -523,6 +523,8 @@ export function GroupManagementOverlay({
                     placeholderTextColor={colors.gray3}
                     style={[styles.input, styles.textArea]}
                     multiline
+                    scrollEnabled
+                    textAlignVertical="top"
                     maxLength={INPUT_LIMITS.CLUB_DESCRIPTION}
                     overLimitMessage={`모임 소개글은 ${INPUT_LIMITS.CLUB_DESCRIPTION}자 이하여야 합니다.`}
                   />

@@ -3093,6 +3093,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   placeholderTextColor={colors.gray3}
                   style={[styles.input, styles.textArea, styles.bookshelfComposerInput]}
                   multiline
+                  scrollEnabled
+                  textAlignVertical="top"
                   maxLength={INPUT_LIMITS.BOOKSHELF_COMPOSER}
                   overLimitMessage={`내용은 ${INPUT_LIMITS.BOOKSHELF_COMPOSER}자 이하여야 합니다.`}
                 />
@@ -3289,6 +3291,7 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
                   { height: noticeTitleInputHeight },
                 ]}
                 multiline
+                textAlignVertical="top"
                 numberOfLines={4}
                 maxLength={INPUT_LIMITS.NOTICE_TITLE}
                 overLimitMessage={`공지 제목은 ${INPUT_LIMITS.NOTICE_TITLE}자 이하여야 합니다.`}
@@ -4179,6 +4182,8 @@ function MeetingCreateFlow({
                 placeholderTextColor={colors.gray3}
                 style={[styles.input, styles.textArea]}
                 multiline
+                scrollEnabled
+                textAlignVertical="top"
                 maxLength={INPUT_LIMITS.CLUB_DESCRIPTION}
                 overLimitMessage={`모임 소개글은 ${INPUT_LIMITS.CLUB_DESCRIPTION}자 이하여야 합니다.`}
               />

@@ -2474,6 +2474,8 @@ export function StoryScreen() {
               placeholderTextColor={colors.gray3}
               style={styles.bodyInput}
               multiline
+              scrollEnabled
+              textAlignVertical="top"
               maxLength={INPUT_LIMITS.BOOK_STORY_CONTENT}
               overLimitMessage={`책이야기 본문은 ${INPUT_LIMITS.BOOK_STORY_CONTENT}자 이하여야 합니다.`}
             />
@@ -3111,11 +3113,13 @@ const styles = StyleSheet.create({
     maxHeight: 320,
     paddingTop: spacing.sm,
     paddingRight: spacing.lg,
+    paddingBottom: spacing.lg,
   },
   bodyCounterText: {
     ...typography.body2_3,
     color: colors.gray4,
     textAlign: 'right',
+    marginTop: spacing.xxs,
   },
   formActions: {
     flexDirection: 'row',

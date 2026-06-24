@@ -290,8 +290,9 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   textArea: {
-    height: 124,
+    minHeight: 124,
     maxHeight: 180,
+    paddingBottom: spacing.lg,
     textAlignVertical: 'top',
   },
   logoRow: {
@@ -2164,10 +2165,12 @@ export const styles = StyleSheet.create({
   },
   noticeComposerTitleInput: {
     minHeight: 96,
+    paddingBottom: spacing.md,
     textAlignVertical: 'top',
   },
   noticeComposerTextArea: {
     minHeight: 180,
+    paddingBottom: spacing.lg,
     textAlignVertical: 'top',
   },
   noticeComposerActionRow: {
@@ -2356,6 +2359,7 @@ export const styles = StyleSheet.create({
   noticeComposerCounter: {
     ...typography.body2_3,
     color: colors.gray4,
+    textAlign: 'right',
   },
   noticeComposerFooter: {
     flexDirection: 'row',
@@ -3001,13 +3005,15 @@ export const styles = StyleSheet.create({
     color: colors.gray6,
   },
   bookshelfComposerInput: {
-    height: 140,
+    minHeight: 140,
     maxHeight: 180,
+    paddingBottom: spacing.lg,
   },
   bookshelfComposerCounter: {
     ...typography.body2_3,
     color: colors.gray4,
     textAlign: 'right',
+    marginTop: spacing.xxs,
   },
   bookshelfComposerRatingRow: {
     flexDirection: 'row',

@@ -137,6 +137,8 @@ export function ReportMemberModal({
                 placeholderTextColor={colors.gray3}
                 style={styles.contentInput}
                 multiline
+                scrollEnabled
+                textAlignVertical="top"
                 maxLength={INPUT_LIMITS.REPORT_CONTENT}
                 overLimitMessage={`신고 내용은 ${INPUT_LIMITS.REPORT_CONTENT}자 이하여야 합니다.`}
               />
@@ -266,21 +268,24 @@ const styles = StyleSheet.create({
     borderColor: colors.gray2,
     borderRadius: radius.sm,
     backgroundColor: colors.gray1,
-    minHeight: 220,
+    minHeight: 204,
+    maxHeight: 244,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
   },
   contentInput: {
     ...typography.body1_3,
     color: colors.gray6,
-    minHeight: 200,
+    minHeight: 180,
     maxHeight: 220,
     paddingRight: spacing.md,
+    paddingBottom: spacing.lg,
   },
   contentCounterText: {
     ...typography.body2_3,
     color: colors.gray4,
     textAlign: 'right',
+    marginTop: spacing.xxs,
   },
   submitButton: {
     height: 52,
