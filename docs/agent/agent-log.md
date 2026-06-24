@@ -3046,3 +3046,7 @@ export const interactionOpacity = {
 - 상단 빠른 조 칩과 스크롤 내부 카드의 drop zone 좌표를 분리하고 현재 대상 활성 피드백·정확한 스크롤 좌표 변환 추가
 - responder 종료 거부와 terminate 취소 경로를 분리해 드래그 중 스크롤 탈취·의도치 않은 배정을 방지
 - `npm run check` 통과(typography, spacing, typecheck, Expo Doctor 18/18), lint 0 errors
+
+# 2026-06-24 11:39:47 KST ref_code 레포 연결 안내 추가
+
+- AGENTS/CLAUDE 지침에 `ref_code/BE`, `ref_code/FE`가 각각 별도 백엔드·프론트엔드 GitHub 레포와 연결되어 있음을 명시

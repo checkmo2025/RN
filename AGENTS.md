@@ -1,5 +1,9 @@
 # Agent Instructions
 
+- `ref_code/` 디렉터리에는 참조용 외부 코드가 포함되어 있다.
+  - `ref_code/BE`: 백엔드 파일이며, 별도의 백엔드 GitHub 레포와 연결되어 있다.
+  - `ref_code/FE`: 프론트엔드 파일이며, 별도의 프론트엔드 GitHub 레포와 연결되어 있다.
+
 - If a user request ends with `/md`, append a short update to `docs/agent/agent-log.md`.
 - The appended update must include:
   - Date (`YYYY-MM-DD`)

@@ -1,5 +1,9 @@
 # Claude Code Instructions
 
+- `ref_code/` 디렉터리에는 참조용 외부 코드가 포함되어 있다.
+  - `ref_code/BE`: 백엔드 파일이며, 별도의 백엔드 GitHub 레포와 연결되어 있다.
+  - `ref_code/FE`: 프론트엔드 파일이며, 별도의 프론트엔드 GitHub 레포와 연결되어 있다.
+
 - 사용자 요청이 `/md`로 끝나면 `docs/agent/agent-log.md` 하단에 짧은 업데이트를 추가한다.
   - 날짜 (`YYYY-MM-DD`)
   - 시간 (`HH:mm:ss KST`)
