@@ -155,6 +155,24 @@ export type ClubManagedMemberList = {
   nextCursor: number | null;
 };
 
+export type ClubParticipantStatus = 'MEMBER' | 'STAFF' | 'OWNER';
+
+export type ClubParticipant = {
+  clubMemberId: number;
+  nickname: string;
+  profileImageUrl?: string;
+  following: boolean;
+  clubMemberStatus: ClubParticipantStatus;
+  staff: boolean;
+};
+
+export type ClubParticipantList = {
+  items: ClubParticipant[];
+  totalCount: number;
+  hasNext: boolean;
+  nextCursor: number | null;
+};
+
 export type ClubNoticeTagCode = 'PIN' | 'VOTE' | 'MEETING' | string;
 
 export type ClubNoticeTagItem = {
@@ -494,6 +512,12 @@ type ApiResponseManagedClubMembers = ApiEnvelope<{
   hasNext?: boolean;
   nextCursor?: number | null;
 }>;
+type ApiResponseClubParticipants = ApiEnvelope<{
+  clubMembers?: unknown[];
+  totalCount?: number;
+  hasNext?: boolean;
+  nextCursor?: number | null;
+}>;
 type ApiResponseNoticeList = ApiEnvelope<{
   pinnedNotices?: unknown[];
   normalNotices?: {
@@ -566,6 +590,13 @@ function toClubMembershipStatus(value: unknown): ClubMembershipStatus | undefine
     return value;
   }
   return undefined;
+}
+
+function toClubParticipantStatus(value: unknown): ClubParticipantStatus {
+  if (value === 'OWNER' || value === 'STAFF' || value === 'MEMBER') {
+    return value;
+  }
+  return 'MEMBER';
 }
 
 function normalizeClubMyMembership(raw: unknown): ClubMyMembership | null {
@@ -660,6 +691,48 @@ function normalizeClubManagedMember(raw: unknown): ClubManagedMember | null {
     clubMemberStatus: toClubMembershipStatus(record.clubMemberStatus),
     appliedAt: toStringValue(record.appliedAt),
     joinedAt: toStringValue(record.joinedAt),
+  };
+}
+
+function normalizeClubParticipant(raw: unknown): ClubParticipant | null {
+  const record = asRecord(raw);
+  if (!record) return null;
+
+  const clubMemberId = toNumberValue(record.clubMemberId);
+  if (!clubMemberId) return null;
+
+  const memberInfo = normalizeOptionalMemberInfo(
+    firstDefined(record.memberInfo, record.detailInfo, record.member, record.user, record),
+  );
+  const nickname =
+    memberInfo.nickname ??
+    toStringValue(firstDefined(record.nickname, record.memberNickname, record.name))?.trim();
+  if (!nickname) return null;
+
+  const clubMemberStatus = toClubParticipantStatus(record.clubMemberStatus);
+  const staff =
+    toBooleanValue(record.staff) ?? (clubMemberStatus === 'OWNER' || clubMemberStatus === 'STAFF');
+
+  return {
+    clubMemberId,
+    nickname,
+    profileImageUrl:
+      memberInfo.profileImageUrl ??
+      normalizeRemoteImageUrl(
+        toStringValue(
+          firstDefined(
+            record.profileImageUrl,
+            record.imgUrl,
+            record.imageUrl,
+            record.profileImgUrl,
+          ),
+        ),
+      ),
+    following:
+      toBooleanValue(firstDefined(record.following, record.isFollowing, record.subscribed)) ??
+      false,
+    clubMemberStatus,
+    staff,
   };
 }
 
@@ -1398,6 +1471,30 @@ export async function fetchClubMembers(
           .map(normalizeClubManagedMember)
           .filter((item): item is ClubManagedMember => Boolean(item))
       : [],
+    hasNext: Boolean(result.hasNext),
+    nextCursor: toNumberValue(result.nextCursor) ?? null,
+  };
+}
+
+export async function fetchClubParticipants(
+  clubId: number,
+  cursorId?: number,
+): Promise<ClubParticipantList> {
+  const response = await requestJson<ApiResponseClubParticipants>(`/clubs/${clubId}/participants`, {
+    method: 'GET',
+    query: {
+      cursorId,
+    },
+  });
+
+  const result = unwrapResult(response) ?? {};
+  return {
+    items: Array.isArray(result.clubMembers)
+      ? result.clubMembers
+          .map(normalizeClubParticipant)
+          .filter((item): item is ClubParticipant => Boolean(item))
+      : [],
+    totalCount: toNumberValue(result.totalCount) ?? 0,
     hasNext: Boolean(result.hasNext),
     nextCursor: toNumberValue(result.nextCursor) ?? null,
   };

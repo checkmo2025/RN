@@ -33,6 +33,7 @@ import {
   useScrollToTop,
   type EventArg,
   type NavigationAction,
+  type ParamListBase,
   type NavigationProp,
   type RouteProp,
 } from '@react-navigation/native';
@@ -75,14 +76,16 @@ import {
   checkClubNameDuplicate,
   createClub,
   fetchClubHome,
+  fetchClubParticipants,
   joinClub,
   type ClubCategoryCode,
+  type ClubParticipant,
   type ClubParticipantTypeCode,
   type ClubSearchOutputFilter,
 } from '../services/api/clubApi';
 import { CATEGORY_LABEL_TO_CODE } from '../constants/domain/category';
 import { PARTICIPANT_LABEL_TO_CODE } from '../constants/domain/participant';
-import { fetchMyProfile } from '../services/api/memberApi';
+import { fetchMyProfile, setFollowingMember } from '../services/api/memberApi';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { pickAndUploadImage as pickAndUploadImageUtil } from '../utils/imageUpload';
@@ -252,6 +255,8 @@ const NOTICE_CONTENT_INPUT_MAX_HEIGHT = 360;
 const NOTICE_INPUT_HEIGHT_SAFETY = spacing.sm;
 const NOTICE_CONTENT_SCROLL_CHAR_THRESHOLD = 220;
 const NOTICE_CONTENT_SCROLL_LINE_THRESHOLD = 8;
+const CLUB_PARTICIPANTS_PRIVATE_MESSAGE = '모임 회원은 가입 후에 조회 가능합니다';
+const CLUB_PARTICIPANT_GRID_BREAKPOINT = 640;
 
 
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
@@ -341,6 +346,12 @@ function createPendingClubGroup(clubId: number): Group {
     topic: '모임 대상 · 정보 없음',
     region: '활동 지역 · 정보 없음',
   };
+}
+
+function getClubParticipantRoleLabel(status: ClubParticipant['clubMemberStatus']) {
+  if (status === 'OWNER') return '개설자';
+  if (status === 'STAFF') return '운영진';
+  return '회원';
 }
 
 
@@ -1014,7 +1025,7 @@ export function MeetingScreen() {
 
 
 function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) {
-  const navigation = useNavigation<NavigationProp<TabParamList>>();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { requireAuth, isLoggedIn, logout } = useAuthGate();
@@ -1050,6 +1061,17 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   const [noticeContentInputFocused, setNoticeContentInputFocused] = useState(false);
   const clubWorkspaceRequestIdRef = useRef(0);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(!isManagedClub);
+  const clubParticipantsRequestIdRef = useRef(0);
+  const [clubParticipants, setClubParticipants] = useState<ClubParticipant[]>([]);
+  const [clubParticipantsTotalCount, setClubParticipantsTotalCount] = useState<number | null>(null);
+  const [clubParticipantsLoading, setClubParticipantsLoading] = useState(false);
+  const [clubParticipantsErrorMessage, setClubParticipantsErrorMessage] = useState('');
+  const [clubParticipantsPageState, setClubParticipantsPageState] = useState<CursorPageState>({
+    hasNext: false,
+    nextCursor: null,
+    loadingMore: false,
+  });
+  const [togglingParticipantNickname, setTogglingParticipantNickname] = useState<string | null>(null);
 
   const handleNoticeTitleContentSizeChange = useCallback(
     (event: NativeSyntheticEvent<TextInputContentSizeChangeEventData>, text: string) => {
@@ -1595,11 +1617,134 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
   );
   useEffect(() => {
     clubWorkspaceRequestIdRef.current += 1;
+    clubParticipantsRequestIdRef.current += 1;
     setManagedGroup(group);
     setCanManageClub(false);
+    setClubParticipants([]);
+    setClubParticipantsTotalCount(null);
+    setClubParticipantsLoading(false);
+    setClubParticipantsErrorMessage('');
+    setClubParticipantsPageState({
+      hasNext: false,
+      nextCursor: null,
+      loadingMore: false,
+    });
+    setTogglingParticipantNickname(null);
     resetBookshelfOnGroupChange();
     resetNoticeOnGroupChange();
   }, [group, resetBookshelfOnGroupChange, resetNoticeOnGroupChange]);
+
+  const loadClubParticipants = useCallback(
+    async (options?: {
+      cursorId?: number;
+      append?: boolean;
+      suppressErrorToast?: boolean;
+      isCancelled?: () => boolean;
+    }) => {
+      if (!isManagedClub || typeof group.clubId !== 'number') return;
+
+      if (!isLoggedIn) {
+        setClubParticipants([]);
+        setClubParticipantsTotalCount(null);
+        setClubParticipantsLoading(false);
+        setClubParticipantsErrorMessage('로그인 후 조회 가능합니다.');
+        setClubParticipantsPageState({
+          hasNext: false,
+          nextCursor: null,
+          loadingMore: false,
+        });
+        return;
+      }
+
+      const append = Boolean(options?.append);
+      const requestId = clubParticipantsRequestIdRef.current + 1;
+      clubParticipantsRequestIdRef.current = requestId;
+      const isStale = () =>
+        Boolean(options?.isCancelled?.()) ||
+        requestId !== clubParticipantsRequestIdRef.current;
+
+      if (append) {
+        setClubParticipantsPageState((prev) => ({ ...prev, loadingMore: true }));
+      } else {
+        setClubParticipantsLoading(true);
+        setClubParticipantsErrorMessage('');
+      }
+
+      try {
+        const response = await fetchClubParticipants(group.clubId, options?.cursorId);
+        if (isStale()) return;
+
+        setClubParticipantsErrorMessage('');
+        setClubParticipantsTotalCount(response.totalCount);
+        setClubParticipants((prev) => {
+          if (!append) return response.items;
+          const merged = new Map<number, ClubParticipant>();
+          prev.forEach((item) => merged.set(item.clubMemberId, item));
+          response.items.forEach((item) => merged.set(item.clubMemberId, item));
+          return Array.from(merged.values());
+        });
+        setClubParticipantsPageState({
+          hasNext: response.hasNext,
+          nextCursor: response.nextCursor,
+          loadingMore: false,
+        });
+      } catch (error) {
+        if (isStale()) return;
+
+        if (error instanceof ApiError && error.status === 401) {
+          handleAuthExpired({ suppressToast: options?.suppressErrorToast });
+          return;
+        }
+
+        const message =
+          error instanceof ApiError && error.status === 403
+            ? error.message?.trim() || CLUB_PARTICIPANTS_PRIVATE_MESSAGE
+            : error instanceof ApiError
+              ? error.message?.trim() || '모임 회원을 불러오지 못했습니다.'
+              : '모임 회원을 불러오지 못했습니다.';
+
+        if (!append) {
+          setClubParticipants([]);
+          setClubParticipantsTotalCount(null);
+        }
+        setClubParticipantsErrorMessage(message);
+        setClubParticipantsPageState((prev) => ({
+          ...prev,
+          loadingMore: false,
+          hasNext: append ? prev.hasNext : false,
+          nextCursor: append ? prev.nextCursor : null,
+        }));
+
+        if (!(error instanceof ApiError && error.status === 403) && !options?.suppressErrorToast) {
+          showToast(message);
+        }
+      } finally {
+        if (!isStale()) {
+          if (append) {
+            setClubParticipantsPageState((prev) => ({ ...prev, loadingMore: false }));
+          } else {
+            setClubParticipantsLoading(false);
+          }
+        }
+      }
+    },
+    [group.clubId, handleAuthExpired, isLoggedIn, isManagedClub],
+  );
+
+  useEffect(() => {
+    if (!isManagedClub) return;
+    let cancelled = false;
+
+    void loadClubParticipants({
+      isCancelled: () => cancelled,
+      suppressErrorToast: true,
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isManagedClub, loadClubParticipants]);
+
   useEffect(() => {
     if (!isLoggedIn) {
       setCurrentMemberNickname('');
@@ -2074,7 +2219,10 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     const refresh = async () => {
       setGroupHomeRefreshing(true);
       try {
-        await reloadClubWorkspace({ suppressErrorToast: true });
+        await Promise.all([
+          reloadClubWorkspace({ suppressErrorToast: true }),
+          loadClubParticipants({ suppressErrorToast: true }),
+        ]);
         if (
           activeTab === 'bookshelf' &&
           bookshelfViewMode !== 'GRID' &&
@@ -2094,10 +2242,84 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     activeTab,
     bookshelfViewMode,
     groupHomeRefreshing,
+    loadClubParticipants,
     reloadBookshelfMeetingDetail,
     reloadClubWorkspace,
     selectedBookshelfBook,
   ]);
+
+  const clubParticipantColumns = screenWidth >= CLUB_PARTICIPANT_GRID_BREAKPOINT ? 2 : 1;
+  const clubParticipantCardWidth =
+    clubParticipantColumns === 2
+      ? Math.max(0, (screenWidth - spacing.md * 2 - spacing.sm) / 2)
+      : '100%';
+  const clubParticipantsTotalText =
+    clubParticipantsTotalCount === null
+      ? '참여 인원을 확인하고 있습니다.'
+      : `총 ${clubParticipantsTotalCount}명`;
+
+  const handlePressClubParticipantProfile = useCallback(
+    (nickname: string) => {
+      const memberNickname = nickname.trim();
+      if (!memberNickname) return;
+      navigation.navigate('UserProfile', { memberNickname, fromScreen: 'Meeting' });
+    },
+    [navigation],
+  );
+
+  const handleToggleClubParticipantFollow = useCallback(
+    (participant: ClubParticipant) => {
+      const nickname = participant.nickname.trim();
+      if (!nickname || nickname === currentMemberNickname || togglingParticipantNickname === nickname) {
+        return;
+      }
+
+      requireAuth(() => {
+        const nextFollowing = !participant.following;
+        const previousParticipants = clubParticipants;
+        triggerSelectionHaptic();
+        setTogglingParticipantNickname(nickname);
+        setClubParticipants((prev) =>
+          prev.map((item) =>
+            item.nickname === nickname ? { ...item, following: nextFollowing } : item,
+          ),
+        );
+
+        const submit = async () => {
+          try {
+            await setFollowingMember(nickname, nextFollowing);
+            showToast(nextFollowing ? '구독했습니다.' : '구독을 취소했습니다.');
+          } catch (error) {
+            setClubParticipants(previousParticipants);
+            if (!(error instanceof ApiError)) {
+              showToast('구독 상태를 변경하지 못했습니다.');
+            }
+          } finally {
+            setTogglingParticipantNickname((prev) => (prev === nickname ? null : prev));
+          }
+        };
+
+        void submit();
+      });
+    },
+    [clubParticipants, currentMemberNickname, requireAuth, togglingParticipantNickname],
+  );
+
+  const handleLoadMoreClubParticipants = useCallback(() => {
+    if (
+      !clubParticipantsPageState.hasNext ||
+      clubParticipantsPageState.loadingMore ||
+      typeof clubParticipantsPageState.nextCursor !== 'number'
+    ) {
+      return;
+    }
+
+    void loadClubParticipants({
+      cursorId: clubParticipantsPageState.nextCursor,
+      append: true,
+      suppressErrorToast: false,
+    });
+  }, [clubParticipantsPageState, loadClubParticipants]);
 
   return (
     <View style={styles.screenWrap}>
@@ -2260,6 +2482,128 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
             >
               <Text style={styles.outlineButtonText}>문의하기</Text>
             </Pressable>
+          </View>
+
+          <View style={styles.clubParticipantsSection}>
+            <View style={styles.clubParticipantsHeader}>
+              <View style={styles.clubParticipantsTitleBlock}>
+                <Text style={styles.clubParticipantsTitle}>모임 회원</Text>
+                <Text style={styles.clubParticipantsCount}>{clubParticipantsTotalText}</Text>
+              </View>
+            </View>
+
+            {clubParticipantsLoading ? (
+              <View style={styles.clubParticipantsStateBox}>
+                <Text style={styles.clubParticipantsStateText}>모임 회원 불러오는 중...</Text>
+              </View>
+            ) : clubParticipantsErrorMessage ? (
+              <View style={styles.clubParticipantsStateBox}>
+                <Text style={styles.clubParticipantsStateText}>{clubParticipantsErrorMessage}</Text>
+              </View>
+            ) : clubParticipants.length === 0 ? (
+              <View style={styles.clubParticipantsStateBox}>
+                <Text style={styles.clubParticipantsStateText}>아직 참여 중인 회원이 없습니다.</Text>
+              </View>
+            ) : (
+              <View style={styles.clubParticipantsGrid}>
+                {clubParticipants.map((participant) => {
+                  const isMe = currentMemberNickname === participant.nickname;
+                  const isToggling = togglingParticipantNickname === participant.nickname;
+                  const roleLabel = getClubParticipantRoleLabel(participant.clubMemberStatus);
+
+                  return (
+                    <View
+                      key={`club-participant-${participant.clubMemberId}`}
+                      style={[
+                        styles.clubParticipantCard,
+                        { width: clubParticipantCardWidth },
+                      ]}
+                    >
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.clubParticipantIdentity,
+                          pressed && styles.pressed,
+                        ]}
+                        onPress={() => handlePressClubParticipantProfile(participant.nickname)}
+                      >
+                        <View style={styles.clubParticipantAvatar}>
+                          {participant.profileImageUrl ? (
+                            <Image
+                              source={{ uri: participant.profileImageUrl }}
+                              style={styles.clubParticipantAvatarImage}
+                            />
+                          ) : (
+                            <DefaultProfileAvatar size={44} />
+                          )}
+                        </View>
+                        <View style={styles.clubParticipantTextBlock}>
+                          <View style={styles.clubParticipantNameRow}>
+                            <Text
+                              style={styles.clubParticipantNickname}
+                              numberOfLines={1}
+                              ellipsizeMode="tail"
+                            >
+                              {participant.nickname}
+                            </Text>
+                            {participant.staff ? (
+                              <View style={styles.clubParticipantStaffBadge}>
+                                <MaterialIcons
+                                  name="admin-panel-settings"
+                                  size={13}
+                                  color={colors.primary3}
+                                />
+                                <Text style={styles.clubParticipantStaffBadgeText}>운영진</Text>
+                              </View>
+                            ) : null}
+                          </View>
+                          <Text style={styles.clubParticipantRole}>{roleLabel}</Text>
+                        </View>
+                      </Pressable>
+
+                      {!isMe ? (
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.clubParticipantFollowButton,
+                            participant.following && styles.clubParticipantFollowButtonActive,
+                            isToggling && styles.clubParticipantFollowButtonDisabled,
+                            pressed && !isToggling && styles.pressed,
+                          ]}
+                          onPress={() => handleToggleClubParticipantFollow(participant)}
+                          disabled={isToggling}
+                        >
+                          <Text
+                            style={[
+                              styles.clubParticipantFollowText,
+                              participant.following
+                                ? styles.clubParticipantFollowTextActive
+                                : styles.clubParticipantFollowTextInactive,
+                            ]}
+                          >
+                            {isToggling ? '처리 중' : participant.following ? '구독중' : '구독'}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {clubParticipantsPageState.hasNext && !clubParticipantsErrorMessage ? (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.clubParticipantsMoreButton,
+                  clubParticipantsPageState.loadingMore && styles.clubParticipantFollowButtonDisabled,
+                  pressed && !clubParticipantsPageState.loadingMore && styles.pressed,
+                ]}
+                onPress={handleLoadMoreClubParticipants}
+                disabled={clubParticipantsPageState.loadingMore}
+              >
+                <Text style={styles.clubParticipantsMoreButtonText}>
+                  {clubParticipantsPageState.loadingMore ? '불러오는 중...' : '더보기'}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
       ) : null}

@@ -3050,3 +3050,9 @@ export const interactionOpacity = {
 # 2026-06-24 11:39:47 KST ref_code 레포 연결 안내 추가
 
 - AGENTS/CLAUDE 지침에 `ref_code/BE`, `ref_code/FE`가 각각 별도 백엔드·프론트엔드 GitHub 레포와 연결되어 있음을 명시
+
+# 2026-06-24 14:47:21 KST RN 모임 회원 목록 구현
+
+- RN 모임 홈에 참여자 목록, 총원, 운영진 배지, 프로필 이동, 구독 버튼을 추가
+- `/clubs/{clubId}/participants` API 타입·정규화·cursor 더보기 처리 추가
+- 비공개 모임 참여자 조회 제한 메시지와 로딩/빈 목록/오류 상태 반영
