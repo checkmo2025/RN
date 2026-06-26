@@ -53,7 +53,8 @@ export type ManagementStateParams = {
   canManageClub: boolean;
   navigation: NavigationProp<ParamListBase>;
   requireAuth: (callback?: () => void) => void;
-  onBack: () => void;
+  onClubUpdated: (group: Group) => void;
+  onClubDeleted: (clubId: number) => void;
   bookshelfSessions: string[];
   bookshelfBookSelectorVisible: boolean;
   setManagedGroup: Dispatch<SetStateAction<Group>>;
@@ -71,7 +72,8 @@ export function useManagementState({
   canManageClub,
   navigation,
   requireAuth,
-  onBack,
+  onClubUpdated,
+  onClubDeleted,
   bookshelfSessions,
   bookshelfBookSelectorVisible,
   setManagedGroup,
@@ -438,12 +440,12 @@ export function useManagementState({
           links: group.links,
         });
         const detail = await fetchClubDetail(group.clubId as number);
+        let nextGroup: Group;
         if (detail) {
-          const nextGroup = mapManagedClubDetailToGroup(detail, managedGroup);
-          setManagedGroup(nextGroup);
+          nextGroup = mapManagedClubDetailToGroup(detail, managedGroup);
         } else {
-          setManagedGroup((prev) => ({
-            ...prev,
+          nextGroup = {
+            ...managedGroup,
             name,
             topic: `모임 대상 · ${targets.join(', ')}`,
             region: `활동 지역 · ${region}`,
@@ -451,8 +453,10 @@ export function useManagementState({
             tags,
             isPrivate: editDraft.isPrivate,
             profileImageUrl: editDraft.imageUrl || undefined,
-          }));
+          };
         }
+        setManagedGroup(nextGroup);
+        onClubUpdated(nextGroup);
         setActiveManagementScreen(null);
         showToast('모임 정보가 수정되었습니다.');
       } catch (error) {
@@ -463,7 +467,15 @@ export function useManagementState({
     };
 
     void save();
-  }, [canManageClub, editDraft, group.clubId, managedGroup, setManagedGroup]);
+  }, [
+    canManageClub,
+    editDraft,
+    group.clubId,
+    group.links,
+    managedGroup,
+    onClubUpdated,
+    setManagedGroup,
+  ]);
 
   const handleOpenJoinRequestProfile = useCallback(
     (nickname: string) => {
@@ -518,8 +530,8 @@ export function useManagementState({
             const submit = async () => {
               try {
                 await deleteClub(clubId);
+                onClubDeleted(clubId);
                 showToast('모임이 삭제되었습니다.');
-                onBack();
               } catch (error) {
                 if (!(error instanceof ApiError)) {
                   showToast('모임 삭제에 실패했습니다.');
@@ -531,7 +543,13 @@ export function useManagementState({
         },
       ]);
     });
-  }, [canManageClub, group.clubId, managedGroup.name, onBack, runAfterClosingManagementMenu]);
+  }, [
+    canManageClub,
+    group.clubId,
+    managedGroup.name,
+    onClubDeleted,
+    runAfterClosingManagementMenu,
+  ]);
 
   const handleCloseReportModal = useCallback(() => {
     if (submittingReport) return;

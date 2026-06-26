@@ -47,6 +47,11 @@ import {
   type BookItem,
 } from '../../services/api/bookApi';
 import {
+  publishBookLikeState,
+  resolveBookLikeId,
+  subscribeBookLikeState,
+} from '../../services/api/bookLikeApi';
+import {
   fetchBookStoriesByBook,
   type RemoteStoryItem,
 } from '../../services/api/bookStoryApi';
@@ -150,18 +155,6 @@ function toBookItemFromRouteParam(raw: unknown): BookItem | null {
     imgUrl: typeof record.imgUrl === 'string' ? record.imgUrl : undefined,
     publisher: typeof record.publisher === 'string' ? record.publisher : undefined,
   };
-}
-
-function resolveBookLikeId(book: Pick<BookItem, 'isbn' | 'bookId' | 'title'>): string | null {
-  const isbn = book.isbn.trim();
-  if (isbn && !isbn.startsWith('placeholder-')) return `isbn:${isbn}`;
-
-  if (typeof book.bookId === 'number' && Number.isInteger(book.bookId) && book.bookId > 0) {
-    return `bookId:${book.bookId}`;
-  }
-
-  const title = book.title.trim();
-  return title ? `title:${title}` : null;
 }
 
 export function AppHeader(props: Props) {
@@ -285,6 +278,7 @@ export function AppHeader(props: Props) {
           if (book.isbn.trim()) {
             await toggleBookLikeByIsbn(book.isbn);
           }
+          publishBookLikeState(book, !wasLiked);
           showToast(wasLiked ? '내 서재에서 제거했습니다.' : '내 서재에 담았습니다.');
         } catch (error) {
           setLikedBookIds((prev) => {
@@ -307,6 +301,20 @@ export function AppHeader(props: Props) {
     },
     [isBookLikeTogglable, isBookLikedInUi],
   );
+
+  useEffect(() => {
+    return subscribeBookLikeState(({ likeId, liked }) => {
+      setLikedBookIds((prev) => {
+        const next = new Set(prev);
+        if (liked) {
+          next.add(likeId);
+        } else {
+          next.delete(likeId);
+        }
+        return next;
+      });
+    });
+  }, []);
 
   const handleToggleBookLike = useCallback(
     (book: BookItem) => {

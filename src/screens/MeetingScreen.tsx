@@ -76,9 +76,11 @@ import {
   checkClubNameDuplicate,
   createClub,
   fetchClubHome,
+  fetchClubMyMembership,
   fetchClubParticipants,
   joinClub,
   type ClubCategoryCode,
+  type ClubMembershipStatus,
   type ClubParticipant,
   type ClubParticipantTypeCode,
   type ClubSearchOutputFilter,
@@ -354,6 +356,44 @@ function getClubParticipantRoleLabel(status: ClubParticipant['clubMemberStatus']
   return '회원';
 }
 
+function isJoinedClubStatus(status?: ClubMembershipStatus) {
+  return status === 'MEMBER' || status === 'STAFF' || status === 'OWNER';
+}
+
+function getJoinFallbackStatus(group: Group): ClubMembershipStatus {
+  return group.isPrivate ? 'PENDING' : 'MEMBER';
+}
+
+function applyGroupMembershipStatus(group: Group, status: ClubMembershipStatus): Group {
+  return {
+    ...group,
+    membershipStatus: status,
+    applicationStatus: mapClubStatusToApplication(status) ?? group.applicationStatus,
+  };
+}
+
+function mergeUpdatedClubGroup(current: Group, updated: Group): Group {
+  return {
+    ...current,
+    ...updated,
+    id: current.id,
+    clubId: current.clubId ?? updated.clubId,
+    membershipStatus: updated.membershipStatus ?? current.membershipStatus,
+    applicationStatus: updated.applicationStatus ?? current.applicationStatus,
+  };
+}
+
+function upsertGroupByClubId(groups: Group[], nextGroup: Group): Group[] {
+  const clubId = nextGroup.clubId;
+  if (typeof clubId !== 'number') return groups;
+  if (!groups.some((group) => group.clubId === clubId)) {
+    return [nextGroup, ...groups];
+  }
+  return groups.map((group) =>
+    group.clubId === clubId ? mergeUpdatedClubGroup(group, nextGroup) : group,
+  );
+}
+
 
 
 export function MeetingScreen() {
@@ -386,10 +426,13 @@ export function MeetingScreen() {
 
   const {
     myGroups,
+    setMyGroups,
     discoverGroups,
+    setDiscoverGroups,
     myGroupsLoading,
     discoverLoading,
     loadMyGroups,
+    loadDiscoverGroups,
   } = useMeetingDiscover({ search, activeInputFilter, selectedOutputFilter, isLoggedIn });
 
   const showLeaveDraftAlert = useCallback((onClose: () => void) => {
@@ -421,6 +464,59 @@ export function MeetingScreen() {
     setActiveGroup(null);
     setOpeningClubLoading(false);
   }, [activeGroup]);
+
+  const refreshMeetingLists = useCallback(async () => {
+    await Promise.all([
+      loadMyGroups(),
+      loadDiscoverGroups(),
+    ]);
+  }, [loadDiscoverGroups, loadMyGroups]);
+
+  const patchClubInMeetingLists = useCallback(
+    (clubId: number, updater: (group: Group) => Group) => {
+      setMyGroups((prev) =>
+        prev.map((group) => (group.clubId === clubId ? updater(group) : group)),
+      );
+      setDiscoverGroups((prev) =>
+        prev.map((group) => (group.clubId === clubId ? updater(group) : group)),
+      );
+      setActiveGroup((prev) => (prev?.clubId === clubId ? updater(prev) : prev));
+    },
+    [setDiscoverGroups, setMyGroups],
+  );
+
+  const handleClubUpdated = useCallback(
+    (updatedGroup: Group) => {
+      const clubId = updatedGroup.clubId;
+      if (typeof clubId !== 'number') return;
+
+      patchClubInMeetingLists(clubId, (group) => mergeUpdatedClubGroup(group, updatedGroup));
+      void refreshMeetingLists();
+    },
+    [patchClubInMeetingLists, refreshMeetingLists],
+  );
+
+  const handleClubDeleted = useCallback(
+    (clubId: number) => {
+      setActiveGroup((prev) => (prev?.clubId === clubId ? null : prev));
+      setMyGroups((prev) => prev.filter((group) => group.clubId !== clubId));
+      setDiscoverGroups((prev) => prev.filter((group) => group.clubId !== clubId));
+      setAppliedById((prev) => {
+        const next = { ...prev };
+        delete next[`club-${clubId}`];
+        return next;
+      });
+      if (lastVisitedClubIdRef.current === clubId) {
+        lastVisitedClubIdRef.current = null;
+      }
+      void refreshMeetingLists();
+    },
+    [refreshMeetingLists, setDiscoverGroups, setMyGroups],
+  );
+
+  const handleClubCreated = useCallback(async () => {
+    await refreshMeetingLists();
+  }, [refreshMeetingLists]);
 
   const scrollMeetingSearchToTop = useCallback((animated = false) => {
     requestAnimationFrame(() => {
@@ -770,10 +866,26 @@ export function MeetingScreen() {
       const submit = async () => {
         try {
           await joinClub(clubId, reason);
-          setAppliedById((prev) => ({ ...prev, [group.id]: '신청 완료되었습니다' }));
+          const membership = await fetchClubMyMembership(clubId, {
+            suppressErrorToast: true,
+          }).catch(() => null);
+          const nextStatus = membership?.myStatus ?? getJoinFallbackStatus(group);
+          const nextApplicationStatus =
+            mapClubStatusToApplication(nextStatus) ??
+            (isJoinedClubStatus(nextStatus) ? '가입 완료되었습니다' : '신청 완료되었습니다');
+          const nextGroup = applyGroupMembershipStatus(group, nextStatus);
+
+          patchClubInMeetingLists(clubId, (item) => applyGroupMembershipStatus(item, nextStatus));
+          if (isJoinedClubStatus(nextStatus)) {
+            setMyGroups((prev) => upsertGroupByClubId(prev, nextGroup));
+          }
+          setAppliedById((prev) => ({ ...prev, [group.id]: nextApplicationStatus }));
           setApplyOpenId(null);
           setApplyReasonById((prev) => ({ ...prev, [group.id]: '' }));
-          showToast('가입 신청이 완료되었습니다.');
+          showToast(
+            isJoinedClubStatus(nextStatus) ? '모임에 가입되었습니다.' : '가입 신청이 완료되었습니다.',
+          );
+          void refreshMeetingLists();
         } catch (error) {
           if (!(error instanceof ApiError)) {
             showToast('가입 신청에 실패했습니다.');
@@ -805,6 +917,7 @@ export function MeetingScreen() {
       <ScreenLayout title="모임" onPressLogo={handlePressHeaderLogo}>
         <MeetingCreateFlow
           onClose={closeCreateFlow}
+          onCreated={handleClubCreated}
           onDirtyChange={setCreateDraftDirty}
         />
       </ScreenLayout>
@@ -820,6 +933,8 @@ export function MeetingScreen() {
             onBack={() => {
               void closeActiveGroupWithLoading();
             }}
+            onClubUpdated={handleClubUpdated}
+            onClubDeleted={handleClubDeleted}
           />
           {openingClubLoading ? (
             <View style={styles.loadingOverlay}>
@@ -1024,7 +1139,17 @@ export function MeetingScreen() {
 
 
 
-function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) {
+function GroupHomeView({
+  group,
+  onBack,
+  onClubUpdated,
+  onClubDeleted,
+}: {
+  group: Group;
+  onBack: () => void;
+  onClubUpdated: (group: Group) => void;
+  onClubDeleted: (clubId: number) => void;
+}) {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -1151,7 +1276,8 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
     canManageClub,
     navigation,
     requireAuth,
-    onBack,
+    onClubUpdated,
+    onClubDeleted,
     bookshelfSessions: bookshelfState.bookshelfSessions,
     bookshelfBookSelectorVisible: bookshelfState.bookshelfBookSelectorVisible,
     setManagedGroup,
@@ -3879,9 +4005,11 @@ function GroupHomeView({ group, onBack }: { group: Group; onBack: () => void }) 
 
 function MeetingCreateFlow({
   onClose,
+  onCreated,
   onDirtyChange,
 }: {
   onClose: () => void;
+  onCreated?: () => Promise<void> | void;
   onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [step, setStep] = useState<CreateStep>(1);
@@ -4037,6 +4165,13 @@ function MeetingCreateFlow({
         open: isPublic ?? true,
         profileImageUrl: clubImageMode === 'uploaded' ? clubImageUrl || undefined : undefined,
       });
+      try {
+        await onCreated?.();
+      } catch (refreshError) {
+        if (!(refreshError instanceof ApiError)) {
+          showToast('모임 목록을 새로고침하지 못했습니다.');
+        }
+      }
       showToast('모임이 생성되었습니다.');
       onClose();
     } catch (error) {

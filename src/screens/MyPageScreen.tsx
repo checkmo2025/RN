@@ -51,6 +51,11 @@ import {
   toggleBookLikeByIsbn,
   type MemberLikedBookItem,
 } from '../services/api/bookApi';
+import {
+  publishBookLikeState,
+  resolveBookLikeId,
+  subscribeBookLikeState,
+} from '../services/api/bookLikeApi';
 import { deleteBookStory, fetchMyBookStories } from '../services/api/bookStoryApi';
 import { fetchMyClubs, leaveClub, type ClubCategoryCode } from '../services/api/clubApi';
 import { CATEGORY_CODE_TO_LABEL, CATEGORY_CHIP_COLOR } from '../constants/domain/category';
@@ -135,6 +140,16 @@ type BookCard = {
   imageUrl?: string;
   liked: boolean;
 };
+
+function toBookLikePayload(book: BookCard) {
+  return {
+    isbn: book.isbn,
+    bookId: book.bookId,
+    title: book.title,
+    author: book.author,
+    imgUrl: book.imageUrl,
+  };
+}
 
 type GroupItem = {
   id: string;
@@ -457,6 +472,38 @@ export function MyPageScreen() {
       setLoadingBooks(false);
     }
   }, [mapLikedBooksToCards]);
+
+  useEffect(() => {
+    return subscribeBookLikeState(({ likeId, liked, book }) => {
+      setBooks((prev) => {
+        const existingIndex = prev.findIndex((item) => resolveBookLikeId(item) === likeId);
+        if (!liked) {
+          return existingIndex >= 0
+            ? prev.filter((_, index) => index !== existingIndex)
+            : prev;
+        }
+
+        if (existingIndex >= 0) {
+          return prev.map((item, index) =>
+            index === existingIndex ? { ...item, liked: true } : item,
+          );
+        }
+
+        if (!book) return prev;
+
+        const nextBook: BookCard = {
+          id: likeId,
+          isbn: book.isbn.trim(),
+          bookId: book.bookId,
+          title: book.title.trim() || '책 제목',
+          author: book.author.trim() || '작가 미상',
+          imageUrl: normalizeRemoteImageUrl(book.imgUrl),
+          liked: true,
+        };
+        return [nextBook, ...prev];
+      });
+    });
+  }, []);
 
   const loadMyPageData = useCallback(async () => {
     if (!isLoggedIn) {
@@ -974,19 +1021,25 @@ export function MyPageScreen() {
       }
 
       const current = books.find((item) => item.id === book.id);
+      const bookLikePayload = toBookLikePayload(book);
 
       if (current) {
         const nextLiked = !current.liked;
-        setBooks((prev) =>
-          prev.map((item) => (item.id === book.id ? { ...item, liked: nextLiked } : item)),
-        );
+        const previousBooks = books;
+        setBooks((prev) => {
+          if (nextLiked) {
+            return prev.map((item) =>
+              item.id === book.id ? { ...item, liked: true } : item,
+            );
+          }
+          return prev.filter((item) => item.id !== book.id);
+        });
         try {
           await toggleBookLikeByIsbn(book.isbn);
+          publishBookLikeState(bookLikePayload, nextLiked);
           showToast(nextLiked ? '내 서재에 담았습니다.' : '좋아요가 취소되었습니다.');
         } catch (error) {
-          setBooks((prev) =>
-            prev.map((item) => (item.id === book.id ? { ...item, liked: !nextLiked } : item)),
-          );
+          setBooks(previousBooks);
           if (!(error instanceof ApiError)) {
             showToast('내 서재 업데이트에 실패했습니다.');
           }
@@ -996,6 +1049,7 @@ export function MyPageScreen() {
         setBooks((prev) => [newBook, ...prev]);
         try {
           await toggleBookLikeByIsbn(book.isbn);
+          publishBookLikeState(bookLikePayload, true);
           showToast('내 서재에 담았습니다.');
         } catch (error) {
           setBooks((prev) => prev.filter((item) => item.id !== book.id));

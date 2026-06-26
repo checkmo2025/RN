@@ -12,9 +12,16 @@ export type LikedBook = {
 };
 
 type LikedBooksListener = (books: LikedBook[]) => void;
+type BookLikeStateChange = {
+  likeId: string;
+  liked: boolean;
+  book?: Pick<BookItem, 'isbn' | 'bookId' | 'title' | 'author' | 'imgUrl'>;
+};
+type BookLikeStateListener = (change: BookLikeStateChange) => void;
 
 const likedBooksById = new Map<string, LikedBook>();
 const likedBooksListeners = new Set<LikedBooksListener>();
+const bookLikeStateListeners = new Set<BookLikeStateListener>();
 
 function normalizeText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
@@ -42,6 +49,14 @@ function notifyLikedBooksChanged() {
   likedBooksListeners.forEach((listener) => listener(next));
 }
 
+function notifyBookLikeStateChanged(
+  likeId: string,
+  liked: boolean,
+  book?: BookLikeStateChange['book'],
+) {
+  bookLikeStateListeners.forEach((listener) => listener({ likeId, liked, book }));
+}
+
 export function resolveBookLikeId(book: Pick<BookItem, 'isbn' | 'bookId' | 'title'>): string | null {
   return toBookLikeId(book);
 }
@@ -63,6 +78,7 @@ export async function toggleBookLike(book: BookItem): Promise<boolean> {
   if (likedBooksById.has(id)) {
     likedBooksById.delete(id);
     notifyLikedBooksChanged();
+    notifyBookLikeStateChanged(id, false, book);
     return false;
   }
 
@@ -79,6 +95,7 @@ export async function toggleBookLike(book: BookItem): Promise<boolean> {
 
   likedBooksById.set(id, likedBook);
   notifyLikedBooksChanged();
+  notifyBookLikeStateChanged(id, true, book);
   return true;
 }
 
@@ -86,5 +103,21 @@ export function subscribeLikedBooks(listener: LikedBooksListener): () => void {
   likedBooksListeners.add(listener);
   return () => {
     likedBooksListeners.delete(listener);
+  };
+}
+
+export function publishBookLikeState(
+  book: Pick<BookItem, 'isbn' | 'bookId' | 'title' | 'author' | 'imgUrl'>,
+  liked: boolean,
+): void {
+  const id = toBookLikeId(book);
+  if (!id) return;
+  notifyBookLikeStateChanged(id, liked, book);
+}
+
+export function subscribeBookLikeState(listener: BookLikeStateListener): () => void {
+  bookLikeStateListeners.add(listener);
+  return () => {
+    bookLikeStateListeners.delete(listener);
   };
 }
