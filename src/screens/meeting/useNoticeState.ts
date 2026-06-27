@@ -1050,6 +1050,14 @@ export function useNoticeState({
       showToast('공지 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
       return;
     }
+    if (title.length > INPUT_LIMITS.NOTICE_TITLE) {
+      showToast(`공지 제목은 ${INPUT_LIMITS.NOTICE_TITLE}자 이하여야 합니다.`);
+      return;
+    }
+    if (content.length > INPUT_LIMITS.NOTICE_CONTENT) {
+      showToast(`공지 내용은 ${INPUT_LIMITS.NOTICE_CONTENT}자 이하여야 합니다.`);
+      return;
+    }
 
     const currentEditingNoticeId = editingNoticeId;
     const isEditingNotice = currentEditingNoticeId !== null;

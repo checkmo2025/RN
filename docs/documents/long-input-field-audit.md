@@ -12,8 +12,8 @@
 | 신고 내용 | 500 | 500 | 있음 | `FormTextInput` clamp + 토스트 | 내부 스크롤 명시, 입력 박스 maxHeight/여백 보강 | 없음 |
 | 모임 소개글 | 500 | 500 | 있음 | `FormTextInput` clamp + 토스트 | 생성/수정 공통 textArea minHeight/여백 보강 | 없음 |
 | 발제/한줄평 | 300 | 300 | 있음 | `FormTextInput` clamp + 토스트 | 내부 스크롤 명시, composer minHeight/여백 보강 | 없음 |
-| 공지 제목 | 40 | 50 | 있음 | `FormTextInput` clamp + 토스트 | 내부 스크롤 명시, 제목 입력 하단 여백 보강 | 있음 |
-| 공지 내용 | 1000 | 2000 | 있음 | `FormTextInput` clamp + 토스트 | 내부 스크롤 명시, 내용 입력 하단 여백 보강 | 있음 |
+| 공지 제목 | 40 | 40 | 있음 | `FormTextInput` clamp + 토스트 | 내부 스크롤 명시, 제목 입력 하단 여백 보강 | 있음 |
+| 공지 내용 | 1000 | 1000 | 있음 | `FormTextInput` clamp + 토스트 | 내부 스크롤 명시, 내용 입력 하단 여백 보강 | 있음 |
 
 ## 상세 조사표
 
@@ -25,8 +25,8 @@
 | 모임 정보 수정 | 소개글 | `PUT /clubs/{clubId}`, `ClubRequestDTO.ClubDetail.description` | `@NotBlank`, `@Size(max = 500)`. entity column 길이는 별도 지정 없음 | `INPUT_LIMITS.CLUB_DESCRIPTION = 500`, `GroupManagementOverlay` 수정 폼 | `{editDraft.description.length}/500`, 500자 초과 clamp + `"모임 소개글은 500자 이하여야 합니다."` | 생성 폼과 같은 공통 `textArea` 보정 적용 | 없음 |
 | 책장 상세 | 발제 | `POST/PATCH /clubs/{clubId}/meetings/{meetingId}/topics`, `BookShelfRequestDTO.TopicCreate.description` | `@NotBlank`, `@Size(max = 300)` | `INPUT_LIMITS.BOOKSHELF_COMPOSER = 300`, `MeetingScreen` bookshelf composer | `{bookshelfComposerInput.length}/300`, 300자 초과 clamp + `"내용은 300자 이하여야 합니다."` | composer 입력 `minHeight/maxHeight`, 내부 스크롤/상단 정렬/하단 여백 명시 | 없음 |
 | 책장 상세 | 한줄평 | `POST/PATCH /clubs/{clubId}/meetings/{meetingId}/reviews`, `BookShelfRequestDTO.BookReviewCreate.description` | `@NotBlank`, `@Size(max = 300)` | `INPUT_LIMITS.BOOKSHELF_COMPOSER = 300`, `MeetingScreen` bookshelf composer | `{bookshelfComposerInput.length}/300`, 300자 초과 clamp + `"내용은 300자 이하여야 합니다."` | 발제와 같은 composer 보정 적용 | 없음 |
-| 공지 작성/수정 | 제목 | `POST/PATCH /clubs/{clubId}/notices`, `ClubNoticeRequestDTO.*.title` | `@NotBlank`, `@Size(max = 40)`. `Notice.title`은 column 길이 지정 없음 | `INPUT_LIMITS.NOTICE_TITLE = 50`, `MeetingScreen` 공지 작성/수정 | `{noticeDraft.title.length}/50`, 50자 초과 clamp + `"공지 제목은 50자 이하여야 합니다."` | 내부 스크롤/상단 정렬 명시, 하단 여백 추가 | BE 40/RN 50 불일치. 서버 400 가능성이 있어 정책 결정 필요 |
-| 공지 작성/수정 | 내용 | `POST/PATCH /clubs/{clubId}/notices`, `ClubNoticeRequestDTO.*.content` | `@NotNull`, `@Size(max = 1000)`, `Notice.content @Column(length = 1000)` | `INPUT_LIMITS.NOTICE_CONTENT = 2000`, `MeetingScreen` 공지 작성/수정 | `{noticeDraft.content.length}/2000`, 2000자 초과 clamp + `"공지 내용은 2000자 이하여야 합니다."` | 내부 스크롤/상단 정렬 명시, 하단 여백 추가 | BE 1000/RN 2000 불일치. 서버 400 가능성이 있어 정책 결정 필요 |
+| 공지 작성/수정 | 제목 | `POST/PATCH /clubs/{clubId}/notices`, `ClubNoticeRequestDTO.*.title` | `@NotBlank`, `@Size(max = 40)`. `Notice.title`은 column 길이 지정 없음 | `INPUT_LIMITS.NOTICE_TITLE = 40`, `MeetingScreen` 공지 작성/수정 | `{noticeDraft.title.length}/40`, 40자 초과 clamp + `"공지 제목은 40자 이하여야 합니다."` | 내부 스크롤/상단 정렬 명시, 하단 여백 추가 | BE/RN 일치 |
+| 공지 작성/수정 | 내용 | `POST/PATCH /clubs/{clubId}/notices`, `ClubNoticeRequestDTO.*.content` | `@NotNull`, `@Size(max = 1000)`, `Notice.content @Column(length = 1000)` | `INPUT_LIMITS.NOTICE_CONTENT = 1000`, `MeetingScreen` 공지 작성/수정 | `{noticeDraft.content.length}/1000`, 1000자 초과 clamp + `"공지 내용은 1000자 이하여야 합니다."` | 내부 스크롤/상단 정렬 명시, 하단 여백 추가 | BE/RN 일치 |
 
 ## 공통 동작
 
@@ -51,6 +51,6 @@
 ## 계약 불일치
 
 - 책이야기 본문: RN은 5000자로 제한하지만 BE DTO에는 `@Size`가 없고 entity는 `TEXT`다. 현재는 RN UX 제한만 존재한다.
-- 공지 제목: RN은 50자를 허용하지만 BE DTO는 40자를 허용한다.
-- 공지 내용: RN은 2000자를 허용하지만 BE DTO/entity는 1000자를 허용한다.
-- 위 3건은 이번 작업에서 코드 정책을 바꾸지 않는다. 다음 결정 시 RN 제한을 BE에 맞출지, BE validation을 RN에 맞출지 별도 확정해야 한다.
+- 공지 제목: BE/RN 40자로 일치.
+- 공지 내용: BE/RN 1000자로 일치.
+- 공지 제목/내용은 RN 제한을 BE validation에 맞췄다. 책이야기 본문 제한은 RN UX 제한으로 유지한다.
