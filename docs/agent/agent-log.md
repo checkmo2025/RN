@@ -3114,3 +3114,9 @@ export const interactionOpacity = {
 - `app.json`의 `version`을 1.0.1 → 1.0.2로 명시적 변경 (스토어 마케팅 버전)
 - `runtimeVersion`도 1.0.1 → 1.0.2로 동기화 (OTA 업데이트 호환 키)
 - buildNumber/versionCode는 EAS `appVersionSource: remote` + `autoIncrement`로 서버 자동 증가라 미변경
+
+# 2026-06-27 18:26:06 KST EAS capability 동기화 비활성화
+
+- iOS 빌드 시 `APPLE_ID_AUTH` capability 동기화 실패로 빌드가 중단되던 문제 대응
+- `eas.json`의 `build.production.env`에 `EXPO_NO_CAPABILITY_SYNC=1` 추가해 capability 자동 동기화를 영구 비활성화
+- RN 앱은 네이티브 Apple/소셜 로그인을 쓰지 않아(이메일/비번 로그인만) capability를 건드릴 필요 없음 확인
