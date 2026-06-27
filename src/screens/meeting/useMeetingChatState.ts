@@ -10,6 +10,7 @@ import {
   type ReportReason,
 } from '../../services/api/memberApi';
 import { useMeetingChatStomp } from '../../services/websocket/useMeetingChatStomp';
+import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { triggerSelectionHaptic } from '../../utils/haptics';
 import { showToast } from '../../utils/toast';
 import type { RegularMeetingGroupItem, RegularMeetingInfo } from './types';
@@ -248,6 +249,10 @@ export function useMeetingChatState({
   const submitMessage = useCallback(() => {
     const content = input.trim();
     if (!content) return;
+    if (content.length > INPUT_LIMITS.CHAT_MESSAGE) {
+      showToast(`채팅 메시지는 ${INPUT_LIMITS.CHAT_MESSAGE}자 이하여야 합니다.`);
+      return;
+    }
     try {
       publish(content);
       triggerSelectionHaptic();

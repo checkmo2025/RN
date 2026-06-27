@@ -139,7 +139,7 @@ export function MeetingListCard({
             value={applyReason}
             onChangeText={(text) => onChangeApplyReason?.(text)}
             onFocus={onApplyInputFocus}
-            placeholder="신청 사유를 입력해보세요(300자 제한)"
+            placeholder={`신청 사유를 입력해보세요(${INPUT_LIMITS.APPLY_REASON}자 제한)`}
             placeholderTextColor={colors.gray3}
             multiline
             maxLength={INPUT_LIMITS.APPLY_REASON}

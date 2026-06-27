@@ -828,7 +828,7 @@ export function GroupManagementOverlay({
                     onChangeText={(text) =>
                       setBookshelfCreateDraft((prev) => ({ ...prev, regularMeetingName: text }))
                     }
-                    placeholder="정기모임 이름을 입력해주세요"
+                    placeholder={`정기모임 이름을 입력해주세요 (최대 ${BOOKSHELF_MEETING_TITLE_MAX_LENGTH}자)`}
                     placeholderTextColor={colors.gray3}
                     maxLength={BOOKSHELF_MEETING_TITLE_MAX_LENGTH}
                     style={styles.input}
@@ -842,7 +842,7 @@ export function GroupManagementOverlay({
                     onChangeText={(text) =>
                       setBookshelfCreateDraft((prev) => ({ ...prev, meetingLocation: text }))
                     }
-                    placeholder="모임 장소를 입력해주세요"
+                    placeholder={`모임 장소를 입력해주세요 (최대 ${BOOKSHELF_MEETING_LOCATION_MAX_LENGTH}자)`}
                     placeholderTextColor={colors.gray3}
                     maxLength={BOOKSHELF_MEETING_LOCATION_MAX_LENGTH}
                     style={styles.input}
@@ -881,7 +881,7 @@ export function GroupManagementOverlay({
                     </View>
                     <MaterialIcons name="chevron-right" size={20} color={colors.gray4} />
                   </Pressable>
-                  <Text style={styles.helperText}>달력에서 날짜를 선택해야 합니다.</Text>
+                  <Text style={styles.helperText}>선택하지 않으면 날짜 없이 등록됩니다.</Text>
                 </View>
               </View>
             ) : null}

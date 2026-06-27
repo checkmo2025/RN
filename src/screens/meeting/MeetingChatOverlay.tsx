@@ -23,6 +23,7 @@ import { DialogOverlay } from '../../components/common/DialogOverlay';
 import { FeedbackPressable as Pressable } from '../../components/common/FeedbackPressable';
 import { FormTextInput } from '../../components/common/FormTextInput';
 import { ToastHost } from '../../components/common/ToastHost';
+import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { useEdgeBackSwipe } from '../../hooks/useEdgeBackSwipe';
 import type { RootStackParamList } from '../../navigation/types';
 import type { ClubMeetingChatMessage } from '../../services/api/clubApi';
@@ -283,9 +284,11 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                 value={state.input}
                 onChangeText={state.setInput}
                 style={styles.chatInput}
-                placeholder="채팅 입력"
+                placeholder={`채팅 입력 (최대 ${INPUT_LIMITS.CHAT_MESSAGE}자)`}
                 placeholderTextColor={colors.gray3}
                 returnKeyType="send"
+                maxLength={INPUT_LIMITS.CHAT_MESSAGE}
+                overLimitMessage={`채팅 메시지는 ${INPUT_LIMITS.CHAT_MESSAGE}자 이하여야 합니다.`}
                 onSubmitEditing={state.submitMessage}
               />
               <Pressable

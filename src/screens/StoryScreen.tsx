@@ -1804,6 +1804,10 @@ export function StoryScreen() {
         return;
       }
       const content = commentInput.trim();
+      if (content.length > INPUT_LIMITS.BOOK_STORY_COMMENT) {
+        showToast(`댓글은 ${INPUT_LIMITS.BOOK_STORY_COMMENT}자 이하여야 합니다.`);
+        return;
+      }
       const isEditing = typeof editingCommentId === 'number';
       const parentCommentId = !isEditing ? replyTarget?.commentId : undefined;
       const replyCommentKey = !isEditing ? replyTarget?.commentKey : undefined;
@@ -2240,11 +2244,17 @@ export function StoryScreen() {
                 <FormTextInput
                   ref={commentInputRef}
                   style={styles.commentInput}
-                  placeholder={editingCommentId ? '댓글 수정' : '댓글 내용'}
+                  placeholder={
+                    editingCommentId
+                      ? `댓글 수정 (최대 ${INPUT_LIMITS.BOOK_STORY_COMMENT}자)`
+                      : `댓글 내용 (최대 ${INPUT_LIMITS.BOOK_STORY_COMMENT}자)`
+                  }
                   placeholderTextColor={colors.gray3}
                   value={commentInput}
                   onChangeText={handleChangeCommentInput}
                   multiline
+                  maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
+                  overLimitMessage={`댓글은 ${INPUT_LIMITS.BOOK_STORY_COMMENT}자 이하여야 합니다.`}
                   onFocus={scrollToCommentInput}
                 />
                 <Pressable
@@ -2307,11 +2317,13 @@ export function StoryScreen() {
                         <FormTextInput
                           ref={inlineReplyInputRef}
                           style={styles.commentInput}
-                          placeholder="대댓글 내용"
+                          placeholder={`대댓글 내용 (최대 ${INPUT_LIMITS.BOOK_STORY_COMMENT}자)`}
                           placeholderTextColor={colors.gray3}
                           value={commentInput}
                           onChangeText={handleChangeCommentInput}
                           multiline
+                          maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
+                          overLimitMessage={`댓글은 ${INPUT_LIMITS.BOOK_STORY_COMMENT}자 이하여야 합니다.`}
                           onFocus={scrollToCommentInput}
                         />
                         <Pressable

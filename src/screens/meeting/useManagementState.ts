@@ -16,6 +16,7 @@ import {
 } from '../../services/api/clubApi';
 import { CATEGORY_LABEL_TO_CODE } from '../../constants/domain/category';
 import { PARTICIPANT_LABEL_TO_CODE } from '../../constants/domain/participant';
+import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { showToast } from '../../utils/toast';
 import { motion } from '../../theme';
 import type {
@@ -413,9 +414,50 @@ export function useManagementState({
     const description = editDraft.description.trim();
     const tags = editDraft.categories;
     const targets = editDraft.targets;
+    const category = tags
+      .map((tag) => CATEGORY_LABEL_TO_CODE[tag])
+      .filter((tag): tag is ClubCategoryCode => Boolean(tag));
+    const participantTypes = targets
+      .map((target) => PARTICIPANT_LABEL_TO_CODE[target])
+      .filter((target): target is ClubParticipantTypeCode => Boolean(target));
+    const profileImageUrl = editDraft.imageUrl.trim();
+    const links = (group.links ?? [])
+      .map((link) => ({
+        label: link.label?.trim() ?? '',
+        link: link.link.trim(),
+      }))
+      .filter((link) => link.link.length > 0);
 
-    if (!name || !region || !description || tags.length === 0 || targets.length === 0) {
+    if (!name || !region || !description || category.length === 0 || participantTypes.length === 0) {
       showToast('모임 이름, 소개글, 지역, 카테고리, 대상을 입력해야 합니다.');
+      return;
+    }
+    if (name.length > INPUT_LIMITS.CLUB_NAME) {
+      showToast(`모임 이름은 ${INPUT_LIMITS.CLUB_NAME}자 이하여야 합니다.`);
+      return;
+    }
+    if (description.length > INPUT_LIMITS.CLUB_DESCRIPTION) {
+      showToast(`모임 소개글은 ${INPUT_LIMITS.CLUB_DESCRIPTION}자 이하여야 합니다.`);
+      return;
+    }
+    if (region.length > INPUT_LIMITS.CLUB_REGION) {
+      showToast(`활동 지역은 ${INPUT_LIMITS.CLUB_REGION}자 이하여야 합니다.`);
+      return;
+    }
+    if (links.length > 4) {
+      showToast('문의 링크는 최대 4개까지 등록할 수 있습니다.');
+      return;
+    }
+    if (links.some((link) => link.label.length > INPUT_LIMITS.CLUB_LINK_LABEL)) {
+      showToast(`문의 링크 이름은 ${INPUT_LIMITS.CLUB_LINK_LABEL}자 이하여야 합니다.`);
+      return;
+    }
+    if (links.some((link) => link.link.length > INPUT_LIMITS.CLUB_LINK_URL)) {
+      showToast(`문의 링크는 ${INPUT_LIMITS.CLUB_LINK_URL}자 이하여야 합니다.`);
+      return;
+    }
+    if (profileImageUrl.length > INPUT_LIMITS.CLUB_PROFILE_IMAGE_URL) {
+      showToast('프로필 이미지 URL이 너무 깁니다. 사진을 다시 선택해 주세요.');
       return;
     }
     if (!canManageClub) {
@@ -429,15 +471,11 @@ export function useManagementState({
           name,
           description,
           region,
-          category: tags
-            .map((tag) => CATEGORY_LABEL_TO_CODE[tag])
-            .filter((tag): tag is ClubCategoryCode => Boolean(tag)),
-          participantTypes: targets
-            .map((target) => PARTICIPANT_LABEL_TO_CODE[target])
-            .filter((target): target is ClubParticipantTypeCode => Boolean(target)),
+          category,
+          participantTypes,
           open: !editDraft.isPrivate,
-          profileImageUrl: editDraft.imageUrl || undefined,
-          links: group.links,
+          profileImageUrl: profileImageUrl || undefined,
+          links,
         });
         const detail = await fetchClubDetail(group.clubId as number);
         let nextGroup: Group;
@@ -452,7 +490,7 @@ export function useManagementState({
             description,
             tags,
             isPrivate: editDraft.isPrivate,
-            profileImageUrl: editDraft.imageUrl || undefined,
+            profileImageUrl: profileImageUrl || undefined,
           };
         }
         setManagedGroup(nextGroup);

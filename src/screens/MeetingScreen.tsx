@@ -857,6 +857,10 @@ export function MeetingScreen() {
         showToast('신청 사유를 입력해야 합니다.');
         return;
       }
+      if (reason.length > INPUT_LIMITS.APPLY_REASON) {
+        showToast(`신청 사유는 ${INPUT_LIMITS.APPLY_REASON}자 이하여야 합니다.`);
+        return;
+      }
       if (typeof group.clubId !== 'number') {
         showToast('모임 정보를 찾을 수 없습니다.');
         return;
