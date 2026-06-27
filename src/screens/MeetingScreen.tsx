@@ -1973,6 +1973,20 @@ function GroupHomeView({
       if (distanceFromBottom > 180) return;
 
       if (
+        activeTab === 'home' &&
+        clubParticipantsPageState.hasNext &&
+        !clubParticipantsPageState.loadingMore &&
+        !clubParticipantsErrorMessage &&
+        typeof clubParticipantsPageState.nextCursor === 'number'
+      ) {
+        void loadClubParticipants({
+          cursorId: clubParticipantsPageState.nextCursor,
+          append: true,
+          suppressErrorToast: false,
+        });
+      }
+
+      if (
         activeTab === 'bookshelf' &&
         bookshelfViewMode === 'DETAIL' &&
         bookshelfDetailTab === 'TOPIC' &&
@@ -1989,6 +2003,11 @@ function GroupHomeView({
       activeTab,
       bookshelfDetailTab,
       bookshelfViewMode,
+      clubParticipantsErrorMessage,
+      clubParticipantsPageState.hasNext,
+      clubParticipantsPageState.loadingMore,
+      clubParticipantsPageState.nextCursor,
+      loadClubParticipants,
       loadMoreBookshelfTopics,
       loadMoreNoticeComments,
       selectedBookshelfBook?.remoteMeetingId,
@@ -2431,22 +2450,6 @@ function GroupHomeView({
     [clubParticipants, currentMemberNickname, requireAuth, togglingParticipantNickname],
   );
 
-  const handleLoadMoreClubParticipants = useCallback(() => {
-    if (
-      !clubParticipantsPageState.hasNext ||
-      clubParticipantsPageState.loadingMore ||
-      typeof clubParticipantsPageState.nextCursor !== 'number'
-    ) {
-      return;
-    }
-
-    void loadClubParticipants({
-      cursorId: clubParticipantsPageState.nextCursor,
-      append: true,
-      suppressErrorToast: false,
-    });
-  }, [clubParticipantsPageState, loadClubParticipants]);
-
   return (
     <View style={styles.screenWrap}>
       <ScrollView
@@ -2715,20 +2718,8 @@ function GroupHomeView({
               </View>
             )}
 
-            {clubParticipantsPageState.hasNext && !clubParticipantsErrorMessage ? (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.clubParticipantsMoreButton,
-                  clubParticipantsPageState.loadingMore && styles.clubParticipantFollowButtonDisabled,
-                  pressed && !clubParticipantsPageState.loadingMore && styles.pressed,
-                ]}
-                onPress={handleLoadMoreClubParticipants}
-                disabled={clubParticipantsPageState.loadingMore}
-              >
-                <Text style={styles.clubParticipantsMoreButtonText}>
-                  {clubParticipantsPageState.loadingMore ? '불러오는 중...' : '더보기'}
-                </Text>
-              </Pressable>
+            {clubParticipantsPageState.loadingMore && !clubParticipantsErrorMessage ? (
+              <Text style={styles.infiniteScrollLoadingText}>불러오는 중...</Text>
             ) : null}
           </View>
         </View>

@@ -990,23 +990,6 @@ export const styles = StyleSheet.create({
   clubParticipantFollowTextActive: {
     color: colors.gray5,
   },
-  clubParticipantsMoreButton: {
-    alignSelf: 'center',
-    minWidth: 120,
-    minHeight: 40,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.subbrown3,
-    backgroundColor: colors.subbrown4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  clubParticipantsMoreButtonText: {
-    ...typography.body1_2,
-    color: colors.primary3,
-  },
   managementOverlay: {
     flex: 1,
     backgroundColor: colors.overlay30,
