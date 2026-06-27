@@ -3120,3 +3120,10 @@ export const interactionOpacity = {
 - iOS 빌드 시 `APPLE_ID_AUTH` capability 동기화 실패로 빌드가 중단되던 문제 대응
 - `eas.json`의 `build.production.env`에 `EXPO_NO_CAPABILITY_SYNC=1` 추가해 capability 자동 동기화를 영구 비활성화
 - RN 앱은 네이티브 Apple/소셜 로그인을 쓰지 않아(이메일/비번 로그인만) capability를 건드릴 필요 없음 확인
+
+# 2026-06-27 18:46:48 KST 네이티브 버전 1.0.2 정합화 (app.json 무시 이슈 대응)
+
+- iOS 빌드가 1.0.2로 안 올라가던 원인 규명: 네이티브 `ios/` 디렉터리가 있어 EAS가 `app.json`의 `version`을 무시하고 `Info.plist`/`MARKETING_VERSION`(1.0.1)을 사용
+- iOS `MARKETING_VERSION`(Debug/Release)·`Info.plist` CFBundleShortVersionString을 1.0.2로 변경
+- Android `versionName`, `package.json`, `package-lock.json` 루트 버전도 1.0.2로 정합화
+- buildNumber는 EAS 원격 관리(현재 11) → 다음 빌드 시 자동 증가, API 버전 가이드 문서의 `1.0.1`은 예시라 미변경
