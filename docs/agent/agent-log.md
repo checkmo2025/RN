@@ -3108,3 +3108,9 @@ export const interactionOpacity = {
 
 - POST 후 즉시 반영 누락 정리, 공지사항 리스트 로딩 문제, 웹 애플로그인 키 발급을 사용자 통과 확인으로 완료 처리
 - 각 항목 최종 편집일자를 2026-06-27로 갱신
+
+# 2026-06-27 18:16:38 KST 스토어 재심사용 버전 1.0.2 상향
+
+- `app.json`의 `version`을 1.0.1 → 1.0.2로 명시적 변경 (스토어 마케팅 버전)
+- `runtimeVersion`도 1.0.1 → 1.0.2로 동기화 (OTA 업데이트 호환 키)
+- buildNumber/versionCode는 EAS `appVersionSource: remote` + `autoIncrement`로 서버 자동 증가라 미변경
