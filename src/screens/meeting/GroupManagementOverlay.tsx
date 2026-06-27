@@ -1305,7 +1305,7 @@ export function GroupManagementOverlay({
                 },
                 {
                   key: 'EDIT' as const,
-                  title: '모임 수정하기',
+                  title: '모임 정보 수정하기',
                   description: '소개, 태그, 공개 여부 수정',
                   icon: 'edit' as const,
                   onPress: () => handleOpenManagementScreen('EDIT'),
