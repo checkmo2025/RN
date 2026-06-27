@@ -8,6 +8,7 @@ import { colors } from '../../theme';
 import { DefaultProfileAvatar } from '../../components/common/DefaultProfileAvatar';
 import { FeedbackPressable as Pressable } from '../../components/common/FeedbackPressable';
 import { FormTextInput } from '../../components/common/FormTextInput';
+import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { styles } from './meetingStyles';
 import {
   formatAverageRating,
@@ -335,7 +336,6 @@ export function GroupNoticeView({
                     </View>
                     <Pressable
                       style={styles.noticePollOptionCount}
-                      disabled={voteCount <= 0}
                       onPress={(event) => {
                         event.stopPropagation();
                         handleOpenVoteVoters(option.id);
@@ -408,10 +408,11 @@ export function GroupNoticeView({
             <FormTextInput
               value={noticeCommentInput}
               onChangeText={setNoticeCommentInput}
-              placeholder="댓글 내용"
+              placeholder={`댓글 내용 (최대 ${INPUT_LIMITS.NOTICE_COMMENT}자)`}
               placeholderTextColor={colors.gray3}
               style={styles.noticeCommentInput}
               editable={!submittingNoticeComment}
+              maxLength={INPUT_LIMITS.NOTICE_COMMENT}
             />
             <Pressable
               style={({ pressed }) => [

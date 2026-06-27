@@ -804,6 +804,11 @@ export function useNoticeState({
         return;
       }
 
+      if (option.voters.length === 0) {
+        showToast('해당 항목에 투표자가 없습니다');
+        return;
+      }
+
       setVoteVotersModal({ optionLabel: option.label, voters: option.voters });
     },
     [currentNoticePollOptions, selectedNotice],

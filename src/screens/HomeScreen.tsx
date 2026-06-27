@@ -11,9 +11,6 @@ import { useNavigation, useScrollToTop, type NavigationProp, type ParamListBase 
 
 import { colors, radius, spacing, typography } from '../theme';
 import { SkeletonBox } from '../components/common/SkeletonBox';
-// TEMP(온보딩 미리보기): 커밋 전 삭제 — FeedbackPressable / OnboardingScreen import
-import { FeedbackPressable } from '../components/common/FeedbackPressable';
-import { OnboardingScreen } from './onboarding/OnboardingScreen';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import HomePostCard from '../components/feature/home/HomePostCard';
 import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
@@ -108,8 +105,6 @@ export function HomeScreen() {
   const [loadingPromotions, setLoadingPromotions] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [promotions, setPromotions] = useState<HomePromotionItem[]>([]);
-  // TEMP(온보딩 미리보기): 커밋 전 삭제 — 온보딩 오버레이 토글 state
-  const [onboardingPreview, setOnboardingPreview] = useState(false);
   const loadingPostsRef = useRef(false);
   const loadingMorePostsRef = useRef(false);
   const hasNextPostsRef = useRef(true);
@@ -563,19 +558,6 @@ export function HomeScreen() {
           }
         />
 
-        {/* TEMP(온보딩 미리보기): 커밋 전 삭제 — 임시 미리보기 버튼 + 오버레이 */}
-        <FeedbackPressable
-          style={styles.tempOnboardingButton}
-          onPress={() => setOnboardingPreview(true)}
-          accessibilityRole="button"
-          accessibilityLabel="온보딩 미리보기(임시)"
-        >
-          <Text style={styles.tempOnboardingLabel}>👀 온보딩 미리보기</Text>
-        </FeedbackPressable>
-        <OnboardingScreen
-          visible={onboardingPreview}
-          onClose={() => setOnboardingPreview(false)}
-        />
       </View>
     </ScreenLayout>
   );
@@ -603,20 +585,6 @@ function mapRemoteStoryToPost(item: RemoteStoryItem): Post {
 const styles = StyleSheet.create({
   screenBody: {
     flex: 1,
-  },
-  // TEMP(온보딩 미리보기): 커밋 전 삭제 — 임시 버튼 스타일
-  tempOnboardingButton: {
-    position: 'absolute',
-    right: spacing.md,
-    bottom: spacing.xl,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary1,
-  },
-  tempOnboardingLabel: {
-    ...typography.body1_2,
-    color: colors.white,
   },
   listContent: {
     backgroundColor: colors.background,
