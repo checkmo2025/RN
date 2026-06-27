@@ -3075,3 +3075,8 @@ export const interactionOpacity = {
 - 모임 생성·수정·삭제 후 모임 목록/상세 상태를 부모 화면까지 동기화
 - 책 좋아요 변경 이벤트를 헤더 검색과 마이페이지 내 서재에 연결해 화면 간 상태를 즉시 반영
 - 관련 실기기 육안 확인 항목 3건을 TODO에 추가하고 `npm run check` 통과
+
+# 2026-06-27 13:25:15 KST 에이전트 지침 ref_code 정책 보강
+
+- AGENTS/CLAUDE 지침에 RN 앱 레포 성격과 `ref_code` 읽기 전용·커밋 제외 정책을 명시
+- `ref_code/BE`, `ref_code/FE`의 별도 레포·기술 스택 정보를 보강

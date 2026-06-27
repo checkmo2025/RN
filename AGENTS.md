@@ -1,8 +1,9 @@
 # Agent Instructions
 
-- `ref_code/` 디렉터리에는 참조용 외부 코드가 포함되어 있다.
-  - `ref_code/BE`: 백엔드 파일이며, 별도의 백엔드 GitHub 레포와 연결되어 있다.
-  - `ref_code/FE`: 프론트엔드 파일이며, 별도의 프론트엔드 GitHub 레포와 연결되어 있다.
+- 이 레포(`checkmo_rn`)는 책모(독서모임 커뮤니티) **모바일 앱**(Expo / React Native)이다.
+- `ref_code/` 디렉터리에는 참조용 외부 코드(읽기 전용 클론)가 포함되어 있다. `.gitignore`에 등록되어 RN 레포에 커밋/푸시되지 않으며, 빌드에서도 제외된다. API 스펙·도메인 로직을 참고할 때 사용하고, 이 디렉터리의 코드는 RN 작업 중 수정하거나 커밋하지 않는다.
+  - `ref_code/BE`: 백엔드. 별도 레포 `https://github.com/checkmo2025/BE.git` (Spring Boot 3.5 / Java 21 / Gradle).
+  - `ref_code/FE`: 웹 프론트엔드. 별도 레포 `https://github.com/checkmo2025/FE.git` (Next.js 16 / React 19).
 
 - If a user request ends with `/md`, append a short update to `docs/agent/agent-log.md`.
 - The appended update must include:
