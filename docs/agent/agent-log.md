@@ -3147,3 +3147,10 @@ export const interactionOpacity = {
 - `AuthFlowScreen` 로그인 화면에 Android 전용 카카오/구글/네이버 버튼 통합, 브랜드 로고 에셋 복원 + `AppButton`에 `leftIcon` 옵션 추가
 - iOS는 `Platform` 게이팅으로 미노출(App Store 4.8 회피), 토큰은 딥링크에 안 싣고 일회용 코드만 사용. 실동작은 BE 배포 + EAS Dev Build 후 검증 예정
 - `CLAUDE.md` ref_code 규칙 갱신(BE/FE 클론은 각자 레포에 직접 커밋 가능), 전체 `tsc --noEmit` 0 에러 확인
+
+# 2026-06-28 22:48:51 KST 프로필 편집 닉네임 변경 구현
+
+- 기존 프로필 편집(소개/이미지/카테고리)에 닉네임 변경 추가, `PATCH /members/me`로 전송 (`UpdateMyProfilePayload`에 `nickname` 추가)
+- 중복 검사 분기를 BE/FE와 동일하게 구현: 현재 닉네임이면 API 생략·자동 통과, 변경 시에만 `checkNicknameDuplicate`(true=중복/false=가능) 요구, 저장 시 `변경됨 && !확인`이면 차단
+- check↔save 사이 선점 대비 BE `MEMBER_416` 재검증 시 재확인 유도, 저장 성공 시 `profileName` 갱신으로 헤더/표시 즉시 반영
+- 입력 필터(소문자/숫자/특수문자, 20자)·상태 메시지(가능 초록/중복 빨강)·`typecheck`·`lint`·하드코딩 체크 통과

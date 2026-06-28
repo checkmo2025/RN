@@ -53,6 +53,7 @@ export type MyProfile = {
 };
 
 export type UpdateMyProfilePayload = {
+  nickname?: string;
   description?: string;
   imgUrl?: string;
   categories?: string[];
