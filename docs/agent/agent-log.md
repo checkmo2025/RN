@@ -3154,3 +3154,10 @@ export const interactionOpacity = {
 - 중복 검사 분기를 BE/FE와 동일하게 구현: 현재 닉네임이면 API 생략·자동 통과, 변경 시에만 `checkNicknameDuplicate`(true=중복/false=가능) 요구, 저장 시 `변경됨 && !확인`이면 차단
 - check↔save 사이 선점 대비 BE `MEMBER_416` 재검증 시 재확인 유도, 저장 성공 시 `profileName` 갱신으로 헤더/표시 즉시 반영
 - 입력 필터(소문자/숫자/특수문자, 20자)·상태 메시지(가능 초록/중복 빨강)·`typecheck`·`lint`·하드코딩 체크 통과
+
+# 2026-06-28 23:03:16 KST RN 앱 버전 업데이트 게이트 구현
+
+- 앱 부팅 시 `/app/version?platform=ios|android` 버전 정책을 조회하는 API 클라이언트 추가
+- 현재 앱 버전과 `minSupportedVersion`/`latestVersion`을 비교하는 버전 게이트 훅 구현
+- 강제 업데이트는 닫기 불가, 권장 업데이트는 닫기 가능 모달로 분기하고 `storeUrl`로 스토어 이동 연결
+- `typecheck`, typography/spacing 체크, `lint` 통과 확인

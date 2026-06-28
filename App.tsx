@@ -8,8 +8,11 @@ import { AuthGateProvider, useAuthGate } from './src/contexts/AuthGateContext';
 import { AuthFlowScreen } from './src/screens/AuthFlowScreen';
 import { ToastHost } from './src/components/common/ToastHost';
 import { BookFlipLoadingScreen } from './src/components/common/BookFlipLoadingScreen';
+import { AppUpdateGateModal } from './src/components/common/AppUpdateGateModal';
+import { useAppVersionGate } from './src/hooks/useAppVersionGate';
 
 function AppRoutes() {
+  const appVersionGate = useAppVersionGate();
   const {
     isReady,
     authPageVisible,
@@ -52,6 +55,12 @@ function AppRoutes() {
           <BookFlipLoadingScreen />
         </View>
       ) : null}
+
+      <AppUpdateGateModal
+        state={appVersionGate.state}
+        onOpenStore={appVersionGate.openStore}
+        onDismissRecommendation={appVersionGate.dismissRecommendation}
+      />
 
       <ToastHost />
     </View>
