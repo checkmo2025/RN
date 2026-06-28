@@ -1,9 +1,11 @@
 # Claude Code Instructions
 
 - 이 레포(`checkmo_rn`)는 책모(독서모임 커뮤니티) **모바일 앱**(Expo / React Native)이다.
-- `ref_code/` 디렉터리에는 참조용 외부 코드(읽기 전용 클론)가 포함되어 있다. `.gitignore`에 등록되어 RN 레포에 커밋/푸시되지 않으며, 빌드에서도 제외된다. API 스펙·도메인 로직을 참고할 때 사용하고, 이 디렉터리의 코드는 RN 작업 중 수정하거나 커밋하지 않는다.
-  - `ref_code/BE`: 백엔드. 별도 레포 `https://github.com/checkmo2025/BE.git` (Spring Boot 3.5 / Java 21 / Gradle).
-  - `ref_code/FE`: 웹 프론트엔드. 별도 레포 `https://github.com/checkmo2025/FE.git` (Next.js 16 / React 19).
+- `ref_code/` 디렉터리에는 외부 코드가 **각자 GitHub 레포에 연결된 라이브 클론**으로 포함되어 있다. `.gitignore`에 등록되어 RN 레포에는 커밋/푸시되지 않으며, 빌드에서도 제외된다.
+  - `ref_code/BE`: 백엔드. 별도 레포 `https://github.com/checkmo2025/BE.git`에 연결 (Spring Boot 3.5 / Java 21 / Gradle).
+  - `ref_code/FE`: 웹 프론트엔드. 별도 레포 `https://github.com/checkmo2025/FE.git`에 연결 (Next.js 16 / React 19).
+  - 기본은 API 스펙·도메인 로직 **참고용**으로 다루고, 이 디렉터리의 내용을 **RN 레포에는 커밋하지 않는다.**
+  - 단, 사용자가 명시적으로 BE/FE 작업을 요청하면 해당 클론 안에서 코드를 수정하고 **그 클론의 원격 레포(BE 또는 FE)** 에 직접 커밋/푸시할 수 있다. (RN 레포가 아니라 각자의 레포로 push)
 
 - 사용자 요청이 `/md`로 끝나면 `docs/agent/agent-log.md` 하단에 짧은 업데이트를 추가한다.
   - 날짜 (`YYYY-MM-DD`)

@@ -18,7 +18,13 @@ import { inferMimeType } from '../utils/imageUpload';
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import { termsDocuments, type TermsAgreementKey } from '../constants/termsDocuments';
 import { INPUT_LIMITS } from '../constants/inputLimits';
-import { LOGO_PRIMARY_URI, MOBILE_HEADER_LOGO_URI } from '../constants/iconMap';
+import {
+  LOGO_PRIMARY_URI,
+  MOBILE_HEADER_LOGO_URI,
+  SOCIAL_GOOGLE_URI,
+  SOCIAL_KAKAO_URI,
+  SOCIAL_NAVER_URI,
+} from '../constants/iconMap';
 import { emailRegex, passwordRegex, phoneRegex, nicknameRegex } from '../constants/validation';
 import { colors, dialog, interactionOpacity, radius, spacing, typography } from '../theme';
 import { AppButton } from '../components/common/PrimaryButton';
@@ -41,6 +47,7 @@ import {
   isProfileIncompleteApiError,
 } from '../services/api/http';
 import { showToast } from '../utils/toast';
+import { loginWithSocial, type OAuthProvider } from '../services/auth/socialAuth';
 import { CATEGORY_OPTIONS } from '../constants/domain/category';
 import { useEmailVerificationFlow } from '../hooks/useEmailVerificationFlow';
 
@@ -130,6 +137,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   const ev = useEmailVerificationFlow();
   const [step, setStep] = useState<Step>(startsInProfileCompletion ? 'profileBasic' : 'login');
   const [profileCompletionMode, setProfileCompletionMode] = useState(startsInProfileCompletion);
+  const [socialSubmitting, setSocialSubmitting] = useState<OAuthProvider | null>(null);
   const [signUpSessionReady, setSignUpSessionReady] = useState(startsInProfileCompletion);
   const [exitSignupConfirmVisible, setExitSignupConfirmVisible] = useState(false);
 
@@ -340,6 +348,30 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
       }
     } finally {
       setLoginSubmitting(false);
+    }
+  };
+
+  // 소셜 로그인(Android 전용). 시스템 브라우저 OAuth → 딥링크 일회용 코드 → 교환.
+  const handleSocialLogin = async (provider: OAuthProvider) => {
+    if (socialSubmitting) return;
+    setSocialSubmitting(provider);
+    try {
+      const outcome = await loginWithSocial(provider);
+      if (outcome.status === 'success') {
+        await fetchLoginStatusSilently(true);
+        if (outcome.isProfileCompleted) {
+          showToast('로그인에 성공했습니다.');
+          completeAuthFlow();
+        } else {
+          showToast(PROFILE_INCOMPLETE_MESSAGE);
+          enterProfileCompletionFlow();
+        }
+      } else if (outcome.status === 'error') {
+        showToast(outcome.message);
+      }
+      // status === 'cancel' 이면 아무 동작 없음
+    } finally {
+      setSocialSubmitting(null);
     }
   };
 
@@ -1577,6 +1609,39 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
         loadingLabel="로그인 중..."
         onPress={() => { void handleLogin(); }}
       />
+      {Platform.OS === 'android' && (
+        <View style={styles.socialSection}>
+          <View style={styles.socialDivider}>
+            <View style={styles.socialDividerLine} />
+            <Text style={styles.socialDividerText}>또는</Text>
+            <View style={styles.socialDividerLine} />
+          </View>
+          <AppButton
+            variant="secondary"
+            label="카카오로 시작하기"
+            loading={socialSubmitting === 'kakao'}
+            loadingLabel="연결 중..."
+            leftIcon={<SvgUri width={18} height={18} uri={SOCIAL_KAKAO_URI} />}
+            onPress={() => { void handleSocialLogin('kakao'); }}
+          />
+          <AppButton
+            variant="secondary"
+            label="구글로 시작하기"
+            loading={socialSubmitting === 'google'}
+            loadingLabel="연결 중..."
+            leftIcon={<SvgUri width={18} height={18} uri={SOCIAL_GOOGLE_URI} />}
+            onPress={() => { void handleSocialLogin('google'); }}
+          />
+          <AppButton
+            variant="secondary"
+            label="네이버로 시작하기"
+            loading={socialSubmitting === 'naver'}
+            loadingLabel="연결 중..."
+            leftIcon={<SvgUri width={18} height={18} uri={SOCIAL_NAVER_URI} />}
+            onPress={() => { void handleSocialLogin('naver'); }}
+          />
+        </View>
+      )}
       <View style={styles.loginFooterLinks}>
         <Pressable onPress={startSignUp}>
           <Text style={styles.linkText}>아직 회원이 아니신가요? 회원가입하러가기</Text>
@@ -2052,6 +2117,24 @@ const styles = StyleSheet.create({
     width: 1,
     height: 12,
     backgroundColor: colors.gray3,
+  },
+  socialSection: {
+    gap: spacing.sm,
+  },
+  socialDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginVertical: spacing.xs,
+  },
+  socialDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.gray2,
+  },
+  socialDividerText: {
+    ...typography.body1_3,
+    color: colors.gray4,
   },
   pressed: {
     opacity: interactionOpacity.pressed,

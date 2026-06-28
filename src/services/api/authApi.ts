@@ -63,6 +63,34 @@ export async function loginByIdentifier(
 // Backward-compatible alias for existing callers.
 export const loginByEmail = loginByIdentifier;
 
+// 앱 소셜 로그인(Android): 딥링크로 받은 일회용 코드를 refreshToken으로 교환한다.
+// 이메일 /auth/app/login과 동일하게 토큰을 응답 바디로 받는 구조. (보안: 토큰을 딥링크 URL에 직접 싣지 않음)
+type OAuthExchangeResult = {
+  refreshToken?: string;
+  isProfileCompleted?: boolean;
+};
+
+export async function exchangeOAuthCode(
+  code: string,
+  options?: { suppressErrorToast?: boolean },
+): Promise<{ isProfileCompleted: boolean }> {
+  const response = await requestJson<ApiEnvelope<OAuthExchangeResult>>('/auth/app/oauth/exchange', {
+    method: 'POST',
+    body: { code },
+    suppressErrorToast: options?.suppressErrorToast,
+  });
+
+  const result = unwrapResult(response);
+  const refreshToken = result?.refreshToken;
+  if (!refreshToken) {
+    throw new ApiError('로그인 토큰을 확인할 수 없습니다.', 500, 'MISSING_REFRESH_TOKEN', response);
+  }
+
+  await saveStoredRefreshToken(refreshToken);
+  // 신규 소셜 가입자는 프로필 미완성 → 프로필 완성 흐름으로 분기. 응답 누락 시 보수적으로 완성 처리.
+  return { isProfileCompleted: result?.isProfileCompleted ?? true };
+}
+
 export async function signUpByEmail(
   email: string,
   password: string,

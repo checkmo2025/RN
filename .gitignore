@@ -44,3 +44,6 @@ yarn-error.*
 
 # reference-only clones (BE/FE) — separate GitHub repos, never commit/push from RN, excluded from build
 /ref_code
+
+# Google Play service account key — secret, never commit
+google-service-account.json

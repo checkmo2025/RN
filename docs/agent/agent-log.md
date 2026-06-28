@@ -3140,3 +3140,10 @@ export const interactionOpacity = {
 - RN 입력 제한 상수를 BE 최신 스펙에 맞춰 모임 소개 500자, 가입 신청 300자, 책이야기 댓글 300자로 조정
 - 공지 이미지 첨부를 5개로 제한하고 투표 항목 255자 clamp/토스트/제출 검증을 추가
 - 공지 댓글 초과 토스트 문구를 명시하고 `typecheck`, `lint`, `diff --check` 통과 확인
+
+# 2026-06-28 18:59:42 KST RN 소셜 로그인(Android) 스캐폴딩 추가 (#263)
+
+- Option C(시스템 브라우저 OAuth + 딥링크 일회용 코드 교환) RN 구현: `socialAuth.ts`, `authApi.exchangeOAuthCode`, `expo-web-browser` 추가
+- `AuthFlowScreen` 로그인 화면에 Android 전용 카카오/구글/네이버 버튼 통합, 브랜드 로고 에셋 복원 + `AppButton`에 `leftIcon` 옵션 추가
+- iOS는 `Platform` 게이팅으로 미노출(App Store 4.8 회피), 토큰은 딥링크에 안 싣고 일회용 코드만 사용. 실동작은 BE 배포 + EAS Dev Build 후 검증 예정
+- `CLAUDE.md` ref_code 규칙 갱신(BE/FE 클론은 각자 레포에 직접 커밋 가능), 전체 `tsc --noEmit` 0 에러 확인

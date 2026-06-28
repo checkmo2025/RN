@@ -9,6 +9,17 @@ export const MOBILE_HEADER_LOGO_URI = resolveSvgUri(
   require('../../assets/mobile-header-logo.svg'),
 );
 
+// 소셜 로그인 브랜드 로고 (40x40 마크)
+export const SOCIAL_GOOGLE_URI = resolveSvgUri(
+  require('../../assets/icons/googleLogo.svg'),
+);
+export const SOCIAL_KAKAO_URI = resolveSvgUri(
+  require('../../assets/icons/kakaoLogo.svg'),
+);
+export const SOCIAL_NAVER_URI = resolveSvgUri(
+  require('../../assets/icons/naverLogo.svg'),
+);
+
 export const HEADER_SEARCH_URI = resolveSvgUri(
   require('../../assets/header/header-search.svg'),
 );

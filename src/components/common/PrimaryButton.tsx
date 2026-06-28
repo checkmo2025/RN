@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
 
 import { colors, interactionOpacity, radius, spacing, typography } from '../../theme';
@@ -7,6 +8,7 @@ type ButtonSize = 'lg' | 'md';
 
 type Props = {
   label: string;
+  leftIcon?: ReactNode;
   onPress?: () => void;
   disabled?: boolean;
   loading?: boolean;
@@ -19,6 +21,7 @@ type Props = {
 
 export function AppButton({
   label,
+  leftIcon,
   onPress,
   disabled,
   loading,
@@ -50,6 +53,7 @@ export function AppButton({
         style ?? null,
       ]}
     >
+      {leftIcon}
       <Text
         style={[
           styles.baseText,
@@ -100,6 +104,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    gap: spacing.xs,
   },
   sizeLg: {
     height: 52,
