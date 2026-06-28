@@ -3127,3 +3127,10 @@ export const interactionOpacity = {
 - iOS `MARKETING_VERSION`(Debug/Release)·`Info.plist` CFBundleShortVersionString을 1.0.2로 변경
 - Android `versionName`, `package.json`, `package-lock.json` 루트 버전도 1.0.2로 정합화
 - buildNumber는 EAS 원격 관리(현재 11) → 다음 빌드 시 자동 증가, API 버전 가이드 문서의 `1.0.1`은 예시라 미변경
+
+# 2026-06-28 16:18:29 KST iPad(태블릿) 지원 활성화
+
+- `app.json` `supportsTablet` false→true, 네이티브 `TARGETED_DEVICE_FAMILY`를 1→"1,2"(Debug/Release 모두)로 변경해 iPhone+iPad 빌드 타깃 설정
+- iPad도 폰과 동일하게 세로 전용 고정: `Info.plist`의 `UISupportedInterfaceOrientations~ipad`를 세로 2방향으로 축소, `UIRequiresFullScreen` true로 변경(멀티태스킹 끄고 세로 전용 → 심사 안전)
+- 심사 스크린샷은 13" iPad(2064×2752)만 준비하면 12.9"/11"는 Apple이 자동 축소 — iPad Pro 13" 시뮬레이터로 네이티브 재빌드(`expo run:ios`) 후 캡처
+- 네이티브 활성화만 완료, RN 화면은 폰 비율 그대로 늘어남 → iPad 레이아웃 분기는 후속 작업
