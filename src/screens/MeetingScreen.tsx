@@ -5,6 +5,7 @@ import {
   Animated,
   FlatList,
   Image,
+  Keyboard,
   Linking,
   Modal,
   ScrollView,
@@ -248,7 +249,9 @@ const MEETING_TAB_DOUBLE_TAP_WINDOW_MS = 450;
 const GROUP_TITLE_FOCUS_TOP_OFFSET = spacing.xs;
 const GROUP_TITLE_FOCUS_SCROLL_SAFETY = spacing.md;
 const BOOKSHELF_DETAIL_FOCUS_TOP_OFFSET = spacing.sm;
-const APPLY_INPUT_FOCUS_TOP_OFFSET = spacing.sm;
+const APPLY_CARD_FOCUS_TOP_OFFSET = spacing.xxl * 2 + spacing.xl;
+const APPLY_SUBMIT_KEYBOARD_GAP = spacing.xxl;
+const APPLY_KEYBOARD_SCROLL_EXTRA_SPACE = spacing.xxl * 4;
 const NOTICE_TITLE_INPUT_MIN_HEIGHT = 96;
 const NOTICE_TITLE_INPUT_MAX_HEIGHT = 152;
 const NOTICE_CONTENT_INPUT_MIN_HEIGHT = 280;
@@ -397,8 +400,12 @@ function upsertGroupByClubId(groups: Group[], nextGroup: Group): Group[] {
 
 export function MeetingScreen() {
   const meetingScrollRef = useRef<ScrollView>(null);
+  const meetingScrollYRef = useRef(0);
+  const applyListYRef = useRef(0);
   const applyCardYByIdRef = useRef<Record<string, number>>({});
-  const applyInputOffsetByIdRef = useRef<Record<string, number>>({});
+  const applySectionRefByIdRef = useRef<Record<string, View | null>>({});
+  const keyboardTopYRef = useRef<number | null>(null);
+  const applyKeyboardScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useScrollToTop(meetingScrollRef);
   const navigation = useNavigation<NavigationProp<TabParamList, 'Meeting'>>();
   const route = useRoute<RouteProp<TabParamList, 'Meeting'>>();
@@ -413,6 +420,7 @@ export function MeetingScreen() {
   const [applyOpenId, setApplyOpenId] = useState<string | null>(null);
   const [applyReasonById, setApplyReasonById] = useState<Record<string, string>>({});
   const [appliedById, setAppliedById] = useState<Record<string, string>>({});
+  const [applyKeyboardInset, setApplyKeyboardInset] = useState(0);
   const [pendingOpenClubId, setPendingOpenClubId] = useState<number | null>(null);
   const [openingClubLoading, setOpeningClubLoading] = useState(false);
 
@@ -526,24 +534,80 @@ export function MeetingScreen() {
   const scrollToApplyCard = useCallback((groupId: string, animated = true) => {
     const cardY = applyCardYByIdRef.current[groupId];
     if (typeof cardY !== 'number') return;
-    const inputOffsetY = applyInputOffsetByIdRef.current[groupId] ?? 0;
+    const absoluteCardY = applyListYRef.current + cardY;
     meetingScrollRef.current?.scrollTo({
-      y: Math.max(0, cardY + inputOffsetY - APPLY_INPUT_FOCUS_TOP_OFFSET),
+      y: Math.max(0, absoluteCardY - APPLY_CARD_FOCUS_TOP_OFFSET),
       animated,
     });
   }, []);
 
+  const keepApplySubmitAboveKeyboard = useCallback((groupId: string, animated = true) => {
+    const applySectionRef = applySectionRefByIdRef.current[groupId];
+    const keyboardTopY = keyboardTopYRef.current;
+    if (!applySectionRef || typeof keyboardTopY !== 'number') return;
+
+    applySectionRef.measureInWindow((_x, sectionY, _width, sectionHeight) => {
+      const sectionBottomY = sectionY + sectionHeight;
+      const maxSectionBottomY = keyboardTopY - APPLY_SUBMIT_KEYBOARD_GAP;
+      const overlapY = sectionBottomY - maxSectionBottomY;
+      if (overlapY <= 0) return;
+
+      meetingScrollRef.current?.scrollTo({
+        y: Math.max(0, meetingScrollYRef.current + overlapY),
+        animated,
+      });
+    });
+  }, []);
+
+  const scheduleKeepApplySubmitAboveKeyboard = useCallback(
+    (groupId: string, delayMs = 0) => {
+      if (applyKeyboardScrollTimerRef.current) {
+        clearTimeout(applyKeyboardScrollTimerRef.current);
+      }
+
+      applyKeyboardScrollTimerRef.current = setTimeout(() => {
+        applyKeyboardScrollTimerRef.current = null;
+        keepApplySubmitAboveKeyboard(groupId, false);
+      }, delayMs);
+    },
+    [keepApplySubmitAboveKeyboard],
+  );
+
   const focusApplyCard = useCallback((groupId: string) => {
     requestAnimationFrame(() => {
-      scrollToApplyCard(groupId, true);
-      setTimeout(() => {
+      if (keyboardTopYRef.current === null) {
         scrollToApplyCard(groupId, true);
-      }, 320);
-      setTimeout(() => {
-        scrollToApplyCard(groupId, true);
-      }, 520);
+      }
+      scheduleKeepApplySubmitAboveKeyboard(groupId, keyboardTopYRef.current === null ? 120 : 0);
     });
-  }, [scrollToApplyCard]);
+  }, [scheduleKeepApplySubmitAboveKeyboard, scrollToApplyCard]);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
+      keyboardTopYRef.current = event.endCoordinates.screenY;
+      setApplyKeyboardInset(event.endCoordinates.height);
+      if (applyOpenId) {
+        scheduleKeepApplySubmitAboveKeyboard(applyOpenId);
+      }
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      keyboardTopYRef.current = null;
+      setApplyKeyboardInset(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [applyOpenId, scheduleKeepApplySubmitAboveKeyboard]);
+
+  useEffect(() => {
+    return () => {
+      if (applyKeyboardScrollTimerRef.current) {
+        clearTimeout(applyKeyboardScrollTimerRef.current);
+      }
+    };
+  }, []);
 
   const handlePressHeaderLogo = useCallback(() => {
     showLeaveDraftAlert(() => {
@@ -822,9 +886,6 @@ export function MeetingScreen() {
     requireAuth(() => {
       const willOpen = applyOpenId !== groupId;
       setApplyOpenId(willOpen ? groupId : null);
-      if (willOpen) {
-        focusApplyCard(groupId);
-      }
     });
   };
 
@@ -836,8 +897,7 @@ export function MeetingScreen() {
   );
 
   const handleApplyInputLayout = useCallback(
-    (groupId: string, event: LayoutChangeEvent) => {
-      applyInputOffsetByIdRef.current[groupId] = event.nativeEvent.layout.y;
+    (groupId: string) => {
       if (applyOpenId === groupId) {
         focusApplyCard(groupId);
       }
@@ -958,9 +1018,18 @@ export function MeetingScreen() {
         <ScrollView
           ref={meetingScrollRef}
           style={styles.container}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            applyKeyboardInset > 0
+              ? { paddingBottom: applyKeyboardInset + APPLY_KEYBOARD_SCROLL_EXTRA_SPACE }
+              : null,
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}
+          onScroll={(event) => {
+            meetingScrollYRef.current = event.nativeEvent.contentOffset.y;
+          }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -1095,7 +1164,12 @@ export function MeetingScreen() {
         <Text style={styles.sectionTitle}>독서 모임 추천</Text>
       ) : null}
 
-      <View style={styles.groupList}>
+      <View
+        style={styles.groupList}
+        onLayout={(event) => {
+          applyListYRef.current = event.nativeEvent.layout.y;
+        }}
+      >
         {visibleDiscoverGroups.map((group) => (
           <View
             key={group.id}
@@ -1111,10 +1185,13 @@ export function MeetingScreen() {
               applicationStatus={group.applicationStatus}
               applyOpen={applyOpenId === group.id}
               applyReason={applyReasonById[group.id] ?? ''}
+              applySectionRef={(ref) => {
+                applySectionRefByIdRef.current[group.id] = ref;
+              }}
               onPressApply={() => handleOpenApply(group.id)}
               onChangeApplyReason={(value) => handleChangeApplyReason(group.id, value)}
               onApplyInputFocus={() => focusApplyCard(group.id)}
-              onApplyInputLayout={(event) => handleApplyInputLayout(group.id, event)}
+              onApplyInputLayout={() => handleApplyInputLayout(group.id)}
               onSubmitApply={() => handleSubmitApply(group)}
               onPressVisit={() => openGroupHome(group)}
             />

@@ -3161,3 +3161,10 @@ export const interactionOpacity = {
 - 현재 앱 버전과 `minSupportedVersion`/`latestVersion`을 비교하는 버전 게이트 훅 구현
 - 강제 업데이트는 닫기 불가, 권장 업데이트는 닫기 가능 모달로 분기하고 `storeUrl`로 스토어 이동 연결
 - `typecheck`, typography/spacing 체크, `lint` 통과 확인
+
+# 2026-06-28 23:53:13 KST 모임 가입신청 키보드 포커싱 끊김 개선
+
+- 가입신청 폼 위치 측정 ref를 추가하고 키보드 top 기준으로 제출 버튼이 키보드 위에 남도록 보정
+- 중복 스크롤 예약과 타이핑 중 보정을 제거해 열림 중 끊김 현상 완화
+- TODO의 모임 가입신청 입력칸 QA 항목은 미완료로 유지하고 끊김 현상 개선/재확인 필요 메모 반영
+- `typecheck`, typography/spacing, `lint`, `diff --check` 통과 확인

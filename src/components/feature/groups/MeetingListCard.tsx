@@ -25,6 +25,7 @@ type Props = {
   applicationStatus?: string;
   applyOpen?: boolean;
   applyReason?: string;
+  applySectionRef?: React.Ref<View>;
   onPressApply?: () => void;
   onChangeApplyReason?: (value: string) => void;
   onApplyInputFocus?: () => void;
@@ -68,6 +69,7 @@ export function MeetingListCard({
   applicationStatus,
   applyOpen,
   applyReason,
+  applySectionRef,
   onPressApply,
   onChangeApplyReason,
   onApplyInputFocus,
@@ -133,7 +135,7 @@ export function MeetingListCard({
       </View>
 
       {applyOpen ? (
-        <View style={styles.applySection} onLayout={onApplyInputLayout}>
+        <View ref={applySectionRef} style={styles.applySection} onLayout={onApplyInputLayout}>
           <FormTextInput
             ref={applyInputRef}
             value={applyReason}
