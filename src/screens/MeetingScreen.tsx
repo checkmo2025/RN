@@ -11,7 +11,6 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
   View,
   KeyboardAvoidingView,
   PanResponder,
@@ -3632,12 +3631,14 @@ function GroupHomeView({
                           key={`notice-poll-option-${index}`}
                           style={styles.noticeComposerPollOptionRow}
                         >
-                          <TextInput
+                          <FormTextInput
                             value={option}
                             onChangeText={(text) => handleUpdateNoticePollOption(index, text)}
                             placeholder={`투표 항목 ${index + 1}`}
                             placeholderTextColor={colors.gray3}
                             style={styles.noticeComposerPollOptionInput}
+                            maxLength={INPUT_LIMITS.NOTICE_POLL_OPTION}
+                            overLimitMessage={`투표 항목은 ${INPUT_LIMITS.NOTICE_POLL_OPTION}자 이하여야 합니다.`}
                           />
                           {removable ? (
                             <Pressable
@@ -3758,7 +3759,9 @@ function GroupHomeView({
                 <View style={styles.noticeComposerSection}>
                   <View style={styles.noticeComposerSectionHeader}>
                     <Text style={styles.noticeAttachmentTitle}>사진</Text>
-                    <Text style={styles.noticeComposerCounter}>{noticeDraft.photos.length}/10</Text>
+                    <Text style={styles.noticeComposerCounter}>
+                      {noticeDraft.photos.length}/{INPUT_LIMITS.NOTICE_IMAGE_COUNT}
+                    </Text>
                   </View>
                   <View style={styles.noticeComposerPhotoGrid}>
                     {noticeDraft.photos.map((photo, index) => (

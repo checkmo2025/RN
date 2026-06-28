@@ -413,6 +413,7 @@ export function GroupNoticeView({
               style={styles.noticeCommentInput}
               editable={!submittingNoticeComment}
               maxLength={INPUT_LIMITS.NOTICE_COMMENT}
+              overLimitMessage={`공지사항 댓글은 ${INPUT_LIMITS.NOTICE_COMMENT}자 이하여야 합니다.`}
             />
             <Pressable
               style={({ pressed }) => [

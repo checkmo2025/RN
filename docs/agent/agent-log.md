@@ -3134,3 +3134,9 @@ export const interactionOpacity = {
 - iPad도 폰과 동일하게 세로 전용 고정: `Info.plist`의 `UISupportedInterfaceOrientations~ipad`를 세로 2방향으로 축소, `UIRequiresFullScreen` true로 변경(멀티태스킹 끄고 세로 전용 → 심사 안전)
 - 심사 스크린샷은 13" iPad(2064×2752)만 준비하면 12.9"/11"는 Apple이 자동 축소 — iPad Pro 13" 시뮬레이터로 네이티브 재빌드(`expo run:ios`) 후 캡처
 - 네이티브 활성화만 완료, RN 화면은 폰 비율 그대로 늘어남 → iPad 레이아웃 분기는 후속 작업
+
+# 2026-06-28 17:49:52 KST RN 입력 길이 제한 BE 스펙 정합화
+
+- RN 입력 제한 상수를 BE 최신 스펙에 맞춰 모임 소개 500자, 가입 신청 300자, 책이야기 댓글 300자로 조정
+- 공지 이미지 첨부를 5개로 제한하고 투표 항목 255자 clamp/토스트/제출 검증을 추가
+- 공지 댓글 초과 토스트 문구를 명시하고 `typecheck`, `lint`, `diff --check` 통과 확인

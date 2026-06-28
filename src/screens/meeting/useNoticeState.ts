@@ -49,7 +49,6 @@ import { toApiLocalDateTime } from './formatters';
 
 const NOTICE_PAGE_SIZE = 8;
 const NOTICE_LIST_PAGE_FETCH_LIMIT = 20;
-const NOTICE_POLL_OPTION_MAX_LENGTH = 255;
 
 function mapClubNoticeListToItems(
   noticeList: Pick<ClubNoticeList, 'pinnedNotices' | 'normalNotices'>,
@@ -968,8 +967,8 @@ export function useNoticeState({
       if (uploadingNoticePhoto) return;
 
       const pick = async () => {
-        if (noticeDraft.photos.length >= 10) {
-          showToast('사진은 최대 10개까지 추가할 수 있습니다.');
+        if (noticeDraft.photos.length >= INPUT_LIMITS.NOTICE_IMAGE_COUNT) {
+          showToast(`사진은 최대 ${INPUT_LIMITS.NOTICE_IMAGE_COUNT}개까지 추가할 수 있습니다.`);
           return;
         }
         setUploadingNoticePhoto(true);
@@ -978,7 +977,7 @@ export function useNoticeState({
           if (!imageUrl) return;
           setNoticeDraft((prev) => ({
             ...prev,
-            photos: [...prev.photos, imageUrl].slice(0, 10),
+            photos: [...prev.photos, imageUrl].slice(0, INPUT_LIMITS.NOTICE_IMAGE_COUNT),
           }));
         } catch (error) {
           if (!(error instanceof ApiError)) {
@@ -1002,10 +1001,17 @@ export function useNoticeState({
   }, []);
 
   const handleUpdateNoticePollOption = useCallback((index: number, value: string) => {
+    const nextValue =
+      value.length > INPUT_LIMITS.NOTICE_POLL_OPTION
+        ? value.slice(0, INPUT_LIMITS.NOTICE_POLL_OPTION)
+        : value;
+    if (nextValue.length < value.length) {
+      showToast(`투표 항목은 ${INPUT_LIMITS.NOTICE_POLL_OPTION}자 이하여야 합니다.`);
+    }
     setNoticeDraft((prev) => ({
       ...prev,
       pollOptions: prev.pollOptions.map((item, currentIndex) =>
-        currentIndex === index ? value : item,
+        currentIndex === index ? nextValue : item,
       ),
     }));
   }, []);
@@ -1109,12 +1115,12 @@ export function useNoticeState({
       return;
     }
 
-    if (noticeDraft.pollEnabled && pollOptions.some((option) => option.length > NOTICE_POLL_OPTION_MAX_LENGTH)) {
+    if (noticeDraft.pollEnabled && pollOptions.some((option) => option.length > INPUT_LIMITS.NOTICE_POLL_OPTION)) {
       logMeetingAction('notice_submit_validation_failed', {
         reason: 'poll_option_too_long',
         clubId: group.clubId,
       });
-      showToast(`투표 항목은 ${NOTICE_POLL_OPTION_MAX_LENGTH}자 이하여야 합니다.`);
+      showToast(`투표 항목은 ${INPUT_LIMITS.NOTICE_POLL_OPTION}자 이하여야 합니다.`);
       return;
     }
 
