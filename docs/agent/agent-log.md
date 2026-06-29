@@ -3181,3 +3181,9 @@ export const interactionOpacity = {
 - 로그인 화면 소셜 버튼 UI를 최종 조정: Apple은 iOS 전용 검정 원형 버튼 + 공통 테두리, Kakao 로고는 중앙 정렬
 - BE 미머지 상태인 앱 버전 정책 조회를 임시 비활성화하고 TODO에 재활성화 항목 추가
 - Apple 네이티브 로그인은 Expo Go가 아닌 EAS iOS preview 빌드에서 테스트하도록 확인
+
+# 2026-06-29 21:20:39 KST 소셜 로그인 약관 동의 흐름 반영
+
+- 소셜/Apple 로그인 후 프로필 미완성 사용자가 약관 동의 화면을 먼저 거치도록 프로필 완성 흐름 시작 지점을 조정
+- 프로필 완성 흐름에서는 `GET /members/me/terms`로 기존 동의 상태를 불러오고 `POST /members/me/terms`로 저장한 뒤 프로필 입력으로 이동
+- 이메일 회원가입의 기존 공개 약관 조회/회원가입 agreements 전송 흐름은 유지

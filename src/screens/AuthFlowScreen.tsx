@@ -36,14 +36,17 @@ import {
   checkNicknameDuplicate,
   fetchActiveTerms,
   fetchLoginStatusSilently,
+  fetchMyTermsStatus,
   findEmailByNamePhone,
   loginByIdentifier,
   issueProfileImageUploadUrl,
   sendTemporaryPassword,
   signUpByEmail,
   submitAdditionalInfo,
+  updateMyTermsAgreements,
   type TermsAgreementPayload,
   type TermsInfo,
+  type MemberTermsInfo,
 } from '../services/api/authApi';
 import {
   ApiError,
@@ -157,6 +160,23 @@ function normalizeTermAgreementState(
   return changed ? next : current;
 }
 
+function normalizeMemberTermAgreementState(
+  terms: MemberTermsInfo[],
+  current: Record<number, boolean>,
+): Record<number, boolean> {
+  let changed = Object.keys(current).length !== terms.length;
+  const next: Record<number, boolean> = {};
+
+  terms.forEach((term) => {
+    next[term.id] = current[term.id] ?? term.agreed;
+    if (!(term.id in current)) {
+      changed = true;
+    }
+  });
+
+  return changed ? next : current;
+}
+
 function resolveTermsErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     switch (error.code) {
@@ -180,7 +200,7 @@ function resolveTermsErrorMessage(error: unknown): string {
 export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Props) {
   const startsInProfileCompletion = mode === 'profileCompletion';
   const ev = useEmailVerificationFlow();
-  const [step, setStep] = useState<Step>(startsInProfileCompletion ? 'profileBasic' : 'login');
+  const [step, setStep] = useState<Step>(startsInProfileCompletion ? 'terms' : 'login');
   const [profileCompletionMode, setProfileCompletionMode] = useState(startsInProfileCompletion);
   const [socialSubmitting, setSocialSubmitting] = useState<OAuthProvider | null>(null);
   const [appleLoginAvailable, setAppleLoginAvailable] = useState(false);
@@ -196,6 +216,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   const [activeTerms, setActiveTerms] = useState<TermsInfo[]>([]);
   const [termsAgreements, setTermsAgreements] = useState<Record<number, boolean>>({});
   const [termsLoading, setTermsLoading] = useState(false);
+  const [termsSubmitting, setTermsSubmitting] = useState(false);
   const [termsLoadError, setTermsLoadError] = useState('');
 
   const [signUpEmail, setSignUpEmail] = useState('');
@@ -290,8 +311,10 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   const resetSignUpFlow = () => {
     setProfileCompletionMode(false);
     setSignUpSessionReady(false);
+    setActiveTerms([]);
     setTermsAgreements({});
     setTermsLoadError('');
+    setTermsSubmitting(false);
     setSignUpEmail('');
     setVerificationCode('');
     ev.reset();
@@ -319,8 +342,10 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     setProfileCompletionMode(false);
     setSignUpSessionReady(false);
     setStep('login');
+    setActiveTerms([]);
     setTermsAgreements({});
     setTermsLoadError('');
+    setTermsSubmitting(false);
     setVerificationCode('');
     ev.reset();
   };
@@ -333,7 +358,10 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   const enterProfileCompletionFlow = () => {
     setProfileCompletionMode(true);
     setSignUpSessionReady(true);
-    setStep('profileBasic');
+    setActiveTerms([]);
+    setTermsAgreements({});
+    setTermsLoadError('');
+    setStep('terms');
   };
 
   const completeAuthFlow = useCallback((nextToast?: string) => {
@@ -351,6 +379,17 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     setTermsLoadError('');
 
     try {
+      if (isProfileCompletionFlow) {
+        const status = await fetchMyTermsStatus();
+        const terms = status.terms;
+        setActiveTerms(terms);
+        setTermsAgreements((prev) => normalizeMemberTermAgreementState(terms, prev));
+        if (terms.length === 0) {
+          setTermsLoadError('약관 목록을 확인할 수 없습니다.');
+        }
+        return;
+      }
+
       const terms = await fetchActiveTerms();
       setActiveTerms(terms);
       setTermsAgreements((prev) => normalizeTermAgreementState(terms, prev));
@@ -362,7 +401,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     } finally {
       setTermsLoading(false);
     }
-  }, [termsLoading]);
+  }, [isProfileCompletionFlow, termsLoading]);
 
   useEffect(() => {
     if (step !== 'terms') return;
@@ -373,6 +412,32 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     if (termsLoadError) return;
     void loadTerms();
   }, [activeTerms, loadTerms, step, termsLoadError]);
+
+  const handleTermsNext = async () => {
+    if (termsLoadError || activeTerms.length === 0) {
+      showToast('약관을 다시 불러와 주세요.');
+      return;
+    }
+    if (!canGoNextFromTerms) {
+      showToast('필수 약관에 동의해야 합니다.');
+      return;
+    }
+
+    if (!isProfileCompletionFlow) {
+      setStep('emailVerification');
+      return;
+    }
+
+    setTermsSubmitting(true);
+    try {
+      await updateMyTermsAgreements(buildTermsAgreementPayload(), { suppressErrorToast: true });
+      setStep('profileBasic');
+    } catch (error) {
+      showToast(resolveTermsErrorMessage(error));
+    } finally {
+      setTermsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (Platform.OS !== 'ios') return;
@@ -1086,7 +1151,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     return renderCard(
       <>
         <Text style={styles.title}>약관 동의</Text>
-        <Text style={styles.flowStep}>1 / 6</Text>
+        <Text style={styles.flowStep}>{isProfileCompletionFlow ? '1 / 3' : '1 / 6'}</Text>
 
         <View style={styles.termsBox}>
           {termsLoading ? (
@@ -1149,26 +1214,26 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
         </View>
 
         <View style={styles.buttonRow}>
-          <AppButton variant="secondary" label="취소" onPress={goToLogin} />
+          {!isProfileCompletionFlow ? (
+            <AppButton variant="secondary" label="취소" onPress={goToLogin} />
+          ) : null}
           <AppButton
             label="다음"
             fullWidth
+            loading={termsSubmitting}
+            loadingLabel="저장 중..."
             disabled={!canGoNextFromTerms || termsLoading || Boolean(termsLoadError)}
             onPress={() => {
-              if (termsLoadError || activeTerms.length === 0) {
-                showToast('약관을 다시 불러와 주세요.');
-                return;
-              }
-              if (!canGoNextFromTerms) {
-                showToast('필수 약관에 동의해야 합니다.');
-                return;
-              }
-              setStep('emailVerification');
+              void handleTermsNext();
             }}
           />
         </View>
       </>,
-      { equalHeight: 'sm', confirmClose: true },
+      {
+        equalHeight: 'sm',
+        confirmClose: !isProfileCompletionFlow,
+        hideClose: isProfileCompletionFlow,
+      },
     );
   }
 
@@ -1391,7 +1456,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     return renderCard(
       <>
         <Text style={styles.title}>프로필 설정</Text>
-        <Text style={styles.flowStep}>4 / 6</Text>
+        <Text style={styles.flowStep}>{isProfileCompletionFlow ? '2 / 3' : '4 / 6'}</Text>
 
         <View style={styles.formGroup}>
           <View style={styles.labelRow}>
@@ -1502,7 +1567,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     return renderCard(
       <>
         <Text style={styles.title}>프로필 설정</Text>
-        <Text style={styles.flowStep}>5 / 6</Text>
+        <Text style={styles.flowStep}>{isProfileCompletionFlow ? '3 / 3' : '5 / 6'}</Text>
 
         <View style={styles.avatarSection}>
           <View style={styles.avatarHolder}>
