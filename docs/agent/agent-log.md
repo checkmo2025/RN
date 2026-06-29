@@ -3187,3 +3187,10 @@ export const interactionOpacity = {
 - 소셜/Apple 로그인 후 프로필 미완성 사용자가 약관 동의 화면을 먼저 거치도록 프로필 완성 흐름 시작 지점을 조정
 - 프로필 완성 흐름에서는 `GET /members/me/terms`로 기존 동의 상태를 불러오고 `POST /members/me/terms`로 저장한 뒤 프로필 입력으로 이동
 - 이메일 회원가입의 기존 공개 약관 조회/회원가입 agreements 전송 흐름은 유지
+
+# 2026-06-29 23:17:19 KST 앱 버전 1.1.0 상향 (iOS 스토어 제출용)
+
+- 스토어 재제출 위해 앱 버전 1.0.2 → 1.1.0 상향. 네이티브 추적 함정 대응으로 동기화 대상 전부 변경: `app.json`(version/runtimeVersion), `ios/app/Info.plist`(CFBundleShortVersionString), `project.pbxproj`(MARKETING_VERSION ×2), `android/app/build.gradle`(versionName), `package.json`, `package-lock.json`(루트 2곳)
+- `package-lock.json`의 의존성 패키지 버전(node_modules/* 12건)은 그대로 두어 lockfile 무결성 유지
+- 1.0.2 이후 변경: Android 소셜 로그인(카카오/구글/네이버), iPad 지원, 앱 강제 업데이트 게이트, 닉네임 변경, 소셜 로그인/약관 흐름 정렬
+- buildNumber는 EAS autoIncrement라 미변경(빌드 시 자동 →13)
