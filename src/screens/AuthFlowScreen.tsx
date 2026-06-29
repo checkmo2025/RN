@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
@@ -11,12 +12,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { inferMimeType } from '../utils/imageUpload';
 import { PUBLIC_ENV } from '../constants/publicEnv';
-import { termsDocuments, type TermsAgreementKey } from '../constants/termsDocuments';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import {
   LOGO_PRIMARY_URI,
@@ -33,6 +34,7 @@ import { FeedbackPressable as Pressable } from '../components/common/FeedbackPre
 import { FormTextInput } from '../components/common/FormTextInput';
 import {
   checkNicknameDuplicate,
+  fetchActiveTerms,
   fetchLoginStatusSilently,
   findEmailByNamePhone,
   loginByIdentifier,
@@ -40,6 +42,8 @@ import {
   sendTemporaryPassword,
   signUpByEmail,
   submitAdditionalInfo,
+  type TermsAgreementPayload,
+  type TermsInfo,
 } from '../services/api/authApi';
 import {
   ApiError,
@@ -47,6 +51,7 @@ import {
   isProfileIncompleteApiError,
 } from '../services/api/http';
 import { showToast } from '../utils/toast';
+import { loginWithAppleNative } from '../services/auth/appleAuth';
 import { loginWithSocial, type OAuthProvider } from '../services/auth/socialAuth';
 import { CATEGORY_OPTIONS } from '../constants/domain/category';
 import { useEmailVerificationFlow } from '../hooks/useEmailVerificationFlow';
@@ -79,6 +84,9 @@ const logoUri = LOGO_PRIMARY_URI;
 const topLogoUri = MOBILE_HEADER_LOGO_URI;
 const PROFILE_IMAGE_UPLOAD_URL_FAILED = 'PROFILE_IMAGE_UPLOAD_URL_FAILED';
 const PROFILE_IMAGE_UPLOAD_FAILED = 'PROFILE_IMAGE_UPLOAD_FAILED';
+const SOCIAL_ICON_BUTTON_SIZE = 48;
+const SOCIAL_BRAND_ICON_SIZE = 40;
+const APPLE_BRAND_ICON_SIZE = 22;
 
 
 function formatPhoneNumberInput(value: string): string {
@@ -132,12 +140,51 @@ function normalizeNicknameInput(value: string): { value: string; error: string }
   return { value: normalized, error: '' };
 }
 
+function normalizeTermAgreementState(
+  terms: TermsInfo[],
+  current: Record<number, boolean>,
+): Record<number, boolean> {
+  let changed = Object.keys(current).length !== terms.length;
+  const next: Record<number, boolean> = {};
+
+  terms.forEach((term) => {
+    next[term.id] = current[term.id] ?? false;
+    if (!(term.id in current)) {
+      changed = true;
+    }
+  });
+
+  return changed ? next : current;
+}
+
+function resolveTermsErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    switch (error.code) {
+      case 'TERMS_400':
+        return '약관 정보를 다시 불러와 주세요.';
+      case 'TERMS_401':
+      case 'TERMS_403':
+        return '필수 약관에 동의해야 합니다.';
+      case 'TERMS_402':
+        return '약관 동의 항목이 중복되었습니다. 약관을 다시 불러와 주세요.';
+      case 'TERMS_500':
+        return '약관 설정을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.';
+      default:
+        return error.message || '약관 처리에 실패했습니다.';
+    }
+  }
+
+  return '약관 처리에 실패했습니다.';
+}
+
 export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Props) {
   const startsInProfileCompletion = mode === 'profileCompletion';
   const ev = useEmailVerificationFlow();
   const [step, setStep] = useState<Step>(startsInProfileCompletion ? 'profileBasic' : 'login');
   const [profileCompletionMode, setProfileCompletionMode] = useState(startsInProfileCompletion);
   const [socialSubmitting, setSocialSubmitting] = useState<OAuthProvider | null>(null);
+  const [appleLoginAvailable, setAppleLoginAvailable] = useState(false);
+  const [appleLoginSubmitting, setAppleLoginSubmitting] = useState(false);
   const [signUpSessionReady, setSignUpSessionReady] = useState(startsInProfileCompletion);
   const [exitSignupConfirmVisible, setExitSignupConfirmVisible] = useState(false);
 
@@ -146,11 +193,10 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginSubmitting, setLoginSubmitting] = useState(false);
 
-  const [agreeService, setAgreeService] = useState(false);
-  const [agreeCheckmo, setAgreeCheckmo] = useState(false);
-  const [agreeThirdParty, setAgreeThirdParty] = useState(false);
-  const [agreeMarketing, setAgreeMarketing] = useState(false);
-  const [activeTermsModalKey, setActiveTermsModalKey] = useState<TermsAgreementKey | null>(null);
+  const [activeTerms, setActiveTerms] = useState<TermsInfo[]>([]);
+  const [termsAgreements, setTermsAgreements] = useState<Record<number, boolean>>({});
+  const [termsLoading, setTermsLoading] = useState(false);
+  const [termsLoadError, setTermsLoadError] = useState('');
 
   const [signUpEmail, setSignUpEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
@@ -187,8 +233,11 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   const [resetPasswordEmail, setResetPasswordEmail] = useState('');
   const [sendingTempPassword, setSendingTempPassword] = useState(false);
 
-  const canGoNextFromTerms = agreeService && agreeCheckmo;
-  const allAgreed = agreeService && agreeCheckmo && agreeThirdParty && agreeMarketing;
+  const canGoNextFromTerms =
+    activeTerms.length > 0 &&
+    activeTerms.filter((term) => term.required).every((term) => termsAgreements[term.id] === true);
+  const allAgreed =
+    activeTerms.length > 0 && activeTerms.every((term) => termsAgreements[term.id] === true);
   const isNicknameValidCheck =
     nicknameChecked &&
     nicknameChecked.value === nickname.trim() &&
@@ -204,8 +253,6 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     step === 'profileBasic' ||
     step === 'profileExtra' ||
     step === 'signupComplete';
-  const activeTermsModalDocument =
-    activeTermsModalKey ? termsDocuments[activeTermsModalKey] : null;
   const isProfileCompletionFlow = profileCompletionMode || signUpSessionReady;
 
   const toggleCategory = (code: string) => {
@@ -216,56 +263,35 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     });
   };
 
-  const toggleTermsAgreement = (key: TermsAgreementKey) => {
-    switch (key) {
-      case 'service':
-        setAgreeService((prev) => !prev);
-        break;
-      case 'checkmo':
-        setAgreeCheckmo((prev) => !prev);
-        break;
-      case 'thirdParty':
-        setAgreeThirdParty((prev) => !prev);
-        break;
-      case 'marketing':
-        setAgreeMarketing((prev) => !prev);
-        break;
-    }
+  const toggleTermsAgreement = (termsId: number) => {
+    setTermsAgreements((prev) => ({
+      ...prev,
+      [termsId]: !prev[termsId],
+    }));
   };
 
-  const agreeTerms = (key: TermsAgreementKey) => {
-    switch (key) {
-      case 'service':
-        setAgreeService(true);
-        break;
-      case 'checkmo':
-        setAgreeCheckmo(true);
-        break;
-      case 'thirdParty':
-        setAgreeThirdParty(true);
-        break;
-      case 'marketing':
-        setAgreeMarketing(true);
-        break;
+  const buildTermsAgreementPayload = (): TermsAgreementPayload[] =>
+    activeTerms.map((term) => ({
+      termsId: term.id,
+      agreed: termsAgreements[term.id] === true,
+    }));
+
+  const openTermsUrl = (term: TermsInfo) => {
+    if (!term.termUrl) {
+      showToast('약관 URL을 확인할 수 없습니다.');
+      return;
     }
-  };
 
-  const closeTermsModal = () => setActiveTermsModalKey(null);
-
-  const handleConfirmTermsModal = () => {
-    if (!activeTermsModalKey) return;
-    agreeTerms(activeTermsModalKey);
-    setActiveTermsModalKey(null);
+    Linking.openURL(term.termUrl).catch(() => {
+      showToast('약관을 열 수 없습니다.');
+    });
   };
 
   const resetSignUpFlow = () => {
     setProfileCompletionMode(false);
     setSignUpSessionReady(false);
-    setAgreeService(false);
-    setAgreeCheckmo(false);
-    setAgreeThirdParty(false);
-    setAgreeMarketing(false);
-    setActiveTermsModalKey(null);
+    setTermsAgreements({});
+    setTermsLoadError('');
     setSignUpEmail('');
     setVerificationCode('');
     ev.reset();
@@ -293,7 +319,8 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     setProfileCompletionMode(false);
     setSignUpSessionReady(false);
     setStep('login');
-    setActiveTermsModalKey(null);
+    setTermsAgreements({});
+    setTermsLoadError('');
     setVerificationCode('');
     ev.reset();
   };
@@ -317,6 +344,56 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     }
     onClose?.();
   }, [onClose, onLoginSuccess]);
+
+  const loadTerms = useCallback(async () => {
+    if (termsLoading) return;
+    setTermsLoading(true);
+    setTermsLoadError('');
+
+    try {
+      const terms = await fetchActiveTerms();
+      setActiveTerms(terms);
+      setTermsAgreements((prev) => normalizeTermAgreementState(terms, prev));
+      if (terms.length === 0) {
+        setTermsLoadError('약관 목록을 확인할 수 없습니다.');
+      }
+    } catch (error) {
+      setTermsLoadError(resolveTermsErrorMessage(error));
+    } finally {
+      setTermsLoading(false);
+    }
+  }, [termsLoading]);
+
+  useEffect(() => {
+    if (step !== 'terms') return;
+    if (activeTerms.length > 0) {
+      setTermsAgreements((prev) => normalizeTermAgreementState(activeTerms, prev));
+      return;
+    }
+    if (termsLoadError) return;
+    void loadTerms();
+  }, [activeTerms, loadTerms, step, termsLoadError]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+
+    let mounted = true;
+    AppleAuthentication.isAvailableAsync()
+      .then((available) => {
+        if (mounted) {
+          setAppleLoginAvailable(available);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setAppleLoginAvailable(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleLogin = async () => {
     const identifier = loginIdentifier.trim();
@@ -351,20 +428,34 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     }
   };
 
-  // 소셜 로그인(Android 전용). 시스템 브라우저 OAuth → 딥링크 일회용 코드 → 교환.
+  // 소셜 로그인. 시스템 브라우저 OAuth → 딥링크 일회용 코드 → 교환.
   const handleSocialLogin = async (provider: OAuthProvider) => {
-    if (socialSubmitting) return;
+    if (socialSubmitting || appleLoginSubmitting) return;
     setSocialSubmitting(provider);
     try {
       const outcome = await loginWithSocial(provider);
       if (outcome.status === 'success') {
-        await fetchLoginStatusSilently(true);
-        if (outcome.isProfileCompleted) {
-          showToast('로그인에 성공했습니다.');
-          completeAuthFlow();
-        } else {
+        if (!outcome.isProfileCompleted) {
           showToast(PROFILE_INCOMPLETE_MESSAGE);
           enterProfileCompletionFlow();
+          return;
+        }
+
+        try {
+          await fetchLoginStatusSilently(true);
+          showToast('로그인에 성공했습니다.');
+          completeAuthFlow();
+        } catch (error) {
+          if (isProfileIncompleteApiError(error)) {
+            showToast(PROFILE_INCOMPLETE_MESSAGE);
+            enterProfileCompletionFlow();
+          } else {
+            showToast(
+              error instanceof ApiError && error.message
+                ? error.message
+                : '로그인 상태를 확인할 수 없습니다.',
+            );
+          }
         }
       } else if (outcome.status === 'error') {
         showToast(outcome.message);
@@ -374,6 +465,75 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
       setSocialSubmitting(null);
     }
   };
+
+  const handleAppleLogin = async () => {
+    if (appleLoginSubmitting || socialSubmitting) return;
+    setAppleLoginSubmitting(true);
+    try {
+      const outcome = await loginWithAppleNative();
+      if (outcome.status === 'success') {
+        try {
+          await fetchLoginStatusSilently(true);
+          showToast('로그인에 성공했습니다.');
+          completeAuthFlow();
+        } catch (error) {
+          if (isProfileIncompleteApiError(error)) {
+            showToast(PROFILE_INCOMPLETE_MESSAGE);
+            enterProfileCompletionFlow();
+          } else {
+            showToast(
+              error instanceof ApiError && error.message
+                ? error.message
+                : '로그인 상태를 확인할 수 없습니다.',
+            );
+          }
+        }
+      } else if (outcome.status === 'error') {
+        showToast(outcome.message);
+      }
+      // status === 'cancel' 이면 아무 동작 없음
+    } finally {
+      setAppleLoginSubmitting(false);
+    }
+  };
+
+  const renderSocialIconButton = ({
+    label,
+    loading,
+    disabled,
+    onPress,
+    children,
+    variant = 'default',
+  }: {
+    label: string;
+    loading: boolean;
+    disabled: boolean;
+    onPress: () => void;
+    children: ReactNode;
+    variant?: 'default' | 'apple';
+  }) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      disabled={disabled}
+      hitSlop={4}
+      onPress={onPress}
+      style={[
+        styles.socialIconButton,
+        variant === 'apple' && styles.appleSocialIconButton,
+        disabled && !loading && styles.socialLoginButtonDisabled,
+      ]}
+    >
+      {loading ? (
+        <ActivityIndicator
+          size="small"
+          color={colors.primary1}
+        />
+      ) : (
+        children
+      )}
+    </Pressable>
+  );
 
   const handleSendVerificationCode = async () => {
     if (ev.verified) return;
@@ -440,13 +600,22 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
       showToast('비밀번호와 비밀번호 확인이 일치하지 않습니다.');
       return;
     }
+    if (!canGoNextFromTerms) {
+      showToast('필수 약관에 동의해야 합니다.');
+      setStep('terms');
+      return;
+    }
 
     const normalizedEmail = signUpEmail.trim();
+    const agreements = buildTermsAgreementPayload();
     setAccountCreating(true);
     let resumedFromExistingAccount = false;
     try {
       try {
-        await signUpByEmail(normalizedEmail, password, { suppressErrorToast: true });
+        await signUpByEmail(normalizedEmail, password, {
+          suppressErrorToast: true,
+          agreements,
+        });
       } catch (error) {
         if (!(error instanceof ApiError)) {
           throw error;
@@ -604,9 +773,18 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
       if (!profileSessionReady) {
         const normalizedEmail = signUpEmail.trim();
         const normalizedPassword = signUpPassword.trim();
+        if (!canGoNextFromTerms) {
+          showToast('필수 약관에 동의해야 합니다.');
+          setStep('terms');
+          return;
+        }
+        const agreements = buildTermsAgreementPayload();
 
         try {
-          await signUpByEmail(normalizedEmail, normalizedPassword, { suppressErrorToast: true });
+          await signUpByEmail(normalizedEmail, normalizedPassword, {
+            suppressErrorToast: true,
+            agreements,
+          });
           signUpCreatedNow = true;
         } catch (error) {
           if (!(error instanceof ApiError)) {
@@ -896,37 +1074,14 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   if (step === 'terms') {
     const toggleAll = () => {
       const next = !allAgreed;
-      setAgreeService(next);
-      setAgreeCheckmo(next);
-      setAgreeThirdParty(next);
-      setAgreeMarketing(next);
+      setTermsAgreements(() => {
+        const nextState: Record<number, boolean> = {};
+        activeTerms.forEach((term) => {
+          nextState[term.id] = next;
+        });
+        return nextState;
+      });
     };
-    const termsItems: Array<{
-      key: TermsAgreementKey;
-      label: string;
-      value: boolean;
-    }> = [
-      {
-        key: 'service',
-        label: '서비스 이용을 위한 필수 개인정보 수집·이용 동의 (필수)',
-        value: agreeService,
-      },
-      {
-        key: 'checkmo',
-        label: '책모 이용약관 동의 (필수)',
-        value: agreeCheckmo,
-      },
-      {
-        key: 'thirdParty',
-        label: '개인정보 제3자 제공 동의 (선택)',
-        value: agreeThirdParty,
-      },
-      {
-        key: 'marketing',
-        label: '마케팅 및 이벤트 정보 수신 동의 (선택)',
-        value: agreeMarketing,
-      },
-    ];
 
     return renderCard(
       <>
@@ -934,82 +1089,76 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
         <Text style={styles.flowStep}>1 / 6</Text>
 
         <View style={styles.termsBox}>
-          {termsItems.map((term) => (
-            <View key={term.key} style={styles.termsRow}>
-              <Pressable
-                style={({ pressed }) => [styles.termsDetailButton, pressed && styles.pressed]}
-                onPress={() => setActiveTermsModalKey(term.key)}
-              >
-                <Text style={styles.termsText}>{term.label}</Text>
-                <MaterialIcons
-                  name="chevron-right"
-                  size={20}
-                  color={colors.gray4}
-                />
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.termsCheckButton, pressed && styles.pressed]}
-                onPress={() => toggleTermsAgreement(term.key)}
-              >
-                <MaterialIcons
-                  name={term.value ? 'check-box' : 'check-box-outline-blank'}
-                  size={22}
-                  color={term.value ? colors.primary1 : colors.gray3}
-                />
-              </Pressable>
+          {termsLoading ? (
+            <View style={styles.termsStatusBox}>
+              <ActivityIndicator size="small" color={colors.primary1} />
+              <Text style={styles.termsStatusText}>약관을 불러오는 중입니다.</Text>
             </View>
-          ))}
-          <View style={styles.termsDivider} />
-          <Pressable style={styles.termsRow} onPress={toggleAll}>
-            <Text style={[styles.termsText, styles.termsAllText]}>전체 동의</Text>
-            <MaterialIcons
-              name={allAgreed ? 'check-box' : 'check-box-outline-blank'}
-              size={22}
-              color={allAgreed ? colors.primary1 : colors.gray3}
-            />
-          </Pressable>
+          ) : termsLoadError ? (
+            <View style={styles.termsStatusBox}>
+              <Text style={styles.termsStatusText}>{termsLoadError}</Text>
+              <AppButton
+                variant="secondary"
+                label="다시 불러오기"
+                onPress={() => { void loadTerms(); }}
+              />
+            </View>
+          ) : (
+            <>
+              {activeTerms.map((term) => {
+                const agreed = termsAgreements[term.id] === true;
+                const label = `${term.title} (${term.required ? '필수' : '선택'})`;
+
+                return (
+                  <View key={term.id} style={styles.termsRow}>
+                    <Pressable
+                      style={({ pressed }) => [styles.termsDetailButton, pressed && styles.pressed]}
+                      onPress={() => openTermsUrl(term)}
+                    >
+                      <Text style={styles.termsText}>{label}</Text>
+                      <MaterialIcons
+                        name="chevron-right"
+                        size={20}
+                        color={colors.gray4}
+                      />
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [styles.termsCheckButton, pressed && styles.pressed]}
+                      onPress={() => toggleTermsAgreement(term.id)}
+                    >
+                      <MaterialIcons
+                        name={agreed ? 'check-box' : 'check-box-outline-blank'}
+                        size={22}
+                        color={agreed ? colors.primary1 : colors.gray3}
+                      />
+                    </Pressable>
+                  </View>
+                );
+              })}
+              <View style={styles.termsDivider} />
+              <Pressable style={styles.termsRow} onPress={toggleAll}>
+                <Text style={[styles.termsText, styles.termsAllText]}>전체 동의</Text>
+                <MaterialIcons
+                  name={allAgreed ? 'check-box' : 'check-box-outline-blank'}
+                  size={22}
+                  color={allAgreed ? colors.primary1 : colors.gray3}
+                />
+              </Pressable>
+            </>
+          )}
         </View>
-
-        <DialogOverlay
-          visible={activeTermsModalDocument !== null}
-          onClose={closeTermsModal}
-          overlayStyle={styles.termsModalOverlay}
-          cardStyle={styles.termsModalCard}
-        >
-          <View style={styles.termsModalHeader}>
-            <Text style={styles.termsModalTitle}>
-              {activeTermsModalDocument?.title ?? ''}
-            </Text>
-            <Pressable onPress={closeTermsModal} hitSlop={8}>
-              <MaterialIcons name="close" size={22} color={colors.gray5} />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            style={styles.termsModalBody}
-            contentContainerStyle={styles.termsModalBodyContent}
-            keyboardShouldPersistTaps="handled"
-            nestedScrollEnabled
-            showsVerticalScrollIndicator
-          >
-            <Text style={styles.termsModalText}>
-              {activeTermsModalDocument?.content ?? ''}
-            </Text>
-          </ScrollView>
-
-          <View style={styles.termsModalButtonRow}>
-            <AppButton variant="secondary" label="닫기" onPress={closeTermsModal} size="lg" fullWidth />
-            <AppButton label="동의" onPress={handleConfirmTermsModal} size="lg" fullWidth />
-          </View>
-        </DialogOverlay>
 
         <View style={styles.buttonRow}>
           <AppButton variant="secondary" label="취소" onPress={goToLogin} />
           <AppButton
             label="다음"
             fullWidth
-            disabled={!canGoNextFromTerms}
+            disabled={!canGoNextFromTerms || termsLoading || Boolean(termsLoadError)}
             onPress={() => {
+              if (termsLoadError || activeTerms.length === 0) {
+                showToast('약관을 다시 불러와 주세요.');
+                return;
+              }
               if (!canGoNextFromTerms) {
                 showToast('필수 약관에 동의해야 합니다.');
                 return;
@@ -1609,39 +1758,68 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
         loadingLabel="로그인 중..."
         onPress={() => { void handleLogin(); }}
       />
-      {Platform.OS === 'android' && (
-        <View style={styles.socialSection}>
-          <View style={styles.socialDivider}>
-            <View style={styles.socialDividerLine} />
-            <Text style={styles.socialDividerText}>또는</Text>
-            <View style={styles.socialDividerLine} />
-          </View>
-          <AppButton
-            variant="secondary"
-            label="카카오로 시작하기"
-            loading={socialSubmitting === 'kakao'}
-            loadingLabel="연결 중..."
-            leftIcon={<SvgUri width={18} height={18} uri={SOCIAL_KAKAO_URI} />}
-            onPress={() => { void handleSocialLogin('kakao'); }}
-          />
-          <AppButton
-            variant="secondary"
-            label="구글로 시작하기"
-            loading={socialSubmitting === 'google'}
-            loadingLabel="연결 중..."
-            leftIcon={<SvgUri width={18} height={18} uri={SOCIAL_GOOGLE_URI} />}
-            onPress={() => { void handleSocialLogin('google'); }}
-          />
-          <AppButton
-            variant="secondary"
-            label="네이버로 시작하기"
-            loading={socialSubmitting === 'naver'}
-            loadingLabel="연결 중..."
-            leftIcon={<SvgUri width={18} height={18} uri={SOCIAL_NAVER_URI} />}
-            onPress={() => { void handleSocialLogin('naver'); }}
-          />
+      <View style={styles.socialSection}>
+        <View style={styles.socialDivider}>
+          <View style={styles.socialDividerLine} />
+          <Text style={styles.socialDividerText}>또는</Text>
+          <View style={styles.socialDividerLine} />
         </View>
-      )}
+        <View style={styles.socialIconRow}>
+          {Platform.OS === 'ios' && appleLoginAvailable && renderSocialIconButton({
+            label: 'Apple로 로그인',
+            loading: appleLoginSubmitting,
+            disabled: Boolean(appleLoginSubmitting || socialSubmitting),
+            variant: 'apple',
+            onPress: () => { void handleAppleLogin(); },
+            children: (
+              <FontAwesome
+                name="apple"
+                size={APPLE_BRAND_ICON_SIZE}
+                color={colors.black}
+              />
+            ),
+          })}
+          {renderSocialIconButton({
+            label: '카카오로 로그인',
+            loading: socialSubmitting === 'kakao',
+            disabled: Boolean(appleLoginSubmitting || socialSubmitting),
+            onPress: () => { void handleSocialLogin('kakao'); },
+            children: (
+              <SvgUri
+                width={SOCIAL_BRAND_ICON_SIZE}
+                height={SOCIAL_BRAND_ICON_SIZE}
+                uri={SOCIAL_KAKAO_URI}
+              />
+            ),
+          })}
+          {renderSocialIconButton({
+            label: '구글로 로그인',
+            loading: socialSubmitting === 'google',
+            disabled: Boolean(appleLoginSubmitting || socialSubmitting),
+            onPress: () => { void handleSocialLogin('google'); },
+            children: (
+              <SvgUri
+                width={SOCIAL_BRAND_ICON_SIZE}
+                height={SOCIAL_BRAND_ICON_SIZE}
+                uri={SOCIAL_GOOGLE_URI}
+              />
+            ),
+          })}
+          {renderSocialIconButton({
+            label: '네이버로 로그인',
+            loading: socialSubmitting === 'naver',
+            disabled: Boolean(appleLoginSubmitting || socialSubmitting),
+            onPress: () => { void handleSocialLogin('naver'); },
+            children: (
+              <SvgUri
+                width={SOCIAL_BRAND_ICON_SIZE}
+                height={SOCIAL_BRAND_ICON_SIZE}
+                uri={SOCIAL_NAVER_URI}
+              />
+            ),
+          })}
+        </View>
+      </View>
       <View style={styles.loginFooterLinks}>
         <Pressable onPress={startSignUp}>
           <Text style={styles.linkText}>아직 회원이 아니신가요? 회원가입하러가기</Text>
@@ -1732,6 +1910,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.md,
     gap: spacing.sm,
+  },
+  termsStatusBox: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  termsStatusText: {
+    ...typography.body1_3,
+    color: colors.gray5,
+    textAlign: 'center',
   },
   termsRow: {
     flexDirection: 'row',
@@ -2120,6 +2307,30 @@ const styles = StyleSheet.create({
   },
   socialSection: {
     gap: spacing.sm,
+  },
+  socialIconRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  socialIconButton: {
+    width: SOCIAL_ICON_BUTTON_SIZE,
+    height: SOCIAL_ICON_BUTTON_SIZE,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  appleSocialIconButton: {
+    borderColor: colors.gray2,
+    backgroundColor: colors.white,
+  },
+  socialLoginButtonDisabled: {
+    opacity: interactionOpacity.disabled,
   },
   socialDivider: {
     flexDirection: 'row',

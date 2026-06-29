@@ -1,10 +1,10 @@
-import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 
 import { PUBLIC_ENV } from '../../constants/publicEnv';
 import { exchangeOAuthCode } from '../api/authApi';
+import { ApiError } from '../api/http';
 
-export type OAuthProvider = 'google' | 'kakao' | 'naver';
+export type OAuthProvider = 'google' | 'kakao' | 'naver' | 'apple';
 
 // BE 성공 핸들러가 리다이렉트할 앱 딥링크 (BE 이슈 #263 계약). app.json scheme = "checkmo".
 const OAUTH_REDIRECT_URL = 'checkmo://oauth-callback';
@@ -36,17 +36,27 @@ function parseCallback(url: string): { code?: string; error?: string } {
   return { code: params.code || undefined, error: params.error || undefined };
 }
 
+function resolveOAuthExchangeErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.code === 'AUTH_416') {
+      return '인증 코드가 만료되었습니다. 다시 로그인해 주세요.';
+    }
+    if (error.code === 'AUTH_414') {
+      return '이미 다른 계정으로 가입된 이메일입니다.';
+    }
+    if (error.message?.trim()) {
+      return error.message.trim();
+    }
+  }
+  return '로그인 처리에 실패했습니다. 다시 시도해 주세요.';
+}
+
 /**
- * Android 전용 소셜 로그인 (Option C — AuthSession + 딥링크 + 일회용 코드 교환).
+ * 앱 소셜 로그인 (Option C — AuthSession + 딥링크 + 일회용 코드 교환).
  * 시스템 브라우저로 BE 웹 OAuth 플로우를 열고, checkmo://oauth-callback?code=... 로 돌아온
  * 일회용 코드를 refreshToken으로 교환해 저장한다. (토큰을 딥링크 URL에 직접 싣지 않음 → 하이재킹 방지)
- * iOS는 App Store 4.8(Sign in with Apple 필수) 회피를 위해 호출하지 않는다(호출 시 error 반환).
  */
 export async function loginWithSocial(provider: OAuthProvider): Promise<SocialLoginOutcome> {
-  if (Platform.OS !== 'android') {
-    return { status: 'error', message: '소셜 로그인은 Android에서만 지원됩니다.' };
-  }
-
   const result = await WebBrowser.openAuthSessionAsync(
     getAuthorizationUrl(provider),
     OAUTH_REDIRECT_URL,
@@ -64,7 +74,7 @@ export async function loginWithSocial(provider: OAuthProvider): Promise<SocialLo
 
   const { code, error } = parseCallback(result.url);
   if (error) {
-    return { status: 'error', message: '소셜 로그인이 거부되었습니다.' };
+    return { status: 'error', message: '소셜 로그인에 실패했습니다. 다시 시도해 주세요.' };
   }
   if (!code) {
     return { status: 'error', message: '로그인 코드를 확인할 수 없습니다.' };
@@ -74,7 +84,7 @@ export async function loginWithSocial(provider: OAuthProvider): Promise<SocialLo
   try {
     const { isProfileCompleted } = await exchangeOAuthCode(code, { suppressErrorToast: true });
     return { status: 'success', isProfileCompleted };
-  } catch {
-    return { status: 'error', message: '로그인 처리에 실패했습니다. 다시 시도해 주세요.' };
+  } catch (exchangeError) {
+    return { status: 'error', message: resolveOAuthExchangeErrorMessage(exchangeError) };
   }
 }

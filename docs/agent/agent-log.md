@@ -3168,3 +3168,10 @@ export const interactionOpacity = {
 - 중복 스크롤 예약과 타이핑 중 보정을 제거해 열림 중 끊김 현상 완화
 - TODO의 모임 가입신청 입력칸 QA 항목은 미완료로 유지하고 끊김 현상 개선/재확인 필요 메모 반영
 - `typecheck`, typography/spacing, `lint`, `diff --check` 통과 확인
+
+# 2026-06-29 12:45:38 KST 앱 소셜 로그인/약관 동의 회원가입 정렬
+
+- 앱 OAuth 코드 교환 및 Apple 네이티브 로그인 API를 RN 로그인 화면에 연결하고 소셜 아이콘 UI를 원형 버튼으로 정리
+- iOS Apple Sign In 설정과 entitlement 반영, Google/Kakao/Naver 브라우저 OAuth를 iOS/Android 공통 흐름으로 확장
+- 이메일 회원가입 약관 동의를 서버 `GET /terms` 기반으로 전환하고 `/auth/signup`에 `agreements` payload를 전송하도록 수정
+- `npm run check`, `git diff --check` 통과 확인

@@ -17,6 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "kr.co.checkmo.app",
       "buildNumber": "1",
+      "usesAppleSignIn": true,
       "config": {
         "usesNonExemptEncryption": false
       }
@@ -56,6 +57,7 @@
       ],
       "expo-font",
       "expo-secure-store",
+      "expo-apple-authentication",
       "@react-native-community/datetimepicker",
       "expo-web-browser"
     ],

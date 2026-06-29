@@ -18,9 +18,45 @@ type FindEmailResult = {
 type LoginStatus = {
   email?: string;
 };
+type PublicTermsListResult = {
+  terms?: TermsInfo[];
+};
+type MemberTermsStatusResult = {
+  requiresRequiredAgreement?: boolean;
+  terms?: MemberTermsInfo[];
+};
 
 export type EmailVerificationType = 'SIGN_UP' | 'UPDATE_EMAIL';
 export type ImageUploadType = 'PROFILE' | 'CLUB' | 'NOTICE';
+export type TermsType =
+  | 'SERVICE_TERMS'
+  | 'PRIVACY_COLLECTION'
+  | 'THIRD_PARTY_PROVISION'
+  | 'MARKETING'
+  | string;
+
+export type TermsInfo = {
+  id: number;
+  termsType: TermsType;
+  title: string;
+  termUrl?: string;
+  version: number;
+  required: boolean;
+};
+
+export type MemberTermsInfo = TermsInfo & {
+  agreed: boolean;
+};
+
+export type TermsAgreementPayload = {
+  termsId: number;
+  agreed: boolean;
+};
+
+export type MemberTermsStatus = {
+  requiresRequiredAgreement: boolean;
+  terms: MemberTermsInfo[];
+};
 
 export type AdditionalInfoPayload = {
   nickname: string;
@@ -63,10 +99,11 @@ export async function loginByIdentifier(
 // Backward-compatible alias for existing callers.
 export const loginByEmail = loginByIdentifier;
 
-// 앱 소셜 로그인(Android): 딥링크로 받은 일회용 코드를 refreshToken으로 교환한다.
+// 앱 소셜 로그인: 딥링크로 받은 일회용 코드를 refreshToken으로 교환한다.
 // 이메일 /auth/app/login과 동일하게 토큰을 응답 바디로 받는 구조. (보안: 토큰을 딥링크 URL에 직접 싣지 않음)
 type OAuthExchangeResult = {
   refreshToken?: string;
+  profileCompleted?: boolean;
   isProfileCompleted?: boolean;
 };
 
@@ -88,20 +125,86 @@ export async function exchangeOAuthCode(
 
   await saveStoredRefreshToken(refreshToken);
   // 신규 소셜 가입자는 프로필 미완성 → 프로필 완성 흐름으로 분기. 응답 누락 시 보수적으로 완성 처리.
-  return { isProfileCompleted: result?.isProfileCompleted ?? true };
+  return { isProfileCompleted: result?.profileCompleted ?? result?.isProfileCompleted ?? true };
+}
+
+export type AppleLoginPayload = {
+  identityToken: string;
+  rawNonce: string;
+  authorizationCode?: string;
+};
+
+export async function loginWithApple(
+  payload: AppleLoginPayload,
+  options?: { suppressErrorToast?: boolean },
+): Promise<void> {
+  const body: Record<string, string> = {
+    identityToken: payload.identityToken,
+    rawNonce: payload.rawNonce,
+  };
+
+  if (payload.authorizationCode) {
+    body.authorizationCode = payload.authorizationCode;
+  }
+
+  const response = await requestJson<ApiEnvelope<LoginResult>>('/auth/app/apple/login', {
+    method: 'POST',
+    body,
+    suppressErrorToast: options?.suppressErrorToast,
+  });
+
+  const refreshToken = unwrapResult(response)?.refreshToken;
+  if (!refreshToken) {
+    throw new ApiError('로그인 토큰을 확인할 수 없습니다.', 500, 'MISSING_REFRESH_TOKEN', response);
+  }
+
+  await saveStoredRefreshToken(refreshToken);
 }
 
 export async function signUpByEmail(
   email: string,
   password: string,
-  options?: { suppressErrorToast?: boolean },
+  options?: { suppressErrorToast?: boolean; agreements?: TermsAgreementPayload[] },
 ): Promise<void> {
   await requestJson<ApiEnvelope<SignUpResult>>('/auth/signup', {
     method: 'POST',
     body: {
       email,
       password,
+      agreements: options?.agreements ?? [],
     },
+    suppressErrorToast: options?.suppressErrorToast,
+  });
+}
+
+export async function fetchActiveTerms(): Promise<TermsInfo[]> {
+  const response = await requestJson<ApiEnvelope<PublicTermsListResult>>('/terms', {
+    method: 'GET',
+    retryOnUnauthorized: false,
+  });
+
+  return unwrapResult(response)?.terms ?? [];
+}
+
+export async function fetchMyTermsStatus(): Promise<MemberTermsStatus> {
+  const response = await requestJson<ApiEnvelope<MemberTermsStatusResult>>('/members/me/terms', {
+    method: 'GET',
+  });
+  const result = unwrapResult(response);
+
+  return {
+    requiresRequiredAgreement: result?.requiresRequiredAgreement ?? false,
+    terms: result?.terms ?? [],
+  };
+}
+
+export async function updateMyTermsAgreements(
+  agreements: TermsAgreementPayload[],
+  options?: { suppressErrorToast?: boolean },
+): Promise<void> {
+  await requestJson<ApiEnvelope<null>>('/members/me/terms', {
+    method: 'POST',
+    body: { agreements },
     suppressErrorToast: options?.suppressErrorToast,
   });
 }

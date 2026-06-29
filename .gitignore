@@ -39,7 +39,10 @@ yarn-error.*
 *.tsbuildinfo
 
 # generated native folders
-/ios
+/ios/*
+!/ios/app/
+/ios/app/*
+!/ios/app/app.entitlements
 /android
 
 # reference-only clones (BE/FE) — separate GitHub repos, never commit/push from RN, excluded from build
