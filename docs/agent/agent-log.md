@@ -3175,3 +3175,9 @@ export const interactionOpacity = {
 - iOS Apple Sign In 설정과 entitlement 반영, Google/Kakao/Naver 브라우저 OAuth를 iOS/Android 공통 흐름으로 확장
 - 이메일 회원가입 약관 동의를 서버 `GET /terms` 기반으로 전환하고 `/auth/signup`에 `agreements` payload를 전송하도록 수정
 - `npm run check`, `git diff --check` 통과 확인
+
+# 2026-06-29 16:47:56 KST 앱 소셜 로그인 테스트 마무리
+
+- 로그인 화면 소셜 버튼 UI를 최종 조정: Apple은 iOS 전용 검정 원형 버튼 + 공통 테두리, Kakao 로고는 중앙 정렬
+- BE 미머지 상태인 앱 버전 정책 조회를 임시 비활성화하고 TODO에 재활성화 항목 추가
+- Apple 네이티브 로그인은 Expo Go가 아닌 EAS iOS preview 빌드에서 테스트하도록 확인

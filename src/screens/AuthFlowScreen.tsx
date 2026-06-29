@@ -1775,7 +1775,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
               <FontAwesome
                 name="apple"
                 size={APPLE_BRAND_ICON_SIZE}
-                color={colors.black}
+                color={colors.white}
               />
             ),
           })}
@@ -2327,7 +2327,7 @@ const styles = StyleSheet.create({
   },
   appleSocialIconButton: {
     borderColor: colors.gray2,
-    backgroundColor: colors.white,
+    backgroundColor: colors.black,
   },
   socialLoginButtonDisabled: {
     opacity: interactionOpacity.disabled,

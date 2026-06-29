@@ -12,6 +12,9 @@ import { showToast } from '../utils/toast';
 
 const logger = createLogger('AppVersionGate');
 
+// TODO: BE 앱 버전 정책 API 머지 후 true로 복구한다.
+const APP_VERSION_POLICY_LOOKUP_ENABLED = false;
+
 export const CURRENT_APP_VERSION = appConfig.expo.version;
 
 export type AppVersionGateState =
@@ -58,9 +61,16 @@ function resolveGateState(policy: AppVersionPolicy): AppVersionGateState {
 }
 
 export function useAppVersionGate() {
-  const [state, setState] = useState<AppVersionGateState>({ status: 'checking' });
+  const [state, setState] = useState<AppVersionGateState>(
+    APP_VERSION_POLICY_LOOKUP_ENABLED ? { status: 'checking' } : { status: 'none' },
+  );
 
   useEffect(() => {
+    if (!APP_VERSION_POLICY_LOOKUP_ENABLED) {
+      setState({ status: 'none' });
+      return;
+    }
+
     const platform = getAppPlatform();
     if (!platform) {
       setState({ status: 'none' });
