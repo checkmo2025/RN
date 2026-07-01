@@ -3194,3 +3194,9 @@ export const interactionOpacity = {
 - `package-lock.json`의 의존성 패키지 버전(node_modules/* 12건)은 그대로 두어 lockfile 무결성 유지
 - 1.0.2 이후 변경: Android 소셜 로그인(카카오/구글/네이버), iPad 지원, 앱 강제 업데이트 게이트, 닉네임 변경, 소셜 로그인/약관 흐름 정렬
 - buildNumber는 EAS autoIncrement라 미변경(빌드 시 자동 →13)
+
+# 2026-07-01 09:50:09 KST 앱 버전 정책 조회 재활성화
+
+- BE 앱 버전 정책 API(`GET /app/version`) 연동 완료로 `useAppVersionGate`의 `APP_VERSION_POLICY_LOOKUP_ENABLED`를 `false` → `true`로 복구
+- iOS App Store 링크 `https://apps.apple.com/app/id6777671102`가 책모(개발자 Hyunil Yun) 앱으로 확인됨
+- 남은 이슈: 업데이트 버튼 클릭 시 스토어 미이동 — 정책 응답 `storeUrl` 값 점검 필요(조사 진행 중)

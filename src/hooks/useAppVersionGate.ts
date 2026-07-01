@@ -12,8 +12,8 @@ import { showToast } from '../utils/toast';
 
 const logger = createLogger('AppVersionGate');
 
-// TODO: BE 앱 버전 정책 API 머지 후 true로 복구한다.
-const APP_VERSION_POLICY_LOOKUP_ENABLED = false;
+// BE 앱 버전 정책 API(GET /api/v1/app/version) 연동 완료로 활성화.
+const APP_VERSION_POLICY_LOOKUP_ENABLED = true;
 
 export const CURRENT_APP_VERSION = appConfig.expo.version;
 
