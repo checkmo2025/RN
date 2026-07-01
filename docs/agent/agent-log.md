@@ -3219,3 +3219,9 @@ export const interactionOpacity = {
 - BE `develop` 최신 코드 기준으로 앱 버전 정책, Swagger 권한 문서, 검색 검증, 날짜/nullable 응답 계약 이슈를 정리
 - 백엔드 전달용 문서 `docs/documents/backend-api-contract-followup-2026-07-01.md` 추가
 - 커밋 범위 외 변경(HomeScreen/온보딩/스토어 산출물/IDE·skill 미추적 파일)은 요청대로 원복 또는 삭제
+
+# 2026-07-01 22:34:26 KST FE/RN 영어화 계획 문서 작성
+
+- FE Next.js 영어 지원 전환 계획 문서 추가
+- RN Expo 앱 영어 지원 및 iOS/App Store·Google Play 현지화 계획 문서 추가
+- 공식 Next.js, next-intl, Apple, Google, Expo 문서 기준으로 라우팅, 앱 내부 문자열, 스토어 메타데이터 전략 정리
