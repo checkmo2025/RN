@@ -3225,3 +3225,9 @@ export const interactionOpacity = {
 - FE Next.js 영어 지원 전환 계획 문서 추가
 - RN Expo 앱 영어 지원 및 iOS/App Store·Google Play 현지화 계획 문서 추가
 - 공식 Next.js, next-intl, Apple, Google, Expo 문서 기준으로 라우팅, 앱 내부 문자열, 스토어 메타데이터 전략 정리
+
+# 2026-07-02 00:42:12 KST i18n 용어집 작성
+
+- Checkmo 브랜드명과 `club`, `group`, `meeting` 계열 핵심 번역 기준 정리
+- RN/FE 공통 번역 source of truth로 `docs/documents/i18n-glossary.md` 추가
+- 스토어 앱 이름, 권한 문구, 기본 톤앤매너, 법률/정책 보류 항목 정리
