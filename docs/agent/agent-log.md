@@ -3200,3 +3200,9 @@ export const interactionOpacity = {
 - BE 앱 버전 정책 API(`GET /app/version`) 연동 완료로 `useAppVersionGate`의 `APP_VERSION_POLICY_LOOKUP_ENABLED`를 `false` → `true`로 복구
 - iOS App Store 링크 `https://apps.apple.com/app/id6777671102`가 책모(개발자 Hyunil Yun) 앱으로 확인됨
 - 남은 이슈: 업데이트 버튼 클릭 시 스토어 미이동 — 정책 응답 `storeUrl` 값 점검 필요(조사 진행 중)
+
+# 2026-07-01 09:54:51 KST 앱 버전 1.1.1 상향
+
+- 스토어 재제출용 앱 버전 1.1.0 → 1.1.1 상향. 네이티브 추적 함정 대응으로 동기화 대상 전부 변경: `app.json`(version/runtimeVersion), `ios/app/Info.plist`(CFBundleShortVersionString), `project.pbxproj`(MARKETING_VERSION ×2), `android/app/build.gradle`(versionName), `package.json`, `package-lock.json`(루트 2곳)
+- `package-lock.json`의 의존성 패키지 버전은 그대로 두어 lockfile 무결성 유지(diff 루트 2줄만 변경 확인)
+- buildNumber(iOS)/versionCode(Android)는 EAS autoIncrement라 미변경
