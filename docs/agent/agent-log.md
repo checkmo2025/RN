@@ -3213,3 +3213,9 @@ export const interactionOpacity = {
 - 원인: `.gitignore`(42~45줄)로 `ios/app/Images.xcassets/AppIcon.appiconset/`가 미추적 → EAS가 app.json 현재 아이콘 대신 캐시된 옛 아이콘 사용, `--clear-cache`로도 미교체
 - 조치: `assets/checkmo-app-icon-ios.png`를 알파 없는 불투명 RGB로 변환해 네이티브 아이콘셋(`App-Icon-1024x1024@1x.png`)에 덮어쓰고 `Contents.json`과 함께 `git add -f`로 강제 추적
 - 소스 에셋도 알파 제거해 일원화(prebuild 경로 알파 거부 방지). 재빌드 시 커밋된 아이콘이 박히도록 함
+
+# 2026-07-01 16:19:27 KST 백엔드 API 계약 후속 문서 작성
+
+- BE `develop` 최신 코드 기준으로 앱 버전 정책, Swagger 권한 문서, 검색 검증, 날짜/nullable 응답 계약 이슈를 정리
+- 백엔드 전달용 문서 `docs/documents/backend-api-contract-followup-2026-07-01.md` 추가
+- 커밋 범위 외 변경(HomeScreen/온보딩/스토어 산출물/IDE·skill 미추적 파일)은 요청대로 원복 또는 삭제
