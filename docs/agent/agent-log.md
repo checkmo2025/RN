@@ -3206,3 +3206,10 @@ export const interactionOpacity = {
 - 스토어 재제출용 앱 버전 1.1.0 → 1.1.1 상향. 네이티브 추적 함정 대응으로 동기화 대상 전부 변경: `app.json`(version/runtimeVersion), `ios/app/Info.plist`(CFBundleShortVersionString), `project.pbxproj`(MARKETING_VERSION ×2), `android/app/build.gradle`(versionName), `package.json`, `package-lock.json`(루트 2곳)
 - `package-lock.json`의 의존성 패키지 버전은 그대로 두어 lockfile 무결성 유지(diff 루트 2줄만 변경 확인)
 - buildNumber(iOS)/versionCode(Android)는 EAS autoIncrement라 미변경
+
+# 2026-07-01 10:42:19 KST iOS 앱 아이콘 강제 추적 커밋 (엠보싱/옛 아이콘 문제 대응)
+
+- build 14 IPA를 직접 추출해 확인: 바이너리 아이콘은 flat이나 현재 소스가 아닌 옛 "여백 많은" 버전이 박혀 있었음(App Store Connect의 엠보싱은 별개의 캐시된 옛 이미지)
+- 원인: `.gitignore`(42~45줄)로 `ios/app/Images.xcassets/AppIcon.appiconset/`가 미추적 → EAS가 app.json 현재 아이콘 대신 캐시된 옛 아이콘 사용, `--clear-cache`로도 미교체
+- 조치: `assets/checkmo-app-icon-ios.png`를 알파 없는 불투명 RGB로 변환해 네이티브 아이콘셋(`App-Icon-1024x1024@1x.png`)에 덮어쓰고 `Contents.json`과 함께 `git add -f`로 강제 추적
+- 소스 에셋도 알파 제거해 일원화(prebuild 경로 알파 거부 방지). 재빌드 시 커밋된 아이콘이 박히도록 함
