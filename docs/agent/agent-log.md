@@ -3237,3 +3237,10 @@ export const interactionOpacity = {
 - 앱 전역 언어 context와 `ko/en` 번역 catalog 추가
 - 마이페이지 설정의 기타 섹션에 언어 선택 화면 추가
 - 영어 선택 시 Profile/Settings 주요 문구, 하단 탭 label, 로그아웃 확인창이 즉시 영어로 표시되도록 반영
+
+# 2026-07-02 23:41:50 KST 배포 앱 채팅 WebSocket 연결 보강
+
+- 채팅 STOMP 연결 전에 로그인 세션을 preflight로 확인해 배포 앱 쿠키 인증 경로를 안정화
+- `/user/queue/errors` 구독과 연결 상태(`preparing/connecting/connected/error/closed`) 표시를 추가
+- 채팅 헤더에 연결 오류/끊김 상태를 노출하고 `EXPO_PUBLIC_WS_BASE_URL` 예시 값을 문서화
+- `npm run check`, `npm run lint` 통과 확인

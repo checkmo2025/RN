@@ -138,7 +138,13 @@ export function useMeetingChatState({
     [fetchLatest],
   );
 
-  const { isConnected, publish } = useMeetingChatStomp({
+  const {
+    isConnected,
+    connectionStatus,
+    connectionError,
+    closeCode,
+    publish,
+  } = useMeetingChatStomp({
     clubId,
     meetingId,
     teamId: activeGroup?.teamId,
@@ -146,6 +152,28 @@ export function useMeetingChatState({
     onMessage: handleStompMessage,
     onConnected: handleStompConnected,
   });
+
+  const connectionLabel = useMemo(() => {
+    if (connectionError) return connectionError;
+
+    switch (connectionStatus) {
+      case 'preparing':
+        return '연결 준비 중...';
+      case 'connecting':
+        return '연결 중...';
+      case 'connected':
+        return '연결됨';
+      case 'error':
+        return '채팅 연결 오류';
+      case 'closed':
+        return closeCode
+          ? `채팅 연결이 끊어졌습니다. (${closeCode})`
+          : '채팅 연결이 끊어졌습니다.';
+      case 'idle':
+      default:
+        return '연결 중...';
+    }
+  }, [closeCode, connectionError, connectionStatus]);
 
   const resetRoom = useCallback(() => {
     roomVersionRef.current += 1;
@@ -324,6 +352,8 @@ export function useMeetingChatState({
     historyError,
     hasNext,
     isConnected,
+    connectionStatus,
+    connectionLabel,
     reportTarget,
     submittingReport,
     setReportTarget,

@@ -71,6 +71,8 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
   const lastMessage = state.messages[state.messages.length - 1];
   const lastMessageId = lastMessage?.messageId;
   const lastMessageIsMine = lastMessage ? isMine(lastMessage, currentMemberNickname) : false;
+  const hasConnectionError =
+    state.connectionStatus === 'error' || state.connectionStatus === 'closed';
   const translateX = useRef(new Animated.Value(0)).current;
 
   const backSwipe = useEdgeBackSwipe({
@@ -186,11 +188,20 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                     <View
                       style={[
                         styles.connectionDot,
-                        state.isConnected ? styles.connectionDotOn : styles.connectionDotOff,
+                        state.isConnected
+                          ? styles.connectionDotOn
+                          : hasConnectionError
+                            ? styles.connectionDotError
+                            : styles.connectionDotOff,
                       ]}
                     />
-                    <Text style={styles.connectionText}>
-                      {state.isConnected ? '연결됨' : '연결 중...'}
+                    <Text
+                      style={[
+                        styles.connectionText,
+                        hasConnectionError && styles.connectionTextError,
+                      ]}
+                    >
+                      {state.connectionLabel}
                     </Text>
                   </View>
                 </View>
@@ -464,7 +475,9 @@ const styles = StyleSheet.create({
   connectionDot: { width: 6, height: 6, borderRadius: 3 },
   connectionDotOn: { backgroundColor: colors.green },
   connectionDotOff: { backgroundColor: colors.gray3 },
+  connectionDotError: { backgroundColor: colors.likeRed },
   connectionText: { ...typography.body2_3, color: colors.gray4 },
+  connectionTextError: { color: colors.likeRed },
   centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   stateText: { ...typography.body1_3, color: colors.gray4, textAlign: 'center' },
   retryButton: {
