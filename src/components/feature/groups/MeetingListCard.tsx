@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Image,
   StyleSheet,
@@ -26,12 +26,13 @@ type Props = {
   applicationStatus?: string;
   applyOpen?: boolean;
   applyReason?: string;
-  applySectionRef?: React.Ref<View>;
+  onApplyInputRef?: (ref: TextInput | null) => void;
   onPressApply?: () => void;
   onChangeApplyReason?: (value: string) => void;
   onApplyInputFocus?: () => void;
   onApplyInputLayout?: (event: LayoutChangeEvent) => void;
   onSubmitApply?: () => void;
+  onCloseApply?: () => void;
   onPressVisit?: () => void;
 };
 
@@ -70,17 +71,25 @@ export function MeetingListCard({
   applicationStatus,
   applyOpen,
   applyReason,
-  applySectionRef,
+  onApplyInputRef,
   onPressApply,
   onChangeApplyReason,
   onApplyInputFocus,
   onApplyInputLayout,
   onSubmitApply,
+  onCloseApply,
   onPressVisit,
 }: Props) {
   const { l } = useLanguage();
   const applyInputRef = useRef<TextInput>(null);
   const canSubmit = (applyReason ?? '').trim().length > 0;
+  const setApplyInputRef = useCallback(
+    (ref: TextInput | null) => {
+      applyInputRef.current = ref;
+      onApplyInputRef?.(ref);
+    },
+    [onApplyInputRef],
+  );
 
   useEffect(() => {
     if (!applyOpen) return;
@@ -137,12 +146,13 @@ export function MeetingListCard({
       </View>
 
       {applyOpen ? (
-        <View ref={applySectionRef} style={styles.applySection} onLayout={onApplyInputLayout}>
+        <View style={styles.applySection}>
           <FormTextInput
-            ref={applyInputRef}
+            ref={setApplyInputRef}
             value={applyReason}
             onChangeText={(text) => onChangeApplyReason?.(text)}
             onFocus={onApplyInputFocus}
+            onLayout={onApplyInputLayout}
             placeholder={l('신청 사유를 입력해보세요({limit}자 제한)', {
               limit: INPUT_LIMITS.APPLY_REASON,
             })}
@@ -157,13 +167,18 @@ export function MeetingListCard({
           <Text style={styles.applyCounterText}>
             {(applyReason ?? '').length}/{INPUT_LIMITS.APPLY_REASON}
           </Text>
-          <Pressable
-            style={[styles.applySubmitButton, !canSubmit && styles.applySubmitDisabled]}
-            disabled={!canSubmit}
-            onPress={onSubmitApply}
-          >
-            <Text style={styles.applySubmitText}>{l('가입신청하기')}</Text>
-          </Pressable>
+          <View style={styles.applyActionRow}>
+            <Pressable
+              style={[styles.applySubmitButton, !canSubmit && styles.applySubmitDisabled]}
+              disabled={!canSubmit}
+              onPress={onSubmitApply}
+            >
+              <Text style={styles.applySubmitText}>{l('가입 신청하기')}</Text>
+            </Pressable>
+            <Pressable style={styles.applyCloseButton} onPress={onCloseApply}>
+              <Text style={styles.applyCloseText}>{l('닫기')}</Text>
+            </Pressable>
+          </View>
         </View>
       ) : (
         <View style={styles.actions}>
@@ -178,7 +193,7 @@ export function MeetingListCard({
                 applicationStatus ? styles.applyButtonTextDisabled : null,
               ]}
             >
-              {applicationStatus ? l('신청완료') : l('가입신청하기')}
+              {applicationStatus ? l('신청완료') : l('가입 신청하기')}
             </Text>
           </Pressable>
           <Pressable style={styles.visitButton} onPress={onPressVisit}>
@@ -340,7 +355,12 @@ const styles = StyleSheet.create({
     color: colors.gray4,
     textAlign: 'right',
   },
+  applyActionRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
   applySubmitButton: {
+    flex: 1,
     height: 36,
     borderRadius: radius.md,
     backgroundColor: colors.primary1,
@@ -353,5 +373,19 @@ const styles = StyleSheet.create({
   applySubmitText: {
     ...typography.body1_2,
     color: colors.white,
+  },
+  applyCloseButton: {
+    flex: 1,
+    height: 36,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.subbrown2,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyCloseText: {
+    ...typography.body1_2,
+    color: colors.gray6,
   },
 });

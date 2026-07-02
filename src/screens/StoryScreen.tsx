@@ -313,6 +313,7 @@ export function StoryScreen() {
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [editingStoryId, setEditingStoryId] = useState<number | null>(null);
@@ -336,6 +337,12 @@ export function StoryScreen() {
   const [submittingStory, setSubmittingStory] = useState(false);
   const listRef = useRef<FlatList<StoryFeedItem>>(null);
   useScrollToTop(listRef);
+  const loadingStoriesRef = useRef(false);
+  const loadingMoreStoriesRef = useRef(false);
+  const hasNextStoriesRef = useRef(false);
+  const nextStoryCursorRef = useRef<number | null>(null);
+  const storyFeedRequestIdRef = useRef(0);
+  const lastEndReachedAtRef = useRef(0);
   const detailScrollRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
   const inlineReplyInputRef = useRef<TextInput>(null);
@@ -806,6 +813,9 @@ export function StoryScreen() {
 
       if (!canLoadApiFeed) {
         if (reset) {
+          hasNextStoriesRef.current = false;
+          nextStoryCursorRef.current = null;
+          setLoadMoreError(false);
           setStories([]);
           setHasNext(false);
           setNextCursor(null);
@@ -813,12 +823,24 @@ export function StoryScreen() {
         return;
       }
 
-      const cursorId = reset ? undefined : nextCursor ?? undefined;
+      let requestId: number;
+      const cursorId = reset ? undefined : nextStoryCursorRef.current ?? undefined;
 
       if (!reset) {
-        if (!hasNext || isLoadingMore) return;
+        if (loadingStoriesRef.current || loadingMoreStoriesRef.current || !hasNextStoriesRef.current) {
+          return;
+        }
+        loadingMoreStoriesRef.current = true;
+        requestId = storyFeedRequestIdRef.current + 1;
+        storyFeedRequestIdRef.current = requestId;
+        setLoadMoreError(false);
         setIsLoadingMore(true);
       } else {
+        if (loadingStoriesRef.current) return;
+        loadingStoriesRef.current = true;
+        requestId = storyFeedRequestIdRef.current + 1;
+        storyFeedRequestIdRef.current = requestId;
+        setLoadMoreError(false);
         setIsInitialLoading(true);
       }
 
@@ -838,6 +860,7 @@ export function StoryScreen() {
           mergeGuestAllBookStoriesCache(feed);
         }
         const mapped = feed.items.map((item) => mapRemoteStoryToStory(item, language, l));
+        if (requestId !== storyFeedRequestIdRef.current) return;
 
         setStories((prev) => {
           if (reset) return mapped;
@@ -847,34 +870,49 @@ export function StoryScreen() {
           return [...prev, ...appended];
         });
 
+        hasNextStoriesRef.current = feed.hasNext;
+        nextStoryCursorRef.current = feed.nextCursor;
         setHasNext(feed.hasNext);
         setNextCursor(feed.nextCursor);
       } catch (error) {
-        showToast(
-          resolveApiError(
-            error,
-            {
-              401: l('로그인 상태를 확인해 주십시오.'),
-              403: l('접근 권한이 없습니다.'),
-              404: l('요청한 책이야기를 찾을 수 없습니다.'),
-            },
-            l('책이야기 목록을 불러오지 못했습니다.'),
-          ),
-        );
+        if (requestId !== storyFeedRequestIdRef.current) return;
+        if (!reset) {
+          setLoadMoreError(true);
+        } else {
+          showToast(
+            resolveApiError(
+              error,
+              {
+                401: l('로그인 상태를 확인해 주십시오.'),
+                403: l('접근 권한이 없습니다.'),
+                404: l('요청한 책이야기를 찾을 수 없습니다.'),
+              },
+              l('책이야기 목록을 불러오지 못했습니다.'),
+            ),
+          );
+        }
       } finally {
         if (!reset) {
-          setIsLoadingMore(false);
+          loadingMoreStoriesRef.current = false;
+          if (requestId === storyFeedRequestIdRef.current) {
+            setIsLoadingMore(false);
+          }
         } else {
+          if (requestId !== storyFeedRequestIdRef.current) return;
+          loadingStoriesRef.current = false;
           setIsInitialLoading(false);
         }
       }
     },
-    [canLoadApiFeed, hasNext, isLoadingMore, isLoggedIn, l, language, nextCursor, selectedTab],
+    [canLoadApiFeed, isLoggedIn, l, language, selectedTab],
   );
 
   useEffect(() => {
     setSelectedStory(null);
     if (!canLoadApiFeed) {
+      hasNextStoriesRef.current = false;
+      nextStoryCursorRef.current = null;
+      setLoadMoreError(false);
       setStories([]);
       setHasNext(false);
       setNextCursor(null);
@@ -882,6 +920,20 @@ export function StoryScreen() {
     }
     void loadStories({ reset: true });
   }, [canLoadApiFeed, loadStories, selectedTab.key]);
+
+  const handleEndReached = useCallback(() => {
+    if (!canLoadApiFeed || loadMoreError) return;
+    const now = Date.now();
+    if (now - lastEndReachedAtRef.current < 600) return;
+    lastEndReachedAtRef.current = now;
+    void loadStories();
+  }, [canLoadApiFeed, loadMoreError, loadStories]);
+
+  const handleRetryLoadMore = useCallback(() => {
+    setLoadMoreError(false);
+    lastEndReachedAtRef.current = 0;
+    void loadStories();
+  }, [loadStories]);
 
   const applyStoryUpdate = useCallback((next: Story) => {
     setStories((prev) => prev.map((story) => (story.id === next.id ? next : story)));
@@ -2741,10 +2793,7 @@ export function StoryScreen() {
           }}
           ItemSeparatorComponent={() => <View style={styles.storyItemSeparator} />}
           contentContainerStyle={styles.listContent}
-          onEndReached={() => {
-            if (!canLoadApiFeed) return;
-            void loadStories();
-          }}
+          onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
@@ -2763,6 +2812,12 @@ export function StoryScreen() {
               <View style={styles.listFooter}>
                 <Text style={styles.listFooterText}>{l('불러오는 중...')}</Text>
               </View>
+            ) : loadMoreError ? (
+              <Pressable style={styles.listFooter} onPress={handleRetryLoadMore}>
+                <Text style={styles.listFooterText}>
+                  {l('책이야기를 추가로 불러오지 못했습니다.')} {l('다시 시도')}
+                </Text>
+              </Pressable>
             ) : (
               <View style={{ height: spacing.xxl }} />
             )
