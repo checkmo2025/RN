@@ -26,7 +26,6 @@ import type {
   TextInputContentSizeChangeEventData,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { SvgUri } from 'react-native-svg';
 import {
   useNavigation,
   useRoute,
@@ -113,6 +112,8 @@ import {
   toOpenableContactLink,
   toTeamLabel,
 } from './meeting/formatters';
+
+const ChatIcon = CHAT_ICON_URI;
 import {
   formatContactLabel,
   mapClubStatusToApplication,
@@ -2891,7 +2892,7 @@ function GroupHomeView({
           onPress={meetingChatState.openPicker}
           accessibilityLabel="채팅 조 선택"
         >
-          <SvgUri uri={CHAT_ICON_URI} width={24} height={24} />
+          <ChatIcon width={24} height={24} />
         </FloatingActionButton>
       ) : null}
       <MeetingChatOverlay

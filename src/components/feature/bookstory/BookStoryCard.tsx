@@ -8,7 +8,6 @@ import {
   GestureResponderEvent,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { SvgUri } from 'react-native-svg';
 
 import { BOOKSTORY_COMMENT_URI } from '../../../constants/iconMap';
 import { colors, interactionOpacity, radius, spacing, typography } from '../../../theme';
@@ -33,7 +32,7 @@ type Props = {
   onPressComment?: (e?: GestureResponderEvent) => void;
 };
 
-const commentIconUri = BOOKSTORY_COMMENT_URI;
+const CommentIcon = BOOKSTORY_COMMENT_URI;
 
 export function BookStoryCard({
   author,
@@ -138,7 +137,7 @@ export function BookStoryCard({
             onPressComment?.(e);
           }}
         >
-          <SvgUri uri={commentIconUri} width={20} height={20} />
+          <CommentIcon width={20} height={20} />
           <Text style={styles.actionText}>댓글 {comments}</Text>
         </Pressable>
       </View>

@@ -15,7 +15,6 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { SvgUri } from 'react-native-svg';
 import {
   useFocusEffect,
   useNavigation,
@@ -44,6 +43,7 @@ import { DialogOverlay } from '../components/common/DialogOverlay';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { FormTextInput } from '../components/common/FormTextInput';
 import { useAuthGate } from '../contexts/AuthGateContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { checkNicknameDuplicate, issueProfileImageUploadUrl } from '../services/api/authApi';
 import { ApiError } from '../services/api/http';
 import {
@@ -91,6 +91,7 @@ import {
 } from './mypage/useNotificationState';
 import { useAccountSettingsState, type ReportHistoryItem } from './mypage/useAccountSettingsState';
 import { SkeletonBox } from '../components/common/SkeletonBox';
+import { languageOptions, type LanguageCode } from '../i18n/translations';
 
 const tabs = ['내 책 이야기', '내 서재', '내 모임', '내 알림'] as const;
 const reportContentBreakInterval = 28;
@@ -113,6 +114,32 @@ type TabKey = (typeof tabs)[number];
 type MyPageRouteParams = {
   openMyTab?: TabKey | 'ALARM';
   openFollowTab?: 'FOLLOWER' | 'FOLLOWING';
+};
+
+type SettingItemKey =
+  | 'profileEdit'
+  | 'emailChange'
+  | 'passwordChange'
+  | 'withdrawal'
+  | 'myNews'
+  | 'report'
+  | 'blocked'
+  | 'notifications'
+  | 'contact'
+  | 'terms'
+  | 'version'
+  | 'language'
+  | 'logout';
+
+type SettingsItem = {
+  key: SettingItemKey;
+  label: string;
+};
+
+type SettingsSection = {
+  title: string;
+  iconUri: typeof MYPAGE_SETTING_PROFILE_URI;
+  items: SettingsItem[];
 };
 
 type StoryCard = {
@@ -306,6 +333,7 @@ function NotificationToggle({
 
 export function MyPageScreen() {
   const { isLoggedIn, logout, requireAuth } = useAuthGate();
+  const { language, setLanguage, t } = useLanguage();
   const myPageScrollRef = useRef<ScrollView>(null);
   useScrollToTop(myPageScrollRef);
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -321,7 +349,7 @@ export function MyPageScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('내 책 이야기');
   const [refreshing, setRefreshing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [selectedSetting, setSelectedSetting] = useState<string | null>(null);
+  const [selectedSetting, setSelectedSetting] = useState<SettingItemKey | null>(null);
   const [stories, setStories] = useState<StoryCard[]>([]);
   const [deletingDraftStoryId, setDeletingDraftStoryId] = useState<number | null>(null);
   const [blockedMembers, setBlockedMembers] = useState<BlockedMember[]>([]);
@@ -421,15 +449,78 @@ export function MyPageScreen() {
       setShowSettings(false);
       setSelectedSetting(null);
     },
-    selectedSetting,
+    selectedSettingKey: selectedSetting,
   });
 
-  const settingIconUri = MYPAGE_SETTING_URI;
-  const settingProfileUri = MYPAGE_SETTING_PROFILE_URI;
-  const settingServiceUri = MYPAGE_SETTING_SERVICE_URI;
-  const settingOtherUri = MYPAGE_SETTING_OTHER_URI;
-  const likeIconUri = BOOKSTORY_LIKE_URI;
-  const commentIconUri = BOOKSTORY_COMMENT_URI;
+  const SettingIcon = MYPAGE_SETTING_URI;
+  const settingProfileIcon = MYPAGE_SETTING_PROFILE_URI;
+  const settingServiceIcon = MYPAGE_SETTING_SERVICE_URI;
+  const settingOtherIcon = MYPAGE_SETTING_OTHER_URI;
+  const LikeIcon = BOOKSTORY_LIKE_URI;
+  const CommentIcon = BOOKSTORY_COMMENT_URI;
+  const getSettingLabel = useCallback(
+    (key: SettingItemKey) => {
+      switch (key) {
+        case 'profileEdit':
+          return t('settings.profileEdit');
+        case 'emailChange':
+          return t('settings.emailChange');
+        case 'passwordChange':
+          return t('settings.passwordChange');
+        case 'withdrawal':
+          return t('settings.withdrawal');
+        case 'myNews':
+          return t('settings.myNews');
+        case 'report':
+          return t('settings.report');
+        case 'blocked':
+          return t('settings.blocked');
+        case 'notifications':
+          return t('settings.notifications');
+        case 'contact':
+          return t('settings.contact');
+        case 'terms':
+          return t('settings.terms');
+        case 'version':
+          return t('settings.version');
+        case 'language':
+          return t('settings.language');
+        case 'logout':
+          return t('settings.logout');
+        default:
+          return key;
+      }
+    },
+    [t],
+  );
+  const getTabLabel = useCallback(
+    (tab: TabKey) => {
+      switch (tab) {
+        case '내 책 이야기':
+          return t('profile.tabs.myStories');
+        case '내 서재':
+          return t('profile.tabs.bookshelf');
+        case '내 모임':
+          return t('profile.tabs.clubs');
+        case '내 알림':
+          return t('profile.tabs.alarms');
+        default:
+          return tab;
+      }
+    },
+    [t],
+  );
+  const currentLanguageLabel =
+    languageOptions.find((option) => option.code === language)?.label ?? languageOptions[0].label;
+  const displayProfileName = isLoggedIn ? profileName : t('profile.needLoginName');
+  const displayProfileDesc = isLoggedIn ? profileDesc : t('profile.needLoginDescription');
+  const handleSelectLanguage = useCallback(
+    (nextLanguage: LanguageCode) => {
+      if (nextLanguage === language) return;
+      void setLanguage(nextLanguage);
+    },
+    [language, setLanguage],
+  );
   const mapLikedBooksToCards = useCallback((items: MemberLikedBookItem[]): BookCard[] => {
     const mapped = items.map((book, index) => {
       const normalizedIsbn = book.isbn.trim();
@@ -920,14 +1011,14 @@ export function MyPageScreen() {
     [emailCurrent, emailNext, emailVerificationCode, emailVerificationSent, emailVerified],
   );
   const accountUpdateGuardEnabled =
-    selectedSetting === '비밀번호 변경' || selectedSetting === '이메일 변경';
+    selectedSetting === 'passwordChange' || selectedSetting === 'emailChange';
 
   const { requestClose: handleAccountUpdateBack } = useUnsavedChangesGuard({
     enabled: accountUpdateGuardEnabled,
     isDirty:
-      selectedSetting === '비밀번호 변경'
+      selectedSetting === 'passwordChange'
         ? passwordUpdateDirty
-        : selectedSetting === '이메일 변경'
+        : selectedSetting === 'emailChange'
           ? emailUpdateDirty
           : false,
     onConfirmLeave: handleCloseSelectedSetting,
@@ -937,7 +1028,7 @@ export function MyPageScreen() {
   });
 
   useEffect(() => {
-    if (selectedSetting !== '프로필 편집') return;
+    if (selectedSetting !== 'profileEdit') return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       handleProfileEditBack();
       return true;
@@ -1273,12 +1364,12 @@ export function MyPageScreen() {
             ) : (
               <>
                 <View style={styles.inlineAction}>
-                  <SvgUri uri={likeIconUri} width={18} height={18} />
+                  <LikeIcon width={18} height={18} />
                   <Text style={styles.inlineText}>{item.likes}</Text>
                 </View>
                 <View style={styles.actionDivider} />
                 <View style={styles.inlineAction}>
-                  <SvgUri uri={commentIconUri} width={18} height={18} />
+                  <CommentIcon width={18} height={18} />
                   <Text style={styles.inlineText}>{item.comments}</Text>
                 </View>
               </>
@@ -1454,12 +1545,12 @@ export function MyPageScreen() {
 
   const renderGuestPrompt = () => (
     <View style={styles.guestPromptWrap}>
-      <Text style={styles.emptyText}>로그인 후 마이페이지 기능을 이용할 수 있습니다.</Text>
+      <Text style={styles.emptyText}>{t('profile.guestPrompt')}</Text>
       <Pressable
         style={({ pressed }) => [styles.guestPromptButton, pressed && styles.pressed]}
         onPress={() => requireAuth()}
       >
-        <Text style={styles.guestPromptButtonText}>로그인하기</Text>
+        <Text style={styles.guestPromptButtonText}>{t('profile.loginButton')}</Text>
       </Pressable>
     </View>
   );
@@ -1493,9 +1584,9 @@ export function MyPageScreen() {
           style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
           onPress={() => setShowFollowPage(false)}
         >
-          <Text style={styles.breadcrumbText}>전체</Text>
+          <Text style={styles.breadcrumbText}>{t('common.all')}</Text>
           <MaterialIcons name="chevron-right" size={16} color={colors.gray4} />
-          <Text style={[styles.breadcrumbText, styles.breadcrumbActive]}>마이페이지</Text>
+          <Text style={[styles.breadcrumbText, styles.breadcrumbActive]}>{t('profile.screenTitle')}</Text>
         </Pressable>
       </View>
 
@@ -1524,7 +1615,7 @@ export function MyPageScreen() {
               activeFollowTab === 'FOLLOWER' && styles.followTabTextActive,
             ]}
           >
-            구독자 {followerCount}
+            {t('profile.subscribers')} {followerCount}
           </Text>
         </Pressable>
         <Pressable
@@ -1540,7 +1631,7 @@ export function MyPageScreen() {
               activeFollowTab === 'FOLLOWING' && styles.followTabTextActive,
             ]}
           >
-            구독중 {followingCount}
+            {t('profile.subscribing')} {followingCount}
           </Text>
         </Pressable>
       </View>
@@ -1609,7 +1700,7 @@ export function MyPageScreen() {
                     user.following ? styles.followButtonTextActive : styles.followButtonTextInactive,
                   ]}
                 >
-                  {user.following ? '구독중' : '구독'}
+                  {user.following ? t('profile.following') : t('profile.follow')}
                 </Text>
               </Pressable>
             )}
@@ -1648,17 +1739,17 @@ export function MyPageScreen() {
   }, [activeTab, loadAllNotifications, alarms.length]);
 
   useEffect(() => {
-    if (selectedSetting !== '알림 관리') return;
+    if (selectedSetting !== 'notifications') return;
     void loadNotificationSettingInfo();
   }, [loadNotificationSettingInfo, selectedSetting]);
 
   useEffect(() => {
-    if (selectedSetting !== '내 소식 관리') return;
+    if (selectedSetting !== 'myNews') return;
     void loadMyNews();
   }, [loadMyNews, selectedSetting]);
 
   useEffect(() => {
-    if (selectedSetting !== '신고 관리') return;
+    if (selectedSetting !== 'report') return;
     void loadReportHistory();
   }, [loadReportHistory, selectedSetting]);
 
@@ -1693,12 +1784,12 @@ export function MyPageScreen() {
   }, []);
 
   useEffect(() => {
-    if (selectedSetting !== '차단 관리') return;
+    if (selectedSetting !== 'blocked') return;
     void loadBlockedMembers();
   }, [loadBlockedMembers, selectedSetting]);
 
   useEffect(() => {
-    if (selectedSetting !== '프로필 편집') return;
+    if (selectedSetting !== 'profileEdit') return;
     setProfileEditNickname(profileName);
     setNicknameChecked(true);
     setNicknameStatus('idle');
@@ -1805,28 +1896,39 @@ export function MyPageScreen() {
     Linking.openURL(PUBLIC_ENV.SUPPORT_FORM_URL).catch(() => null);
   }, []);
 
-  const settingsSections = [
+  const settingsSections = useMemo<SettingsSection[]>(() => [
     {
-      title: '계정 관리',
-      iconUri: settingProfileUri,
+      title: t('settings.sections.account'),
+      iconUri: settingProfileIcon,
       items: [
-        '프로필 편집',
-        '이메일 변경',
-        '비밀번호 변경',
-        '탈퇴/비활성화',
+        { key: 'profileEdit', label: getSettingLabel('profileEdit') },
+        { key: 'emailChange', label: getSettingLabel('emailChange') },
+        { key: 'passwordChange', label: getSettingLabel('passwordChange') },
+        { key: 'withdrawal', label: getSettingLabel('withdrawal') },
       ],
     },
     {
-      title: '서비스',
-      iconUri: settingServiceUri,
-      items: ['내 소식 관리', '신고 관리', '차단 관리', '알림 관리'],
+      title: t('settings.sections.service'),
+      iconUri: settingServiceIcon,
+      items: [
+        { key: 'myNews', label: getSettingLabel('myNews') },
+        { key: 'report', label: getSettingLabel('report') },
+        { key: 'blocked', label: getSettingLabel('blocked') },
+        { key: 'notifications', label: getSettingLabel('notifications') },
+      ],
     },
     {
-      title: '기타',
-      iconUri: settingOtherUri,
-      items: ['고객센터/문의하기', '이용약관', '버전 정보', '로그아웃'],
+      title: t('settings.sections.other'),
+      iconUri: settingOtherIcon,
+      items: [
+        { key: 'contact', label: getSettingLabel('contact') },
+        { key: 'terms', label: getSettingLabel('terms') },
+        { key: 'language', label: getSettingLabel('language') },
+        { key: 'version', label: getSettingLabel('version') },
+        { key: 'logout', label: getSettingLabel('logout') },
+      ],
     },
-  ];
+  ], [getSettingLabel, settingOtherIcon, settingProfileIcon, settingServiceIcon, t]);
 
   const renderSettingDetail = () => {
     if (!selectedSetting) return null;
@@ -1837,22 +1939,64 @@ export function MyPageScreen() {
         onPress={accountUpdateGuardEnabled ? handleAccountUpdateBack : handleCloseSelectedSetting}
       >
         <MaterialIcons name="chevron-left" size={18} color={colors.gray4} />
-        <Text style={styles.breadcrumbText}>뒤로가기</Text>
+        <Text style={styles.breadcrumbText}>{t('common.back')}</Text>
       </Pressable>
     );
 
-    if (selectedSetting === '버전 정보') {
+    if (selectedSetting === 'version') {
       return (
         <View style={styles.settingsDetailWrap}>
           {back}
-          <Text style={styles.detailTitle}>{selectedSetting}</Text>
+          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
-          <Text style={styles.detailBody}>버전 업데이트 날짜 : 2026.06.14</Text>
+          <Text style={styles.detailBody}>{t('settings.versionUpdatedAt')}</Text>
         </View>
       );
     }
 
-    if (selectedSetting === '프로필 편집') {
+    if (selectedSetting === 'language') {
+      return (
+        <View style={styles.settingsDetailWrap}>
+          {back}
+          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
+          <Text style={styles.detailDivider} />
+          <Text style={styles.detailBody}>{t('settings.languageDescription')}</Text>
+          <Text style={styles.languageCurrentText}>
+            {t('settings.currentLanguage')}: {currentLanguageLabel}
+          </Text>
+          <View style={styles.languageList}>
+            {languageOptions.map((option) => {
+              const selected = option.code === language;
+              return (
+                <Pressable
+                  key={option.code}
+                  style={({ pressed }) => [
+                    styles.languageItem,
+                    selected ? styles.languageItemSelected : null,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() => handleSelectLanguage(option.code)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                >
+                  <Text
+                    style={[
+                      styles.languageItemText,
+                      selected ? styles.languageItemTextSelected : null,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                  {selected ? <MaterialIcons name="check" size={20} color={colors.primary1} /> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      );
+    }
+
+    if (selectedSetting === 'profileEdit') {
       const selectedCategorySet = new Set(profileEditCategoryCodes);
       const profileEditBack = (
         <Pressable
@@ -1860,13 +2004,13 @@ export function MyPageScreen() {
           onPress={handleProfileEditBack}
         >
           <MaterialIcons name="chevron-left" size={18} color={colors.gray4} />
-          <Text style={styles.breadcrumbText}>뒤로가기</Text>
+          <Text style={styles.breadcrumbText}>{t('common.back')}</Text>
         </Pressable>
       );
       return (
         <View style={styles.settingsDetailWrap}>
           {profileEditBack}
-          <Text style={styles.detailTitle}>프로필 편집</Text>
+          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
           <View style={styles.formBlock}>
             <Text style={styles.detailLabel}>닉네임</Text>
@@ -2016,11 +2160,11 @@ export function MyPageScreen() {
       );
     }
 
-    if (selectedSetting === '비밀번호 변경') {
+    if (selectedSetting === 'passwordChange') {
       return (
         <View style={styles.settingsDetailWrap}>
           {back}
-          <Text style={styles.detailTitle}>{selectedSetting}</Text>
+          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
           <View style={styles.formBlock}>
             <Text style={styles.detailLabel}>기존 비밀번호</Text>
@@ -2119,11 +2263,11 @@ export function MyPageScreen() {
       );
     }
 
-    if (selectedSetting === '탈퇴/비활성화') {
+    if (selectedSetting === 'withdrawal') {
       return (
         <View style={styles.settingsDetailWrap}>
           {back}
-          <Text style={styles.detailTitle}>탈퇴/비활성화</Text>
+          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
           <View style={styles.detailList}>
             <Text style={styles.detailBody}>
@@ -2156,22 +2300,22 @@ export function MyPageScreen() {
       );
     }
 
-    if (selectedSetting === '내 소식 관리') {
+    if (selectedSetting === 'myNews') {
       return (
         <View style={styles.settingsDetailWrap}>
           {back}
-          <Text style={styles.detailTitle}>내 소식 관리</Text>
+          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
           {renderMyNews()}
         </View>
       );
     }
 
-    if (selectedSetting === '신고 관리') {
+    if (selectedSetting === 'report') {
       return (
         <View style={styles.settingsDetailWrap}>
           {back}
-          <Text style={styles.detailTitle}>신고 관리</Text>
+          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
           {loadingReportHistory ? (
             <View style={styles.reportList}>
@@ -2210,11 +2354,11 @@ export function MyPageScreen() {
       );
     }
 
-    if (selectedSetting === '차단 관리') {
+    if (selectedSetting === 'blocked') {
       return (
         <View style={styles.settingsDetailWrap}>
           {back}
-          <Text style={styles.detailTitle}>차단 관리</Text>
+          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
           {loadingBlockedMembers ? (
             <View style={styles.reportList}>
@@ -2250,7 +2394,7 @@ export function MyPageScreen() {
       );
     }
 
-    if (selectedSetting === '이용약관') {
+    if (selectedSetting === 'terms') {
       return (
         <ScrollView
           style={styles.container}
@@ -2258,7 +2402,7 @@ export function MyPageScreen() {
           showsVerticalScrollIndicator={false}
         >
           {back}
-          <Text style={styles.detailTitle}>이용약관</Text>
+          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
           {termsDocumentOrder.map((key) => {
             const termsDoc = termsDocuments[key];
@@ -2273,11 +2417,11 @@ export function MyPageScreen() {
       );
     }
 
-    if (selectedSetting === '알림 관리') {
+    if (selectedSetting === 'notifications') {
       return (
         <View style={styles.settingsDetailWrap}>
           {back}
-          <Text style={styles.detailTitle}>알림 관리</Text>
+          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
           {loadingNotificationSettings ? (
             <>
@@ -2313,11 +2457,11 @@ export function MyPageScreen() {
       );
     }
 
-    if (selectedSetting === '이메일 변경') {
+    if (selectedSetting === 'emailChange') {
       return (
         <View style={styles.settingsDetailWrap}>
           {back}
-          <Text style={styles.detailTitle}>이메일 변경</Text>
+          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
           <View style={styles.formBlock}>
             <Text style={styles.detailLabel}>기존 이메일</Text>
@@ -2443,14 +2587,14 @@ export function MyPageScreen() {
     return (
       <View style={styles.settingsDetailWrap}>
         {back}
-        <Text style={styles.detailTitle}>{selectedSetting}</Text>
+        <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
       </View>
     );
   };
 
   if (showFollowPage) {
     return (
-      <ScreenLayout title="마이페이지">
+      <ScreenLayout title={t('profile.screenTitle')}>
         <ScrollView
           style={styles.container}
           contentContainerStyle={styles.scrollContent}
@@ -2477,7 +2621,7 @@ export function MyPageScreen() {
 
   if (showSettings) {
     return (
-      <ScreenLayout title="마이페이지">
+      <ScreenLayout title={t('profile.screenTitle')}>
         <ScrollView
           style={styles.container}
           contentContainerStyle={styles.settingsContent}
@@ -2495,7 +2639,7 @@ export function MyPageScreen() {
                 }}
               >
                 <MaterialIcons name="chevron-left" size={18} color={colors.gray4} />
-                <Text style={styles.breadcrumbText}>뒤로가기</Text>
+                <Text style={styles.breadcrumbText}>{t('common.back')}</Text>
               </Pressable>
             </View>
           )}
@@ -2504,38 +2648,43 @@ export function MyPageScreen() {
             renderSettingDetail()
           ) : (
             <>
-              {settingsSections.map((section) => (
-                <View key={section.title} style={styles.settingsSection}>
-                  <View style={styles.settingsHeader}>
-                    <SvgUri uri={section.iconUri} width={18} height={18} />
-                    <Text style={styles.settingsTitle}>{section.title}</Text>
+              {settingsSections.map((section) => {
+                const SectionIcon = section.iconUri;
+                return (
+                  <View key={section.title} style={styles.settingsSection}>
+                    <View style={styles.settingsHeader}>
+                      <SectionIcon width={18} height={18} />
+                      <Text style={styles.settingsTitle}>{section.title}</Text>
+                    </View>
+                    <View style={styles.settingsItems}>
+                      {section.items.map((item) => (
+                        <Pressable
+                          key={item.key}
+                          style={({ pressed }) => [styles.settingsItem, pressed && styles.pressed]}
+                          disabled={item.key === 'logout' && submittingLogout}
+                          onPress={() => {
+                            if (item.key === 'contact') {
+                              handleContact();
+                              return;
+                            }
+                            if (item.key === 'logout') {
+                              handleLogoutPress();
+                              return;
+                            }
+                            setSelectedSetting(item.key);
+                          }}
+                        >
+                          <Text style={styles.settingsItemText}>
+                            {item.key === 'logout' && submittingLogout
+                              ? t('settings.logoutLoading')
+                              : item.label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
                   </View>
-                  <View style={styles.settingsItems}>
-                    {section.items.map((item) => (
-                      <Pressable
-                        key={item}
-                        style={({ pressed }) => [styles.settingsItem, pressed && styles.pressed]}
-                        disabled={item === '로그아웃' && submittingLogout}
-                        onPress={() => {
-                          if (item === '고객센터/문의하기') {
-                            handleContact();
-                            return;
-                          }
-                          if (item === '로그아웃') {
-                            handleLogoutPress();
-                            return;
-                          }
-                          setSelectedSetting(item);
-                        }}
-                      >
-                        <Text style={styles.settingsItemText}>
-                          {item === '로그아웃' && submittingLogout ? '로그아웃 중...' : item}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
-              ))}
+                );
+              })}
             </>
           )}
         </ScrollView>
@@ -2546,14 +2695,14 @@ export function MyPageScreen() {
   if (submittingLogout) {
     return (
       <BookFlipLoadingScreen
-        detailTitle="로그아웃중입니다"
-        detailDescription="홈화면으로 이동합니다"
+        detailTitle={t('settings.logoutProgressTitle')}
+        detailDescription={t('settings.logoutProgressDescription')}
       />
     );
   }
 
   return (
-    <ScreenLayout title="마이페이지">
+    <ScreenLayout title={t('profile.screenTitle')}>
       <View style={styles.container}>
         <ScrollView
           ref={myPageScrollRef}
@@ -2569,7 +2718,7 @@ export function MyPageScreen() {
                   if (activeTab === '내 알림') {
                     await loadAllNotifications();
                   }
-                  if (selectedSetting === '알림 관리') {
+                  if (selectedSetting === 'notifications') {
                     await loadNotificationSettingInfo();
                   }
                   setRefreshing(false);
@@ -2580,9 +2729,9 @@ export function MyPageScreen() {
           }
         >
         <View style={styles.breadcrumbRow}>
-          <Text style={styles.breadcrumbText}>전체</Text>
+          <Text style={styles.breadcrumbText}>{t('common.all')}</Text>
           <MaterialIcons name="chevron-right" size={16} color={colors.gray4} />
-          <Text style={[styles.breadcrumbText, styles.breadcrumbActive]}>마이페이지</Text>
+          <Text style={[styles.breadcrumbText, styles.breadcrumbActive]}>{t('profile.screenTitle')}</Text>
         </View>
 
         <View style={styles.profileRow}>
@@ -2594,24 +2743,24 @@ export function MyPageScreen() {
             )}
           </View>
           <View style={styles.profileMeta}>
-            <Text style={styles.profileName}>{profileName}</Text>
+            <Text style={styles.profileName}>{displayProfileName}</Text>
             <View style={styles.profileFollowRow}>
               <Pressable onPress={openFollowerList} hitSlop={8}>
-                <Text style={styles.profileSub}>구독자 {followerCount}</Text>
+                <Text style={styles.profileSub}>{t('profile.subscribers')} {followerCount}</Text>
               </Pressable>
               <Pressable onPress={openFollowingList} hitSlop={8}>
-                <Text style={styles.profileSub}>구독중 {followingCount}</Text>
+                <Text style={styles.profileSub}>{t('profile.subscribing')} {followingCount}</Text>
               </Pressable>
             </View>
             <Text style={styles.profileDesc} numberOfLines={2}>
-              {profileDesc}
+              {displayProfileDesc}
             </Text>
             {profileCategories.length > 0 ? (
               <Text style={styles.profileCategory}>
-                관심 카테고리 · {profileCategories.join(', ')}
+                {t('profile.interests')} · {profileCategories.join(', ')}
               </Text>
             ) : null}
-            {loadingProfile ? <Text style={styles.loadingText}>프로필을 불러오는 중...</Text> : null}
+            {loadingProfile ? <Text style={styles.loadingText}>{t('common.loadingProfile')}</Text> : null}
           </View>
           <Pressable
             onPress={() => {
@@ -2623,7 +2772,7 @@ export function MyPageScreen() {
             }}
             style={({ pressed }) => (pressed ? styles.pressed : undefined)}
           >
-            <SvgUri uri={settingIconUri} width={22} height={22} />
+            <SettingIcon width={22} height={22} />
           </Pressable>
         </View>
 
@@ -2632,13 +2781,13 @@ export function MyPageScreen() {
             style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
             onPress={handleWriteStory}
           >
-            <Text style={styles.primaryButtonText}>책 이야기 쓰기</Text>
+            <Text style={styles.primaryButtonText}>{t('profile.writeStory')}</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
             onPress={handleContact}
           >
-            <Text style={styles.secondaryButtonText}>소식 문의하기</Text>
+            <Text style={styles.secondaryButtonText}>{t('profile.contactNews')}</Text>
           </Pressable>
         </View>
 
@@ -2659,7 +2808,7 @@ export function MyPageScreen() {
                 }}
               >
                 <Text style={[styles.tabLabel, active ? styles.tabLabelActive : null]}>
-                  {tab}
+                  {getTabLabel(tab)}
                 </Text>
               </Pressable>
             );
@@ -2760,6 +2909,36 @@ const styles = StyleSheet.create({
   detailBody: {
     ...typography.body1_3_relaxed,
     color: colors.gray6,
+  },
+  languageCurrentText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+  },
+  languageList: {
+    gap: spacing.xs,
+  },
+  languageItem: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.subbrown4,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  languageItemSelected: {
+    borderColor: colors.primary1,
+    backgroundColor: colors.subbrown4,
+  },
+  languageItemText: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
+  languageItemTextSelected: {
+    color: colors.primary1,
   },
   termsDocumentSection: {
     gap: spacing.xs,

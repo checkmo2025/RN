@@ -13,7 +13,6 @@ import {
   View,
 } from 'react-native';
 import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
-import { SvgUri } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { inferMimeType } from '../utils/imageUpload';
@@ -83,8 +82,11 @@ type LocalProfileImage = {
   mimeType?: string;
 };
 
-const logoUri = LOGO_PRIMARY_URI;
-const topLogoUri = MOBILE_HEADER_LOGO_URI;
+const LogoIcon = LOGO_PRIMARY_URI;
+const TopLogoIcon = MOBILE_HEADER_LOGO_URI;
+const KakaoIcon = SOCIAL_KAKAO_URI;
+const GoogleIcon = SOCIAL_GOOGLE_URI;
+const NaverIcon = SOCIAL_NAVER_URI;
 const PROFILE_IMAGE_UPLOAD_URL_FAILED = 'PROFILE_IMAGE_UPLOAD_URL_FAILED';
 const PROFILE_IMAGE_UPLOAD_FAILED = 'PROFILE_IMAGE_UPLOAD_FAILED';
 const SOCIAL_ICON_BUTTON_SIZE = 48;
@@ -1052,7 +1054,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
         >
           {!hideTopBrand ? (
             <View style={styles.topBrand}>
-              <SvgUri uri={topLogoUri} width={92} height={56} />
+              <TopLogoIcon width={92} height={56} />
             </View>
           ) : null}
           <View
@@ -1114,7 +1116,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
               </DialogOverlay>
             ) : null}
             <View style={styles.cardHeader}>
-              <SvgUri uri={logoUri} width={108} height={64} />
+              <LogoIcon width={108} height={64} />
             </View>
             {children}
           </View>
@@ -1850,10 +1852,9 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
             disabled: Boolean(appleLoginSubmitting || socialSubmitting),
             onPress: () => { void handleSocialLogin('kakao'); },
             children: (
-              <SvgUri
+              <KakaoIcon
                 width={SOCIAL_BRAND_ICON_SIZE}
                 height={SOCIAL_BRAND_ICON_SIZE}
-                uri={SOCIAL_KAKAO_URI}
               />
             ),
           })}
@@ -1863,10 +1864,9 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
             disabled: Boolean(appleLoginSubmitting || socialSubmitting),
             onPress: () => { void handleSocialLogin('google'); },
             children: (
-              <SvgUri
+              <GoogleIcon
                 width={SOCIAL_BRAND_ICON_SIZE}
                 height={SOCIAL_BRAND_ICON_SIZE}
-                uri={SOCIAL_GOOGLE_URI}
               />
             ),
           })}
@@ -1876,10 +1876,9 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
             disabled: Boolean(appleLoginSubmitting || socialSubmitting),
             onPress: () => { void handleSocialLogin('naver'); },
             children: (
-              <SvgUri
+              <NaverIcon
                 width={SOCIAL_BRAND_ICON_SIZE}
                 height={SOCIAL_BRAND_ICON_SIZE}
-                uri={SOCIAL_NAVER_URI}
               />
             ),
           })}

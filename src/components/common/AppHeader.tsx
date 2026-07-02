@@ -22,7 +22,6 @@ import {
   View,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { SvgUri } from 'react-native-svg';
 
 import { PUBLIC_ENV } from '../../constants/publicEnv';
 import {
@@ -68,11 +67,11 @@ import { useBookSearch } from '../../hooks/useBookSearch';
 import BookStoryFeedCard from '../feature/bookstory/BookStoryFeedCard';
 import { SkeletonBox } from './SkeletonBox';
 
-const logoUri = MOBILE_HEADER_LOGO_URI;
-const searchUri = HEADER_SEARCH_URI;
-const searchDarkUri = SEARCH_DARK_URI;
-const alarmUri = HEADER_ALARM_URI;
-const writeIconUri = PENCIL_ICON_URI;
+const LogoIcon = MOBILE_HEADER_LOGO_URI;
+const SearchIcon = HEADER_SEARCH_URI;
+const SearchDarkIcon = SEARCH_DARK_URI;
+const AlarmIcon = HEADER_ALARM_URI;
+const WriteIcon = PENCIL_ICON_URI;
 const ALADIN_RANKING_URL = PUBLIC_ENV.ALADIN_RANKING_URL;
 const ALADIN_HOME_URL = PUBLIC_ENV.ALADIN_HOME_URL;
 
@@ -740,7 +739,7 @@ export function AppHeader(props: Props) {
               accessibilityRole="button"
               accessibilityLabel="홈으로 이동"
             >
-              <SvgUri uri={logoUri} width={44} height={24} />
+              <LogoIcon width={44} height={24} />
             </Pressable>
           )}
         </View>
@@ -796,10 +795,10 @@ export function AppHeader(props: Props) {
               style={showNoti && action.icon === 'notifications-none' ? styles.activeAction : undefined}
               renderIcon={
                 action.icon === 'search' ? (
-                  <SvgUri uri={searchUri} width={24} height={24} />
+                  <SearchIcon width={24} height={24} />
                 ) : action.icon === 'notifications-none' ? (
                   <View>
-                    <SvgUri uri={alarmUri} width={24} height={24} />
+                    <AlarmIcon width={24} height={24} />
                     {hasUnread ? <View style={styles.unreadDot} /> : null}
                   </View>
                 ) : undefined
@@ -952,7 +951,7 @@ export function AppHeader(props: Props) {
                   hitSlop={8}
                   style={styles.dropdownSearchSubmitButton}
                 >
-                  <SvgUri uri={searchUri} width={24} height={24} />
+                  <SearchIcon width={24} height={24} />
                 </Pressable>
               </View>
 
@@ -1078,7 +1077,7 @@ export function AppHeader(props: Props) {
                       hitSlop={8}
                       style={styles.searchPageSubmitButton}
                     >
-                      <SvgUri uri={searchDarkUri} width={24} height={24} />
+                      <SearchDarkIcon width={24} height={24} />
                     </Pressable>
                   </View>
 
@@ -1161,7 +1160,7 @@ export function AppHeader(props: Props) {
                             openStoryCompose(book);
                           }}
                         >
-                          <SvgUri uri={writeIconUri} width={20} height={20} />
+                          <WriteIcon width={20} height={20} />
                         </Pressable>
                       </Pressable>
                     ))}
@@ -1240,7 +1239,7 @@ export function AppHeader(props: Props) {
                           openStoryCompose(selectedBook);
                         }}
                       >
-                        <SvgUri uri={writeIconUri} width={20} height={20} />
+                        <WriteIcon width={20} height={20} />
                       </Pressable>
                     </Pressable>
                   ) : null}

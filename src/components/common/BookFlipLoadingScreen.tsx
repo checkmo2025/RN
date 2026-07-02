@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
-import { SvgUri } from 'react-native-svg';
 
 import { LOGO_PRIMARY_URI } from '../../constants/iconMap';
 import { colors, motion, spacing, typography } from '../../theme';
@@ -8,7 +7,7 @@ import { colors, motion, spacing, typography } from '../../theme';
 const LOGO_WIDTH = 100;
 const LOGO_HEIGHT = 60;
 
-const logoUri = LOGO_PRIMARY_URI;
+const LogoIcon = LOGO_PRIMARY_URI;
 
 type Props = {
   detailTitle?: string;
@@ -81,11 +80,11 @@ export function BookFlipLoadingScreen({
     <View style={styles.container}>
       <View style={styles.logoWrap}>
         <View style={styles.emptyLogo}>
-          <SvgUri uri={logoUri} width={LOGO_WIDTH} height={LOGO_HEIGHT} />
+          <LogoIcon width={LOGO_WIDTH} height={LOGO_HEIGHT} />
         </View>
 
         <Animated.View style={[styles.filledMask, { width: fillWidth }]}>
-          <SvgUri uri={logoUri} width={LOGO_WIDTH} height={LOGO_HEIGHT} />
+          <LogoIcon width={LOGO_WIDTH} height={LOGO_HEIGHT} />
         </Animated.View>
 
         <Animated.View

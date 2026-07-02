@@ -15,6 +15,7 @@ import { showToast } from '../../utils/toast';
 import { navigateToHome } from '../../navigation/navigateToHome';
 import { emailRegex, passwordRegex } from '../../constants/validation';
 import { useEmailVerificationFlow } from '../../hooks/useEmailVerificationFlow';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const reasonLabelByCode: Record<string, string> = {
   GENERAL: '일반',
@@ -36,7 +37,7 @@ type Params = {
   logout: () => void;
   navigation: NavigationProp<ParamListBase>;
   onCloseSettings: () => void;
-  selectedSetting: string | null;
+  selectedSettingKey: string | null;
 };
 
 export function useAccountSettingsState({
@@ -44,8 +45,9 @@ export function useAccountSettingsState({
   logout,
   navigation,
   onCloseSettings,
-  selectedSetting,
+  selectedSettingKey,
 }: Params) {
+  const { t } = useLanguage();
   const ev = useEmailVerificationFlow();
   const [emailCurrent, setEmailCurrent] = useState('');
   const [emailNext, setEmailNext] = useState('');
@@ -64,22 +66,22 @@ export function useAccountSettingsState({
   const [submittingLogout, setSubmittingLogout] = useState(false);
 
   useEffect(() => {
-    if (selectedSetting === '이메일 변경') return;
+    if (selectedSettingKey === 'emailChange') return;
     setEmailCurrent('');
     setEmailNext('');
     setEmailVerificationCode('');
     ev.reset();
-  }, [selectedSetting]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedSettingKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (selectedSetting === '비밀번호 변경') return;
+    if (selectedSettingKey === 'passwordChange') return;
     setPasswordCurrent('');
     setPasswordNext('');
     setPasswordConfirm('');
     setShowPasswordCurrent(false);
     setShowPasswordNext(false);
     setShowPasswordConfirm(false);
-  }, [selectedSetting]);
+  }, [selectedSettingKey]);
 
   const mapReportItems = useCallback((items: ReportItem[]): ReportHistoryItem[] => {
     return items.map((item, index) => {
@@ -279,10 +281,10 @@ export function useAccountSettingsState({
   const handleLogoutPress = useCallback(() => {
     if (submittingLogout) return;
 
-    Alert.alert('로그아웃', '로그아웃하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('settings.logoutAlertTitle'), t('settings.logoutAlertMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '로그아웃',
+        text: t('settings.logout'),
         style: 'destructive',
         onPress: () => {
           setSubmittingLogout(true);
@@ -295,7 +297,7 @@ export function useAccountSettingsState({
               logout();
               onCloseSettings();
               navigateToHome(navigation);
-              showToast('로그아웃되었습니다.');
+              showToast(t('settings.logoutSuccess'));
               setSubmittingLogout(false);
             }
           };
@@ -303,7 +305,7 @@ export function useAccountSettingsState({
         },
       },
     ]);
-  }, [logout, navigation, onCloseSettings, submittingLogout]);
+  }, [logout, navigation, onCloseSettings, submittingLogout, t]);
 
   return {
     emailCurrent,

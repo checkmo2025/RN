@@ -18,7 +18,6 @@ import {
   type RouteProp,
 } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { SvgUri } from 'react-native-svg';
 
 import { BOOKSTORY_COMMENT_URI, BOOKSTORY_LIKE_URI } from '../constants/iconMap';
 import { colors, dialog, interactionOpacity, radius, spacing, typography } from '../theme';
@@ -97,8 +96,8 @@ type FollowUser = {
 };
 
 const tabs: TabKey[] = ['책 이야기', '서재', '모임'];
-const likeIconUri = BOOKSTORY_LIKE_URI;
-const commentIconUri = BOOKSTORY_COMMENT_URI;
+const LikeIcon = BOOKSTORY_LIKE_URI;
+const CommentIcon = BOOKSTORY_COMMENT_URI;
 const PROFILE_BACK_EDGE_WIDTH = 32;
 const PROFILE_BACK_ACTIVATE_DISTANCE = 12;
 const PROFILE_BACK_ACTIVATE_MAX_DY = 18;
@@ -683,12 +682,12 @@ export function UserProfileScreen() {
           </View>
           <View style={styles.storyActions}>
             <View style={styles.inlineAction}>
-              <SvgUri uri={likeIconUri} width={18} height={18} />
+              <LikeIcon width={18} height={18} />
               <Text style={styles.inlineText}>{story.likes}</Text>
             </View>
             <View style={styles.actionDivider} />
             <View style={styles.inlineAction}>
-              <SvgUri uri={commentIconUri} width={18} height={18} />
+              <CommentIcon width={18} height={18} />
               <Text style={styles.inlineText}>{story.comments}</Text>
             </View>
           </View>

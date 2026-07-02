@@ -3231,3 +3231,9 @@ export const interactionOpacity = {
 - Checkmo 브랜드명과 `club`, `group`, `meeting` 계열 핵심 번역 기준 정리
 - RN/FE 공통 번역 source of truth로 `docs/documents/i18n-glossary.md` 추가
 - 스토어 앱 이름, 권한 문구, 기본 톤앤매너, 법률/정책 보류 항목 정리
+
+# 2026-07-02 13:11:31 KST RN 언어 선택 기능 추가
+
+- 앱 전역 언어 context와 `ko/en` 번역 catalog 추가
+- 마이페이지 설정의 기타 섹션에 언어 선택 화면 추가
+- 영어 선택 시 Profile/Settings 주요 문구, 하단 탭 label, 로그아웃 확인창이 즉시 영어로 표시되도록 반영

@@ -10,9 +10,11 @@ import { ToastHost } from './src/components/common/ToastHost';
 import { BookFlipLoadingScreen } from './src/components/common/BookFlipLoadingScreen';
 import { AppUpdateGateModal } from './src/components/common/AppUpdateGateModal';
 import { useAppVersionGate } from './src/hooks/useAppVersionGate';
+import { LanguageProvider, useLanguage } from './src/contexts/LanguageContext';
 
 function AppRoutes() {
   const appVersionGate = useAppVersionGate();
+  const { t } = useLanguage();
   const {
     isReady,
     authPageVisible,
@@ -38,12 +40,12 @@ function AppRoutes() {
           <BookFlipLoadingScreen
             detailTitle={
               authTransitionVariant === 'authRequired'
-                ? '해당 서비스는 로그인이 필요합니다!'
+                ? t('app.authRequiredTitle')
                 : undefined
             }
             detailDescription={
               authTransitionVariant === 'authRequired'
-                ? '로그인 화면으로 이동합니다'
+                ? t('app.authRequiredDescription')
                 : undefined
             }
           />
@@ -70,12 +72,14 @@ function AppRoutes() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        <AuthGateProvider>
-          <AppRoutes />
-          <StatusBar style="dark" backgroundColor="transparent" translucent />
-        </AuthGateProvider>
-      </NavigationContainer>
+      <LanguageProvider>
+        <NavigationContainer>
+          <AuthGateProvider>
+            <AppRoutes />
+            <StatusBar style="dark" backgroundColor="transparent" translucent />
+          </AuthGateProvider>
+        </NavigationContainer>
+      </LanguageProvider>
     </SafeAreaProvider>
   );
 }

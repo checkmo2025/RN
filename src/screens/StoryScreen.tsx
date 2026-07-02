@@ -31,7 +31,6 @@ import {
   type RouteProp,
 } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { SvgUri } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PUBLIC_ENV } from '../constants/publicEnv';
@@ -352,7 +351,7 @@ export function StoryScreen() {
   const commentDraftTextRef = useRef('');
   const editingCommentIdRef = useRef<number | null>(null);
   const editingCommentOriginalTextRef = useRef('');
-  const writeIconUri = PENCIL_ICON_URI;
+  const WriteIcon = PENCIL_ICON_URI;
   const detailTranslateX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -2743,7 +2742,7 @@ export function StoryScreen() {
           }
         />
         <FloatingActionButton onPress={() => openCompose()} accessibilityLabel="글 작성하기">
-          <SvgUri uri={writeIconUri} width={20} height={20} />
+          <WriteIcon width={20} height={20} />
         </FloatingActionButton>
       </KeyboardAvoidingView>
     </ScreenLayout>

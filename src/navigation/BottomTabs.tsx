@@ -1,7 +1,6 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SvgUri } from 'react-native-svg';
 
 import { TAB_ICON_URIS } from '../constants/iconMap';
 import { colors, spacing } from '../theme';
@@ -12,6 +11,7 @@ import { MyPageScreen } from '../screens/MyPageScreen';
 import { MeetingScreen } from '../screens/MeetingScreen';
 import { NewsScreen } from '../screens/NewsScreen';
 import { useAuthGate } from '../contexts/AuthGateContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const TAB_ICON_SIZE = 44;
 
@@ -19,21 +19,15 @@ const TabIcon = ({ routeName, focused }: { routeName: keyof typeof TAB_ICON_URIS
   const uri = focused
     ? TAB_ICON_URIS[routeName].focused
     : TAB_ICON_URIS[routeName].unfocused;
-  return <SvgUri uri={uri} width={TAB_ICON_SIZE} height={TAB_ICON_SIZE} />;
+  const Icon = uri;
+  return <Icon width={TAB_ICON_SIZE} height={TAB_ICON_SIZE} />;
 };
 
 const Tab = createBottomTabNavigator();
 
-const labels = {
-  home: '\uCC45\uBAA8 \uD648',
-  meeting: '\uBAA8\uC784',
-  story: '\uCC45 \uC774\uC57C\uAE30',
-  news: '\uC18C\uC2DD',
-  my: '\uB9C8\uC774\uD398\uC774\uC9C0',
-};
-
 export default function BottomTabs() {
   const { isLoggedIn, requireAuth } = useAuthGate();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
 
   return (
@@ -55,7 +49,7 @@ export default function BottomTabs() {
       <Tab.Screen
         name="Home"
         options={{
-          tabBarLabel: labels.home,
+          tabBarLabel: t('tabs.home'),
           tabBarIcon: ({ focused }) => <TabIcon routeName="Home" focused={focused} />,
         }}
       >
@@ -64,7 +58,7 @@ export default function BottomTabs() {
       <Tab.Screen
         name="Meeting"
         options={{
-          tabBarLabel: labels.meeting,
+          tabBarLabel: t('tabs.clubs'),
           tabBarIcon: ({ focused }) => <TabIcon routeName="Meeting" focused={focused} />,
         }}
       >
@@ -73,7 +67,7 @@ export default function BottomTabs() {
       <Tab.Screen
         name="Story"
         options={{
-          tabBarLabel: labels.story,
+          tabBarLabel: t('tabs.bookStory'),
           tabBarIcon: ({ focused }) => <TabIcon routeName="Story" focused={focused} />,
         }}
       >
@@ -82,7 +76,7 @@ export default function BottomTabs() {
       <Tab.Screen
         name="News"
         options={{
-          tabBarLabel: labels.news,
+          tabBarLabel: t('tabs.news'),
           tabBarIcon: ({ focused }) => <TabIcon routeName="News" focused={focused} />,
         }}
       >
@@ -91,7 +85,7 @@ export default function BottomTabs() {
       <Tab.Screen
         name="My"
         options={{
-          tabBarLabel: labels.my,
+          tabBarLabel: t('tabs.profile'),
           tabBarIcon: ({ focused }) => <TabIcon routeName="My" focused={focused} />,
         }}
         listeners={({ navigation }) => ({
