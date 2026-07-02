@@ -3251,3 +3251,10 @@ export const interactionOpacity = {
 - `AppButton`, `FormTextInput`, `showToast` 공통 번역 처리와 `ko/en` 리터럴 사전 보강
 - 모임/조/책장/공지/신고/알림/설정 계열 주요 UI 문구 영어화
 - `npm run check` 통과 확인
+
+# 2026-07-02 23:54:53 KST 문서 산출물 정리
+
+- 서비스 소개 HTML 문서와 홍보 제안서 HTML 문서 추가
+- 홍보 제안서용 히어로 이미지 추가
+- `docs/agent/todo.md`의 실기기 통과 항목 상태 갱신
+- `npm run check` 통과 확인
