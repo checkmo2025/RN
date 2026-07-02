@@ -623,6 +623,8 @@ const enLiteralMessages: Record<string, string> = {
   '모임 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.':
     'Club editing is temporarily unavailable. Please try again later.',
   '모임 이름 중복 확인에 실패했습니다.': 'Could not check club name availability.',
+  '모임 이름 중복 확인 중입니다.': 'Checking club name availability.',
+  '모임 이름 중복 확인을 완료해야 합니다.': 'Complete club name duplicate check.',
   '모임 이름, 소개글, 지역, 카테고리, 대상을 입력해야 합니다.':
     'Enter club name, description, region, category, and target members.',
   '모임 이름은 {limit}자 이하여야 합니다.':
@@ -830,6 +832,7 @@ const enLiteralMessages: Record<string, string> = {
   '해당 항목에 투표자가 없습니다.': 'No voters for this option.',
   '현재 조의 발제만 선택할 수 있습니다.':
     'You can only choose discussion topics for your current group.',
+  '현재 사용 중인 모임 이름입니다.': 'This is the current club name.',
   '현재 페이지는 저장되지 않습니다.': 'This page will not be saved.',
   '확인 중': 'Checking',
   '확인 중...': 'Checking...',

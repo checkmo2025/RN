@@ -6,6 +6,7 @@ import type { ReportMemberModalState } from '../../components/common/ReportMembe
 import { ApiError } from '../../services/api/http';
 import { createReport, type ReportReason } from '../../services/api/memberApi';
 import {
+  checkClubNameDuplicate,
   deleteClub,
   fetchClubDetail,
   fetchClubMembers,
@@ -184,6 +185,12 @@ export function useManagementState({
   const [submittingReport, setSubmittingReport] = useState(false);
   const [uploadingClubImage, setUploadingClubImage] = useState(false);
   const [editDraft, setEditDraft] = useState<GroupEditDraft>(() => toEditDraft(group));
+  const [checkedEditName, setCheckedEditName] = useState<{
+    value: string;
+    duplicate: boolean;
+    current?: boolean;
+  } | null>(null);
+  const [checkingEditName, setCheckingEditName] = useState(false);
 
   useEffect(() => {
     setContactModalVisible(false);
@@ -195,6 +202,8 @@ export function useManagementState({
     setSelectedJoinRequestMessage(null);
     setSelectedMemberActionId(null);
     setEditDraft(toEditDraft(group));
+    setCheckedEditName(null);
+    setCheckingEditName(false);
   }, [closeManagementMenuImmediately, group]);
 
   useEffect(() => {
@@ -252,6 +261,52 @@ export function useManagementState({
     closeBookshelfBookSelector();
     closeBookshelfCalendar();
   }, [closeBookshelfBookSelector, closeBookshelfCalendar, setEditingBookshelfMeetingId]);
+
+  const handleChangeEditName = useCallback((text: string) => {
+    const normalized = text.trim();
+    setEditDraft((prev) => ({ ...prev, name: text }));
+    setCheckedEditName((prev) => (prev && prev.value !== normalized ? null : prev));
+  }, []);
+
+  const handleCheckEditName = useCallback(() => {
+    if (checkingEditName) return;
+
+    const normalized = editDraft.name.trim();
+    const currentName = managedGroup.name.trim();
+
+    if (!normalized) {
+      showToast(l('모임 이름을 입력해야 합니다.'));
+      return;
+    }
+    if (normalized.length > INPUT_LIMITS.CLUB_NAME) {
+      showToast(l('모임 이름은 {limit}자 이하여야 합니다.', { limit: INPUT_LIMITS.CLUB_NAME }));
+      return;
+    }
+    if (normalized === currentName) {
+      setCheckedEditName({ value: normalized, duplicate: false, current: true });
+      showToast(l('현재 사용 중인 모임 이름입니다.'));
+      return;
+    }
+
+    const check = async () => {
+      setCheckingEditName(true);
+      try {
+        const duplicate = await checkClubNameDuplicate(normalized);
+        setCheckedEditName({ value: normalized, duplicate });
+        showToast(
+          duplicate ? l('이미 사용 중인 모임 이름입니다.') : l('사용 가능한 모임 이름입니다.'),
+        );
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast(l('모임 이름 중복 확인에 실패했습니다.'));
+        }
+      } finally {
+        setCheckingEditName(false);
+      }
+    };
+
+    void check();
+  }, [checkingEditName, editDraft.name, l, managedGroup.name]);
 
   const handleCloseManagementLayer = useCallback(() => {
     if (bookshelfBookSelectorVisible) {
@@ -470,6 +525,17 @@ export function useManagementState({
       showToast(l('프로필 이미지 URL이 너무 깁니다. 사진을 다시 선택해 주세요.'));
       return;
     }
+    if (checkingEditName) {
+      showToast(l('모임 이름 중복 확인 중입니다.'));
+      return;
+    }
+    if (
+      name !== managedGroup.name.trim() &&
+      (!checkedEditName || checkedEditName.value !== name || checkedEditName.duplicate)
+    ) {
+      showToast(l('모임 이름 중복 확인을 완료해야 합니다.'));
+      return;
+    }
     if (!canManageClub) {
       showToast(l('모임 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'));
       return;
@@ -505,10 +571,15 @@ export function useManagementState({
         }
         setManagedGroup(nextGroup);
         onClubUpdated(nextGroup);
+        setCheckedEditName(null);
         setActiveManagementScreen(null);
         showToast(l('모임 정보가 수정되었습니다.'));
       } catch (error) {
-        if (!(error instanceof ApiError)) {
+        if (error instanceof ApiError) {
+          if (error.status === 409 || error.code === 'CLUB_400') {
+            setCheckedEditName({ value: name, duplicate: true });
+          }
+        } else {
           showToast(l('모임 정보 수정에 실패했습니다.'));
         }
       }
@@ -518,6 +589,8 @@ export function useManagementState({
   }, [
     canManageClub,
     editDraft,
+    checkedEditName,
+    checkingEditName,
     group.clubId,
     group.links,
     l,
@@ -708,6 +781,8 @@ export function useManagementState({
     uploadingClubImage,
     editDraft,
     setEditDraft,
+    checkedEditName,
+    checkingEditName,
     selectedJoinRequestAction,
     selectedMemberAction,
     closeManagementMenu,
@@ -719,6 +794,8 @@ export function useManagementState({
     handleProcessJoinRequest,
     handleChangeMemberRole,
     handleRemoveMember,
+    handleChangeEditName,
+    handleCheckEditName,
     handleSaveGroupEdit,
     handleOpenJoinRequestProfile,
     handlePickClubImage,

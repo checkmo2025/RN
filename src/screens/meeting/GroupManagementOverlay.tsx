@@ -71,6 +71,12 @@ export type GroupManagementOverlayProps = {
   selectedMemberAction: GroupMemberItem | null;
   submittingMemberAction: boolean;
   editDraft: GroupEditDraft;
+  checkedEditName: {
+    value: string;
+    duplicate: boolean;
+    current?: boolean;
+  } | null;
+  checkingEditName: boolean;
   uploadingClubImage: boolean;
   managementSheetY: Animated.Value;
   managementHandlePanResponder: PanResponderInstance;
@@ -84,6 +90,8 @@ export type GroupManagementOverlayProps = {
   handleOpenJoinRequestProfile: (nickname: string) => void;
   setSelectedMemberActionId: (id: string | null) => void;
   setEditDraft: Dispatch<SetStateAction<GroupEditDraft>>;
+  handleChangeEditName: (text: string) => void;
+  handleCheckEditName: () => void;
   handlePickClubImage: () => void;
   handleSaveGroupEdit: () => void;
   handleProcessJoinRequest: (request: GroupJoinRequestItem, action: 'APPROVE' | 'REJECT') => void;
@@ -144,6 +152,8 @@ export function GroupManagementOverlay({
   selectedMemberAction,
   submittingMemberAction,
   editDraft,
+  checkedEditName,
+  checkingEditName,
   uploadingClubImage,
   managementSheetY,
   managementHandlePanResponder,
@@ -155,6 +165,8 @@ export function GroupManagementOverlay({
   handleOpenJoinRequestProfile,
   setSelectedMemberActionId,
   setEditDraft,
+  handleChangeEditName,
+  handleCheckEditName,
   handlePickClubImage,
   handleSaveGroupEdit,
   handleProcessJoinRequest,
@@ -195,6 +207,10 @@ export function GroupManagementOverlay({
   const insets = useSafeAreaInsets();
   const { language, l } = useLanguage();
   const closingManagementMenuByPullRef = useRef(false);
+  const primaryActionDisabled =
+    activeManagementScreen === 'EDIT'
+      ? checkingEditName
+      : activeManagementScreen === 'BOOKSHELF_CREATE' && creatingBookshelf;
   const handleManagementMenuScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       if (closingManagementMenuByPullRef.current) return;
@@ -510,17 +526,48 @@ export function GroupManagementOverlay({
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
                     {l('독서 모임 이름을 입력해주세요!')}
                   </Text>
-                  <FormTextInput
-                    value={editDraft.name}
-                    onChangeText={(text) => {
-                      setEditDraft((prev) => ({ ...prev, name: text }));
-                    }}
-                    placeholder={l('독서 모임 이름을 입력해주세요')}
-                    placeholderTextColor={colors.gray3}
-                    style={styles.input}
-                    fieldType="text"
-                    maxLength={INPUT_LIMITS.CLUB_NAME}
-                  />
+                  <View style={styles.inlineRow}>
+                    <FormTextInput
+                      value={editDraft.name}
+                      onChangeText={handleChangeEditName}
+                      placeholder={l('독서 모임 이름을 입력해주세요')}
+                      placeholderTextColor={colors.gray3}
+                      style={[styles.input, styles.inlineInput]}
+                      fieldType="text"
+                      maxLength={INPUT_LIMITS.CLUB_NAME}
+                    />
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.dupCheckButton,
+                        checkingEditName && styles.dupCheckButtonDisabled,
+                        pressed && !checkingEditName && styles.pressed,
+                      ]}
+                      onPress={() => {
+                        handleCheckEditName();
+                      }}
+                      disabled={checkingEditName}
+                    >
+                      <Text style={styles.dupCheckText}>
+                        {checkingEditName ? l('확인 중...') : l('중복확인')}
+                      </Text>
+                    </Pressable>
+                  </View>
+                  {checkedEditName && checkedEditName.value === editDraft.name.trim() ? (
+                    <Text
+                      style={[
+                        styles.nameCheckText,
+                        checkedEditName.duplicate
+                          ? styles.nameCheckErrorText
+                          : styles.nameCheckSuccessText,
+                      ]}
+                    >
+                      {checkedEditName.current
+                        ? l('현재 사용 중인 모임 이름입니다.')
+                        : checkedEditName.duplicate
+                          ? l('이미 사용 중인 모임 이름입니다.')
+                          : l('사용 가능한 모임 이름입니다.')}
+                    </Text>
+                  ) : null}
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
                     {l('모임의 소개글을 입력해주세요!')}
@@ -952,11 +999,9 @@ export function GroupManagementOverlay({
                   style={({ pressed }) => [
                     styles.primaryButton,
                     styles.managementFooterButton,
-                    activeManagementScreen === 'BOOKSHELF_CREATE' &&
-                    creatingBookshelf &&
-                    styles.primaryButtonDisabled,
+                    primaryActionDisabled && styles.primaryButtonDisabled,
                     pressed &&
-                    !(activeManagementScreen === 'BOOKSHELF_CREATE' && creatingBookshelf) &&
+                    !primaryActionDisabled &&
                     styles.pressed,
                   ]}
                   onPress={
@@ -964,7 +1009,7 @@ export function GroupManagementOverlay({
                       ? handleSaveGroupEdit
                       : handleSubmitBookshelfCreate
                   }
-                  disabled={activeManagementScreen === 'BOOKSHELF_CREATE' && creatingBookshelf}
+                  disabled={primaryActionDisabled}
                 >
                   <Text style={styles.managementFooterPrimaryButtonText}>
                     {activeManagementScreen === 'EDIT'

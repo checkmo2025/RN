@@ -1618,6 +1618,8 @@ function GroupHomeView({
     submittingReport,
     uploadingClubImage,
     editDraft, setEditDraft,
+    checkedEditName,
+    checkingEditName,
     selectedJoinRequestAction,
     selectedMemberAction,
     closeManagementMenu,
@@ -1629,6 +1631,8 @@ function GroupHomeView({
     handleProcessJoinRequest,
     handleChangeMemberRole,
     handleRemoveMember,
+    handleChangeEditName,
+    handleCheckEditName,
     handleSaveGroupEdit,
     handleOpenJoinRequestProfile,
     handlePickClubImage,
@@ -3370,6 +3374,8 @@ function GroupHomeView({
         selectedMemberAction={selectedMemberAction}
         submittingMemberAction={submittingMemberAction}
         editDraft={editDraft}
+        checkedEditName={checkedEditName}
+        checkingEditName={checkingEditName}
         uploadingClubImage={uploadingClubImage}
         managementSheetY={managementSheetY}
         managementHandlePanResponder={managementHandlePanResponder}
@@ -3381,6 +3387,8 @@ function GroupHomeView({
         handleOpenJoinRequestProfile={handleOpenJoinRequestProfile}
         setSelectedMemberActionId={setSelectedMemberActionId}
         setEditDraft={setEditDraft}
+        handleChangeEditName={handleChangeEditName}
+        handleCheckEditName={handleCheckEditName}
         handlePickClubImage={handlePickClubImage}
         handleSaveGroupEdit={handleSaveGroupEdit}
         handleProcessJoinRequest={handleProcessJoinRequest}
