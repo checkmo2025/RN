@@ -57,6 +57,7 @@ import { loginWithAppleNative } from '../services/auth/appleAuth';
 import { loginWithSocial, type OAuthProvider } from '../services/auth/socialAuth';
 import { CATEGORY_OPTIONS } from '../constants/domain/category';
 import { useEmailVerificationFlow } from '../hooks/useEmailVerificationFlow';
+import { useLanguage } from '../contexts/LanguageContext';
 
 type Step =
   | 'login'
@@ -200,6 +201,7 @@ function resolveTermsErrorMessage(error: unknown): string {
 }
 
 export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Props) {
+  const { l } = useLanguage();
   const startsInProfileCompletion = mode === 'profileCompletion';
   const ev = useEmailVerificationFlow();
   const [step, setStep] = useState<Step>(startsInProfileCompletion ? 'terms' : 'login');
@@ -1070,7 +1072,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
                   onPress={goToLogin}
                   hitSlop={8}
                   accessibilityRole="button"
-                  accessibilityLabel="뒤로가기"
+                  accessibilityLabel={l('뒤로가기')}
                   style={({ pressed }) => [styles.cardTopBackButton, pressed && styles.pressed]}
                 >
                   <MaterialIcons name="arrow-back-ios-new" size={20} color={colors.primary1} />
@@ -1093,7 +1095,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
                 cardStyle={styles.confirmModalCard}
               >
                 <Text style={styles.confirmModalTitle}>
-                  회원가입을 그만하시겠습니까?{'\n'}현재 저장된 정보가 사라집니다.
+                  {l('회원가입을 그만하시겠습니까?\n현재 저장된 정보가 사라집니다.')}
                 </Text>
                 <View style={styles.confirmModalButtonRow}>
                   <AppButton
@@ -1152,18 +1154,18 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
 
     return renderCard(
       <>
-        <Text style={styles.title}>약관 동의</Text>
+        <Text style={styles.title}>{l('약관 동의')}</Text>
         <Text style={styles.flowStep}>{isProfileCompletionFlow ? '1 / 3' : '1 / 6'}</Text>
 
         <View style={styles.termsBox}>
           {termsLoading ? (
             <View style={styles.termsStatusBox}>
               <ActivityIndicator size="small" color={colors.primary1} />
-              <Text style={styles.termsStatusText}>약관을 불러오는 중입니다.</Text>
+              <Text style={styles.termsStatusText}>{l('약관을 불러오는 중입니다.')}</Text>
             </View>
           ) : termsLoadError ? (
             <View style={styles.termsStatusBox}>
-              <Text style={styles.termsStatusText}>{termsLoadError}</Text>
+              <Text style={styles.termsStatusText}>{l(termsLoadError)}</Text>
               <AppButton
                 variant="secondary"
                 label="다시 불러오기"
@@ -1174,7 +1176,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
             <>
               {activeTerms.map((term) => {
                 const agreed = termsAgreements[term.id] === true;
-                const label = `${term.title} (${term.required ? '필수' : '선택'})`;
+                const label = `${term.title} (${term.required ? l('필수') : l('선택')})`;
 
                 return (
                   <View key={term.id} style={styles.termsRow}>
@@ -1204,7 +1206,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
               })}
               <View style={styles.termsDivider} />
               <Pressable style={styles.termsRow} onPress={toggleAll}>
-                <Text style={[styles.termsText, styles.termsAllText]}>전체 동의</Text>
+                <Text style={[styles.termsText, styles.termsAllText]}>{l('전체 동의')}</Text>
                 <MaterialIcons
                   name={allAgreed ? 'check-box' : 'check-box-outline-blank'}
                   size={22}
@@ -1249,11 +1251,11 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
 
     return renderCard(
       <>
-        <Text style={styles.title}>이메일 인증</Text>
+        <Text style={styles.title}>{l('이메일 인증')}</Text>
         <Text style={styles.flowStep}>2 / 6</Text>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>이메일</Text>
+          <Text style={styles.label}>{l('이메일')}</Text>
           <FormTextInput
             value={signUpEmail}
             onChangeText={(value) => {
@@ -1278,12 +1280,12 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
             disabled={ev.sending || ev.verified}
           >
             <Text style={[styles.outlineText, ev.verified && styles.outlineTextDisabled]}>
-              {ev.sending ? '발송 중...' : ev.sent ? '인증번호 재발송' : '인증번호 발송'}
+              {ev.sending ? l('발송 중...') : ev.sent ? l('인증번호 재발송') : l('인증번호 발송')}
             </Text>
           </Pressable>
 
           <View style={styles.verificationLabelRow}>
-            <Text style={styles.label}>인증번호</Text>
+            <Text style={styles.label}>{l('인증번호')}</Text>
             {ev.sent && !ev.verified ? (
               <Text
                 style={[
@@ -1291,7 +1293,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
                   ev.remainingSeconds <= 0 ? styles.timerExpiredText : null,
                 ]}
               >
-                남은 시간 {ev.remainingText}
+                {l('남은 시간 {time}', { time: ev.remainingText })}
               </Text>
             ) : null}
           </View>
@@ -1324,22 +1326,22 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
                   !canConfirmVerification && !ev.verified && styles.outlineTextDisabled,
                 ]}
               >
-                {ev.confirming ? '확인 중...' : ev.verified ? '인증 완료되었습니다' : '인증하기'}
+                {ev.confirming ? l('확인 중...') : ev.verified ? l('인증 완료되었습니다') : l('인증하기')}
               </Text>
             </Pressable>
             {ev.verified ? (
               <Pressable
                 style={({ pressed }) => [styles.outlineButton, styles.actionButton, pressed && styles.pressed]}
                 onPress={() => Alert.alert(
-                  '이메일 인증 초기화',
-                  '이메일 인증을 다시 진행하시겠습니까?',
+                  l('이메일 인증 초기화'),
+                  l('이메일 인증을 다시 진행하시겠습니까?'),
                   [
-                    { text: '취소', style: 'cancel' },
-                    { text: '초기화', style: 'destructive', onPress: resetEmailVerificationStep },
+                    { text: l('취소'), style: 'cancel' },
+                    { text: l('초기화'), style: 'destructive', onPress: resetEmailVerificationStep },
                   ],
                 )}
               >
-                <Text style={styles.outlineText}>초기화</Text>
+                <Text style={styles.outlineText}>{l('초기화')}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -1368,11 +1370,11 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   if (step === 'passwordSet') {
     return renderCard(
       <>
-        <Text style={styles.title}>비밀번호 입력</Text>
+        <Text style={styles.title}>{l('비밀번호 입력')}</Text>
         <Text style={styles.flowStep}>3 / 6</Text>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>비밀번호</Text>
+          <Text style={styles.label}>{l('비밀번호')}</Text>
           <View style={styles.passwordInputRow}>
             <FormTextInput
               value={signUpPassword}
@@ -1431,7 +1433,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
                 color={ok ? colors.green : colors.gray3}
               />
               <Text style={[styles.passwordHintText, ok && styles.passwordHintTextOk]}>
-                {label}
+                {l(label)}
               </Text>
             </View>
           ))}
@@ -1457,13 +1459,13 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
 
     return renderCard(
       <>
-        <Text style={styles.title}>프로필 설정</Text>
+        <Text style={styles.title}>{l('프로필 설정')}</Text>
         <Text style={styles.flowStep}>{isProfileCompletionFlow ? '2 / 3' : '4 / 6'}</Text>
 
         <View style={styles.formGroup}>
           <View style={styles.labelRow}>
-            <Text style={styles.label}>닉네임</Text>
-            <Text style={styles.labelHint}>최대 20글자</Text>
+            <Text style={styles.label}>{l('닉네임')}</Text>
+            <Text style={styles.labelHint}>{l('최대 {count}글자', { count: 20 })}</Text>
           </View>
           <View style={styles.inlineRow}>
             <FormTextInput
@@ -1483,7 +1485,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
               }}
               disabled={checkingNickname}
             >
-              <Text style={styles.outlineText}>{checkingNickname ? '확인 중' : '중복확인'}</Text>
+              <Text style={styles.outlineText}>{checkingNickname ? l('확인 중') : l('중복확인')}</Text>
             </Pressable>
           </View>
           {nicknameChecked && nicknameChecked.value === nickname.trim() ? (
@@ -1493,23 +1495,23 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
                 nicknameChecked.duplicate ? styles.nicknameCheckError : styles.nicknameCheckSuccess,
               ]}
             >
-              {nicknameChecked.duplicate ? '이미 사용 중인 닉네임입니다.' : '사용 가능한 닉네임입니다.'}
+              {nicknameChecked.duplicate ? l('이미 사용 중인 닉네임입니다.') : l('사용 가능한 닉네임입니다.')}
             </Text>
           ) : null}
           {nicknameFormatError ? (
             <Text style={[styles.nicknameCheckText, styles.nicknameCheckError]}>
-              {nicknameFormatError}
+              {l(nicknameFormatError)}
             </Text>
           ) : null}
           {nicknameLengthExceeded ? (
             <Text style={[styles.nicknameCheckText, styles.nicknameCheckError]}>
-              닉네임은 최대 20글자까지 입력할 수 있습니다.
+              {l('닉네임은 최대 {count}글자까지 입력할 수 있습니다.', { count: 20 })}
             </Text>
           ) : null}
 
           <View style={styles.descriptionFieldGroup}>
             <View style={styles.descriptionLabelRow}>
-              <Text style={styles.label}>소개</Text>
+              <Text style={styles.label}>{l('소개')}</Text>
               <Text style={styles.inputCounterText}>
                 {description.length}/{INPUT_LIMITS.USER_DESCRIPTION}
               </Text>
@@ -1524,7 +1526,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
             />
           </View>
 
-          <Text style={styles.label}>이름</Text>
+          <Text style={styles.label}>{l('이름')}</Text>
           <FormTextInput
             value={name}
             onChangeText={setName}
@@ -1535,7 +1537,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
             maxLength={INPUT_LIMITS.USER_NAME}
           />
 
-          <Text style={styles.label}>전화번호</Text>
+          <Text style={styles.label}>{l('전화번호')}</Text>
           <FormTextInput
             value={phoneNumber}
             onChangeText={(value) => setPhoneNumber(formatPhoneNumberInput(value))}
@@ -1568,7 +1570,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     const defaultProfileSelected = defaultProfileConfirmed && !profileExtraPreviewUri;
     return renderCard(
       <>
-        <Text style={styles.title}>프로필 설정</Text>
+        <Text style={styles.title}>{l('프로필 설정')}</Text>
         <Text style={styles.flowStep}>{isProfileCompletionFlow ? '3 / 3' : '5 / 6'}</Text>
 
         <View style={styles.avatarSection}>
@@ -1607,17 +1609,17 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
             label="기본 프로필 이미지"
             style={styles.profileDefaultButton}
             onPress={() => Alert.alert(
-              '기본 프로필 이미지',
-              '기본 프로필 이미지를 사용하시겠습니까?',
+              l('기본 프로필 이미지'),
+              l('기본 프로필 이미지를 사용하시겠습니까?'),
               [
-                { text: '취소', style: 'cancel' },
-                { text: '확인', onPress: useDefaultProfileImage },
+                { text: l('취소'), style: 'cancel' },
+                { text: l('확인'), onPress: useDefaultProfileImage },
               ],
             )}
           />
         </View>
 
-        <Text style={styles.label}>관심 카테고리 (최소 1개, 최대 6개 선택)</Text>
+        <Text style={styles.label}>{l('관심 카테고리 (최소 1개, 최대 6개 선택)')}</Text>
         <View style={styles.chipGrid}>
           {CATEGORY_OPTIONS.map((category) => {
             const active = selectedCategories.includes(category.code);
@@ -1632,7 +1634,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
                 ]}
               >
                 <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>
-                  {category.label}
+                  {l(category.label)}
                 </Text>
               </Pressable>
             );
@@ -1665,7 +1667,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     return renderCard(
       <>
         <Text style={[styles.flowStep, { marginTop: 0 }]}>6 / 6</Text>
-        <Text style={styles.title}>회원이 되신 것을 환영합니다!</Text>
+        <Text style={styles.title}>{l('회원이 되신 것을 환영합니다!')}</Text>
 
         <View style={styles.completeProfileCard}>
           <View style={styles.completeAvatarCircle}>
@@ -1675,13 +1677,13 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
               <MaterialIcons name="person" size={54} color={colors.subbrown3} />
             )}
           </View>
-          <Text style={styles.completeNickname}>{nickname || '닉네임'}</Text>
+          <Text style={styles.completeNickname}>{nickname || l('닉네임')}</Text>
           <Text style={styles.completeDescription}>
-            {description.trim().length > 0 ? description : '안녕하세요. 반갑습니다.'}
+            {description.trim().length > 0 ? description : l('안녕하세요. 반갑습니다.')}
           </Text>
         </View>
 
-        <Text style={[styles.completeSubLabel, { marginTop: spacing.lg }]}>참여중인 독서 모임이 있으신가요?</Text>
+        <Text style={[styles.completeSubLabel, { marginTop: spacing.lg }]}>{l('참여중인 독서 모임이 있으신가요?')}</Text>
 
         <View style={[styles.completeButtonGroup, { marginTop: spacing.sm }]}>
           <AppButton label="모임 검색하기" onPress={() => completeAuthFlow('모임 탭에서 모임을 탐색해보세요.')} />
@@ -1696,8 +1698,8 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   if (step === 'findId') {
     return renderCard(
       <>
-        <Text style={styles.title}>아이디{'\n'}(이메일 찾기)</Text>
-        <Text style={styles.subLabel}>이름과 전화번호를 입력해주세요</Text>
+        <Text style={styles.title}>{l('아이디\n(이메일 찾기)')}</Text>
+        <Text style={styles.subLabel}>{l('이름과 전화번호를 입력해주세요')}</Text>
         <View style={styles.formGroup}>
           <FormTextInput
             value={findName}
@@ -1730,8 +1732,8 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   if (step === 'findIdResult') {
     return renderCard(
       <>
-        <Text style={styles.title}>아이디{'\n'}(이메일 찾기)</Text>
-        <Text style={styles.subLabel}>해당 정보의 이메일은 다음과 같습니다.</Text>
+        <Text style={styles.title}>{l('아이디\n(이메일 찾기)')}</Text>
+        <Text style={styles.subLabel}>{l('해당 정보의 이메일은 다음과 같습니다.')}</Text>
         <View style={styles.formGroup}>
           <TextInput value={foundEmail || '-'} style={[styles.input, styles.inputDescenderSafe]} editable={false} />
         </View>
@@ -1748,8 +1750,8 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   if (step === 'resetPw') {
     return renderCard(
       <>
-        <Text style={styles.title}>비밀번호 재발급</Text>
-        <Text style={styles.subLabel}>이메일을 입력해주세요</Text>
+        <Text style={styles.title}>{l('비밀번호 재발급')}</Text>
+        <Text style={styles.subLabel}>{l('이메일을 입력해주세요')}</Text>
         <View style={styles.formGroup}>
           <FormTextInput
             value={resetPasswordEmail}
@@ -1773,7 +1775,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
 
   return renderCard(
     <>
-      <Text style={styles.title}>로그인</Text>
+      <Text style={styles.title}>{l('로그인')}</Text>
       <View style={styles.formGroup}>
         <FormTextInput
           value={loginIdentifier}
@@ -1812,11 +1814,11 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
       </View>
       <View style={styles.inlineLinks}>
         <Pressable onPress={() => setStep('findId')}>
-          <Text style={styles.linkText}>아이디 찾기</Text>
+          <Text style={styles.linkText}>{l('아이디 찾기')}</Text>
         </Pressable>
         <View style={styles.linkDivider} />
         <Pressable onPress={() => setStep('resetPw')}>
-          <Text style={styles.linkText}>비밀번호 찾기</Text>
+          <Text style={styles.linkText}>{l('비밀번호 찾기')}</Text>
         </Pressable>
       </View>
       <AppButton
@@ -1828,12 +1830,12 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
       <View style={styles.socialSection}>
         <View style={styles.socialDivider}>
           <View style={styles.socialDividerLine} />
-          <Text style={styles.socialDividerText}>또는</Text>
+          <Text style={styles.socialDividerText}>{l('또는')}</Text>
           <View style={styles.socialDividerLine} />
         </View>
         <View style={styles.socialIconRow}>
           {Platform.OS === 'ios' && appleLoginAvailable && renderSocialIconButton({
-            label: 'Apple로 로그인',
+            label: l('Apple로 로그인'),
             loading: appleLoginSubmitting,
             disabled: Boolean(appleLoginSubmitting || socialSubmitting),
             variant: 'apple',
@@ -1847,7 +1849,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
             ),
           })}
           {renderSocialIconButton({
-            label: '카카오로 로그인',
+            label: l('카카오로 로그인'),
             loading: socialSubmitting === 'kakao',
             disabled: Boolean(appleLoginSubmitting || socialSubmitting),
             onPress: () => { void handleSocialLogin('kakao'); },
@@ -1859,7 +1861,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
             ),
           })}
           {renderSocialIconButton({
-            label: '구글로 로그인',
+            label: l('구글로 로그인'),
             loading: socialSubmitting === 'google',
             disabled: Boolean(appleLoginSubmitting || socialSubmitting),
             onPress: () => { void handleSocialLogin('google'); },
@@ -1871,7 +1873,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
             ),
           })}
           {renderSocialIconButton({
-            label: '네이버로 로그인',
+            label: l('네이버로 로그인'),
             loading: socialSubmitting === 'naver',
             disabled: Boolean(appleLoginSubmitting || socialSubmitting),
             onPress: () => { void handleSocialLogin('naver'); },
@@ -1886,10 +1888,10 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
       </View>
       <View style={styles.loginFooterLinks}>
         <Pressable onPress={startSignUp}>
-          <Text style={styles.linkText}>아직 회원이 아니신가요? 회원가입하러가기</Text>
+          <Text style={styles.linkText}>{l('아직 회원이 아니신가요? 회원가입하러가기')}</Text>
         </Pressable>
         <Pressable onPress={() => Linking.openURL(PUBLIC_ENV.SUPPORT_FORM_URL).catch(() => null)}>
-          <Text style={styles.linkText}>고객센터/문의하기</Text>
+          <Text style={styles.linkText}>{l('고객센터/문의하기')}</Text>
         </Pressable>
       </View>
     </>,

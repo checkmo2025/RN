@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radius, spacing, typography } from '../../theme';
 import { AppButton } from './PrimaryButton';
 import type { AppVersionGateState } from '../../hooks/useAppVersionGate';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const noop = () => undefined;
 
@@ -18,6 +19,7 @@ export function AppUpdateGateModal({
   onOpenStore,
   onDismissRecommendation,
 }: Props) {
+  const { l } = useLanguage();
   const visible = state.status === 'force' || state.status === 'recommend';
   const isForce = state.status === 'force';
   const policy = visible ? state.policy : null;
@@ -36,20 +38,24 @@ export function AppUpdateGateModal({
           </View>
 
           <Text style={styles.title}>
-            {isForce ? '업데이트가 필요해요' : '새 버전이 있어요'}
+            {isForce ? l('업데이트가 필요해요') : l('새 버전이 있어요')}
           </Text>
           <Text style={styles.description}>
             {isForce
-              ? '책모를 계속 이용하려면 최신 버전으로 업데이트해 주세요.'
-              : '더 안정적인 이용을 위해 최신 버전으로 업데이트해 주세요.'}
+              ? l('책모를 계속 이용하려면 최신 버전으로 업데이트해 주세요.')
+              : l('더 안정적인 이용을 위해 최신 버전으로 업데이트해 주세요.')}
           </Text>
 
           {policy ? (
             <View style={styles.versionBox}>
               <Text style={styles.versionText}>
-                현재 버전 {state.status === 'force' || state.status === 'recommend' ? state.currentVersion : '-'}
+                {l('현재 버전 {version}', {
+                  version: state.status === 'force' || state.status === 'recommend' ? state.currentVersion : '-',
+                })}
               </Text>
-              <Text style={styles.versionText}>최신 버전 {policy.latestVersion}</Text>
+              <Text style={styles.versionText}>
+                {l('최신 버전 {version}', { version: policy.latestVersion })}
+              </Text>
             </View>
           ) : null}
 
@@ -57,14 +63,14 @@ export function AppUpdateGateModal({
             {!isForce ? (
               <AppButton
                 variant="secondary"
-                label="나중에"
+                label={l('나중에')}
                 onPress={onDismissRecommendation}
                 size="lg"
                 fullWidth
               />
             ) : null}
             <AppButton
-              label="업데이트하기"
+              label={l('업데이트하기')}
               onPress={onOpenStore}
               size="lg"
               fullWidth

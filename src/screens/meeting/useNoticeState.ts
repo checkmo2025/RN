@@ -25,6 +25,7 @@ import {
   type ClubNoticeList,
 } from '../../services/api/clubApi';
 import { showToast } from '../../utils/toast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import type {
   BookshelfItem,
@@ -174,6 +175,7 @@ export function useNoticeState({
   openBookshelfTopicByMeetingId,
   onNoticeSubmitSuccess,
 }: NoticeStateParams) {
+  const { l } = useLanguage();
   const [noticePage, setNoticePage] = useState(1);
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
   const [noticeCommentInput, setNoticeCommentInput] = useState('');
@@ -448,15 +450,15 @@ export function useNoticeState({
         if (cancelled) return;
         if (error instanceof ApiError) {
           if (isProfileIncompleteApiError(error)) {
-            showToast(PROFILE_INCOMPLETE_MESSAGE);
+            showToast(l(PROFILE_INCOMPLETE_MESSAGE));
           } else if (error.status === 403) {
-            showToast('공지 열람 권한이 없습니다.');
+            showToast(l('공지 열람 권한이 없습니다.'));
           } else if (error.status !== 401) {
-            showToast(error.message || '공지 상세를 불러오지 못했습니다.');
+            showToast(l(error.message || '공지 상세를 불러오지 못했습니다.'));
           }
           return;
         }
-        showToast('공지 상세를 불러오지 못했습니다.');
+        showToast(l('공지 상세를 불러오지 못했습니다.'));
       }
     };
 
@@ -465,7 +467,7 @@ export function useNoticeState({
     return () => {
       cancelled = true;
     };
-  }, [group.clubId, mapNoticeCommentItemToUi, noticeCommentsById, noticeItems, selectedNoticeId]);
+  }, [group.clubId, l, mapNoticeCommentItemToUi, noticeCommentsById, noticeItems, selectedNoticeId]);
 
   const loadMoreNoticeComments = useCallback(
     async (notice: NoticeItem) => {
@@ -517,18 +519,18 @@ export function useNoticeState({
         }));
         if (error instanceof ApiError) {
           if (isProfileIncompleteApiError(error)) {
-            showToast(PROFILE_INCOMPLETE_MESSAGE);
+            showToast(l(PROFILE_INCOMPLETE_MESSAGE));
           } else if (error.status === 403) {
-            showToast('댓글 열람 권한이 없습니다.');
+            showToast(l('댓글 열람 권한이 없습니다.'));
           } else if (error.status !== 401) {
-            showToast(error.message || '댓글을 추가로 불러오지 못했습니다.');
+            showToast(l(error.message || '댓글을 추가로 불러오지 못했습니다.'));
           }
         } else {
-          showToast('댓글을 추가로 불러오지 못했습니다.');
+          showToast(l('댓글을 추가로 불러오지 못했습니다.'));
         }
       }
     },
-    [group.clubId, mapNoticeCommentItemToUi, noticeCommentPageStateByNoticeId],
+    [group.clubId, l, mapNoticeCommentItemToUi, noticeCommentPageStateByNoticeId],
   );
 
   const handleOpenNoticeDetailByRemoteId = useCallback(
@@ -566,7 +568,7 @@ export function useNoticeState({
           }
         } catch (error) {
           if (!(error instanceof ApiError)) {
-            showToast('공지 상세를 불러오지 못했습니다.');
+            showToast(l('공지 상세를 불러오지 못했습니다.'));
           }
         }
       }
@@ -577,22 +579,22 @@ export function useNoticeState({
         return;
       }
 
-      showToast('등록된 공지가 없습니다.');
+      showToast(l('등록된 공지가 없습니다.'));
     },
-    [group.clubId, noticeItems, noticePageSize],
+    [group.clubId, l, noticeItems, noticePageSize],
   );
 
   const handleSubmitNoticeComment = useCallback(() => {
     if (!selectedNotice) return;
     const content = noticeCommentInput.trim();
     if (!content) {
-      showToast('댓글 내용을 입력해야 합니다.');
+      showToast(l('댓글 내용을 입력해야 합니다.'));
       return;
     }
     const clubId = group.clubId;
     const noticeId = selectedNotice.remoteId;
     if (!isManagedClub || typeof clubId !== 'number' || typeof noticeId !== 'number') {
-      showToast('공지 댓글 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+      showToast(l('공지 댓글 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'));
       return;
     }
 
@@ -616,7 +618,7 @@ export function useNoticeState({
       } catch (error) {
         if (!(error instanceof ApiError)) {
           showToast(
-            editingNoticeCommentId ? '댓글 수정에 실패했습니다.' : '댓글 등록에 실패했습니다.',
+            editingNoticeCommentId ? l('댓글 수정에 실패했습니다.') : l('댓글 등록에 실패했습니다.'),
           );
         }
       } finally {
@@ -630,6 +632,7 @@ export function useNoticeState({
     editingNoticeCommentId,
     group.clubId,
     isManagedClub,
+    l,
     noticeCommentInput,
     refreshNoticeComments,
     selectedNotice,
@@ -676,14 +679,14 @@ export function useNoticeState({
         typeof noticeId !== 'number' ||
         typeof commentId !== 'number'
       ) {
-        showToast('공지 댓글 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+        showToast(l('공지 댓글 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'));
         return;
       }
 
-      Alert.alert('댓글 삭제', '이 댓글을 삭제하시겠습니까?', [
-        { text: '취소', style: 'cancel' },
+      Alert.alert(l('댓글 삭제'), l('이 댓글을 삭제하시겠습니까?'), [
+        { text: l('취소'), style: 'cancel' },
         {
-          text: '삭제',
+          text: l('삭제'),
           style: 'destructive',
           onPress: () => {
             const remove = async () => {
@@ -697,7 +700,7 @@ export function useNoticeState({
                 }
               } catch (error) {
                 if (!(error instanceof ApiError)) {
-                  showToast('댓글 삭제에 실패했습니다.');
+                  showToast(l('댓글 삭제에 실패했습니다.'));
                 }
               } finally {
                 setSubmittingNoticeComment(false);
@@ -712,6 +715,7 @@ export function useNoticeState({
       editingNoticeCommentId,
       group.clubId,
       isManagedClub,
+      l,
       noticeCommentMenu,
       refreshNoticeComments,
       selectedNotice,
@@ -747,13 +751,13 @@ export function useNoticeState({
             }
           } catch (error) {
             if (!(error instanceof ApiError)) {
-              showToast('공지 작성자 정보를 확인하지 못했습니다.');
+              showToast(l('공지 작성자 정보를 확인하지 못했습니다.'));
             }
           }
         }
 
         if (!targetNickname) {
-          showToast('공지 작성자 정보를 찾을 수 없습니다.');
+          showToast(l('공지 작성자 정보를 찾을 수 없습니다.'));
           return;
         }
 
@@ -765,7 +769,7 @@ export function useNoticeState({
 
       void openReportModal();
     });
-  }, [group.clubId, requireAuth, selectedNotice, setReportModal]);
+  }, [group.clubId, l, requireAuth, selectedNotice, setReportModal]);
 
   const handleToggleVoteOption = useCallback(
     (optionId: string) => {
@@ -799,18 +803,18 @@ export function useNoticeState({
       if (!option) return;
 
       if (selectedNotice.poll.anonymous) {
-        showToast('익명 투표는 투표자 목록을 볼 수 없습니다.');
+        showToast(l('익명 투표는 투표자 목록을 볼 수 없습니다.'));
         return;
       }
 
       if (option.voters.length === 0) {
-        showToast('해당 항목에 투표자가 없습니다');
+        showToast(l('해당 항목에 투표자가 없습니다.'));
         return;
       }
 
       setVoteVotersModal({ optionLabel: option.label, voters: option.voters });
     },
-    [currentNoticePollOptions, selectedNotice],
+    [currentNoticePollOptions, l, selectedNotice],
   );
 
   const handleSubmitVote = useCallback(() => {
@@ -819,7 +823,7 @@ export function useNoticeState({
       selectedNotice.poll.closed ||
       (selectedNotice.poll.endsAtMillis != null && Date.now() > selectedNotice.poll.endsAtMillis)
     ) {
-      showToast('투표가 종료되었습니다.');
+      showToast(l('투표가 종료되었습니다.'));
       return;
     }
 
@@ -830,20 +834,20 @@ export function useNoticeState({
     }
     const selectedIds = selectedVoteOptionIdsByNotice[noticeKey] ?? [];
     if (selectedIds.length === 0) {
-      showToast('투표 항목을 선택해야 합니다.');
+      showToast(l('투표 항목을 선택해야 합니다.'));
       return;
     }
     const clubId = group.clubId;
     const noticeId = selectedNotice.remoteId;
     if (!isManagedClub || typeof clubId !== 'number' || typeof noticeId !== 'number') {
-      showToast('공지 투표 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+      showToast(l('공지 투표 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'));
       return;
     }
 
     const submit = async () => {
       const detail = await fetchClubNoticeDetail(clubId, noticeId);
       if (!detail?.voteDetail) {
-        showToast('투표 정보를 찾을 수 없습니다.');
+        showToast(l('투표 정보를 찾을 수 없습니다.'));
         return;
       }
 
@@ -870,10 +874,10 @@ export function useNoticeState({
         }));
         setSubmittedVoteOptionIdsByNotice((prev) => ({ ...prev, [noticeKey]: selectedIds }));
         setVoteEditEnabledByNotice((prev) => ({ ...prev, [noticeKey]: false }));
-        showToast('투표가 완료되었습니다.');
+        showToast(l('투표가 완료되었습니다.'));
       } catch (error) {
         if (!(error instanceof ApiError)) {
-          showToast('투표에 실패했습니다.');
+          showToast(l('투표에 실패했습니다.'));
         }
       }
     };
@@ -883,6 +887,7 @@ export function useNoticeState({
     group.clubId,
     hasSubmittedVoteInNotice,
     isManagedClub,
+    l,
     selectedNotice,
     selectedVoteOptionIdsByNotice,
     voteEditEnabled,
@@ -928,7 +933,7 @@ export function useNoticeState({
               enrichedNoticeDetailKeysRef.current.add(detailKey);
               editableNotice = merged;
             } else if (notice.content.trim().length === 0) {
-              showToast('공지 상세 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주십시오.');
+              showToast(l('공지 상세 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주십시오.'));
               return;
             }
           } catch (error) {
@@ -938,7 +943,7 @@ export function useNoticeState({
               message: error instanceof Error ? error.message : String(error),
             });
             if (notice.content.trim().length === 0) {
-              showToast('공지 상세 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주십시오.');
+              showToast(l('공지 상세 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주십시오.'));
               return;
             }
           }
@@ -960,7 +965,7 @@ export function useNoticeState({
     setNoticeDraft(emptyDraft);
     setNoticeComposerInitialDraft(emptyDraft);
     setNoticeComposerVisible(true);
-  }, [group.clubId]);
+  }, [group.clubId, l]);
 
   const handleAddNoticePhoto = useCallback(
     (pickAndUploadImage: (type: 'NOTICE') => Promise<string | null>) => {
@@ -968,7 +973,9 @@ export function useNoticeState({
 
       const pick = async () => {
         if (noticeDraft.photos.length >= INPUT_LIMITS.NOTICE_IMAGE_COUNT) {
-          showToast(`사진은 최대 ${INPUT_LIMITS.NOTICE_IMAGE_COUNT}개까지 추가할 수 있습니다.`);
+          showToast(l('사진은 최대 {limit}개까지 추가할 수 있습니다.', {
+            limit: INPUT_LIMITS.NOTICE_IMAGE_COUNT,
+          }));
           return;
         }
         setUploadingNoticePhoto(true);
@@ -981,7 +988,7 @@ export function useNoticeState({
           }));
         } catch (error) {
           if (!(error instanceof ApiError)) {
-            showToast('이미지 업로드에 실패했습니다.');
+            showToast(l('이미지 업로드에 실패했습니다.'));
           }
         } finally {
           setUploadingNoticePhoto(false);
@@ -990,7 +997,7 @@ export function useNoticeState({
 
       void pick();
     },
-    [noticeDraft.photos.length, uploadingNoticePhoto],
+    [l, noticeDraft.photos.length, uploadingNoticePhoto],
   );
 
   const handleRemoveNoticePhoto = useCallback((index: number) => {
@@ -1006,7 +1013,9 @@ export function useNoticeState({
         ? value.slice(0, INPUT_LIMITS.NOTICE_POLL_OPTION)
         : value;
     if (nextValue.length < value.length) {
-      showToast(`투표 항목은 ${INPUT_LIMITS.NOTICE_POLL_OPTION}자 이하여야 합니다.`);
+      showToast(l('투표 항목은 {limit}자 이하여야 합니다.', {
+        limit: INPUT_LIMITS.NOTICE_POLL_OPTION,
+      }));
     }
     setNoticeDraft((prev) => ({
       ...prev,
@@ -1014,17 +1023,19 @@ export function useNoticeState({
         currentIndex === index ? nextValue : item,
       ),
     }));
-  }, []);
+  }, [l]);
 
   const handleAddNoticePollOption = useCallback(() => {
     setNoticeDraft((prev) => {
       if (prev.pollOptions.length >= INPUT_LIMITS.NOTICE_POLL_OPTION_MAX) {
-        showToast(`투표 항목은 최대 ${INPUT_LIMITS.NOTICE_POLL_OPTION_MAX}개까지 추가할 수 있습니다.`);
+        showToast(l('투표 항목은 최대 {limit}개까지 추가할 수 있습니다.', {
+          limit: INPUT_LIMITS.NOTICE_POLL_OPTION_MAX,
+        }));
         return prev;
       }
       return { ...prev, pollOptions: [...prev.pollOptions, ''] };
     });
-  }, []);
+  }, [l]);
 
   const handleRemoveNoticePollOption = useCallback((index: number) => {
     if (index < 2) return;
@@ -1049,19 +1060,21 @@ export function useNoticeState({
     const title = noticeDraft.title.trim();
     const content = noticeDraft.content.trim();
     if (!title || !content) {
-      showToast('제목과 내용을 입력해야 합니다.');
+      showToast(l('제목과 내용을 입력해야 합니다.'));
       return;
     }
     if (!canManageClub) {
-      showToast('공지 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+      showToast(l('공지 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'));
       return;
     }
     if (title.length > INPUT_LIMITS.NOTICE_TITLE) {
-      showToast(`공지 제목은 ${INPUT_LIMITS.NOTICE_TITLE}자 이하여야 합니다.`);
+      showToast(l('공지 제목은 {limit}자 이하여야 합니다.', { limit: INPUT_LIMITS.NOTICE_TITLE }));
       return;
     }
     if (content.length > INPUT_LIMITS.NOTICE_CONTENT) {
-      showToast(`공지 내용은 ${INPUT_LIMITS.NOTICE_CONTENT}자 이하여야 합니다.`);
+      showToast(l('공지 내용은 {limit}자 이하여야 합니다.', {
+        limit: INPUT_LIMITS.NOTICE_CONTENT,
+      }));
       return;
     }
 
@@ -1100,7 +1113,7 @@ export function useNoticeState({
         reason: 'missing_bookshelf',
         clubId: group.clubId,
       });
-      showToast('연결할 책장을 선택해야 합니다.');
+      showToast(l('연결할 책장을 선택해야 합니다.'));
       setNoticeBookSelectorVisible(true);
       return;
     }
@@ -1111,7 +1124,7 @@ export function useNoticeState({
         clubId: group.clubId,
         pollOptionCount: pollOptions.length,
       });
-      showToast('투표 항목은 2개 이상 필요합니다.');
+      showToast(l('투표 항목은 2개 이상 필요합니다.'));
       return;
     }
 
@@ -1120,7 +1133,9 @@ export function useNoticeState({
         reason: 'poll_option_too_long',
         clubId: group.clubId,
       });
-      showToast(`투표 항목은 ${INPUT_LIMITS.NOTICE_POLL_OPTION}자 이하여야 합니다.`);
+      showToast(l('투표 항목은 {limit}자 이하여야 합니다.', {
+        limit: INPUT_LIMITS.NOTICE_POLL_OPTION,
+      }));
       return;
     }
 
@@ -1131,7 +1146,7 @@ export function useNoticeState({
         pollStartsAt: noticeDraft.pollStartsAt,
         pollEndsAt: noticeDraft.pollEndsAt,
       });
-      showToast('투표 기간을 올바르게 입력해야 합니다.');
+      showToast(l('투표 기간을 올바르게 입력해야 합니다.'));
       return;
     }
 
@@ -1147,7 +1162,7 @@ export function useNoticeState({
         pollStartTime,
         pollDeadline,
       });
-      showToast('투표 종료일은 시작일 이후여야 합니다.');
+      showToast(l('투표 종료일은 시작일 이후여야 합니다.'));
       return;
     }
 
@@ -1156,7 +1171,7 @@ export function useNoticeState({
       try {
         if (isEditingNotice) {
           if (!editingNotice?.remoteId) {
-            showToast('수정할 공지 정보를 찾을 수 없습니다.');
+            showToast(l('수정할 공지 정보를 찾을 수 없습니다.'));
             return;
           }
           await updateClubNotice(group.clubId as number, editingNotice.remoteId, {
@@ -1217,7 +1232,7 @@ export function useNoticeState({
         const emptyDraft = buildNoticeDraft();
         setNoticeDraft(emptyDraft);
         setNoticeComposerInitialDraft(emptyDraft);
-        showToast(isEditingNotice ? '공지가 수정되었습니다.' : '공지가 등록되었습니다.');
+        showToast(isEditingNotice ? l('공지가 수정되었습니다.') : l('공지가 등록되었습니다.'));
         logMeetingAction('notice_submit_success', {
           clubId: group.clubId,
           mode: isEditingNotice ? 'edit' : 'create',
@@ -1231,7 +1246,7 @@ export function useNoticeState({
           message: error instanceof Error ? error.message : String(error),
         });
         if (!(error instanceof ApiError)) {
-          showToast(isEditingNotice ? '공지 수정에 실패했습니다.' : '공지 등록에 실패했습니다.');
+          showToast(isEditingNotice ? l('공지 수정에 실패했습니다.') : l('공지 등록에 실패했습니다.'));
         }
       } finally {
         setSubmittingNotice(false);
@@ -1244,6 +1259,7 @@ export function useNoticeState({
     canManageClub,
     editingNoticeId,
     group.clubId,
+    l,
     noticeDraft,
     noticeItems,
     onNoticeSubmitSuccess,
@@ -1257,7 +1273,7 @@ export function useNoticeState({
     const clubId = group.clubId;
     const noticeId = selectedNotice.remoteId;
     if (!canManageClub || typeof clubId !== 'number' || typeof noticeId !== 'number') {
-      showToast('공지 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+      showToast(l('공지 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'));
       return;
     }
 
@@ -1301,30 +1317,30 @@ export function useNoticeState({
         setNoticeMenuVisible(false);
         setSelectedNoticeId(null);
         setNoticeCommentInput('');
-        showToast('공지를 삭제했습니다.');
+        showToast(l('공지를 삭제했습니다.'));
       } catch (error) {
         if (!(error instanceof ApiError)) {
-          showToast('공지 삭제에 실패했습니다.');
+          showToast(l('공지 삭제에 실패했습니다.'));
         }
       }
     };
 
-    Alert.alert('공지 삭제', '이 공지를 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(l('공지 삭제'), l('이 공지를 삭제하시겠습니까?'), [
+      { text: l('취소'), style: 'cancel' },
       {
-        text: '삭제',
+        text: l('삭제'),
         style: 'destructive',
         onPress: () => {
           void remove();
         },
       },
     ]);
-  }, [canManageClub, group.clubId, selectedNotice, setLatestNoticeId, setManagedGroup]);
+  }, [canManageClub, group.clubId, l, selectedNotice, setLatestNoticeId, setManagedGroup]);
 
   const handleOpenNoticeBookshelf = useCallback(() => {
     const meetingId = selectedNotice?.bookshelf?.remoteMeetingId;
     if (typeof meetingId !== 'number') {
-      showToast('연결된 책장 정보를 찾을 수 없습니다.');
+      showToast(l('연결된 책장 정보를 찾을 수 없습니다.'));
       return;
     }
 
@@ -1332,19 +1348,19 @@ export function useNoticeState({
       try {
         const opened = await openBookshelfTopicByMeetingId(meetingId);
         if (!opened) {
-          showToast('연결된 책장 정보를 찾을 수 없습니다.');
+          showToast(l('연결된 책장 정보를 찾을 수 없습니다.'));
         }
       } catch (error) {
         if (error instanceof ApiError) {
-          showToast(error.message);
+          showToast(l(error.message));
           return;
         }
-        showToast('책장을 열지 못했습니다.');
+        showToast(l('책장을 열지 못했습니다.'));
       }
     };
 
     void open();
-  }, [openBookshelfTopicByMeetingId, selectedNotice]);
+  }, [l, openBookshelfTopicByMeetingId, selectedNotice]);
 
   const resetNoticeOnGroupChange = useCallback(() => {
     setNoticePage(1);

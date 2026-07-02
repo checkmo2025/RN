@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
 
 import { colors, interactionOpacity, radius, spacing, typography } from '../../theme';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger';
 type ButtonSize = 'lg' | 'md';
@@ -31,7 +32,9 @@ export function AppButton({
   fullWidth,
   style,
 }: Props) {
+  const { l } = useLanguage();
   const isDisabled = disabled || loading;
+  const resolvedLabel = loading && loadingLabel ? loadingLabel : label;
 
   return (
     <Pressable
@@ -63,7 +66,7 @@ export function AppButton({
           variant === 'danger' ? styles.dangerText : null,
         ]}
       >
-        {loading && loadingLabel ? loadingLabel : label}
+        {l(resolvedLabel)}
       </Text>
     </Pressable>
   );

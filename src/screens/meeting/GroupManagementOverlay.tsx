@@ -25,6 +25,7 @@ import { FormTextInput } from '../../components/common/FormTextInput';
 import { ToastHost } from '../../components/common/ToastHost';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { CLUB_DEFAULT_IMAGE } from '../../constants/defaultAssets';
+import { useLanguage } from '../../contexts/LanguageContext';
 import {
   formatCalendarMonthLabel,
   formatGenerationLabel,
@@ -192,6 +193,7 @@ export function GroupManagementOverlay({
   handleSubmitBookshelfCreate,
 }: GroupManagementOverlayProps) {
   const insets = useSafeAreaInsets();
+  const { language, l } = useLanguage();
   const closingManagementMenuByPullRef = useRef(false);
   const handleManagementMenuScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -220,7 +222,7 @@ export function GroupManagementOverlay({
             <Pressable onPress={closeBookshelfBookSelector} hitSlop={8}>
               <MaterialIcons name="chevron-left" size={24} color={colors.gray6} />
             </Pressable>
-            <Text style={styles.managementScreenTitle}>책 검색</Text>
+            <Text style={styles.managementScreenTitle}>{l('책 검색')}</Text>
             <Pressable onPress={closeBookshelfBookSelector} hitSlop={8}>
               <MaterialIcons name="close" size={22} color={colors.gray6} />
             </Pressable>
@@ -234,7 +236,7 @@ export function GroupManagementOverlay({
               <TextInput
                 value={bookshelfBookSearchQuery}
                 onChangeText={setBookshelfBookSearchQuery}
-                placeholder="책 제목, 작가 이름을 검색해보세요"
+                placeholder={l('책 제목, 작가 이름을 검색해보세요')}
                 placeholderTextColor={colors.gray3}
                 style={[styles.bookshelfBookSearchInput, styles.bookshelfBookSearchInputDescenderSafe]}
                 onSubmitEditing={handleSubmitBookshelfBookSearch}
@@ -253,12 +255,15 @@ export function GroupManagementOverlay({
             {bookshelfBookSearchSearched ? (
               <Text style={styles.bookshelfBookSearchGuide}>
                 {bookshelfBookSearchLoading
-                  ? '검색 중...'
-                  : `"${bookshelfBookSearchKeyword}" 총 ${bookshelfBookSearchTotal}개의 검색결과가 있습니다.`}
+                  ? l('검색 중...')
+                  : l('"{keyword}" 총 {count}개의 검색결과가 있습니다.', {
+                      keyword: bookshelfBookSearchKeyword,
+                      count: bookshelfBookSearchTotal,
+                    })}
               </Text>
             ) : (
               <Text style={styles.bookshelfBookSearchGuide}>
-                검색어를 입력하고 책을 선택해야 합니다.
+                {l('검색어를 입력하고 책을 선택해야 합니다.')}
               </Text>
             )}
             <ScrollView
@@ -270,7 +275,7 @@ export function GroupManagementOverlay({
               {bookshelfBookSearchSearched &&
               !bookshelfBookSearchLoading &&
               bookshelfBookSearchResults.length === 0 ? (
-                <Text style={styles.bookshelfBookSearchEmpty}>검색 결과가 없습니다.</Text>
+                <Text style={styles.bookshelfBookSearchEmpty}>{l('검색 결과가 없습니다.')}</Text>
               ) : null}
 
               {bookshelfBookSearchResults.map((book, index) => (
@@ -321,15 +326,17 @@ export function GroupManagementOverlay({
               <MaterialIcons name="chevron-left" size={24} color={colors.gray6} />
             </Pressable>
             <Text style={styles.managementScreenTitle}>
-              {activeManagementScreen === 'JOIN_REQUESTS'
-                ? '모임 가입 신청 관리'
-                : activeManagementScreen === 'MEMBERS'
-                  ? '모임 회원 관리'
-                  : activeManagementScreen === 'BOOKSHELF_CREATE'
-                    ? typeof editingBookshelfMeetingId === 'number'
-                      ? '책장 수정하기'
-                      : '책장 생성하기'
-                    : '모임 정보 수정하기'}
+              {l(
+                activeManagementScreen === 'JOIN_REQUESTS'
+                  ? '모임 가입 신청 관리'
+                  : activeManagementScreen === 'MEMBERS'
+                    ? '모임 회원 관리'
+                    : activeManagementScreen === 'BOOKSHELF_CREATE'
+                      ? typeof editingBookshelfMeetingId === 'number'
+                        ? '책장 수정하기'
+                        : '책장 생성하기'
+                      : '모임 정보 수정하기',
+              )}
             </Text>
             <Pressable onPress={handleCloseManagementScreen} hitSlop={8}>
               <MaterialIcons name="close" size={22} color={colors.gray6} />
@@ -345,13 +352,13 @@ export function GroupManagementOverlay({
             {activeManagementScreen === 'JOIN_REQUESTS' ? (
               <>
                 <View style={styles.managementSummaryCard}>
-                  <Text style={styles.managementSummaryTitle}>가입 신청 현황</Text>
+                  <Text style={styles.managementSummaryTitle}>{l('가입 신청 현황')}</Text>
                   <Text style={styles.managementSummaryDescription}>
-                    가입 메시지를 확인한 뒤 승인하거나 삭제할 수 있습니다.
+                    {l('가입 메시지를 확인한 뒤 승인하거나 삭제할 수 있습니다.')}
                   </Text>
                   <View style={styles.managementCountBadge}>
                     <Text style={styles.managementCountBadgeText}>
-                      대기 {joinRequests.length}
+                      {l('대기 {count}', { count: joinRequests.length })}
                     </Text>
                   </View>
                 </View>
@@ -388,7 +395,7 @@ export function GroupManagementOverlay({
                           ]}
                           onPress={() => handleOpenJoinRequestProfile(request.nickname)}
                         >
-                          <Text style={styles.managementGhostButtonText}>프로필 보기</Text>
+                          <Text style={styles.managementGhostButtonText}>{l('프로필 보기')}</Text>
                         </Pressable>
                         <Pressable
                           style={({ pressed }) => [
@@ -397,7 +404,7 @@ export function GroupManagementOverlay({
                           ]}
                           onPress={() => setSelectedJoinRequestMessage(request)}
                         >
-                          <Text style={styles.managementGhostButtonText}>가입 메시지</Text>
+                          <Text style={styles.managementGhostButtonText}>{l('가입 메시지')}</Text>
                         </Pressable>
                         <Pressable
                           style={({ pressed }) => [
@@ -406,14 +413,14 @@ export function GroupManagementOverlay({
                           ]}
                           onPress={() => setSelectedJoinRequestActionId(request.id)}
                         >
-                          <Text style={styles.managementPrimarySmallButtonText}>가입 처리</Text>
+                          <Text style={styles.managementPrimarySmallButtonText}>{l('가입 처리')}</Text>
                         </Pressable>
                       </View>
                     </View>
                   ))}
                   {joinRequests.length === 0 ? (
                     <View style={styles.managementEmptyCard}>
-                      <Text style={styles.managementEmptyText}>대기 중인 가입 신청이 없습니다.</Text>
+                      <Text style={styles.managementEmptyText}>{l('대기 중인 가입 신청이 없습니다.')}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -423,12 +430,14 @@ export function GroupManagementOverlay({
             {activeManagementScreen === 'MEMBERS' ? (
               <>
                 <View style={styles.managementSummaryCard}>
-                  <Text style={styles.managementSummaryTitle}>회원 역할 관리</Text>
+                  <Text style={styles.managementSummaryTitle}>{l('회원 역할 관리')}</Text>
                   <Text style={styles.managementSummaryDescription}>
-                    회원 역할을 수정하거나 운영진 권한을 조정할 수 있습니다.
+                    {l('회원 역할을 수정하거나 운영진 권한을 조정할 수 있습니다.')}
                   </Text>
                   <View style={styles.managementCountBadge}>
-                    <Text style={styles.managementCountBadgeText}>회원 {members.length}</Text>
+                    <Text style={styles.managementCountBadgeText}>
+                      {l('회원 {count}', { count: members.length })}
+                    </Text>
                   </View>
                 </View>
 
@@ -463,11 +472,13 @@ export function GroupManagementOverlay({
                                 : styles.managementRoleBadgeMember,
                           ]}
                         >
-                          <Text style={styles.managementRoleBadgeText}>{member.role}</Text>
+                          <Text style={styles.managementRoleBadgeText}>{l(member.role)}</Text>
                         </View>
                       </View>
                       <Text style={styles.managementMetaText}>{member.email}</Text>
-                      <Text style={styles.managementMetaText}>가입일 {member.joinedAt}</Text>
+                      <Text style={styles.managementMetaText}>
+                        {l('가입일 {date}', { date: member.joinedAt })}
+                      </Text>
                       <Pressable
                         style={({ pressed }) => [
                           styles.managementWideButton,
@@ -475,13 +486,13 @@ export function GroupManagementOverlay({
                         ]}
                         onPress={() => setSelectedMemberActionId(member.id)}
                       >
-                        <Text style={styles.managementWideButtonText}>역할 수정</Text>
+                        <Text style={styles.managementWideButtonText}>{l('역할 수정')}</Text>
                       </Pressable>
                     </View>
                   ))}
                   {members.length === 0 ? (
                     <View style={styles.managementEmptyCard}>
-                      <Text style={styles.managementEmptyText}>조회된 회원이 없습니다.</Text>
+                      <Text style={styles.managementEmptyText}>{l('조회된 회원이 없습니다.')}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -491,20 +502,20 @@ export function GroupManagementOverlay({
             {activeManagementScreen === 'EDIT' ? (
               <View style={styles.managementEditSection}>
                 <View style={styles.sectionBox}>
-                  <Text style={styles.sectionTitle}>모임 정보 수정하기</Text>
+                  <Text style={styles.sectionTitle}>{l('모임 정보 수정하기')}</Text>
                   <Text style={styles.helperText}>
-                    모임 생성하기처럼 한 화면에서 수정하고 저장할 수 있습니다.
+                    {l('모임 생성하기처럼 한 화면에서 수정하고 저장할 수 있습니다.')}
                   </Text>
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                    독서 모임 이름을 입력해주세요!
+                    {l('독서 모임 이름을 입력해주세요!')}
                   </Text>
                   <FormTextInput
                     value={editDraft.name}
                     onChangeText={(text) => {
                       setEditDraft((prev) => ({ ...prev, name: text }));
                     }}
-                    placeholder="독서 모임 이름을 입력해주세요"
+                    placeholder={l('독서 모임 이름을 입력해주세요')}
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
                     fieldType="text"
@@ -512,28 +523,32 @@ export function GroupManagementOverlay({
                   />
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
-                    모임의 소개글을 입력해주세요!
+                    {l('모임의 소개글을 입력해주세요!')}
                   </Text>
                   <FormTextInput
                     value={editDraft.description}
                     onChangeText={(text) => {
                       setEditDraft((prev) => ({ ...prev, description: text }));
                     }}
-                    placeholder="자유롭게 입력해주세요! (500자 제한)"
+                    placeholder={l('자유롭게 입력해주세요! ({limit}자 제한)', {
+                      limit: INPUT_LIMITS.CLUB_DESCRIPTION,
+                    })}
                     placeholderTextColor={colors.gray3}
                     style={[styles.input, styles.textArea]}
                     multiline
                     scrollEnabled
                     textAlignVertical="top"
                     maxLength={INPUT_LIMITS.CLUB_DESCRIPTION}
-                    overLimitMessage={`모임 소개글은 ${INPUT_LIMITS.CLUB_DESCRIPTION}자 이하여야 합니다.`}
+                    overLimitMessage={l('모임 소개글은 {limit}자 이하여야 합니다.', {
+                      limit: INPUT_LIMITS.CLUB_DESCRIPTION,
+                    })}
                   />
                   <Text style={styles.bookshelfComposerCounter}>
                     {editDraft.description.length}/{INPUT_LIMITS.CLUB_DESCRIPTION}
                   </Text>
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
-                    모임의 프로필 사진을 변경할 수 있어요!
+                    {l('모임의 프로필 사진을 변경할 수 있어요!')}
                   </Text>
                   <View style={styles.createProfileCard}>
                     <Pressable
@@ -582,7 +597,7 @@ export function GroupManagementOverlay({
                             !editDraft.imageUrl && styles.createProfileBtnTextSelected,
                           ]}
                         >
-                          기본 이미지
+                          {l('기본 이미지')}
                         </Text>
                       </Pressable>
                       <Pressable
@@ -597,18 +612,18 @@ export function GroupManagementOverlay({
                       >
                         <MaterialIcons name="photo-camera" size={15} color={colors.primary1} />
                         <Text style={styles.createProfileBtnTextPrimary}>
-                          {uploadingClubImage ? '업로드 중...' : '사진 업로드'}
+                          {uploadingClubImage ? l('업로드 중...') : l('사진 업로드')}
                         </Text>
                       </Pressable>
                     </View>
 
                     <Text style={styles.createProfileHint}>
-                      저장하면 모임 프로필 이미지가 변경됩니다.
+                      {l('저장하면 모임 프로필 이미지가 변경됩니다.')}
                     </Text>
                   </View>
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
-                    모임의 공개여부를 알려주세요!
+                    {l('모임의 공개여부를 알려주세요!')}
                   </Text>
                   <View style={styles.managementToggleRow}>
                     <Pressable
@@ -625,7 +640,7 @@ export function GroupManagementOverlay({
                           !editDraft.isPrivate && styles.managementToggleChipTextActive,
                         ]}
                       >
-                        공개
+                        {l('공개')}
                       </Text>
                     </Pressable>
                     <Pressable
@@ -642,13 +657,13 @@ export function GroupManagementOverlay({
                           editDraft.isPrivate && styles.managementToggleChipTextActive,
                         ]}
                       >
-                        비공개
+                        {l('비공개')}
                       </Text>
                     </Pressable>
                   </View>
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
-                    선호하는 독서 카테고리를 선택해주세요!
+                    {l('선호하는 독서 카테고리를 선택해주세요!')}
                   </Text>
                   <View style={styles.chipGrid}>
                     {categoryCodeLabels.map((category) => {
@@ -673,7 +688,7 @@ export function GroupManagementOverlay({
                           ]}
                         >
                           <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>
-                            {category}
+                            {l(category)}
                           </Text>
                         </Pressable>
                       );
@@ -681,21 +696,23 @@ export function GroupManagementOverlay({
                   </View>
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                    활동 지역을 입력해주세요!
+                    {l('활동 지역을 입력해주세요!')}
                   </Text>
                   <FormTextInput
                     value={editDraft.region}
                     onChangeText={(text) => {
                       setEditDraft((prev) => ({ ...prev, region: text }));
                     }}
-                    placeholder="활동 지역을 입력해주세요 (40자 제한)"
+                    placeholder={l('활동 지역을 입력해주세요 ({limit}자 제한)', {
+                      limit: INPUT_LIMITS.CLUB_REGION,
+                    })}
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
                     maxLength={INPUT_LIMITS.CLUB_REGION}
                   />
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                    모임의 대상을 선택해주세요!
+                    {l('모임의 대상을 선택해주세요!')}
                   </Text>
                   <View style={styles.chipGrid}>
                     {participantCodeLabels.map((target) => {
@@ -718,7 +735,7 @@ export function GroupManagementOverlay({
                           ]}
                         >
                           <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>
-                            {target}
+                            {l(target)}
                           </Text>
                         </Pressable>
                       );
@@ -732,16 +749,18 @@ export function GroupManagementOverlay({
               <View style={styles.managementEditSection}>
                 <View style={styles.sectionBox}>
                   <Text style={styles.sectionTitle}>
-                    {typeof editingBookshelfMeetingId === 'number' ? '책장 수정하기' : '책장 생성하기'}
+                    {typeof editingBookshelfMeetingId === 'number'
+                      ? l('책장 수정하기')
+                      : l('책장 생성하기')}
                   </Text>
                   <Text style={styles.helperText}>
                     {typeof editingBookshelfMeetingId === 'number'
-                      ? '정기모임 정보를 수정하고 저장할 수 있습니다.'
-                      : '책을 선택하고 정기모임 정보까지 한 화면에서 등록할 수 있습니다.'}
+                      ? l('정기모임 정보를 수정하고 저장할 수 있습니다.')
+                      : l('책을 선택하고 정기모임 정보까지 한 화면에서 등록할 수 있습니다.')}
                   </Text>
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                    책 선택
+                    {l('책 선택')}
                   </Text>
                   <Pressable
                     style={({ pressed }) => [
@@ -761,15 +780,15 @@ export function GroupManagementOverlay({
                     >
                       {bookshelfCreateDraft.sourceBook
                         ? bookshelfCreateDraft.sourceBook.title
-                        : '선택하기'}
+                        : l('선택하기')}
                     </Text>
                   </Pressable>
                   {typeof editingBookshelfMeetingId === 'number' ? (
-                    <Text style={styles.helperText}>수정 모드에서는 책을 변경할 수 없습니다.</Text>
+                    <Text style={styles.helperText}>{l('수정 모드에서는 책을 변경할 수 없습니다.')}</Text>
                   ) : null}
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                    기수
+                    {l('기수')}
                   </Text>
                   <TextInput
                     value={bookshelfCreateDraft.session}
@@ -785,11 +804,13 @@ export function GroupManagementOverlay({
                     style={styles.input}
                   />
                   <Text style={styles.helperText}>
-                    입력한 숫자는 책장에서 {formatGenerationLabel(bookshelfCreateDraft.session || '1')} 형태로 표시됩니다.
+                    {l('입력한 숫자는 책장에서 {generation} 형태로 표시됩니다.', {
+                      generation: l(formatGenerationLabel(bookshelfCreateDraft.session || '1')),
+                    })}
                   </Text>
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                    태그
+                    {l('태그')}
                   </Text>
                   <View style={styles.chipGrid}>
                     {categoryCodeLabels.map((category) => {
@@ -812,44 +833,48 @@ export function GroupManagementOverlay({
                           ]}
                         >
                           <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>
-                            {category}
+                            {l(category)}
                           </Text>
                         </Pressable>
                       );
                     })}
                   </View>
-                  <Text style={styles.helperText}>태그는 1개만 선택해 등록할 수 있습니다.</Text>
+                  <Text style={styles.helperText}>{l('태그는 1개만 선택해 등록할 수 있습니다.')}</Text>
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                    정기모임 이름 (선택)
+                    {l('정기모임 이름 (선택)')}
                   </Text>
                   <FormTextInput
                     value={bookshelfCreateDraft.regularMeetingName}
                     onChangeText={(text) =>
                       setBookshelfCreateDraft((prev) => ({ ...prev, regularMeetingName: text }))
                     }
-                    placeholder={`정기모임 이름을 입력해주세요 (최대 ${BOOKSHELF_MEETING_TITLE_MAX_LENGTH}자)`}
+                    placeholder={l('정기모임 이름을 입력해주세요 (최대 {limit}자)', {
+                      limit: BOOKSHELF_MEETING_TITLE_MAX_LENGTH,
+                    })}
                     placeholderTextColor={colors.gray3}
                     maxLength={BOOKSHELF_MEETING_TITLE_MAX_LENGTH}
                     style={styles.input}
                   />
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                    모임 장소 (선택)
+                    {l('모임 장소 (선택)')}
                   </Text>
                   <FormTextInput
                     value={bookshelfCreateDraft.meetingLocation}
                     onChangeText={(text) =>
                       setBookshelfCreateDraft((prev) => ({ ...prev, meetingLocation: text }))
                     }
-                    placeholder={`모임 장소를 입력해주세요 (최대 ${BOOKSHELF_MEETING_LOCATION_MAX_LENGTH}자)`}
+                    placeholder={l('모임 장소를 입력해주세요 (최대 {limit}자)', {
+                      limit: BOOKSHELF_MEETING_LOCATION_MAX_LENGTH,
+                    })}
                     placeholderTextColor={colors.gray3}
                     maxLength={BOOKSHELF_MEETING_LOCATION_MAX_LENGTH}
                     style={styles.input}
                   />
 
                   <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                    모임 날짜 (선택)
+                    {l('모임 날짜 (선택)')}
                   </Text>
                   <Pressable
                     style={({ pressed }) => [
@@ -876,12 +901,12 @@ export function GroupManagementOverlay({
                             styles.bookshelfDatePickerPlaceholder,
                         ]}
                       >
-                        {bookshelfCreateDraft.meetingDate || '날짜를 선택해주세요'}
+                        {bookshelfCreateDraft.meetingDate || l('날짜를 선택해주세요')}
                       </Text>
                     </View>
                     <MaterialIcons name="chevron-right" size={20} color={colors.gray4} />
                   </Pressable>
-                  <Text style={styles.helperText}>선택하지 않으면 날짜 없이 등록됩니다.</Text>
+                  <Text style={styles.helperText}>{l('선택하지 않으면 날짜 없이 등록됩니다.')}</Text>
                 </View>
               </View>
             ) : null}
@@ -904,7 +929,7 @@ export function GroupManagementOverlay({
                     disabled={updatingBookshelf || deletingBookshelf}
                   >
                     <Text style={styles.managementFooterDangerButtonText}>
-                      {deletingBookshelf ? '삭제 중...' : '삭제하기'}
+                      {deletingBookshelf ? l('삭제 중...') : l('삭제하기')}
                     </Text>
                   </Pressable>
                   <Pressable
@@ -918,7 +943,7 @@ export function GroupManagementOverlay({
                     disabled={updatingBookshelf || deletingBookshelf}
                   >
                     <Text style={styles.managementFooterPrimaryButtonText}>
-                      {updatingBookshelf ? '저장 중...' : '저장하기'}
+                      {updatingBookshelf ? l('저장 중...') : l('저장하기')}
                     </Text>
                   </Pressable>
                 </View>
@@ -943,10 +968,10 @@ export function GroupManagementOverlay({
                 >
                   <Text style={styles.managementFooterPrimaryButtonText}>
                     {activeManagementScreen === 'EDIT'
-                      ? '저장하기'
+                      ? l('저장하기')
                       : creatingBookshelf
-                        ? '등록 중...'
-                        : '등록하기'}
+                        ? l('등록 중...')
+                        : l('등록하기')}
                   </Text>
                 </Pressable>
               )}
@@ -964,7 +989,7 @@ export function GroupManagementOverlay({
                 onPress={(event) => event.stopPropagation()}
                 disableFeedback
               >
-                <Text style={styles.managementMessageTitle}>가입 메시지</Text>
+                <Text style={styles.managementMessageTitle}>{l('가입 메시지')}</Text>
                 <ScrollView
                   style={styles.managementMessageScroll}
                   showsVerticalScrollIndicator={false}
@@ -991,7 +1016,7 @@ export function GroupManagementOverlay({
                 onPress={(event) => event.stopPropagation()}
                 disableFeedback
               >
-                <Text style={styles.managementJoinActionTitle}>가입 처리</Text>
+                <Text style={styles.managementJoinActionTitle}>{l('가입 처리')}</Text>
                 <Pressable
                   style={({ pressed }) => [
                     styles.managementJoinActionItem,
@@ -1012,7 +1037,7 @@ export function GroupManagementOverlay({
                       submittingJoinRequestAction && styles.managementJoinActionItemTextDisabled,
                     ]}
                   >
-                    삭제하기
+                    {l('삭제하기')}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -1036,7 +1061,7 @@ export function GroupManagementOverlay({
                       submittingJoinRequestAction && styles.managementJoinActionItemTextDisabled,
                     ]}
                   >
-                    {submittingJoinRequestAction ? '처리 중...' : '가입처리'}
+                    {submittingJoinRequestAction ? l('처리 중...') : l('가입처리')}
                   </Text>
                 </Pressable>
               </Pressable>
@@ -1055,7 +1080,7 @@ export function GroupManagementOverlay({
                 disableFeedback
               >
                 <View style={styles.managementModalHeader}>
-                  <Text style={styles.managementModalTitle}>모임 날짜 선택</Text>
+                  <Text style={styles.managementModalTitle}>{l('모임 날짜 선택')}</Text>
                   <Pressable onPress={closeBookshelfCalendar} hitSlop={8}>
                     <MaterialIcons name="close" size={20} color={colors.gray6} />
                   </Pressable>
@@ -1075,7 +1100,7 @@ export function GroupManagementOverlay({
                     <MaterialIcons name="chevron-left" size={20} color={colors.gray6} />
                   </Pressable>
                   <Text style={styles.bookshelfCalendarMonthText}>
-                    {formatCalendarMonthLabel(bookshelfCalendarMonth)}
+                    {formatCalendarMonthLabel(bookshelfCalendarMonth, language)}
                   </Text>
                   <Pressable
                     style={({ pressed }) => [
@@ -1094,7 +1119,7 @@ export function GroupManagementOverlay({
                 <View style={styles.bookshelfCalendarWeekRow}>
                   {calendarWeekdayLabels.map((label) => (
                     <Text key={`bookshelf-calendar-weekday-${label}`} style={styles.bookshelfCalendarWeekLabel}>
-                      {label}
+                      {l(label)}
                     </Text>
                   ))}
                 </View>
@@ -1136,7 +1161,7 @@ export function GroupManagementOverlay({
                 </View>
                 <View style={styles.bookshelfCalendarFooter}>
                   <Text style={styles.bookshelfCalendarFooterHint}>
-                    선택한 날짜가 바로 적용됩니다.
+                    {l('선택한 날짜가 바로 적용됩니다.')}
                   </Text>
                   <Pressable
                     style={({ pressed }) => [
@@ -1145,7 +1170,7 @@ export function GroupManagementOverlay({
                     ]}
                     onPress={handlePickTodayBookshelfMeetingDate}
                   >
-                    <Text style={styles.bookshelfCalendarTodayButtonText}>오늘</Text>
+                    <Text style={styles.bookshelfCalendarTodayButtonText}>{l('오늘')}</Text>
                   </Pressable>
                 </View>
               </Pressable>
@@ -1166,11 +1191,11 @@ export function GroupManagementOverlay({
                 onPress={(event) => event.stopPropagation()}
                 disableFeedback
               >
-                <Text style={styles.managementRoleMenuTitle}>역할 수정</Text>
+                <Text style={styles.managementRoleMenuTitle}>{l('역할 수정')}</Text>
                 {[
                   {
                     key: '운영진' as const,
-                    label: '운영진 역할',
+                    label: l('운영진 역할'),
                     icon: 'workspace-premium' as const,
                     disabled:
                       submittingMemberAction ||
@@ -1180,7 +1205,7 @@ export function GroupManagementOverlay({
                   },
                   {
                     key: '회원' as const,
-                    label: '회원 역할',
+                    label: l('회원 역할'),
                     icon: 'person-outline' as const,
                     disabled:
                       submittingMemberAction ||
@@ -1190,7 +1215,7 @@ export function GroupManagementOverlay({
                   },
                   {
                     key: '개설자' as const,
-                    label: '개설자 역할',
+                    label: l('개설자 역할'),
                     icon: 'schedule' as const,
                     disabled:
                       submittingMemberAction || selectedMemberAction.role === '개설자',
@@ -1252,7 +1277,7 @@ export function GroupManagementOverlay({
                         styles.managementRoleMenuItemTextDisabled,
                     ]}
                   >
-                    회원 탈퇴
+                    {l('회원 탈퇴')}
                   </Text>
                 </Pressable>
               </Pressable>
@@ -1272,9 +1297,9 @@ export function GroupManagementOverlay({
             <View style={styles.managementHandleArea} {...managementHandlePanResponder.panHandlers}>
               <View style={styles.managementHandle} />
             </View>
-            <Text style={styles.managementMenuTitle}>모임 관리하기</Text>
+            <Text style={styles.managementMenuTitle}>{l('모임 관리하기')}</Text>
             <Text style={styles.managementMenuCaption}>
-              운영진용 관리 기능을 선택해야 합니다.
+              {l('운영진용 관리 기능을 선택해야 합니다.')}
             </Text>
             <ScrollView
               style={styles.managementMenuScroll}
@@ -1291,43 +1316,43 @@ export function GroupManagementOverlay({
               {[
                 {
                   key: 'JOIN_REQUESTS' as const,
-                  title: '모임 가입 신청 관리',
-                  description: `${joinRequests.length}개의 대기 신청`,
+                  title: l('모임 가입 신청 관리'),
+                  description: l('{count}개의 대기 신청', { count: joinRequests.length }),
                   icon: 'person-add-alt-1' as const,
                   onPress: () => handleOpenManagementScreen('JOIN_REQUESTS'),
                 },
                 {
                   key: 'MEMBERS' as const,
-                  title: '모임 회원 관리',
-                  description: `${members.length}명의 모임 회원`,
+                  title: l('모임 회원 관리'),
+                  description: l('{count}명의 모임 회원', { count: members.length }),
                   icon: 'groups' as const,
                   onPress: () => handleOpenManagementScreen('MEMBERS'),
                 },
                 {
                   key: 'EDIT' as const,
-                  title: '모임 정보 수정하기',
-                  description: '소개, 태그, 공개 여부 수정',
+                  title: l('모임 정보 수정하기'),
+                  description: l('소개, 태그, 공개 여부 수정'),
                   icon: 'edit' as const,
                   onPress: () => handleOpenManagementScreen('EDIT'),
                 },
                 {
                   key: 'NOTICE_CREATE' as const,
-                  title: '공지 작성하기',
-                  description: '책장, 투표, 사진 첨부 가능',
+                  title: l('공지 작성하기'),
+                  description: l('책장, 투표, 사진 첨부 가능'),
                   icon: 'edit-note' as const,
                   onPress: handleOpenNoticeComposerFromManagement,
                 },
                 {
                   key: 'BOOKSHELF_CREATE' as const,
-                  title: '책장 생성하기',
-                  description: '정기모임용 책장 추가',
+                  title: l('책장 생성하기'),
+                  description: l('정기모임용 책장 추가'),
                   icon: 'library-add' as const,
                   onPress: () => handleOpenManagementScreen('BOOKSHELF_CREATE'),
                 },
                 {
                   key: 'DELETE_CLUB' as const,
-                  title: '모임 삭제하기',
-                  description: '삭제 후 복구할 수 없습니다',
+                  title: l('모임 삭제하기'),
+                  description: l('삭제 후 복구할 수 없습니다'),
                   icon: 'delete-outline' as const,
                   onPress: handleDeleteManagedClub,
                 },

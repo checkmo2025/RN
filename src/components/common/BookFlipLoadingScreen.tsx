@@ -3,6 +3,7 @@ import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 import { LOGO_PRIMARY_URI } from '../../constants/iconMap';
 import { colors, motion, spacing, typography } from '../../theme';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const LOGO_WIDTH = 100;
 const LOGO_HEIGHT = 60;
@@ -18,6 +19,7 @@ export function BookFlipLoadingScreen({
   detailTitle,
   detailDescription,
 }: Props) {
+  const { l } = useLanguage();
   const fillProgress = useRef(new Animated.Value(0)).current;
   const textOpacity = useRef(new Animated.Value(0.35)).current;
 
@@ -98,7 +100,7 @@ export function BookFlipLoadingScreen({
       </View>
 
       <Animated.Text style={[styles.loadingText, { opacity: textOpacity }]}>
-        로딩중
+        {l('로딩중')}
       </Animated.Text>
       {detailTitle ? <Text style={styles.detailTitle}>{detailTitle}</Text> : null}
       {detailDescription ? (

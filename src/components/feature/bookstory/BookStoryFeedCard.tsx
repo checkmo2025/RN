@@ -11,6 +11,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius, spacing, typography } from '../../../theme';
 import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../../common/DefaultProfileAvatar';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 type Props = {
   authorName: string;
@@ -51,6 +52,8 @@ export default function BookStoryFeedCard({
   onPressAuthor,
   onPressComment,
 }: Props) {
+  const { l } = useLanguage();
+
   return (
     <Pressable style={styles.card} onPress={onPress}>
       {/* Header */}
@@ -73,7 +76,7 @@ export default function BookStoryFeedCard({
             <View style={styles.meta}>
               <Text style={styles.author}>{authorName}</Text>
               <Text style={styles.subtitle}>
-                {timeAgo}  조회수 {viewCount}
+                {timeAgo}  {l('조회수 {count}', { count: viewCount })}
               </Text>
             </View>
           </Pressable>
@@ -89,14 +92,14 @@ export default function BookStoryFeedCard({
             <View style={styles.meta}>
               <Text style={styles.author}>{authorName}</Text>
               <Text style={styles.subtitle}>
-                {timeAgo}  조회수 {viewCount}
+                {timeAgo}  {l('조회수 {count}', { count: viewCount })}
               </Text>
             </View>
           </View>
         )}
         {isAuthor ? (
           <View style={styles.authorTag}>
-            <Text style={styles.authorTagText}>작성자</Text>
+            <Text style={styles.authorTagText}>{l('작성자')}</Text>
           </View>
         ) : typeof subscribed !== 'undefined' ? (
           <Pressable
@@ -115,7 +118,7 @@ export default function BookStoryFeedCard({
                 subscribed ? styles.subTextActive : styles.subTextInactive,
               ]}
             >
-              {subscribed ? '구독중' : '구독'}
+              {subscribed ? l('구독중') : l('구독')}
             </Text>
           </Pressable>
         ) : null}
@@ -158,7 +161,7 @@ export default function BookStoryFeedCard({
             size={22}
             color={liked ? colors.likeRed : colors.gray4}
           />
-          <Text style={styles.footerText}>좋아요 {likeCount}</Text>
+          <Text style={styles.footerText}>{l('좋아요 {count}', { count: likeCount })}</Text>
         </Pressable>
 
         <View style={styles.footerDivider} />
@@ -171,7 +174,7 @@ export default function BookStoryFeedCard({
           }}
         >
           <MaterialIcons name="chat-bubble-outline" size={22} color={colors.gray4} />
-          <Text style={styles.footerText}>댓글 {commentCount}</Text>
+          <Text style={styles.footerText}>{l('댓글 {count}', { count: commentCount })}</Text>
         </Pressable>
       </View>
     </Pressable>

@@ -18,6 +18,7 @@ import { DefaultProfileAvatar } from './DefaultProfileAvatar';
 import { FormTextInput } from './FormTextInput';
 import { ToastHost } from './ToastHost';
 import type { ReportReason } from '../../services/api/memberApi';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export type ReportMemberModalState = {
   nickname: string;
@@ -48,6 +49,7 @@ export function ReportMemberModal({
   onClose,
   onSubmit,
 }: Props) {
+  const { l } = useLanguage();
   const [reason, setReason] = useState<ReportReason>('GENERAL');
   const [content, setContent] = useState('');
 
@@ -73,7 +75,7 @@ export function ReportMemberModal({
       </View>
       <View style={styles.targetMeta}>
         <Text style={styles.targetName}>{target.nickname}</Text>
-        <Text style={styles.targetSub}>신고 대상 사용자</Text>
+        <Text style={styles.targetSub}>{l('신고 대상 사용자')}</Text>
       </View>
     </>
   ) : null;
@@ -92,7 +94,7 @@ export function ReportMemberModal({
             disableFeedback
           >
             <View style={styles.header}>
-              <Text style={styles.title}>신고하기</Text>
+              <Text style={styles.title}>{l('신고하기')}</Text>
               <Pressable style={styles.closeButton} onPress={onClose}>
                 <MaterialIcons name="close" size={24} color={colors.primary1} />
               </Pressable>
@@ -110,7 +112,7 @@ export function ReportMemberModal({
               <View style={styles.targetCard}>{targetCardContent}</View>
             )}
 
-            <Text style={styles.label}>종류</Text>
+            <Text style={styles.label}>{l('종류')}</Text>
             <View style={styles.typeRow}>
               {reasonOptions.map((option) => {
                 const active = reason === option.type;
@@ -121,26 +123,30 @@ export function ReportMemberModal({
                     onPress={() => setReason(option.type)}
                   >
                     <Text style={[styles.typeButtonText, active ? styles.typeButtonTextActive : null]}>
-                      {option.label}
+                      {l(option.label)}
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
 
-            <Text style={styles.label}>내용</Text>
+            <Text style={styles.label}>{l('내용')}</Text>
             <View style={styles.contentBox}>
               <FormTextInput
                 value={content}
                 onChangeText={setContent}
-                placeholder="신고 내용 작성 (최대 500자)"
+                placeholder={l('신고 내용 작성 (최대 {limit}자)', {
+                  limit: INPUT_LIMITS.REPORT_CONTENT,
+                })}
                 placeholderTextColor={colors.gray3}
                 style={styles.contentInput}
                 multiline
                 scrollEnabled
                 textAlignVertical="top"
                 maxLength={INPUT_LIMITS.REPORT_CONTENT}
-                overLimitMessage={`신고 내용은 ${INPUT_LIMITS.REPORT_CONTENT}자 이하여야 합니다.`}
+                overLimitMessage={l('신고 내용은 {limit}자 이하여야 합니다.', {
+                  limit: INPUT_LIMITS.REPORT_CONTENT,
+                })}
               />
             </View>
             <Text style={styles.contentCounterText}>
@@ -153,7 +159,7 @@ export function ReportMemberModal({
               disabled={submitting}
             >
               <Text style={styles.submitButtonText}>
-                {submitting ? '등록 중...' : '신고 등록'}
+                {submitting ? l('등록 중...') : l('신고 등록')}
               </Text>
             </Pressable>
           </Pressable>

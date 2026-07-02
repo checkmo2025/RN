@@ -14,6 +14,7 @@ import { INPUT_LIMITS } from '../../../constants/inputLimits';
 import { CLUB_DEFAULT_IMAGE } from '../../../constants/defaultAssets';
 import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 import { FormTextInput } from '../../common/FormTextInput';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 type Props = {
   name: string;
@@ -77,6 +78,7 @@ export function MeetingListCard({
   onSubmitApply,
   onPressVisit,
 }: Props) {
+  const { l } = useLanguage();
   const applyInputRef = useRef<TextInput>(null);
   const canSubmit = (applyReason ?? '').trim().length > 0;
 
@@ -96,13 +98,13 @@ export function MeetingListCard({
         <View style={styles.headerRight}>
           {isPrivate ? (
             <View style={styles.privateWrap}>
-              <Text style={styles.privateText}>비공개</Text>
+              <Text style={styles.privateText}>{l('비공개')}</Text>
               <MaterialIcons name="lock-outline" size={14} color={colors.gray4} />
             </View>
           ) : null}
           {applicationStatus ? (
             <View style={styles.statusWrap}>
-              <Text style={styles.statusText}>{applicationStatus}</Text>
+              <Text style={styles.statusText}>{l(applicationStatus)}</Text>
               <MaterialIcons name="check-circle-outline" size={14} color={colors.green} />
             </View>
           ) : null}
@@ -119,7 +121,7 @@ export function MeetingListCard({
               tag.length <= 2 ? styles.tagShort : null,
             ]}
           >
-            <Text style={styles.tagText}>{tag}</Text>
+            <Text style={styles.tagText}>{l(tag)}</Text>
           </View>
         ))}
       </View>
@@ -129,8 +131,8 @@ export function MeetingListCard({
           <Image source={{ uri: profileImageUrl || CLUB_DEFAULT_IMAGE }} style={styles.thumbImage} resizeMode="cover" />
         </View>
         <View style={styles.metaWrap}>
-          <Text style={styles.metaText}>{topic}</Text>
-          <Text style={styles.metaText}>{region}</Text>
+          <Text style={styles.metaText}>{l(topic)}</Text>
+          <Text style={styles.metaText}>{l(region)}</Text>
         </View>
       </View>
 
@@ -141,11 +143,15 @@ export function MeetingListCard({
             value={applyReason}
             onChangeText={(text) => onChangeApplyReason?.(text)}
             onFocus={onApplyInputFocus}
-            placeholder={`신청 사유를 입력해보세요(${INPUT_LIMITS.APPLY_REASON}자 제한)`}
+            placeholder={l('신청 사유를 입력해보세요({limit}자 제한)', {
+              limit: INPUT_LIMITS.APPLY_REASON,
+            })}
             placeholderTextColor={colors.gray3}
             multiline
             maxLength={INPUT_LIMITS.APPLY_REASON}
-            overLimitMessage={`신청 사유는 ${INPUT_LIMITS.APPLY_REASON}자 이하여야 합니다.`}
+            overLimitMessage={l('신청 사유는 {limit}자 이하여야 합니다.', {
+              limit: INPUT_LIMITS.APPLY_REASON,
+            })}
             style={styles.applyInput}
           />
           <Text style={styles.applyCounterText}>
@@ -156,7 +162,7 @@ export function MeetingListCard({
             disabled={!canSubmit}
             onPress={onSubmitApply}
           >
-            <Text style={styles.applySubmitText}>가입신청하기</Text>
+            <Text style={styles.applySubmitText}>{l('가입신청하기')}</Text>
           </Pressable>
         </View>
       ) : (
@@ -172,11 +178,11 @@ export function MeetingListCard({
                 applicationStatus ? styles.applyButtonTextDisabled : null,
               ]}
             >
-              {applicationStatus ? '신청완료' : '가입신청하기'}
+              {applicationStatus ? l('신청완료') : l('가입신청하기')}
             </Text>
           </Pressable>
           <Pressable style={styles.visitButton} onPress={onPressVisit}>
-            <Text style={styles.visitButtonText}>방문하기</Text>
+            <Text style={styles.visitButtonText}>{l('방문하기')}</Text>
           </Pressable>
         </View>
       )}

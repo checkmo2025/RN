@@ -17,6 +17,7 @@ import {
 import { CATEGORY_LABEL_TO_CODE } from '../../constants/domain/category';
 import { PARTICIPANT_LABEL_TO_CODE } from '../../constants/domain/participant';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { showToast } from '../../utils/toast';
 import { motion } from '../../theme';
 import type {
@@ -85,6 +86,7 @@ export function useManagementState({
   handleOpenNoticeComposer,
   pickAndUploadImage,
 }: ManagementStateParams) {
+  const { l } = useLanguage();
   const [managementMenuVisible, setManagementMenuVisible] = useState(false);
   const managementSheetY = useRef(new Animated.Value(0)).current;
   const managementSheetPositionRef = useRef(0);
@@ -275,7 +277,7 @@ export function useManagementState({
       const clubMemberId = request.clubMemberId;
       if (submittingJoinRequestAction) return;
       if (!canManageClub || typeof clubId !== 'number' || typeof clubMemberId !== 'number') {
-        showToast('가입 신청 처리 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+        showToast(l('가입 신청 처리 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'));
         return;
       }
 
@@ -292,10 +294,10 @@ export function useManagementState({
           setJoinRequests(pendingMembers.items.map(mapClubManagedMemberToJoinRequest));
           setMembers(activeMembers.items.map(mapClubManagedMemberToGroupMember));
           setSelectedJoinRequestActionId(null);
-          showToast(action === 'APPROVE' ? '가입 신청을 승인했습니다.' : '가입 신청을 삭제했습니다.');
+          showToast(action === 'APPROVE' ? l('가입 신청을 승인했습니다.') : l('가입 신청을 삭제했습니다.'));
         } catch (error) {
           if (!(error instanceof ApiError)) {
-            showToast('가입 신청 처리에 실패했습니다.');
+            showToast(l('가입 신청 처리에 실패했습니다.'));
           }
         } finally {
           setSubmittingJoinRequestAction(false);
@@ -304,7 +306,7 @@ export function useManagementState({
 
       void process();
     },
-    [canManageClub, group.clubId, submittingJoinRequestAction],
+    [canManageClub, group.clubId, l, submittingJoinRequestAction],
   );
 
   const handleChangeMemberRole = useCallback(
@@ -314,7 +316,7 @@ export function useManagementState({
       const clubMemberId = targetMember?.clubMemberId;
       if (submittingMemberAction) return;
       if (!canManageClub || typeof clubId !== 'number' || typeof clubMemberId !== 'number') {
-        showToast('회원 역할 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+        showToast(l('회원 역할 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'));
         return;
       }
       if (!targetMember || targetMember.role === role) {
@@ -336,10 +338,10 @@ export function useManagementState({
           const activeMembers = await fetchClubMembers(clubId, 'ACTIVE');
           setMembers(activeMembers.items.map(mapClubManagedMemberToGroupMember));
           setSelectedMemberActionId(null);
-          showToast(`${role} 역할로 변경했습니다.`);
+          showToast(l('{role} 역할로 변경했습니다.', { role: l(role) }));
         } catch (error) {
           if (!(error instanceof ApiError)) {
-            showToast('회원 역할 수정에 실패했습니다.');
+            showToast(l('회원 역할 수정에 실패했습니다.'));
           }
         } finally {
           setSubmittingMemberAction(false);
@@ -348,11 +350,13 @@ export function useManagementState({
 
       if (role === '개설자') {
         Alert.alert(
-          '개설자 역할 위임',
-          `'${targetMember.nickname}'님에게 개설자 역할을 위임하시겠습니까?`,
+          l('개설자 역할 위임'),
+          l('{nickname}님에게 개설자 역할을 위임하시겠습니까?', {
+            nickname: targetMember.nickname,
+          }),
           [
-            { text: '취소', style: 'cancel' },
-            { text: '위임하기', onPress: () => { void submit(); } },
+            { text: l('취소'), style: 'cancel' },
+            { text: l('위임하기'), onPress: () => { void submit(); } },
           ],
         );
         return;
@@ -360,7 +364,7 @@ export function useManagementState({
 
       void submit();
     },
-    [canManageClub, group.clubId, members, submittingMemberAction],
+    [canManageClub, group.clubId, l, members, submittingMemberAction],
   );
 
   const handleRemoveMember = useCallback(
@@ -370,7 +374,7 @@ export function useManagementState({
       const clubMemberId = targetMember?.clubMemberId;
       if (submittingMemberAction) return;
       if (!canManageClub || typeof clubId !== 'number' || typeof clubMemberId !== 'number') {
-        showToast('회원 제외 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+        showToast(l('회원 제외 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'));
         return;
       }
       if (!targetMember || targetMember.role === '개설자') {
@@ -378,10 +382,12 @@ export function useManagementState({
         return;
       }
 
-      Alert.alert('회원 탈퇴', `'${targetMember.nickname}'님을 모임에서 제외하시겠습니까?`, [
-        { text: '취소', style: 'cancel' },
+      Alert.alert(l('회원 탈퇴'), l('{nickname}님을 모임에서 제외하시겠습니까?', {
+        nickname: targetMember.nickname,
+      }), [
+        { text: l('취소'), style: 'cancel' },
         {
-          text: '탈퇴 처리',
+          text: l('탈퇴 처리'),
           style: 'destructive',
           onPress: () => {
             const removeMember = async () => {
@@ -391,10 +397,10 @@ export function useManagementState({
                 const activeMembers = await fetchClubMembers(clubId, 'ACTIVE');
                 setMembers(activeMembers.items.map(mapClubManagedMemberToGroupMember));
                 setSelectedMemberActionId(null);
-                showToast('회원이 모임에서 제외되었습니다.');
+                showToast(l('회원이 모임에서 제외되었습니다.'));
               } catch (error) {
                 if (!(error instanceof ApiError)) {
-                  showToast('회원 제외에 실패했습니다.');
+                  showToast(l('회원 제외에 실패했습니다.'));
                 }
               } finally {
                 setSubmittingMemberAction(false);
@@ -405,7 +411,7 @@ export function useManagementState({
         },
       ]);
     },
-    [canManageClub, group.clubId, members, submittingMemberAction],
+    [canManageClub, group.clubId, l, members, submittingMemberAction],
   );
 
   const handleSaveGroupEdit = useCallback(() => {
@@ -429,39 +435,43 @@ export function useManagementState({
       .filter((link) => link.link.length > 0);
 
     if (!name || !region || !description || category.length === 0 || participantTypes.length === 0) {
-      showToast('모임 이름, 소개글, 지역, 카테고리, 대상을 입력해야 합니다.');
+      showToast(l('모임 이름, 소개글, 지역, 카테고리, 대상을 입력해야 합니다.'));
       return;
     }
     if (name.length > INPUT_LIMITS.CLUB_NAME) {
-      showToast(`모임 이름은 ${INPUT_LIMITS.CLUB_NAME}자 이하여야 합니다.`);
+      showToast(l('모임 이름은 {limit}자 이하여야 합니다.', { limit: INPUT_LIMITS.CLUB_NAME }));
       return;
     }
     if (description.length > INPUT_LIMITS.CLUB_DESCRIPTION) {
-      showToast(`모임 소개글은 ${INPUT_LIMITS.CLUB_DESCRIPTION}자 이하여야 합니다.`);
+      showToast(l('모임 소개글은 {limit}자 이하여야 합니다.', {
+        limit: INPUT_LIMITS.CLUB_DESCRIPTION,
+      }));
       return;
     }
     if (region.length > INPUT_LIMITS.CLUB_REGION) {
-      showToast(`활동 지역은 ${INPUT_LIMITS.CLUB_REGION}자 이하여야 합니다.`);
+      showToast(l('활동 지역은 {limit}자 이하여야 합니다.', { limit: INPUT_LIMITS.CLUB_REGION }));
       return;
     }
     if (links.length > 4) {
-      showToast('문의 링크는 최대 4개까지 등록할 수 있습니다.');
+      showToast(l('문의 링크는 최대 4개까지 등록할 수 있습니다.'));
       return;
     }
     if (links.some((link) => link.label.length > INPUT_LIMITS.CLUB_LINK_LABEL)) {
-      showToast(`문의 링크 이름은 ${INPUT_LIMITS.CLUB_LINK_LABEL}자 이하여야 합니다.`);
+      showToast(l('문의 링크 이름은 {limit}자 이하여야 합니다.', {
+        limit: INPUT_LIMITS.CLUB_LINK_LABEL,
+      }));
       return;
     }
     if (links.some((link) => link.link.length > INPUT_LIMITS.CLUB_LINK_URL)) {
-      showToast(`문의 링크는 ${INPUT_LIMITS.CLUB_LINK_URL}자 이하여야 합니다.`);
+      showToast(l('문의 링크는 {limit}자 이하여야 합니다.', { limit: INPUT_LIMITS.CLUB_LINK_URL }));
       return;
     }
     if (profileImageUrl.length > INPUT_LIMITS.CLUB_PROFILE_IMAGE_URL) {
-      showToast('프로필 이미지 URL이 너무 깁니다. 사진을 다시 선택해 주세요.');
+      showToast(l('프로필 이미지 URL이 너무 깁니다. 사진을 다시 선택해 주세요.'));
       return;
     }
     if (!canManageClub) {
-      showToast('모임 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+      showToast(l('모임 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'));
       return;
     }
 
@@ -496,10 +506,10 @@ export function useManagementState({
         setManagedGroup(nextGroup);
         onClubUpdated(nextGroup);
         setActiveManagementScreen(null);
-        showToast('모임 정보가 수정되었습니다.');
+        showToast(l('모임 정보가 수정되었습니다.'));
       } catch (error) {
         if (!(error instanceof ApiError)) {
-          showToast('모임 정보 수정에 실패했습니다.');
+          showToast(l('모임 정보 수정에 실패했습니다.'));
         }
       }
     };
@@ -510,6 +520,7 @@ export function useManagementState({
     editDraft,
     group.clubId,
     group.links,
+    l,
     managedGroup,
     onClubUpdated,
     setManagedGroup,
@@ -536,10 +547,10 @@ export function useManagementState({
         const imageUrl = await pickAndUploadImage('CLUB');
         if (!imageUrl) return;
         setEditDraft((prev) => ({ ...prev, imageUrl }));
-        showToast('모임 이미지를 적용했습니다.');
+        showToast(l('모임 이미지를 적용했습니다.'));
       } catch (error) {
         if (!(error instanceof ApiError)) {
-          showToast('이미지 업로드에 실패했습니다.');
+          showToast(l('이미지 업로드에 실패했습니다.'));
         }
       } finally {
         setUploadingClubImage(false);
@@ -547,32 +558,32 @@ export function useManagementState({
     };
 
     void pick();
-  }, [pickAndUploadImage, uploadingClubImage]);
+  }, [l, pickAndUploadImage, uploadingClubImage]);
 
   const handleDeleteManagedClub = useCallback(() => {
     if (!canManageClub || typeof group.clubId !== 'number') {
-      showToast('모임 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+      showToast(l('모임 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'));
       return;
     }
 
     const clubId = group.clubId;
-    const clubName = managedGroup.name || '모임';
+    const clubName = managedGroup.name || l('모임');
 
     runAfterClosingManagementMenu(() => {
-      Alert.alert('모임 삭제', `'${clubName}' 모임을 삭제하시겠습니까?`, [
-        { text: '취소', style: 'cancel' },
+      Alert.alert(l('모임 삭제'), l('{clubName} 모임을 삭제하시겠습니까?', { clubName }), [
+        { text: l('취소'), style: 'cancel' },
         {
-          text: '삭제',
+          text: l('삭제'),
           style: 'destructive',
           onPress: () => {
             const submit = async () => {
               try {
                 await deleteClub(clubId);
                 onClubDeleted(clubId);
-                showToast('모임이 삭제되었습니다.');
+                showToast(l('모임이 삭제되었습니다.'));
               } catch (error) {
                 if (!(error instanceof ApiError)) {
-                  showToast('모임 삭제에 실패했습니다.');
+                  showToast(l('모임 삭제에 실패했습니다.'));
                 }
               }
             };
@@ -584,6 +595,7 @@ export function useManagementState({
   }, [
     canManageClub,
     group.clubId,
+    l,
     managedGroup.name,
     onClubDeleted,
     runAfterClosingManagementMenu,
@@ -618,10 +630,10 @@ export function useManagementState({
               content: payload.content,
             });
             setReportModal(null);
-            showToast('신고가 접수되었습니다.');
+            showToast(l('신고가 접수되었습니다.'));
           } catch (error) {
             if (!(error instanceof ApiError)) {
-              showToast('신고 접수에 실패했습니다.');
+              showToast(l('신고 접수에 실패했습니다.'));
             }
           } finally {
             setSubmittingReport(false);
@@ -630,7 +642,7 @@ export function useManagementState({
         void submit();
       });
     },
-    [reportModal, requireAuth],
+    [l, reportModal, requireAuth],
   );
 
   const handlePressContactButton = useCallback(() => {
@@ -641,17 +653,17 @@ export function useManagementState({
     async (link: string) => {
       const target = toOpenableContactLink(link);
       if (!target) {
-        showToast('문의하기 링크를 열 수 없습니다.');
+        showToast(l('문의하기 링크를 열 수 없습니다.'));
         return;
       }
       try {
         await Linking.openURL(target);
         closeContactModal();
       } catch {
-        showToast('문의하기 링크를 열 수 없습니다.');
+        showToast(l('문의하기 링크를 열 수 없습니다.'));
       }
     },
-    [closeContactModal],
+    [closeContactModal, l],
   );
 
   const handleOpenNoticeComposerFromManagement = useCallback(() => {

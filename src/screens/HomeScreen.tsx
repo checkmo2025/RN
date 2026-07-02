@@ -17,6 +17,7 @@ import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
 import { NewsPromotionCarousel, type NewsPromotionCarouselItem } from '../components/feature/news/NewsPromotionCarousel';
 import { NewsPromotionCarouselSkeleton } from '../components/feature/news/NewsPromotionCarouselSkeleton';
 import { useAuthGate } from '../contexts/AuthGateContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { resolveHomeAccessPolicy } from '../constants/homeAccessPolicy';
 import { NEWS_DEFAULT_IMAGE } from '../constants/defaultAssets';
 import {
@@ -69,30 +70,33 @@ type HomePromotionItem = NewsPromotionCarouselItem & {
   newsId?: number;
 };
 
-const defaultPromotions: HomePromotionItem[] = [
-  {
-    id: 'p1',
-    title: '봄메이트',
-    description: '5월 책 추천\n나의 돈키호테\n할인된 가격에\n만나보세요!',
-    imageUri: NEWS_DEFAULT_IMAGE,
-  },
-  {
-    id: 'p2',
-    title: '신간 소식',
-    description: '새로운 이야기와\n서점 큐레이션을\n매주 만나보세요.',
-    imageUri: NEWS_DEFAULT_IMAGE,
-  },
-  {
-    id: 'p3',
-    title: '이벤트',
-    description: '책모 구독자 전용\n굿즈 증정 이벤트',
-    imageUri: NEWS_DEFAULT_IMAGE,
-  },
-].slice(0, 5);
+function getDefaultPromotions(l: (text: string) => string): HomePromotionItem[] {
+  return [
+    {
+      id: 'p1',
+      title: l('봄메이트'),
+      description: l('5월 책 추천\n나의 돈키호테\n할인된 가격에\n만나보세요!'),
+      imageUri: NEWS_DEFAULT_IMAGE,
+    },
+    {
+      id: 'p2',
+      title: l('신간 소식'),
+      description: l('새로운 이야기와\n서점 큐레이션을\n매주 만나보세요.'),
+      imageUri: NEWS_DEFAULT_IMAGE,
+    },
+    {
+      id: 'p3',
+      title: l('이벤트'),
+      description: l('책모 구독자 전용\n굿즈 증정 이벤트'),
+      imageUri: NEWS_DEFAULT_IMAGE,
+    },
+  ].slice(0, 5);
+}
 
 export function HomeScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const { requireAuth, isLoggedIn } = useAuthGate();
+  const { language, l } = useLanguage();
   const accessPolicy = resolveHomeAccessPolicy({ isLoggedIn });
   const { width } = useWindowDimensions();
   const horizontalInset = width >= 768 ? spacing.xl : spacing.md;
@@ -135,7 +139,7 @@ export function HomeScreen() {
             subscribed = profile?.following ?? false;
           } catch (error) {
             if (!(error instanceof ApiError)) {
-              showToast('추천 사용자 상태를 불러오지 못했습니다.');
+              showToast(l('추천 사용자 상태를 불러오지 못했습니다.'));
             }
           }
 
@@ -155,13 +159,13 @@ export function HomeScreen() {
         return;
       }
       if (!(error instanceof ApiError)) {
-        showToast('추천 사용자를 불러오지 못했습니다.');
+        showToast(l('추천 사용자를 불러오지 못했습니다.'));
       }
       setUserRecommendations([]);
     } finally {
       setLoadingUsers(false);
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, l]);
 
   useEffect(() => {
     void loadRecommendedUsers();
@@ -199,6 +203,7 @@ export function HomeScreen() {
 
   const loadPromotions = useCallback(async () => {
     setLoadingPromotions(true);
+    const defaultPromotions = getDefaultPromotions(l);
     try {
       const allNews = await collectAllCursorPages({
         fetchPage: (cursor) => fetchNewsList(cursor),
@@ -216,18 +221,28 @@ export function HomeScreen() {
           newsId: item.id,
           title: item.title,
           description:
-            item.excerpt.trim() || '새로운 소식을 확인해보세요.',
+            item.excerpt.trim() || l('새로운 소식을 확인해보세요.'),
           imageUri:
             item.thumbnailUrl ?? NEWS_DEFAULT_IMAGE,
         })),
       );
     } catch (error) {
-      showToast(resolveApiError(error, { 401: '로그인 상태를 확인해 주십시오.', 403: '접근 권한이 없습니다.', 404: '요청한 소식을 찾을 수 없습니다.' }, '소식을 불러오지 못했습니다.'));
+      showToast(
+        resolveApiError(
+          error,
+          {
+            401: l('로그인 상태를 확인해 주십시오.'),
+            403: l('접근 권한이 없습니다.'),
+            404: l('요청한 소식을 찾을 수 없습니다.'),
+          },
+          l('소식을 불러오지 못했습니다.'),
+        ),
+      );
       setPromotions(defaultPromotions);
     } finally {
       setLoadingPromotions(false);
     }
-  }, []);
+  }, [l]);
 
   useEffect(() => {
     void loadPromotions();
@@ -256,7 +271,7 @@ export function HomeScreen() {
         if (isGuestAll && !reset) {
           mergeGuestAllBookStoriesCache(feed);
         }
-        const mapped = feed.items.map(mapRemoteStoryToPost);
+        const mapped = feed.items.map((item) => mapRemoteStoryToPost(item, language));
 
         setPosts((prev) => {
           if (reset) return mapped;
@@ -269,7 +284,7 @@ export function HomeScreen() {
         nextPostsCursorRef.current = feed.nextCursor;
       } catch (error) {
         if (reset && !(error instanceof ApiError)) {
-          showToast('책이야기 목록을 불러오지 못했습니다.');
+          showToast(l('책이야기 목록을 불러오지 못했습니다.'));
         }
       } finally {
         if (reset) {
@@ -281,7 +296,7 @@ export function HomeScreen() {
         }
       }
     },
-    [accessPolicy.canViewBookStoryFeed, isLoggedIn],
+    [accessPolicy.canViewBookStoryFeed, isLoggedIn, l, language],
   );
 
   useEffect(() => {
@@ -309,7 +324,7 @@ export function HomeScreen() {
       const submit = async () => {
         try {
           await setFollowingMember(target.nickname, nextSubscribed);
-          showToast(nextSubscribed ? '구독했습니다.' : '구독을 취소했습니다.');
+          showToast(nextSubscribed ? l('구독했습니다.') : l('구독을 취소했습니다.'));
         } catch (error) {
           setUserRecommendations((prev) =>
             prev.map((user) =>
@@ -317,10 +332,10 @@ export function HomeScreen() {
             ),
           );
           if (error instanceof ApiError) {
-            showToast(error.message || '구독 상태를 변경하지 못했습니다.');
+            showToast(error.message || l('구독 상태를 변경하지 못했습니다.'));
             return;
           }
-          showToast('구독 상태를 변경하지 못했습니다.');
+          showToast(l('구독 상태를 변경하지 못했습니다.'));
         }
       };
       void submit();
@@ -368,7 +383,7 @@ export function HomeScreen() {
               };
             }),
           );
-          showToast('좋아요 상태를 변경하지 못했습니다.');
+          showToast(l('좋아요 상태를 변경하지 못했습니다.'));
         }
       };
       void submit();
@@ -396,14 +411,14 @@ export function HomeScreen() {
       const submit = async () => {
         try {
           await setFollowingMember(target.author, nextSubscribed);
-          showToast(nextSubscribed ? '구독했습니다.' : '구독을 취소했습니다.');
+          showToast(nextSubscribed ? l('구독했습니다.') : l('구독을 취소했습니다.'));
         } catch {
           setPosts((prev) =>
             prev.map((post) =>
               post.id === id ? { ...post, subscribed: !nextSubscribed } : post,
             ),
           );
-          showToast('구독 상태를 변경하지 못했습니다.');
+          showToast(l('구독 상태를 변경하지 못했습니다.'));
         }
       };
       void submit();
@@ -460,7 +475,7 @@ export function HomeScreen() {
   const header = (
     <View style={styles.headerContainer}>
       <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
-        <Text style={styles.sectionTitle}>소식</Text>
+        <Text style={styles.sectionTitle}>{l('소식')}</Text>
       </View>
       {loadingPromotions && promotions.length === 0 ? (
         <NewsPromotionCarouselSkeleton horizontalInset={horizontalInset} />
@@ -482,7 +497,7 @@ export function HomeScreen() {
       {isLoggedIn ? (
         <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset }]}>
           <View style={styles.userRecommendationCard}>
-            <Text style={styles.sectionTitle}>사용자 추천</Text>
+            <Text style={styles.sectionTitle}>{l('사용자 추천')}</Text>
             <View style={styles.userRecommendationList}>
               {loadingUsers ? (
                 [0, 1, 2].map((i) => (
@@ -505,7 +520,7 @@ export function HomeScreen() {
                   />
                 ))
               ) : (
-                <Text style={styles.emptyUserText}>추천 사용자가 없습니다.</Text>
+                <Text style={styles.emptyUserText}>{l('추천 사용자가 없습니다.')}</Text>
               )}
             </View>
           </View>
@@ -513,7 +528,7 @@ export function HomeScreen() {
       ) : null}
 
       <View style={[styles.contentBlock, { paddingHorizontal: horizontalInset, marginTop: spacing.xxs, marginBottom: spacing.sm }]}>
-        <Text style={styles.sectionTitle}>책이야기</Text>
+        <Text style={styles.sectionTitle}>{l('책이야기')}</Text>
       </View>
     </View>
   );
@@ -530,11 +545,11 @@ export function HomeScreen() {
           ItemSeparatorComponent={() => <View style={styles.postItemSeparator} />}
           ListEmptyComponent={
             !loadingPosts ? (
-              <Text style={styles.emptyPostText}>표시할 책이야기가 없습니다.</Text>
+              <Text style={styles.emptyPostText}>{l('표시할 책이야기가 없습니다.')}</Text>
             ) : null
           }
           ListFooterComponent={
-            loadingMorePosts ? <Text style={styles.loadingPostText}>불러오는 중...</Text> : null
+            loadingMorePosts ? <Text style={styles.loadingPostText}>{l('불러오는 중...')}</Text> : null
           }
           renderItem={({ item }) => (
             <HomePostCard
@@ -563,14 +578,14 @@ export function HomeScreen() {
   );
 }
 
-function mapRemoteStoryToPost(item: RemoteStoryItem): Post {
+function mapRemoteStoryToPost(item: RemoteStoryItem, language: 'ko' | 'en'): Post {
   return {
     id: `post-${item.id}`,
     remoteId: item.id,
     author: item.nickname,
     profileImageUrl: normalizeRemoteImageUrl(item.profileImageUrl),
     mine: item.mine ?? false,
-    timeAgo: toKstTimeAgoLabel(item.createdAt),
+    timeAgo: toKstTimeAgoLabel(item.createdAt, Date.now(), language),
     views: item.viewCount,
     title: item.title,
     body: item.description,

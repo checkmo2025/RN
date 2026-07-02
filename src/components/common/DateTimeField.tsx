@@ -15,6 +15,7 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker';
 
 import { colors, radius, spacing, typography } from '../../theme';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 type Props = {
   value: Date | null;
@@ -49,6 +50,7 @@ function combine(datePart: Date, timePart: Date): Date {
  * value/onChange 는 기기 로컬 벽시계 기준 Date 를 사용한다.
  */
 export function DateTimeField({ value, onChange, placeholder, minimumDate, style }: Props) {
+  const { language, l } = useLanguage();
   const [iosVisible, setIosVisible] = useState(false);
   const [iosTemp, setIosTemp] = useState<Date | null>(null);
 
@@ -96,7 +98,7 @@ export function DateTimeField({ value, onChange, placeholder, minimumDate, style
         accessibilityRole="button"
       >
         <Text style={value ? styles.valueText : styles.placeholderText} numberOfLines={1}>
-          {value ? formatLabel(value) : (placeholder ?? '날짜 선택')}
+          {value ? formatLabel(value) : (placeholder ?? l('날짜 선택'))}
         </Text>
       </Pressable>
 
@@ -111,10 +113,10 @@ export function DateTimeField({ value, onChange, placeholder, minimumDate, style
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
               <Pressable onPress={() => setIosVisible(false)} hitSlop={8}>
-                <Text style={styles.headerCancel}>취소</Text>
+                <Text style={styles.headerCancel}>{l('취소')}</Text>
               </Pressable>
               <Pressable onPress={confirmIos} hitSlop={8}>
-                <Text style={styles.headerDone}>완료</Text>
+                <Text style={styles.headerDone}>{l('완료')}</Text>
               </Pressable>
             </View>
             <DateTimePicker
@@ -122,7 +124,7 @@ export function DateTimeField({ value, onChange, placeholder, minimumDate, style
               mode="datetime"
               display="spinner"
               minimumDate={minimumDate}
-              locale="ko-KR"
+              locale={language === 'en' ? 'en-US' : 'ko-KR'}
               themeVariant="light"
               textColor={colors.gray6}
               onChange={(_event: DateTimePickerEvent, picked?: Date) => {

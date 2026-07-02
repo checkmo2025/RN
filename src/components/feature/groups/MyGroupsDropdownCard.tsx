@@ -9,6 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '../../../theme';
 import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 export type MyGroupSummary = {
   id: string;
@@ -32,6 +33,7 @@ export function MyGroupsDropdownCard<T extends MyGroupSummary>({
   rowStyle,
   rowTextStyle,
 }: Props<T>) {
+  const { l } = useLanguage();
   const [expanded, setExpanded] = useState(false);
 
   const showToggle = groups.length > visibleCount;
@@ -64,7 +66,7 @@ export function MyGroupsDropdownCard<T extends MyGroupSummary>({
             setExpanded((prev) => !prev);
           }}
         >
-          <Text style={styles.toggleText}>{expanded ? '접기' : '전체보기'}</Text>
+          <Text style={styles.toggleText}>{expanded ? l('접기') : l('전체보기')}</Text>
           <MaterialIcons
             name={expanded ? 'expand-less' : 'expand-more'}
             size={18}

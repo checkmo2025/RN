@@ -13,6 +13,7 @@ import {
 } from '../../components/common/BottomSheetActionMenu';
 import { styles } from './meetingStyles';
 import { formatAverageRating, getStarIconName } from './helpers';
+import { useLanguage } from '../../contexts/LanguageContext';
 import type {
   BookshelfDetailTab,
   BookshelfItem,
@@ -125,6 +126,7 @@ export function GroupBookshelfView({
   handleDeleteSelectedBookshelf,
   handlePressManageRegularGroups,
 }: GroupBookshelfViewProps) {
+  const { l } = useLanguage();
   const bookshelfSectionYRef = useRef(0);
   const detailSectionYRef = useRef(0);
   const [bookshelfMenuVisible, setBookshelfMenuVisible] = useState(false);
@@ -150,13 +152,13 @@ export function GroupBookshelfView({
     return [
       {
         key: 'edit',
-        label: '책장 수정',
+        label: l('책장 수정'),
         icon: 'edit',
         onPress: handleOpenBookshelfEdit,
       },
       {
         key: 'delete',
-        label: '책장 삭제',
+        label: l('책장 삭제'),
         icon: 'delete-outline',
         destructive: true,
         disabled: typeof selectedBookshelfBook.remoteMeetingId !== 'number',
@@ -164,7 +166,7 @@ export function GroupBookshelfView({
       },
       {
         key: 'manage-groups',
-        label: '조 관리하기',
+        label: l('조 관리하기'),
         icon: 'groups',
         disabled: !canManageRegularGroups,
         onPress: handlePressManageRegularGroups,
@@ -176,6 +178,7 @@ export function GroupBookshelfView({
     handleDeleteSelectedBookshelf,
     handleOpenBookshelfEdit,
     handlePressManageRegularGroups,
+    l,
     selectedBookshelfBook,
   ]);
 
@@ -209,7 +212,7 @@ export function GroupBookshelfView({
     return (
       <View style={styles.managementEmptyCard}>
         <Text style={styles.managementEmptyText}>
-          책장은 독서 모임의 회원이 되신 후 조회 가능합니다.
+          {l('책장은 독서 모임의 회원이 되신 후 조회 가능합니다.')}
         </Text>
       </View>
     );
@@ -260,7 +263,7 @@ export function GroupBookshelfView({
       </ScrollView>
       {visibleBookshelfItems.length === 0 ? (
         <View style={styles.managementEmptyCard}>
-          <Text style={styles.managementEmptyText}>등록된 책장이 없습니다.</Text>
+          <Text style={styles.managementEmptyText}>{l('등록된 책장이 없습니다.')}</Text>
         </View>
       ) : (
         <View style={styles.bookshelfGrid}>
@@ -291,7 +294,7 @@ export function GroupBookshelfView({
                     getBookshelfCategoryBadgeStyle(book.category),
                   ]}
                 >
-                  <Text style={styles.bookshelfBadgeText}>{book.category}</Text>
+                  <Text style={styles.bookshelfBadgeText}>{l(book.category)}</Text>
                 </View>
               </View>
               {[
@@ -304,7 +307,7 @@ export function GroupBookshelfView({
                   style={({ pressed }) => [styles.bookshelfLinkRow, pressed && styles.pressed]}
                   onPress={() => openBookshelfDetail(book, item.tab)}
                 >
-                  <Text style={styles.bookshelfLinkLabel}>{item.label}</Text>
+                  <Text style={styles.bookshelfLinkLabel}>{l(item.label)}</Text>
                   <MaterialIcons name="north-east" size={14} color={colors.gray3} />
                 </Pressable>
               ))}
@@ -350,7 +353,7 @@ export function GroupBookshelfView({
           onPress={handleBackToBookshelfGrid}
         >
           <MaterialIcons name="chevron-left" size={18} color={colors.gray5} />
-          <Text style={styles.breadcrumbText}>책장</Text>
+          <Text style={styles.breadcrumbText}>{l('책장')}</Text>
         </Pressable>
         {canManageClub ? (
           <Pressable
@@ -381,7 +384,7 @@ export function GroupBookshelfView({
                 getBookshelfCategoryBadgeStyle(selectedBookshelfBook.category),
               ]}
             >
-              <Text style={styles.bookshelfBadgeText}>{selectedBookshelfBook.category}</Text>
+              <Text style={styles.bookshelfBadgeText}>{l(selectedBookshelfBook.category)}</Text>
             </View>
           </View>
           <View style={styles.bookshelfRatingRow}>
@@ -427,7 +430,7 @@ export function GroupBookshelfView({
                   active && styles.bookshelfDetailTabLabelActive,
                 ]}
               >
-                {item.label}
+                {l(item.label)}
               </Text>
             </Pressable>
           );
@@ -439,7 +442,7 @@ export function GroupBookshelfView({
           <View style={styles.bookshelfPanelHeader}>
             <View style={styles.bookshelfPanelTitleRow}>
               <MaterialIcons name="description" size={22} color={colors.gray6} />
-              <Text style={styles.bookshelfPanelTitle}>전체 발제</Text>
+              <Text style={styles.bookshelfPanelTitle}>{l('전체 발제')}</Text>
             </View>
             <Pressable
               style={({ pressed }) => [styles.bookshelfPanelAddButton, pressed && styles.pressed]}
@@ -482,16 +485,16 @@ export function GroupBookshelfView({
             ))}
             {showBookshelfTopicLoading ? (
               <View style={styles.managementEmptyCard}>
-                <Text style={styles.managementEmptyText}>발제를 불러오는 중...</Text>
+                <Text style={styles.managementEmptyText}>{l('발제를 불러오는 중...')}</Text>
               </View>
             ) : null}
             {!showBookshelfTopicLoading && bookshelfTopicItems.length === 0 ? (
               <View style={styles.managementEmptyCard}>
-                <Text style={styles.managementEmptyText}>등록된 발제가 없습니다.</Text>
+                <Text style={styles.managementEmptyText}>{l('등록된 발제가 없습니다.')}</Text>
               </View>
             ) : null}
             {currentBookshelfTopicPageState?.loadingMore ? (
-              <Text style={styles.infiniteScrollLoadingText}>불러오는 중...</Text>
+              <Text style={styles.infiniteScrollLoadingText}>{l('불러오는 중...')}</Text>
             ) : null}
           </View>
         </View>
@@ -502,7 +505,7 @@ export function GroupBookshelfView({
           <View style={styles.bookshelfPanelHeader}>
             <View style={styles.bookshelfPanelTitleRow}>
               <MaterialIcons name="star-border" size={22} color={colors.gray6} />
-              <Text style={styles.bookshelfPanelTitle}>한줄평</Text>
+              <Text style={styles.bookshelfPanelTitle}>{l('한줄평')}</Text>
             </View>
             <Pressable
               style={({ pressed }) => [styles.bookshelfPanelAddButton, pressed && styles.pressed]}
@@ -559,12 +562,12 @@ export function GroupBookshelfView({
 	                    ))}
             {showBookshelfReviewLoading ? (
               <View style={styles.managementEmptyCard}>
-                <Text style={styles.managementEmptyText}>한줄평을 불러오는 중...</Text>
+                <Text style={styles.managementEmptyText}>{l('한줄평을 불러오는 중...')}</Text>
               </View>
             ) : null}
             {!showBookshelfReviewLoading && bookshelfReviewItems.length === 0 ? (
               <View style={styles.managementEmptyCard}>
-                <Text style={styles.managementEmptyText}>등록된 한줄평이 없습니다.</Text>
+                <Text style={styles.managementEmptyText}>{l('등록된 한줄평이 없습니다.')}</Text>
               </View>
             ) : null}
           </View>
@@ -575,7 +578,7 @@ export function GroupBookshelfView({
         <View style={styles.bookshelfPanel}>
           {showRegularMeetingLoading ? (
             <View style={styles.managementEmptyCard}>
-              <Text style={styles.managementEmptyText}>정기모임 정보를 불러오는 중...</Text>
+              <Text style={styles.managementEmptyText}>{l('정기모임 정보를 불러오는 중...')}</Text>
             </View>
           ) : regularMeetingInfo ? (
             <>
@@ -632,7 +635,7 @@ export function GroupBookshelfView({
                             active && styles.bookshelfGroupChipTextActive,
                           ]}
                         >
-                          {groupItem.label}
+                          {l(groupItem.label)}
                         </Text>
                       </Pressable>
                     );
@@ -640,7 +643,7 @@ export function GroupBookshelfView({
                 </ScrollView>
               ) : (
                 <View style={styles.managementEmptyCard}>
-                  <Text style={styles.managementEmptyText}>등록된 조 정보가 없습니다.</Text>
+                  <Text style={styles.managementEmptyText}>{l('등록된 조 정보가 없습니다.')}</Text>
                 </View>
               )}
 
@@ -654,7 +657,7 @@ export function GroupBookshelfView({
                 >
                   <View style={styles.bookshelfRegularGroupPreviewHeader}>
                     <View style={styles.bookshelfGroupHeaderLeft}>
-                      <Text style={styles.bookshelfGroupTitle}>{selectedRegularGroup.label}</Text>
+                      <Text style={styles.bookshelfGroupTitle}>{l(selectedRegularGroup.label)}</Text>
                       <MaterialIcons name="person" size={20} color={colors.gray4} />
                       <Text style={styles.bookshelfGroupMemberCount}>
                         {selectedRegularGroup.memberCount}
@@ -662,7 +665,7 @@ export function GroupBookshelfView({
                     </View>
                     <MaterialIcons name="chevron-right" size={20} color={colors.gray4} />
                   </View>
-                  <Text style={styles.bookshelfRegularGroupPreviewLabel}>참여자</Text>
+                  <Text style={styles.bookshelfRegularGroupPreviewLabel}>{l('참여자')}</Text>
                   <View style={styles.bookshelfRegularGroupMemberList}>
                     {selectedRegularGroup.members.map((member) => (
                       <View key={member.id} style={styles.bookshelfRegularGroupMemberRow}>
@@ -682,7 +685,7 @@ export function GroupBookshelfView({
                     ))}
                   </View>
                   <Text style={styles.bookshelfRegularGroupHint}>
-                    조 페이지로 이동해 발제를 선택하고 모임을 진행하세요.
+                    {l('조 페이지로 이동해 발제를 선택하고 모임을 진행하세요.')}
                   </Text>
                 </Pressable>
               ) : null}
@@ -691,7 +694,7 @@ export function GroupBookshelfView({
                 <View style={styles.bookshelfGroupSection}>
                   <View style={styles.bookshelfGroupHeader}>
                     <View style={styles.bookshelfGroupHeaderLeft}>
-                      <Text style={styles.bookshelfGroupTitle}>{selectedRegularGroup.label}</Text>
+                      <Text style={styles.bookshelfGroupTitle}>{l(selectedRegularGroup.label)}</Text>
                       <View style={styles.bookshelfGroupMemberWrap}>
                         <Pressable
                           style={({ pressed }) => [
@@ -717,7 +720,7 @@ export function GroupBookshelfView({
                         {regularGroupMembersVisible ? (
                           <View style={styles.bookshelfGroupMemberDropdown}>
                             <Text style={styles.bookshelfGroupMemberDropdownTitle}>
-                              {selectedRegularGroup.label} 참여자
+                              {l('{group} 참여자', { group: l(selectedRegularGroup.label) })}
                             </Text>
                             <View style={styles.bookshelfRegularGroupMemberList}>
                               {selectedRegularGroup.members.map((member) => (
@@ -755,7 +758,7 @@ export function GroupBookshelfView({
                         onPress={() => handleOpenBookshelfComposer('TOPIC')}
                       >
                         <MaterialIcons name="edit" size={18} color={colors.gray4} />
-                        <Text style={styles.bookshelfGroupSortText}>발제</Text>
+                        <Text style={styles.bookshelfGroupSortText}>{l('발제')}</Text>
                       </Pressable>
                       <Pressable
                         style={({ pressed }) => [
@@ -765,7 +768,7 @@ export function GroupBookshelfView({
                         onPress={() => handleSortRegularGroupPosts(selectedRegularGroup.id)}
                       >
                         <MaterialIcons name="sort" size={18} color={colors.gray4} />
-                        <Text style={styles.bookshelfGroupSortText}>정렬하기</Text>
+                        <Text style={styles.bookshelfGroupSortText}>{l('정렬하기')}</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -814,7 +817,7 @@ export function GroupBookshelfView({
                     })}
                     {selectedRegularGroup.posts.length === 0 ? (
                       <View style={styles.managementEmptyCard}>
-                        <Text style={styles.managementEmptyText}>등록된 조 발제가 없습니다.</Text>
+                        <Text style={styles.managementEmptyText}>{l('등록된 조 발제가 없습니다.')}</Text>
                       </View>
                     ) : null}
                   </View>
@@ -823,7 +826,7 @@ export function GroupBookshelfView({
             </>
           ) : (
             <View style={styles.managementEmptyCard}>
-              <Text style={styles.managementEmptyText}>정기모임 정보가 없습니다.</Text>
+              <Text style={styles.managementEmptyText}>{l('정기모임 정보가 없습니다.')}</Text>
             </View>
           )}
         </View>
@@ -831,7 +834,7 @@ export function GroupBookshelfView({
 
       <BottomSheetActionMenu
         visible={bookshelfMenuVisible}
-        title="책장 메뉴"
+        title={l('책장 메뉴')}
         actions={bookshelfMenuItems}
         onClose={() => setBookshelfMenuVisible(false)}
       />

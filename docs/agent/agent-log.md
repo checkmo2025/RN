@@ -3244,3 +3244,10 @@ export const interactionOpacity = {
 - `/user/queue/errors` 구독과 연결 상태(`preparing/connecting/connected/error/closed`) 표시를 추가
 - 채팅 헤더에 연결 오류/끊김 상태를 노출하고 `EXPO_PUBLIC_WS_BASE_URL` 예시 값을 문서화
 - `npm run check`, `npm run lint` 통과 확인
+
+# 2026-07-02 23:51:16 KST RN 영어 지원 범위 확장
+
+- 마이페이지 외 홈/모임/책이야기/소식/인증/사용자 프로필/온보딩/채팅/관리 모달까지 영어 번역 경로 확장
+- `AppButton`, `FormTextInput`, `showToast` 공통 번역 처리와 `ko/en` 리터럴 사전 보강
+- 모임/조/책장/공지/신고/알림/설정 계열 주요 UI 문구 영어화
+- `npm run check` 통과 확인

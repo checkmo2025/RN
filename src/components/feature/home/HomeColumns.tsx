@@ -6,6 +6,7 @@ import { colors, radius, spacing, typography } from '../../../theme';
 import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 import { MyGroupsDropdownCard } from '../groups/MyGroupsDropdownCard';
 import SubscribeUserItem from '../member/SubscribeUserItem';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 export type Group = { id: string; name: string };
 export type UserRecommendation = {
@@ -36,6 +37,8 @@ export default function HomeColumns({
   useTwoColumns,
   horizontalInset,
 }: Props) {
+  const { l } = useLanguage();
+
   return (
     <View
       style={[
@@ -46,17 +49,17 @@ export default function HomeColumns({
       ]}
     >
       <View style={[styles.columnCard, styles.columnLeft]}>
-        <Text style={styles.columnTitle}>독서모임</Text>
+        <Text style={styles.columnTitle}>{l('독서모임')}</Text>
         {groups.length === 0 ? (
           <View style={styles.emptyGroups}>
-            <Text style={styles.emptyGroupsTitle}>다른 독서 모임도 둘러볼까요?</Text>
+            <Text style={styles.emptyGroupsTitle}>{l('다른 독서 모임도 둘러볼까요?')}</Text>
             <Pressable style={styles.secondaryButton} onPress={onPressSearchGroup}>
               <MaterialIcons name="search" size={18} color={colors.gray6} />
-              <Text style={styles.secondaryButtonText}>모임 검색하기</Text>
+              <Text style={styles.secondaryButtonText}>{l('모임 검색하기')}</Text>
             </Pressable>
             <Pressable style={styles.primaryButton} onPress={onPressCreateGroup}>
               <MaterialIcons name="add" size={18} color={colors.white} />
-              <Text style={styles.primaryButtonText}>모임 생성하기</Text>
+              <Text style={styles.primaryButtonText}>{l('모임 생성하기')}</Text>
             </Pressable>
           </View>
         ) : (
@@ -65,7 +68,7 @@ export default function HomeColumns({
       </View>
 
       <View style={[styles.columnCard, styles.columnRight]}>
-        <Text style={styles.columnTitle}>사용자 추천</Text>
+        <Text style={styles.columnTitle}>{l('사용자 추천')}</Text>
         {userRecommendations.map((user) => (
           <SubscribeUserItem
             key={user.id}

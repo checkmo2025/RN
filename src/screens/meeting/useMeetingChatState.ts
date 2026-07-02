@@ -11,6 +11,7 @@ import {
 } from '../../services/api/memberApi';
 import { useMeetingChatStomp } from '../../services/websocket/useMeetingChatStomp';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { triggerSelectionHaptic } from '../../utils/haptics';
 import { showToast } from '../../utils/toast';
 import type { RegularMeetingGroupItem, RegularMeetingInfo } from './types';
@@ -54,6 +55,7 @@ export function useMeetingChatState({
   canManageClub,
   currentMemberNickname,
 }: Params) {
+  const { l } = useLanguage();
   const [pickerVisible, setPickerVisible] = useState(false);
   const [activeGroup, setActiveGroup] = useState<RegularMeetingGroupItem | null>(null);
   const [messages, setMessages] = useState<ClubMeetingChatMessage[]>([]);
@@ -109,7 +111,7 @@ export function useMeetingChatState({
         if (roomVersionRef.current !== roomVersion || activeGroupRef.current?.id !== group.id) return;
         if (showLoading) {
           setHistoryError(
-            error instanceof ApiError ? error.message : '채팅 내역을 불러오지 못했습니다.',
+            l(error instanceof ApiError ? error.message : '채팅 내역을 불러오지 못했습니다.'),
           );
         }
       } finally {
@@ -118,7 +120,7 @@ export function useMeetingChatState({
         }
       }
     },
-    [clubId, meetingId, updatePagination],
+    [clubId, l, meetingId, updatePagination],
   );
 
   const handleStompMessage = useCallback(
@@ -154,26 +156,26 @@ export function useMeetingChatState({
   });
 
   const connectionLabel = useMemo(() => {
-    if (connectionError) return connectionError;
+    if (connectionError) return l(connectionError);
 
     switch (connectionStatus) {
       case 'preparing':
-        return '연결 준비 중...';
+        return l('연결 준비 중...');
       case 'connecting':
-        return '연결 중...';
+        return l('연결 중...');
       case 'connected':
-        return '연결됨';
+        return l('연결됨');
       case 'error':
-        return '채팅 연결 오류';
+        return l('채팅 연결 오류');
       case 'closed':
         return closeCode
-          ? `채팅 연결이 끊어졌습니다. (${closeCode})`
-          : '채팅 연결이 끊어졌습니다.';
+          ? `${l('채팅 연결이 끊어졌습니다.')} (${closeCode})`
+          : l('채팅 연결이 끊어졌습니다.');
       case 'idle':
       default:
-        return '연결 중...';
+        return l('연결 중...');
     }
-  }, [closeCode, connectionError, connectionStatus]);
+  }, [closeCode, connectionError, connectionStatus, l]);
 
   const resetRoom = useCallback(() => {
     roomVersionRef.current += 1;
@@ -210,7 +212,7 @@ export function useMeetingChatState({
     (groupId: string) => {
       const group = accessibleGroups.find((item) => item.id === groupId);
       if (!group || group.teamId == null) {
-        showToast('이용할 수 있는 채팅 조가 아닙니다.');
+        showToast(l('이용할 수 있는 채팅 조가 아닙니다.'));
         return;
       }
       triggerSelectionHaptic();
@@ -226,7 +228,7 @@ export function useMeetingChatState({
       updatePagination(false, null);
       void fetchLatest(group, roomVersion, true);
     },
-    [accessibleGroups, fetchLatest, updatePagination],
+    [accessibleGroups, fetchLatest, l, updatePagination],
   );
 
   const retryHistory = useCallback(() => {
@@ -267,18 +269,18 @@ export function useMeetingChatState({
     } catch (error) {
       visitedCursorsRef.current.delete(cursor);
       if (roomVersionRef.current === roomVersion) {
-        showToast(error instanceof ApiError ? error.message : '이전 채팅을 불러오지 못했습니다.');
+        showToast(l(error instanceof ApiError ? error.message : '이전 채팅을 불러오지 못했습니다.'));
       }
     } finally {
       if (roomVersionRef.current === roomVersion) setLoadingOlder(false);
     }
-  }, [clubId, loadingOlder, meetingId, updatePagination]);
+  }, [clubId, l, loadingOlder, meetingId, updatePagination]);
 
   const submitMessage = useCallback(() => {
     const content = input.trim();
     if (!content) return;
     if (content.length > INPUT_LIMITS.CHAT_MESSAGE) {
-      showToast(`채팅 메시지는 ${INPUT_LIMITS.CHAT_MESSAGE}자 이하여야 합니다.`);
+      showToast(l('채팅 메시지는 {limit}자 이하여야 합니다.', { limit: INPUT_LIMITS.CHAT_MESSAGE }));
       return;
     }
     try {
@@ -286,9 +288,9 @@ export function useMeetingChatState({
       triggerSelectionHaptic();
       setInput('');
     } catch (error) {
-      showToast(error instanceof Error ? error.message : '채팅 전송에 실패했습니다.');
+      showToast(l(error instanceof Error ? error.message : '채팅 전송에 실패했습니다.'));
     }
-  }, [input, publish]);
+  }, [input, l, publish]);
 
   const openMessageReport = useCallback(
     (message: ClubMeetingChatMessage) => {
@@ -326,14 +328,14 @@ export function useMeetingChatState({
           content: payload.content,
         });
         setReportTarget(null);
-        showToast('신고가 접수되었습니다.');
+        showToast(l('신고가 접수되었습니다.'));
       } catch (error) {
-        if (!(error instanceof ApiError)) showToast('신고 접수에 실패했습니다.');
+        if (!(error instanceof ApiError)) showToast(l('신고 접수에 실패했습니다.'));
       } finally {
         setSubmittingReport(false);
       }
     },
-    [currentMemberNickname, reportTarget],
+    [currentMemberNickname, l, reportTarget],
   );
 
   useEffect(() => {

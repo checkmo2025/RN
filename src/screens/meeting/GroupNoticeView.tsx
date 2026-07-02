@@ -20,6 +20,7 @@ import type {
   NoticeItem,
   NoticePollOption,
 } from './types';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const NOTICE_PAGE_SIZE = 8;
 
@@ -38,7 +39,7 @@ function getBookshelfCategoryBadgeStyle(category: string) {
   }
 }
 
-function renderNoticeTag(tag: NoticeItem['tags'][number], key: string) {
+function renderNoticeTag(tag: NoticeItem['tags'][number], key: string, l: (text: string) => string) {
   if (tag === 'PIN') {
     return (
       <View key={key} style={[styles.noticeTag, styles.noticeTagPin]}>
@@ -49,20 +50,20 @@ function renderNoticeTag(tag: NoticeItem['tags'][number], key: string) {
   if (tag === 'VOTE') {
     return (
       <View key={key} style={[styles.noticeTag, styles.noticeTagVote]}>
-        <Text style={styles.noticeTagText}>투표</Text>
+        <Text style={styles.noticeTagText}>{l('투표')}</Text>
       </View>
     );
   }
   if (tag === 'MEETING') {
     return (
       <View key={key} style={[styles.noticeTag, styles.noticeTagMeeting]}>
-        <Text style={styles.noticeTagText}>모임</Text>
+        <Text style={styles.noticeTagText}>{l('모임')}</Text>
       </View>
     );
   }
   return (
     <View key={key} style={[styles.noticeTag, styles.noticeTagGeneral]}>
-      <Text style={styles.noticeTagText}>일반</Text>
+      <Text style={styles.noticeTagText}>{l('일반')}</Text>
     </View>
   );
 }
@@ -129,6 +130,7 @@ export function GroupNoticeView({
   handleSubmitNoticeComment,
   handlePressCommentMenu,
 }: GroupNoticeViewProps) {
+  const { l } = useLanguage();
   const selectedNotice = useMemo(
     () => noticeItems.find((item) => item.id === selectedNoticeId) ?? null,
     [noticeItems, selectedNoticeId],
@@ -186,7 +188,7 @@ export function GroupNoticeView({
     return (
       <View style={styles.managementEmptyCard}>
         <Text style={styles.managementEmptyText}>
-          공지사항은 독서 모임의 회원이 되신 후 조회 가능합니다.
+          {l('공지사항은 독서 모임의 회원이 되신 후 조회 가능합니다.')}
         </Text>
       </View>
     );
@@ -204,14 +206,14 @@ export function GroupNoticeView({
           }}
         >
           <MaterialIcons name="chevron-left" size={18} color={colors.gray5} />
-          <Text style={styles.breadcrumbText}>공지사항</Text>
+          <Text style={styles.breadcrumbText}>{l('공지사항')}</Text>
         </Pressable>
 
         <View style={styles.noticeDetailTopRow}>
           <View style={styles.noticeDetailCategoryRow}>
             <View style={styles.noticeTagRow}>
               {selectedNotice.tags.map((tag, index) =>
-                renderNoticeTag(tag, `${selectedNotice.id}-${tag}-${index}`),
+                renderNoticeTag(tag, `${selectedNotice.id}-${tag}-${index}`, l),
               )}
             </View>
             <Text style={styles.noticeDetailDate}>{selectedNotice.date}</Text>
@@ -230,7 +232,7 @@ export function GroupNoticeView({
             style={({ pressed }) => [styles.noticeAttachmentCard, pressed && styles.pressed]}
             onPress={handleOpenNoticeBookshelf}
           >
-            <Text style={styles.noticeAttachmentTitle}>책장</Text>
+            <Text style={styles.noticeAttachmentTitle}>{l('책장')}</Text>
             <View style={styles.noticeBookshelfCard}>
               <Image
                 source={{ uri: selectedNotice.bookshelf.coverImage }}
@@ -251,7 +253,7 @@ export function GroupNoticeView({
                     ]}
                   >
                     <Text style={styles.bookshelfBadgeText}>
-                      {selectedNotice.bookshelf.category}
+                      {l(selectedNotice.bookshelf.category)}
                     </Text>
                   </View>
                 </View>
@@ -280,14 +282,14 @@ export function GroupNoticeView({
           <View style={styles.noticePollSection}>
             <View style={styles.noticePollMetaRow}>
               <View style={styles.noticePollSchedule}>
-                <Text style={styles.noticeAttachmentTitle}>투표</Text>
+                <Text style={styles.noticeAttachmentTitle}>{l('투표')}</Text>
                 <Text style={styles.noticePollEndText}>
                   {selectedNotice.poll.startsAt} - {selectedNotice.poll.endsAt}
                 </Text>
               </View>
               <View style={styles.noticePollMetaRight}>
                 <Text style={styles.noticePollMetaText}>
-                  {selectedNotice.poll.allowDuplicate ? '중복 가능' : '중복 불가'}
+                  {selectedNotice.poll.allowDuplicate ? l('중복 가능') : l('중복 불가')}
                 </Text>
                 <View style={styles.noticePollMetaPrivacy}>
                   <MaterialIcons
@@ -296,7 +298,7 @@ export function GroupNoticeView({
                     color={colors.gray4}
                   />
                   <Text style={styles.noticePollMetaText}>
-                    {selectedNotice.poll.anonymous ? '익명' : '실명'}
+                    {selectedNotice.poll.anonymous ? l('익명') : l('실명')}
                   </Text>
                 </View>
               </View>
@@ -370,10 +372,10 @@ export function GroupNoticeView({
                 >
                   <Text style={styles.noticePollSubmitText}>
                     {pollEnded
-                      ? '투표종료'
+                      ? l('투표종료')
                       : hasSubmittedVoteInNotice && !voteEditEnabled
-                        ? '다시 투표'
-                        : '투표하기'}
+                        ? l('다시 투표')
+                        : l('투표하기')}
                   </Text>
                 </Pressable>
               );
@@ -382,7 +384,7 @@ export function GroupNoticeView({
         ) : null}
         {selectedNotice.photos && selectedNotice.photos.length > 0 ? (
           <View style={styles.noticeAttachmentCard}>
-            <Text style={styles.noticeAttachmentTitle}>사진</Text>
+            <Text style={styles.noticeAttachmentTitle}>{l('사진')}</Text>
             <View style={styles.noticePhotoGrid}>
               {selectedNotice.photos.map((photo, index) => (
                 <Pressable
@@ -403,17 +405,21 @@ export function GroupNoticeView({
         <View style={styles.noticeDetailDivider} />
 
         <View style={styles.noticeCommentSection}>
-          <Text style={styles.noticeCommentHeader}>댓글</Text>
+          <Text style={styles.noticeCommentHeader}>{l('댓글')}</Text>
           <View style={styles.noticeCommentInputRow}>
             <FormTextInput
               value={noticeCommentInput}
               onChangeText={setNoticeCommentInput}
-              placeholder={`댓글 내용 (최대 ${INPUT_LIMITS.NOTICE_COMMENT}자)`}
+              placeholder={l('댓글 내용 (최대 {limit}자)', {
+                limit: INPUT_LIMITS.NOTICE_COMMENT,
+              })}
               placeholderTextColor={colors.gray3}
               style={styles.noticeCommentInput}
               editable={!submittingNoticeComment}
               maxLength={INPUT_LIMITS.NOTICE_COMMENT}
-              overLimitMessage={`공지사항 댓글은 ${INPUT_LIMITS.NOTICE_COMMENT}자 이하여야 합니다.`}
+              overLimitMessage={l('공지사항 댓글은 {limit}자 이하여야 합니다.', {
+                limit: INPUT_LIMITS.NOTICE_COMMENT,
+              })}
             />
             <Pressable
               style={({ pressed }) => [
@@ -427,7 +433,7 @@ export function GroupNoticeView({
               disabled={submittingNoticeComment || noticeCommentInput.trim().length === 0}
             >
               <Text style={styles.noticeCommentSubmitText}>
-                {submittingNoticeComment ? '처리 중' : editingNoticeCommentId ? '수정' : '입력'}
+                {submittingNoticeComment ? l('처리 중') : editingNoticeCommentId ? l('수정') : l('입력')}
               </Text>
             </Pressable>
           </View>
@@ -439,7 +445,7 @@ export function GroupNoticeView({
                 setNoticeCommentInput('');
               }}
             >
-              <Text style={styles.breadcrumbText}>댓글 수정 취소</Text>
+              <Text style={styles.breadcrumbText}>{l('댓글 수정 취소')}</Text>
             </Pressable>
           ) : null}
 
@@ -480,7 +486,7 @@ export function GroupNoticeView({
                       </Pressable>
                       {comment.isAuthor ? (
                         <View style={styles.noticeCommentAuthorBadge}>
-                          <Text style={styles.noticeCommentAuthorBadgeText}>작성자</Text>
+                          <Text style={styles.noticeCommentAuthorBadgeText}>{l('작성자')}</Text>
                         </View>
                       ) : null}
                       <Text style={styles.noticeCommentDate}>{comment.date}</Text>
@@ -501,11 +507,11 @@ export function GroupNoticeView({
             ))}
             {currentNoticeComments.length === 0 ? (
               <View style={styles.managementEmptyCard}>
-                <Text style={styles.managementEmptyText}>등록된 댓글이 없습니다.</Text>
+                <Text style={styles.managementEmptyText}>{l('등록된 댓글이 없습니다.')}</Text>
               </View>
             ) : null}
             {currentNoticeCommentPageState?.loadingMore ? (
-              <Text style={styles.infiniteScrollLoadingText}>불러오는 중...</Text>
+              <Text style={styles.infiniteScrollLoadingText}>{l('불러오는 중...')}</Text>
             ) : null}
           </View>
         </View>
@@ -517,8 +523,8 @@ export function GroupNoticeView({
     <View style={styles.noticeBoardCard}>
       <View style={styles.noticeBoardHeader}>
         <View>
-          <Text style={styles.noticeBoardTitle}>공지사항</Text>
-          <Text style={styles.noticeBoardDescription}>모임의 공지사항을 확인하세요!</Text>
+          <Text style={styles.noticeBoardTitle}>{l('공지사항')}</Text>
+          <Text style={styles.noticeBoardDescription}>{l('모임의 공지사항을 확인하세요!')}</Text>
         </View>
       </View>
       <View style={styles.noticeList}>
@@ -540,7 +546,7 @@ export function GroupNoticeView({
           >
             <View style={styles.noticeTagRow}>
               {notice.tags.map((tag, index) =>
-                renderNoticeTag(tag, `${notice.id}-${tag}-${index}`),
+                renderNoticeTag(tag, `${notice.id}-${tag}-${index}`, l),
               )}
             </View>
             <Text style={styles.noticeItemTitle} numberOfLines={1}>
@@ -556,7 +562,7 @@ export function GroupNoticeView({
         ))}
         {!isInitialLoading && visibleNotices.length === 0 ? (
           <View style={styles.managementEmptyCard}>
-            <Text style={styles.managementEmptyText}>등록된 공지가 없습니다.</Text>
+            <Text style={styles.managementEmptyText}>{l('등록된 공지가 없습니다.')}</Text>
           </View>
         ) : null}
       </View>

@@ -4,6 +4,7 @@ import { Image, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-nativ
 import { colors, interactionOpacity, radius, spacing, typography } from '../../../theme';
 import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../../common/DefaultProfileAvatar';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 type Props = {
   nickname: string;
@@ -24,6 +25,8 @@ export default function SubscribeUserItem({
   compactSubscribeButton = false,
   style,
 }: Props) {
+  const { l } = useLanguage();
+
   return (
     <View style={[styles.container, style]}>
       <Pressable
@@ -58,7 +61,7 @@ export default function SubscribeUserItem({
             subscribed ? styles.subscribeButtonTextActive : styles.subscribeButtonTextInactive,
           ]}
         >
-          {subscribed ? '구독중' : '구독'}
+          {subscribed ? l('구독중') : l('구독')}
         </Text>
       </Pressable>
     </View>

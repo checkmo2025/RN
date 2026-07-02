@@ -24,6 +24,7 @@ import { FeedbackPressable as Pressable } from '../../components/common/Feedback
 import { FormTextInput } from '../../components/common/FormTextInput';
 import { ToastHost } from '../../components/common/ToastHost';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useEdgeBackSwipe } from '../../hooks/useEdgeBackSwipe';
 import type { RootStackParamList } from '../../navigation/types';
 import type { ClubMeetingChatMessage } from '../../services/api/clubApi';
@@ -61,6 +62,7 @@ function isMine(message: ClubMeetingChatMessage, currentMemberNickname: string):
 export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
+  const { l } = useLanguage();
   const { width: screenWidth } = useWindowDimensions();
   const [profileMessage, setProfileMessage] = useState<ClubMeetingChatMessage | null>(null);
   const [messageActionTarget, setMessageActionTarget] =
@@ -120,9 +122,9 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
     setMessageActionTarget(null);
     try {
       await Clipboard.setStringAsync(content);
-      showToast('메시지를 복사했습니다.');
+      showToast(l('메시지를 복사했습니다.'));
     } catch {
-      showToast('메시지를 복사하지 못했습니다.');
+      showToast(l('메시지를 복사하지 못했습니다.'));
     }
   };
 
@@ -135,8 +137,8 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
         cardStyle={styles.pickerCard}
       >
         <View style={styles.dialogHeader}>
-          <Text style={styles.dialogTitle}>채팅 조 선택</Text>
-          <Pressable onPress={state.closeChat} hitSlop={8} accessibilityLabel="채팅 조 선택 닫기">
+          <Text style={styles.dialogTitle}>{l('채팅 조 선택')}</Text>
+          <Pressable onPress={state.closeChat} hitSlop={8} accessibilityLabel={l('채팅 조 선택 닫기')}>
             <MaterialIcons name="close" size={24} color={colors.gray6} />
           </Pressable>
         </View>
@@ -148,14 +150,16 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
               onPress={() => state.selectGroup(group.id)}
             >
               <View style={styles.groupItemTextWrap}>
-                <Text style={styles.groupItemTitle}>{group.label}</Text>
-                <Text style={styles.groupItemMeta}>참여자 {group.memberCount}명</Text>
+                <Text style={styles.groupItemTitle}>{l(group.label)}</Text>
+                <Text style={styles.groupItemMeta}>
+                  {l('참여자 {count}명', { count: group.memberCount })}
+                </Text>
               </View>
               <MaterialIcons name="chevron-right" size={22} color={colors.gray4} />
             </Pressable>
           ))}
           {state.accessibleGroups.length === 0 ? (
-            <Text style={styles.emptyText}>이용할 수 있는 채팅 조가 없습니다.</Text>
+            <Text style={styles.emptyText}>{l('이용할 수 있는 채팅 조가 없습니다.')}</Text>
           ) : null}
         </View>
       </DialogOverlay>
@@ -178,12 +182,12 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                 <Pressable
                   onPress={state.backToPicker}
                   hitSlop={8}
-                  accessibilityLabel="채팅 조 선택으로 돌아가기"
+                  accessibilityLabel={l('채팅 조 선택으로 돌아가기')}
                 >
                   <MaterialIcons name="chevron-left" size={26} color={colors.gray6} />
                 </Pressable>
                 <View>
-                  <Text style={styles.chatTitle}>{state.activeGroup?.label ?? '조 채팅'}</Text>
+                  <Text style={styles.chatTitle}>{l(state.activeGroup?.label ?? '조 채팅')}</Text>
                   <View style={styles.connectionRow}>
                     <View
                       style={[
@@ -206,20 +210,20 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                   </View>
                 </View>
               </View>
-              <Pressable onPress={state.closeChat} hitSlop={8} accessibilityLabel="채팅 닫기">
+              <Pressable onPress={state.closeChat} hitSlop={8} accessibilityLabel={l('채팅 닫기')}>
                 <MaterialIcons name="close" size={24} color={colors.gray6} />
               </Pressable>
             </View>
 
             {state.initialLoading ? (
               <View style={styles.centerState}>
-                <Text style={styles.stateText}>채팅 내역을 불러오는 중...</Text>
+                <Text style={styles.stateText}>{l('채팅 내역을 불러오는 중...')}</Text>
               </View>
             ) : state.historyError ? (
               <View style={styles.centerState}>
-                <Text style={styles.stateText}>{state.historyError}</Text>
+                <Text style={styles.stateText}>{l(state.historyError)}</Text>
                 <Pressable style={styles.retryButton} onPress={state.retryHistory}>
-                  <Text style={styles.retryText}>다시 시도</Text>
+                  <Text style={styles.retryText}>{l('다시 시도')}</Text>
                 </Pressable>
               </View>
             ) : (
@@ -244,10 +248,10 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                 }}
                 ListHeaderComponent={
                   state.loadingOlder ? (
-                    <Text style={styles.loadingOlderText}>이전 채팅을 불러오는 중...</Text>
+                    <Text style={styles.loadingOlderText}>{l('이전 채팅을 불러오는 중...')}</Text>
                   ) : null
                 }
-                ListEmptyComponent={<Text style={styles.emptyText}>표시할 채팅 내역이 없습니다.</Text>}
+                ListEmptyComponent={<Text style={styles.emptyText}>{l('표시할 채팅 내역이 없습니다.')}</Text>}
                 renderItem={({ item }) => {
                   const mine = isMine(item, currentMemberNickname);
                   return (
@@ -279,7 +283,7 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                           !mine && pressed && styles.pressed,
                         ]}
                         onPress={() => setMessageActionTarget(item)}
-                        accessibilityLabel="메시지 메뉴 열기"
+                        accessibilityLabel={l('메시지 메뉴 열기')}
                       >
                         <Text style={styles.bubbleText}>{item.content}</Text>
                       </Pressable>
@@ -295,11 +299,13 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                 value={state.input}
                 onChangeText={state.setInput}
                 style={styles.chatInput}
-                placeholder={`채팅 입력 (최대 ${INPUT_LIMITS.CHAT_MESSAGE}자)`}
+                placeholder={l('채팅 입력 (최대 {limit}자)', { limit: INPUT_LIMITS.CHAT_MESSAGE })}
                 placeholderTextColor={colors.gray3}
                 returnKeyType="send"
                 maxLength={INPUT_LIMITS.CHAT_MESSAGE}
-                overLimitMessage={`채팅 메시지는 ${INPUT_LIMITS.CHAT_MESSAGE}자 이하여야 합니다.`}
+                overLimitMessage={l('채팅 메시지는 {limit}자 이하여야 합니다.', {
+                  limit: INPUT_LIMITS.CHAT_MESSAGE,
+                })}
                 onSubmitEditing={state.submitMessage}
               />
               <Pressable
@@ -309,7 +315,7 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                 ]}
                 onPress={state.submitMessage}
                 disabled={!state.isConnected || !state.input.trim()}
-                accessibilityLabel="채팅 전송"
+                accessibilityLabel={l('채팅 전송')}
               >
                 <MaterialIcons name="send" size={20} color={colors.white} />
               </Pressable>
@@ -325,11 +331,11 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                 />
                 <View style={styles.profileCard}>
                   <View style={styles.profileHeader}>
-                    <Text style={styles.profileTitle}>사용자 프로필</Text>
+                    <Text style={styles.profileTitle}>{l('사용자 프로필')}</Text>
                     <Pressable
                       onPress={() => setProfileMessage(null)}
                       hitSlop={8}
-                      accessibilityLabel="사용자 프로필 닫기"
+                      accessibilityLabel={l('사용자 프로필 닫기')}
                     >
                       <MaterialIcons name="close" size={24} color={colors.gray6} />
                     </Pressable>
@@ -344,7 +350,7 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                       <DefaultProfileAvatar size={64} />
                     )}
                   </View>
-                  <Text style={styles.profileLabel}>아이디</Text>
+                  <Text style={styles.profileLabel}>{l('아이디')}</Text>
                   <Text style={styles.profileNickname}>{profileMessage.senderNickname}</Text>
                   <View style={styles.profileActionRow}>
                     <Pressable
@@ -355,10 +361,10 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                         state.openMemberReport(message);
                       }}
                     >
-                      <Text style={styles.profileReportButtonText}>신고하기</Text>
+                      <Text style={styles.profileReportButtonText}>{l('신고하기')}</Text>
                     </Pressable>
                     <Pressable style={styles.profileButton} onPress={navigateToProfile}>
-                      <Text style={styles.profileButtonText}>바로가기</Text>
+                      <Text style={styles.profileButtonText}>{l('바로가기')}</Text>
                     </Pressable>
                   </View>
                 </View>
@@ -385,7 +391,7 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                     { paddingBottom: Math.max(insets.bottom, spacing.md) },
                   ]}
                 >
-                  <Text style={styles.messageActionTitle}>메시지 메뉴</Text>
+                  <Text style={styles.messageActionTitle}>{l('메시지 메뉴')}</Text>
                   <Pressable
                     style={({ pressed }) => [
                       styles.messageActionItem,
@@ -394,7 +400,7 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                     onPress={() => void copyMessage()}
                   >
                     <MaterialIcons name="content-copy" size={20} color={colors.gray5} />
-                    <Text style={styles.messageActionText}>복사하기</Text>
+                    <Text style={styles.messageActionText}>{l('복사하기')}</Text>
                   </Pressable>
                   {!isMine(messageActionTarget, currentMemberNickname) ? (
                     <Pressable
@@ -409,7 +415,7 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                       }}
                     >
                       <MaterialIcons name="flag" size={20} color={colors.gray5} />
-                      <Text style={styles.messageActionText}>신고하기</Text>
+                      <Text style={styles.messageActionText}>{l('신고하기')}</Text>
                     </Pressable>
                   ) : null}
                 </View>

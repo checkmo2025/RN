@@ -55,6 +55,7 @@ import { BookStoryFeedCardSkeleton } from '../components/feature/bookstory/BookS
 import { SkeletonBox } from '../components/common/SkeletonBox';
 import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
 import { useAuthGate } from '../contexts/AuthGateContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import {
   createBookStory,
   createBookStoryComment,
@@ -249,13 +250,13 @@ function toComposeBook(raw: unknown): Book | null {
   };
 }
 
-function mapBookItemToBook(item: BookItem): Book {
+function mapBookItemToBook(item: BookItem, l: (text: string) => string): Book {
   return {
     id: item.isbn || String(item.bookId ?? ''),
     title: item.title,
-    author: item.author || '작가 미상',
+    author: item.author || l('작가 미상'),
     description:
-      item.description || item.publisher || '책 설명이 없습니다.',
+      item.description || item.publisher || l('책 설명이 없습니다.'),
     image: normalizeRemoteImageUrl(item.imgUrl),
   };
 }
@@ -277,12 +278,11 @@ function buildComposeInitialDraft(
   };
 }
 
-const STORY_FEED_ERROR_OVERRIDES = { 401: '로그인 상태를 확인해 주십시오.', 403: '접근 권한이 없습니다.', 404: '요청한 책이야기를 찾을 수 없습니다.' } as const;
-
 export function StoryScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ Story: StoryRouteParams }, 'Story'>>();
   const { requireAuth, isLoggedIn } = useAuthGate();
+  const { language, l } = useLanguage();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -553,12 +553,12 @@ export function StoryScreen() {
         return;
       }
 
-      Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
-        { text: '취소', style: 'cancel' },
-        { text: '닫기', style: 'destructive', onPress: onClose },
+      Alert.alert(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
+        { text: l('취소'), style: 'cancel' },
+        { text: l('닫기'), style: 'destructive', onPress: onClose },
       ]);
     },
-    [hasUnsavedStoryChangesNow],
+    [hasUnsavedStoryChangesNow, l],
   );
 
   const handleChangeStoryTitle = useCallback((text: string) => {
@@ -696,7 +696,7 @@ export function StoryScreen() {
         setMyClubTabs(all);
       } catch (error) {
         if (!cancelled && !(error instanceof ApiError)) {
-          showToast('내 독서모임 목록을 불러오지 못했습니다.');
+          showToast(l('내 독서모임 목록을 불러오지 못했습니다.'));
         }
       }
     };
@@ -706,7 +706,7 @@ export function StoryScreen() {
     return () => {
       cancelled = true;
     };
-  }, [isLoggedIn]);
+  }, [isLoggedIn, l]);
 
   const canLoadApiFeed = selectedTab.type === 'ALL' || isLoggedIn;
 
@@ -732,10 +732,10 @@ export function StoryScreen() {
         return;
       }
       if (!(error instanceof ApiError)) {
-        showToast('추천 사용자를 불러오지 못했습니다.');
+        showToast(l('추천 사용자를 불러오지 못했습니다.'));
       }
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, l]);
 
   useEffect(() => {
     void loadRecommendedUsers();
@@ -837,7 +837,7 @@ export function StoryScreen() {
         if (isGuestAll && !reset) {
           mergeGuestAllBookStoriesCache(feed);
         }
-        const mapped = feed.items.map(mapRemoteStoryToStory);
+        const mapped = feed.items.map((item) => mapRemoteStoryToStory(item, language, l));
 
         setStories((prev) => {
           if (reset) return mapped;
@@ -850,7 +850,17 @@ export function StoryScreen() {
         setHasNext(feed.hasNext);
         setNextCursor(feed.nextCursor);
       } catch (error) {
-        showToast(resolveApiError(error, STORY_FEED_ERROR_OVERRIDES, '책이야기 목록을 불러오지 못했습니다.'));
+        showToast(
+          resolveApiError(
+            error,
+            {
+              401: l('로그인 상태를 확인해 주십시오.'),
+              403: l('접근 권한이 없습니다.'),
+              404: l('요청한 책이야기를 찾을 수 없습니다.'),
+            },
+            l('책이야기 목록을 불러오지 못했습니다.'),
+          ),
+        );
       } finally {
         if (!reset) {
           setIsLoadingMore(false);
@@ -859,7 +869,7 @@ export function StoryScreen() {
         }
       }
     },
-    [canLoadApiFeed, hasNext, isLoadingMore, isLoggedIn, nextCursor, selectedTab],
+    [canLoadApiFeed, hasNext, isLoadingMore, isLoggedIn, l, language, nextCursor, selectedTab],
   );
 
   useEffect(() => {
@@ -887,17 +897,17 @@ export function StoryScreen() {
           viewerAuthenticated: isLoggedIn,
         });
         if (!detail) return;
-        const mapped = mapRemoteDetailToStory(detail, story);
+        const mapped = mapRemoteDetailToStory(detail, language, l, story);
         applyStoryUpdate(mapped);
       } catch (error) {
         if (!(error instanceof ApiError)) {
-          showToast('책이야기 상세를 불러오지 못했습니다.');
+          showToast(l('책이야기 상세를 불러오지 못했습니다.'));
         }
       } finally {
         setIsDetailLoading(false);
       }
     },
-    [applyStoryUpdate, isLoggedIn],
+    [applyStoryUpdate, isLoggedIn, l, language],
   );
 
   const openStoryDetailByRemoteId = useCallback(
@@ -930,10 +940,10 @@ export function StoryScreen() {
           viewerAuthenticated: isLoggedIn,
         });
         if (!detail) {
-          showToast('해당 책이야기를 찾을 수 없습니다.');
+          showToast(l('해당 책이야기를 찾을 수 없습니다.'));
           return;
         }
-        const mapped = mapRemoteDetailToStory(detail);
+        const mapped = mapRemoteDetailToStory(detail, language, l);
         setStories((prev) => {
           const exists = prev.some((story) => story.id === mapped.id);
           if (!exists) return [mapped, ...prev];
@@ -943,11 +953,11 @@ export function StoryScreen() {
         setSelectedStory(mapped);
       } catch (error) {
         if (!(error instanceof ApiError)) {
-          showToast('책이야기 상세를 불러오지 못했습니다.');
+          showToast(l('책이야기 상세를 불러오지 못했습니다.'));
         }
       }
     },
-    [animateTransition, detailTranslateX, isLoggedIn],
+    [animateTransition, detailTranslateX, isLoggedIn, l, language],
   );
 
   const startEditStory = useCallback(
@@ -1001,10 +1011,10 @@ export function StoryScreen() {
       const storyRemoteId = story.remoteId;
       if (typeof storyRemoteId !== 'number') return;
 
-      Alert.alert('책 이야기 삭제', '이 글을 삭제하시겠습니까?', [
-        { text: '취소', style: 'cancel' },
+      Alert.alert(l('책 이야기 삭제'), l('이 글을 삭제하시겠습니까?'), [
+        { text: l('취소'), style: 'cancel' },
         {
-          text: '삭제',
+          text: l('삭제'),
           style: 'destructive',
           onPress: () => {
             const submit = async () => {
@@ -1012,10 +1022,10 @@ export function StoryScreen() {
                 await deleteBookStory(storyRemoteId);
                 setStories((prev) => prev.filter((item) => item.id !== story.id));
                 setSelectedStory(null);
-                showToast('책이야기를 삭제했습니다.');
+                showToast(l('책이야기를 삭제했습니다.'));
               } catch (error) {
                 if (!(error instanceof ApiError)) {
-                  showToast('책이야기 삭제에 실패했습니다.');
+                  showToast(l('책이야기 삭제에 실패했습니다.'));
                 }
               }
             };
@@ -1025,7 +1035,7 @@ export function StoryScreen() {
         },
       ]);
     },
-    [],
+    [l],
   );
 
   const handleShareStory = useCallback(() => {
@@ -1046,12 +1056,12 @@ export function StoryScreen() {
     (nickname: string, profileImageUrl: string | undefined) => {
       const targetNickname = nickname.trim();
       if (!targetNickname) {
-        showToast('신고 대상을 확인할 수 없습니다.');
+        showToast(l('신고 대상을 확인할 수 없습니다.'));
         return;
       }
       setReportModal({ nickname: targetNickname, profileImageUrl });
     },
-    [],
+    [l],
   );
 
   const closeReportModal = useCallback(() => {
@@ -1081,11 +1091,11 @@ export function StoryScreen() {
             reason: payload.reason,
             content: payload.content,
           });
-          showToast('신고가 접수되었습니다.');
+          showToast(l('신고가 접수되었습니다.'));
           setReportModal(null);
         } catch (error) {
           if (!(error instanceof ApiError)) {
-            showToast('신고 접수에 실패했습니다.');
+            showToast(l('신고 접수에 실패했습니다.'));
           }
         } finally {
           setSubmittingReport(false);
@@ -1093,7 +1103,7 @@ export function StoryScreen() {
       };
       void submit();
     });
-  }, [reportModal, requireAuth]);
+  }, [l, reportModal, requireAuth]);
 
   const handleSelectStoryMenuAction = useCallback(
     (action: 'edit' | 'delete' | 'report' | 'share') => {
@@ -1196,17 +1206,17 @@ export function StoryScreen() {
             storyRemoteId,
             commentRemoteId,
           );
-          showToast('댓글을 삭제했습니다.');
+          showToast(l('댓글을 삭제했습니다.'));
         } catch (error) {
           applyStoryUpdate(originalStory);
           if (!(error instanceof ApiError)) {
-            showToast('댓글 삭제에 실패했습니다.');
+            showToast(l('댓글 삭제에 실패했습니다.'));
           }
         }
       };
       void submit();
     },
-    [applyStoryUpdate, selectedStory],
+    [applyStoryUpdate, l, selectedStory],
   );
 
   const handleSelectCommentMenuAction = useCallback(
@@ -1232,15 +1242,15 @@ export function StoryScreen() {
       }
 
       if (current.deleted) {
-        showToast('삭제된 댓글에는 대댓글을 작성할 수 없습니다.');
+        showToast(l('삭제된 댓글에는 대댓글을 작성할 수 없습니다.'));
         return;
       }
       if (current.replyTo) {
-        showToast('대댓글에는 다시 답글을 달 수 없습니다.');
+        showToast(l('대댓글에는 다시 답글을 달 수 없습니다.'));
         return;
       }
       if (typeof current.remoteId !== 'number') {
-        showToast('잠시 후 다시 시도해 주십시오.');
+        showToast(l('잠시 후 다시 시도해 주십시오.'));
         return;
       }
 
@@ -1260,7 +1270,7 @@ export function StoryScreen() {
         inlineReplyInputRef.current?.focus();
       });
     },
-    [beginEditComment, commentMenu, deleteComment, openReportModal, scrollToCommentInput],
+    [beginEditComment, commentMenu, deleteComment, l, openReportModal, scrollToCommentInput],
   );
 
   const commentMenuItems = useMemo<ActionMenuItem[]>(() => {
@@ -1270,7 +1280,7 @@ export function StoryScreen() {
       ? [
           {
             key: 'reply',
-            label: '대댓글 쓰기',
+            label: l('대댓글 쓰기'),
             onPress: () => handleSelectCommentMenuAction('reply'),
           },
         ]
@@ -1278,20 +1288,20 @@ export function StoryScreen() {
     if (isLoggedIn && commentMenu.comment.mine) {
       return [
         ...replyItems,
-        { key: 'edit', label: '수정하기', onPress: () => handleSelectCommentMenuAction('edit') },
+        { key: 'edit', label: l('수정하기'), onPress: () => handleSelectCommentMenuAction('edit') },
         {
           key: 'delete',
-          label: '삭제하기',
+          label: l('삭제하기'),
           destructive: true,
           onPress: () => handleSelectCommentMenuAction('delete'),
         },
       ];
     }
     return [
-      { key: 'report', label: '신고하기', onPress: () => handleSelectCommentMenuAction('report') },
+      { key: 'report', label: l('신고하기'), onPress: () => handleSelectCommentMenuAction('report') },
       ...replyItems,
     ];
-  }, [commentMenu, handleSelectCommentMenuAction, isLoggedIn]);
+  }, [commentMenu, handleSelectCommentMenuAction, isLoggedIn, l]);
 
   const storyMenuItems = useMemo<BottomSheetActionMenuItem[]>(() => {
     if (!storyMenu || !selectedStory) return [];
@@ -1299,13 +1309,13 @@ export function StoryScreen() {
       return [
         {
           key: 'edit',
-          label: '수정하기',
+          label: l('수정하기'),
           icon: 'edit',
           onPress: () => handleSelectStoryMenuAction('edit'),
         },
         {
           key: 'delete',
-          label: '삭제하기',
+          label: l('삭제하기'),
           icon: 'delete-outline',
           destructive: true,
           onPress: () => handleSelectStoryMenuAction('delete'),
@@ -1315,26 +1325,26 @@ export function StoryScreen() {
     return [
       {
         key: 'report',
-        label: '신고하기',
+        label: l('신고하기'),
         icon: 'flag',
         onPress: () => handleSelectStoryMenuAction('report'),
       },
       {
         key: 'share',
-        label: '공유하기',
+        label: l('공유하기'),
         icon: 'share',
         onPress: () => handleSelectStoryMenuAction('share'),
       },
     ];
-  }, [handleSelectStoryMenuAction, isLoggedIn, selectedStory, storyMenu]);
+  }, [handleSelectStoryMenuAction, isLoggedIn, l, selectedStory, storyMenu]);
 
   const openBookPicker = useCallback(() => {
     if (isEditingStory) {
-      showToast('수정 모드에서는 책을 변경할 수 없습니다.');
+      showToast(l('수정 모드에서는 책을 변경할 수 없습니다.'));
       return;
     }
     setShowBookPicker(true);
-  }, [isEditingStory]);
+  }, [isEditingStory, l]);
 
   const closeBookPicker = useCallback(() => {
     setShowBookPicker(false);
@@ -1343,17 +1353,17 @@ export function StoryScreen() {
   const handleSubmitBookSearch = useCallback(() => {
     const keyword = bookSearchQuery.trim();
     if (!keyword) {
-      showToast('검색어를 입력해야 합니다.');
+      showToast(l('검색어를 입력해야 합니다.'));
       return;
     }
     void runBookSearch(keyword);
-  }, [bookSearchQuery, runBookSearch]);
+  }, [bookSearchQuery, l, runBookSearch]);
 
   const handleSelectBookFromSearch = useCallback((bookItem: BookItem) => {
-    setSelectedBook(mapBookItemToBook(bookItem));
+    setSelectedBook(mapBookItemToBook(bookItem, l));
     setBookSearchQuery(bookItem.title);
     setShowBookPicker(false);
-  }, []);
+  }, [l]);
 
   const handleSaveDraft = useCallback(() => {
     if (submittingStory) return;
@@ -1363,7 +1373,7 @@ export function StoryScreen() {
       const nextBody = body.trim();
 
       if (!nextTitle && !nextBody && !selectedBook) {
-        showToast('제목, 내용 또는 책을 입력해야 합니다.');
+        showToast(l('제목, 내용 또는 책을 입력해야 합니다.'));
         return;
       }
 
@@ -1378,27 +1388,27 @@ export function StoryScreen() {
             });
           } else {
             if (!selectedBook) {
-              showToast('책을 선택해야 임시저장할 수 있습니다.');
+              showToast(l('책을 선택해야 임시저장할 수 있습니다.'));
               return;
             }
             const isbn = selectedBook.id.trim();
             if (!ISBN13_REGEX.test(isbn)) {
-              showToast('책 정보 형식이 올바르지 않습니다.');
+              showToast(l('책 정보 형식이 올바르지 않습니다.'));
               return;
             }
             const newId = await createBookStory({
               isbn,
-              title: nextTitle || '임시저장',
+              title: nextTitle || l('임시저장'),
               description: nextBody,
               status: 'DRAFT' as BookStoryStatus,
             });
             if (newId > 0) setDraftStoryId(newId);
           }
-          showToast('임시저장되었습니다.');
+          showToast(l('임시저장되었습니다.'));
           closeCompose();
           navigation.navigate('My', { openMyTab: '내 책 이야기' });
         } catch {
-          showToast('임시저장에 실패했습니다.');
+          showToast(l('임시저장에 실패했습니다.'));
         } finally {
           setSubmittingStory(false);
         }
@@ -1406,7 +1416,7 @@ export function StoryScreen() {
 
       void save();
     });
-  }, [requireAuth, submittingStory, title, body, selectedBook, draftStoryId, navigation]);
+  }, [body, draftStoryId, l, navigation, requireAuth, selectedBook, submittingStory, title]);
 
   const handleSubmit = () => {
     if (submittingStory) {
@@ -1440,7 +1450,7 @@ export function StoryScreen() {
 
     if (currentEditingStoryId === null && !currentSelectedBook) {
       storyLog.warn('submit_validation_failed', { reason: 'missing_book' });
-      showToast('책을 선택해야 합니다.');
+      showToast(l('책을 선택해야 합니다.'));
       return;
     }
     if (currentEditingStoryId !== null && (!nextTitle || !nextDescription)) {
@@ -1451,7 +1461,7 @@ export function StoryScreen() {
         hasTitle: Boolean(nextTitle),
         hasBody: Boolean(nextDescription),
       });
-      showToast('제목과 내용을 입력해야 합니다.');
+      showToast(l('제목과 내용을 입력해야 합니다.'));
       return;
     }
     if (currentEditingStoryId === null && (!nextTitle || !nextDescription)) {
@@ -1461,7 +1471,7 @@ export function StoryScreen() {
         hasTitle: Boolean(nextTitle),
         hasBody: Boolean(nextDescription),
       });
-      showToast('제목과 내용을 입력해야 합니다.');
+      showToast(l('제목과 내용을 입력해야 합니다.'));
       return;
     }
     requireAuth(() => {
@@ -1492,7 +1502,7 @@ export function StoryScreen() {
                 viewerAuthenticated: isLoggedIn,
               });
               if (detail) {
-                updatedEditedStory = mapRemoteDetailToStory(detail);
+                updatedEditedStory = mapRemoteDetailToStory(detail, language, l);
                 storyLog.info('edit_detail_refetch_success', {
                   remoteId: currentEditingStoryId,
                   commentCount: detail.commentList.length,
@@ -1507,7 +1517,7 @@ export function StoryScreen() {
               });
               updatedEditedStory = null;
             }
-            showToast('책이야기를 수정했습니다.');
+            showToast(l('책이야기를 수정했습니다.'));
           } else if (currentDraftStoryId !== null) {
             // 임시저장 → 발행
             await updateBookStory(currentDraftStoryId, {
@@ -1515,16 +1525,16 @@ export function StoryScreen() {
               description: nextDescription,
               status: 'PUBLISHED' as BookStoryStatus,
             });
-            showToast('책이야기를 등록했습니다.');
+            showToast(l('책이야기를 등록했습니다.'));
             setDraftStoryId(null);
           } else {
             if (!currentSelectedBook) {
-              showToast('책을 선택해야 합니다.');
+              showToast(l('책을 선택해야 합니다.'));
               return;
             }
             const isbn = currentSelectedBook.id.trim();
             if (!ISBN13_REGEX.test(isbn)) {
-              showToast('책 정보 형식이 올바르지 않습니다.');
+              showToast(l('책 정보 형식이 올바르지 않습니다.'));
               return;
             }
             await createBookStory({
@@ -1533,7 +1543,7 @@ export function StoryScreen() {
               description: nextDescription,
               status: 'PUBLISHED' as BookStoryStatus,
             });
-            showToast('책이야기를 등록했습니다.');
+            showToast(l('책이야기를 등록했습니다.'));
           }
 
           await loadStories({ reset: true });
@@ -1588,8 +1598,8 @@ export function StoryScreen() {
           if (!(error instanceof ApiError)) {
             showToast(
               currentEditingStoryId !== null
-                ? '책이야기 수정에 실패했습니다.'
-                : '책이야기 등록에 실패했습니다.',
+                ? l('책이야기 수정에 실패했습니다.')
+                : l('책이야기 등록에 실패했습니다.'),
             );
           }
         } finally {
@@ -1631,7 +1641,7 @@ export function StoryScreen() {
       const submit = async () => {
         try {
           await setFollowingMember(target.author, nextSubscribed);
-          showToast(nextSubscribed ? '구독했습니다.' : '구독을 취소했습니다.');
+          showToast(nextSubscribed ? l('구독했습니다.') : l('구독을 취소했습니다.'));
         } catch {
           // Rollback on failure
           setStories((prev) =>
@@ -1644,7 +1654,7 @@ export function StoryScreen() {
               prev ? { ...prev, subscribed: !nextSubscribed } : prev,
             );
           }
-          showToast('구독 상태를 변경하지 못했습니다.');
+          showToast(l('구독 상태를 변경하지 못했습니다.'));
         }
       };
       void submit();
@@ -1667,19 +1677,19 @@ export function StoryScreen() {
       const submit = async () => {
         try {
           await setFollowingMember(target.nickname, nextSubscribed);
-          showToast(nextSubscribed ? '구독했습니다.' : '구독을 취소했습니다.');
+          showToast(nextSubscribed ? l('구독했습니다.') : l('구독을 취소했습니다.'));
         } catch {
           setRecommendedUsers((prev) =>
             prev.map((user) =>
               user.id === id ? { ...user, subscribed: !nextSubscribed } : user,
             ),
           );
-          showToast('구독 상태를 변경하지 못했습니다.');
+          showToast(l('구독 상태를 변경하지 못했습니다.'));
         }
       };
       void submit();
     });
-  }, [recommendedUsers, requireAuth]);
+  }, [l, recommendedUsers, requireAuth]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -1735,14 +1745,14 @@ export function StoryScreen() {
       try {
         const detail = await fetchBookStoryDetail(selectedStory.remoteId as number);
         if (!detail) {
-          showToast('해당 책이야기를 찾을 수 없습니다.');
+          showToast(l('해당 책이야기를 찾을 수 없습니다.'));
           return;
         }
-        const mapped = mapRemoteDetailToStory(detail, selectedStory);
+        const mapped = mapRemoteDetailToStory(detail, language, l, selectedStory);
         applyStoryUpdate(mapped);
       } catch (error) {
         if (!(error instanceof ApiError)) {
-          showToast('책이야기 상세를 새로고침하지 못했습니다.');
+          showToast(l('책이야기 상세를 새로고침하지 못했습니다.'));
         }
       } finally {
         setDetailRefreshing(false);
@@ -1750,7 +1760,7 @@ export function StoryScreen() {
     };
 
     void refresh();
-  }, [applyStoryUpdate, selectedStory]);
+  }, [applyStoryUpdate, l, language, selectedStory]);
 
   const handleToggleLike = (id: string) => {
     requireAuth(() => {
@@ -1799,12 +1809,14 @@ export function StoryScreen() {
   const handleSubmitComment = () => {
     requireAuth(() => {
       if (!selectedStory || !commentInput.trim()) {
-        showToast('댓글 내용을 입력해야 합니다.');
+        showToast(l('댓글 내용을 입력해야 합니다.'));
         return;
       }
       const content = commentInput.trim();
       if (content.length > INPUT_LIMITS.BOOK_STORY_COMMENT) {
-        showToast(`댓글은 ${INPUT_LIMITS.BOOK_STORY_COMMENT}자 이하여야 합니다.`);
+        showToast(l('댓글은 {limit}자 이하여야 합니다.', {
+          limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+        }));
         return;
       }
       const isEditing = typeof editingCommentId === 'number';
@@ -1813,7 +1825,7 @@ export function StoryScreen() {
       if (!isEditing && replyCommentKey) {
         const replyParent = selectedStory.commentList.find((comment) => comment.id === replyCommentKey);
         if (replyParent?.replyTo) {
-          showToast('대댓글에는 다시 답글을 달 수 없습니다.');
+          showToast(l('대댓글에는 다시 답글을 달 수 없습니다.'));
           setReplyTarget(null);
           return;
         }
@@ -1830,9 +1842,9 @@ export function StoryScreen() {
       } else {
         const newComment: Comment = {
           id: `c-${Date.now()}`,
-          author: myNickname || '나',
+          author: myNickname || l('나'),
           profileImageUrl: myProfileImageUrl,
-          time: '방금 전',
+          time: l('방금 전'),
           text: content,
           mine: true,
           replyTo: replyCommentKey,
@@ -1882,7 +1894,7 @@ export function StoryScreen() {
             viewerAuthenticated: isLoggedIn,
           });
           if (detail) {
-            const mapped = mapRemoteDetailToStory(detail);
+            const mapped = mapRemoteDetailToStory(detail, language, l);
             setStories((prev) => {
               const exists = prev.some((story) => story.id === mapped.id);
               if (!exists) return [mapped, ...prev];
@@ -2014,10 +2026,10 @@ export function StoryScreen() {
         if (!targetRoute || targetRoute.name === 'Story') return;
 
         event.preventDefault();
-        Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
-          { text: '취소', style: 'cancel' },
+        Alert.alert(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
+          { text: l('취소'), style: 'cancel' },
           {
-            text: '닫기',
+            text: l('닫기'),
             style: 'destructive',
             onPress: () => {
               setCommentInput('');
@@ -2036,7 +2048,7 @@ export function StoryScreen() {
     );
 
     return unsubscribe;
-  }, [closeCompose, hasUnsavedStoryChanges, navigation]);
+  }, [closeCompose, hasUnsavedStoryChanges, l, navigation]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener(
@@ -2045,10 +2057,10 @@ export function StoryScreen() {
         if (!hasUnsavedStoryChanges) return;
 
         event.preventDefault();
-        Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
-          { text: '취소', style: 'cancel' },
+        Alert.alert(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
+          { text: l('취소'), style: 'cancel' },
           {
-            text: '닫기',
+            text: l('닫기'),
             style: 'destructive',
             onPress: () => {
               setCommentInput('');
@@ -2067,7 +2079,7 @@ export function StoryScreen() {
     );
 
     return unsubscribe;
-  }, [closeCompose, hasUnsavedStoryChanges, navigation]);
+  }, [closeCompose, hasUnsavedStoryChanges, l, navigation]);
 
   if (selectedStory) {
     const book = selectedStory.book;
@@ -2104,14 +2116,14 @@ export function StoryScreen() {
               style={styles.breadcrumbButton}
               onPress={requestCloseStoryDetail}
             >
-              <Text style={styles.breadcrumbText}>책이야기</Text>
+              <Text style={styles.breadcrumbText}>{l('책이야기')}</Text>
               <MaterialIcons
                 name="chevron-right"
                 size={18}
                 color={colors.gray4}
               />
               <Text style={[styles.breadcrumbText, styles.breadcrumbActive]}>
-                상세보기
+                {l('상세보기')}
               </Text>
             </Pressable>
           </View>
@@ -2150,7 +2162,7 @@ export function StoryScreen() {
                         : styles.chipTextInactive,
                     ]}
                   >
-                    {selectedStory.subscribed ? '구독중' : '구독'}
+                    {selectedStory.subscribed ? l('구독중') : l('구독')}
                   </Text>
                 </Pressable>
               )}
@@ -2172,7 +2184,7 @@ export function StoryScreen() {
             <Text style={styles.detailMetaText}>{selectedStory.timeAgo}</Text>
             <Text style={styles.detailMetaDot}>·</Text>
             <Text style={styles.detailMetaText}>
-              조회수 {selectedStory.views}
+              {l('조회수 {count}', { count: selectedStory.views })}
             </Text>
           </View>
 
@@ -2202,7 +2214,7 @@ export function StoryScreen() {
                     color={selectedStory.liked ? colors.likeRed : colors.gray5}
                   />
                   <Text style={styles.detailActionText}>
-                    좋아요 {selectedStory.likes}
+                    {l('좋아요 {count}', { count: selectedStory.likes })}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -2214,7 +2226,7 @@ export function StoryScreen() {
                     size={20}
                     color={colors.gray5}
                   />
-                  <Text style={styles.detailActionText}>공유하기</Text>
+                  <Text style={styles.detailActionText}>{l('공유하기')}</Text>
                 </Pressable>
               </View>
             </View>
@@ -2224,7 +2236,7 @@ export function StoryScreen() {
           <Text style={styles.detailBody}>{selectedStory.fullText}</Text>
 
           <View style={styles.commentSection} onLayout={handleCommentSectionLayout}>
-            <Text style={styles.commentHeader}>댓글</Text>
+            <Text style={styles.commentHeader}>{l('댓글')}</Text>
             {isDetailLoading && selectedStory.commentList.length === 0 && (
               <View style={styles.commentSkeletonList}>
                 {[0, 1].map((i) => (
@@ -2245,15 +2257,21 @@ export function StoryScreen() {
                   style={styles.commentInput}
                   placeholder={
                     editingCommentId
-                      ? `댓글 수정 (최대 ${INPUT_LIMITS.BOOK_STORY_COMMENT}자)`
-                      : `댓글 내용 (최대 ${INPUT_LIMITS.BOOK_STORY_COMMENT}자)`
+                      ? l('댓글 수정 (최대 {limit}자)', {
+                          limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                        })
+                      : l('댓글 내용 (최대 {limit}자)', {
+                          limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                        })
                   }
                   placeholderTextColor={colors.gray3}
                   value={commentInput}
                   onChangeText={handleChangeCommentInput}
                   multiline
                   maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
-                  overLimitMessage={`댓글은 ${INPUT_LIMITS.BOOK_STORY_COMMENT}자 이하여야 합니다.`}
+                  overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
+                    limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                  })}
                   onFocus={scrollToCommentInput}
                 />
                 <Pressable
@@ -2270,7 +2288,7 @@ export function StoryScreen() {
                       isCommentSubmitDisabled && styles.commentSubmitTextDisabled,
                     ]}
                   >
-                    {editingCommentId ? '수정' : '입력'}
+                    {editingCommentId ? l('수정') : l('입력')}
                   </Text>
                 </Pressable>
               </View>
@@ -2293,7 +2311,7 @@ export function StoryScreen() {
                         <Text style={styles.commentAuthor}>{comment.author}</Text>
                         {comment.author === selectedStory.author && (
                           <View style={styles.commentAuthorBadge}>
-                            <Text style={styles.commentAuthorBadgeText}>작성자</Text>
+                            <Text style={styles.commentAuthorBadgeText}>{l('작성자')}</Text>
                           </View>
                         )}
                         <Text style={styles.commentTime}>{comment.time}</Text>
@@ -2316,13 +2334,17 @@ export function StoryScreen() {
                         <FormTextInput
                           ref={inlineReplyInputRef}
                           style={styles.commentInput}
-                          placeholder={`대댓글 내용 (최대 ${INPUT_LIMITS.BOOK_STORY_COMMENT}자)`}
+                          placeholder={l('대댓글 내용 (최대 {limit}자)', {
+                            limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                          })}
                           placeholderTextColor={colors.gray3}
                           value={commentInput}
                           onChangeText={handleChangeCommentInput}
                           multiline
                           maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
-                          overLimitMessage={`댓글은 ${INPUT_LIMITS.BOOK_STORY_COMMENT}자 이하여야 합니다.`}
+                          overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
+                            limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                          })}
                           onFocus={scrollToCommentInput}
                         />
                         <Pressable
@@ -2339,7 +2361,7 @@ export function StoryScreen() {
                               isCommentSubmitDisabled && styles.commentSubmitTextDisabled,
                             ]}
                           >
-                            입력
+                            {l('입력')}
                           </Text>
                         </Pressable>
                       </View>
@@ -2369,7 +2391,7 @@ export function StoryScreen() {
         />
         <BottomSheetActionMenu
           visible={storyMenu}
-          title="책이야기 메뉴"
+          title={l('책이야기 메뉴')}
           actions={storyMenuItems}
           onClose={() => setStoryMenu(false)}
         />
@@ -2402,7 +2424,7 @@ export function StoryScreen() {
               onPress={requestCloseCompose}
             >
               <MaterialIcons name="chevron-left" size={20} color={colors.gray5} />
-              <Text style={styles.composeBackText}>목록으로</Text>
+              <Text style={styles.composeBackText}>{l('목록으로')}</Text>
             </Pressable>
             <View style={styles.writeRow}>
               <MaterialIcons
@@ -2411,7 +2433,7 @@ export function StoryScreen() {
                 color={colors.gray5}
               />
               <Text style={styles.writeLabel}>
-                {editingStoryId ? '글 수정하기' : '글 작성하기'}
+                {editingStoryId ? l('글 수정하기') : l('글 작성하기')}
               </Text>
             </View>
           </View>
@@ -2421,7 +2443,7 @@ export function StoryScreen() {
               isEditingStory ? (
                 <View style={styles.bookReadOnlyNotice}>
                   <Text style={styles.bookReadOnlyNoticeText}>
-                    수정 모드에서는 책 정보를 변경할 수 없습니다.
+                    {l('수정 모드에서는 책 정보를 변경할 수 없습니다.')}
                   </Text>
                 </View>
               ) : (
@@ -2429,7 +2451,7 @@ export function StoryScreen() {
                   style={styles.bookSelectButton}
                   onPress={openBookPicker}
                 >
-                  <Text style={styles.bookSelectText}>책 선택하기</Text>
+                  <Text style={styles.bookSelectText}>{l('책 선택하기')}</Text>
                 </Pressable>
               )
             ) : (
@@ -2453,12 +2475,12 @@ export function StoryScreen() {
                 style={styles.secondaryButton}
                 onPress={openBookPicker}
               >
-                <Text style={styles.secondaryButtonText}>변경하기</Text>
+                <Text style={styles.secondaryButtonText}>{l('변경하기')}</Text>
               </Pressable>
             )}
             {isEditingStory ? (
               <Text style={styles.bookReadOnlyGuide}>
-                수정 모드에서는 책은 변경할 수 없고 제목과 본문만 수정됩니다.
+                {l('수정 모드에서는 책은 변경할 수 없고 제목과 본문만 수정됩니다.')}
               </Text>
             ) : null}
           </View>
@@ -2467,12 +2489,14 @@ export function StoryScreen() {
             <FormTextInput
               value={title}
               onChangeText={handleChangeStoryTitle}
-              placeholder="제목을 입력해야 합니다."
+              placeholder={l('제목을 입력해야 합니다.')}
               placeholderTextColor={colors.gray3}
               style={styles.titleInput}
               autoFocus={!isEditingStory}
               maxLength={INPUT_LIMITS.BOOK_STORY_TITLE}
-              overLimitMessage={`책이야기 제목은 ${INPUT_LIMITS.BOOK_STORY_TITLE}자 이하여야 합니다.`}
+              overLimitMessage={l('책이야기 제목은 {limit}자 이하여야 합니다.', {
+                limit: INPUT_LIMITS.BOOK_STORY_TITLE,
+              })}
             />
             <Text style={styles.titleCounterText}>
               {title.length}/{INPUT_LIMITS.BOOK_STORY_TITLE}
@@ -2481,14 +2505,18 @@ export function StoryScreen() {
               ref={bodyInputRef}
               value={body}
               onChangeText={handleChangeStoryBody}
-              placeholder={`자신의 책이야기를 들려주세요. (최대 ${INPUT_LIMITS.BOOK_STORY_CONTENT}자)`}
+              placeholder={l('자신의 책이야기를 들려주세요. (최대 {limit}자)', {
+                limit: INPUT_LIMITS.BOOK_STORY_CONTENT,
+              })}
               placeholderTextColor={colors.gray3}
               style={styles.bodyInput}
               multiline
               scrollEnabled
               textAlignVertical="top"
               maxLength={INPUT_LIMITS.BOOK_STORY_CONTENT}
-              overLimitMessage={`책이야기 본문은 ${INPUT_LIMITS.BOOK_STORY_CONTENT}자 이하여야 합니다.`}
+              overLimitMessage={l('책이야기 본문은 {limit}자 이하여야 합니다.', {
+                limit: INPUT_LIMITS.BOOK_STORY_CONTENT,
+              })}
             />
             <Text style={styles.bodyCounterText}>
               {body.length}/{INPUT_LIMITS.BOOK_STORY_CONTENT}
@@ -2499,7 +2527,7 @@ export function StoryScreen() {
                 onPress={requestCloseCompose}
                 disabled={submittingStory}
               >
-                <Text style={styles.secondaryButtonText}>취소</Text>
+                <Text style={styles.secondaryButtonText}>{l('취소')}</Text>
               </Pressable>
               {!editingStoryId && (
                 <Pressable
@@ -2507,7 +2535,7 @@ export function StoryScreen() {
                   onPress={handleSaveDraft}
                   disabled={submittingStory}
                 >
-                  <Text style={styles.draftButtonText}>임시저장</Text>
+                  <Text style={styles.draftButtonText}>{l('임시저장')}</Text>
                 </Pressable>
               )}
               <Pressable
@@ -2518,11 +2546,11 @@ export function StoryScreen() {
                 <Text style={styles.primaryButtonText}>
                   {submittingStory
                     ? editingStoryId
-                      ? '수정 중...'
-                      : '등록 중...'
+                      ? l('수정 중...')
+                      : l('등록 중...')
                     : editingStoryId
-                      ? '수정'
-                      : '등록'}
+                      ? l('수정')
+                      : l('등록')}
                 </Text>
               </Pressable>
             </View>
@@ -2535,13 +2563,13 @@ export function StoryScreen() {
         >
           <View style={[styles.bookPickerModalContainer, { paddingTop: insets.top + spacing.sm }]}>
                 <View style={styles.bookPickerHeaderRow}>
-                  <Text style={styles.bookPickerHeaderText}>책 검색</Text>
+                  <Text style={styles.bookPickerHeaderText}>{l('책 검색')}</Text>
                   <IconButton
                     name="close"
                     color={colors.gray5}
                     size={20}
                     onPress={closeBookPicker}
-                    accessibilityLabel="닫기"
+                    accessibilityLabel={l('닫기')}
                   />
                 </View>
                 <View style={styles.bookSearchInputRow}>
@@ -2551,7 +2579,7 @@ export function StoryScreen() {
                   <TextInput
                     value={bookSearchQuery}
                     onChangeText={setBookSearchQuery}
-                    placeholder="책 제목, 작가 이름을 검색해보세요"
+                    placeholder={l('책 제목, 작가 이름을 검색해보세요')}
                     placeholderTextColor={colors.gray3}
                     style={styles.bookSearchInput}
                     onSubmitEditing={handleSubmitBookSearch}
@@ -2563,21 +2591,26 @@ export function StoryScreen() {
                       name="close"
                       color={colors.gray4}
                       size={18}
-                      accessibilityLabel="검색어 지우기"
+                      accessibilityLabel={l('검색어 지우기')}
                       onPress={resetBookSearch}
                     />
                   ) : null}
                 </View>
                 {bookSearchSearched ? (
                   bookSearchLoading ? (
-                    <Text style={styles.bookSearchGuideText}>검색 중...</Text>
+                    <Text style={styles.bookSearchGuideText}>{l('검색 중...')}</Text>
                   ) : (
                     <Text style={styles.bookSearchGuideText}>
-                      "{bookSearchKeyword}" 총 {bookSearchTotalResults}개의 검색결과가 있습니다.
+                      {l('"{keyword}" 총 {count}개의 검색결과가 있습니다.', {
+                        keyword: bookSearchKeyword,
+                        count: bookSearchTotalResults,
+                      })}
                     </Text>
                   )
                 ) : (
-                  <Text style={styles.bookSearchGuideText}>검색어를 입력하고 책을 선택해야 합니다.</Text>
+                  <Text style={styles.bookSearchGuideText}>
+                    {l('검색어를 입력하고 책을 선택해야 합니다.')}
+                  </Text>
                 )}
 
                 <KeyboardAvoidingView
@@ -2594,7 +2627,7 @@ export function StoryScreen() {
                     showsVerticalScrollIndicator={false}
                   >
                     {bookSearchSearched && !bookSearchLoading && bookSearchResults.length === 0 ? (
-                      <Text style={styles.bookPickerEmptyText}>검색 결과가 없습니다.</Text>
+                      <Text style={styles.bookPickerEmptyText}>{l('검색 결과가 없습니다.')}</Text>
                     ) : null}
 
                     {bookSearchResults.map((bookItem, index) => (
@@ -2614,7 +2647,7 @@ export function StoryScreen() {
                           </Text>
                           <Text style={styles.bookAuthor}>{bookItem.author}</Text>
                           <Text style={styles.bookDescription} numberOfLines={2}>
-                            {bookItem.description || bookItem.publisher || '책 설명이 없습니다.'}
+                            {bookItem.description || bookItem.publisher || l('책 설명이 없습니다.')}
                           </Text>
                         </View>
                       </Pressable>
@@ -2653,7 +2686,7 @@ export function StoryScreen() {
                       <Text
                         style={[styles.filterTabText, active ? styles.filterTabTextActive : null]}
                       >
-                        {tab.label}
+                        {l(tab.label)}
                       </Text>
                     </Pressable>
                   );
@@ -2665,7 +2698,7 @@ export function StoryScreen() {
             if (item.type === 'recommended') {
               return (
                 <View style={styles.recommendedCard}>
-                  <Text style={styles.recommendedTitle}>사용자 추천</Text>
+                  <Text style={styles.recommendedTitle}>{l('사용자 추천')}</Text>
                   {recommendedUsers.map((user) => (
                     <SubscribeUserItem
                       key={user.id}
@@ -2728,7 +2761,7 @@ export function StoryScreen() {
           ListFooterComponent={
             isLoadingMore ? (
               <View style={styles.listFooter}>
-                <Text style={styles.listFooterText}>불러오는 중...</Text>
+                <Text style={styles.listFooterText}>{l('불러오는 중...')}</Text>
               </View>
             ) : (
               <View style={{ height: spacing.xxl }} />
@@ -2741,7 +2774,7 @@ export function StoryScreen() {
             />
           }
         />
-        <FloatingActionButton onPress={() => openCompose()} accessibilityLabel="글 작성하기">
+        <FloatingActionButton onPress={() => openCompose()} accessibilityLabel={l('글 작성하기')}>
           <WriteIcon width={20} height={20} />
         </FloatingActionButton>
       </KeyboardAvoidingView>
@@ -2749,12 +2782,16 @@ export function StoryScreen() {
   );
 }
 
-function mapRemoteStoryToStory(item: RemoteStoryItem): Story {
+function mapRemoteStoryToStory(
+  item: RemoteStoryItem,
+  language: 'ko' | 'en',
+  l: (text: string) => string,
+): Story {
   const book: Book | undefined = item.bookInfo
       ? {
         id: item.bookInfo.isbn ?? `book-${item.id}`,
-        title: item.bookInfo.title ?? '책 제목',
-        author: item.bookInfo.author ?? '작가 미상',
+        title: item.bookInfo.title ?? l('책 제목'),
+        author: item.bookInfo.author ?? l('작가 미상'),
         description: item.bookInfo.description ?? '',
         image: normalizeRemoteImageUrl(item.bookInfo.imgUrl),
       }
@@ -2766,14 +2803,14 @@ function mapRemoteStoryToStory(item: RemoteStoryItem): Story {
     author: item.nickname,
     profileImageUrl: normalizeRemoteImageUrl(item.profileImageUrl),
     mine: item.mine ?? false,
-    timeAgo: toKstTimeAgoLabel(item.createdAt),
+    timeAgo: toKstTimeAgoLabel(item.createdAt, Date.now(), language),
     views: item.viewCount,
     title: item.title,
     body: item.description,
     fullText: item.description,
     likes: item.likeCount,
     comments: item.commentCount,
-    tag: '전체',
+    tag: l('전체'),
     subscribed: item.following,
     liked: item.liked,
     book,
@@ -2781,28 +2818,37 @@ function mapRemoteStoryToStory(item: RemoteStoryItem): Story {
   };
 }
 
-function mapRemoteCommentToComment(comment: RemoteStoryComment): Comment {
+function mapRemoteCommentToComment(
+  comment: RemoteStoryComment,
+  language: 'ko' | 'en',
+  l: (text: string) => string,
+): Comment {
   return {
     id: `comment-${comment.id}`,
     remoteId: comment.id,
     author: comment.nickname,
     profileImageUrl: normalizeRemoteImageUrl(comment.profileImageUrl),
-    time: toKstTimeAgoLabel(comment.createdAt),
-    text: comment.deleted ? '삭제된 댓글입니다.' : comment.content,
+    time: toKstTimeAgoLabel(comment.createdAt, Date.now(), language),
+    text: comment.deleted ? l('삭제된 댓글입니다.') : comment.content,
     mine: comment.mine,
     deleted: comment.deleted,
     replyTo: typeof comment.parentCommentId === 'number' ? `comment-${comment.parentCommentId}` : undefined,
   };
 }
 
-function mapRemoteDetailToStory(detail: RemoteStoryDetail, previous?: Story): Story {
-  const mapped = mapRemoteStoryToStory(detail);
+function mapRemoteDetailToStory(
+  detail: RemoteStoryDetail,
+  language: 'ko' | 'en',
+  l: (text: string) => string,
+  previous?: Story,
+): Story {
+  const mapped = mapRemoteStoryToStory(detail, language, l);
   return {
     ...(previous ?? mapped),
     ...mapped,
     mine: detail.mine,
     fullText: detail.description,
-    commentList: detail.commentList.map(mapRemoteCommentToComment),
+    commentList: detail.commentList.map((comment) => mapRemoteCommentToComment(comment, language, l)),
   };
 }
 

@@ -10,13 +10,42 @@ function withSuffix(name: string) {
   return trimmed ? `${trimmed}님` : '누군가';
 }
 
+function withEnglishActor(name: string) {
+  const trimmed = name.trim();
+  return trimmed || 'Someone';
+}
+
 function toMemberNickname(name: string): string | null {
   const trimmed = name.trim();
   if (!trimmed) return null;
   return trimmed;
 }
 
-export function formatNotificationText(type: NotificationType, displayName: string): string {
+export function formatNotificationText(
+  type: NotificationType,
+  displayName: string,
+  language: 'ko' | 'en' = 'ko',
+): string {
+  if (language === 'en') {
+    const actor = withEnglishActor(displayName);
+    switch (type) {
+      case 'LIKE':
+        return `${actor} liked your post.`;
+      case 'COMMENT':
+        return `${actor} left a comment.`;
+      case 'FOLLOW':
+        return `${actor} subscribed to you.`;
+      case 'JOIN_CLUB':
+        return `${actor} joined the club.`;
+      case 'CLUB_MEETING_CREATED':
+        return `${actor} added a club meeting.`;
+      case 'CLUB_NOTICE_CREATED':
+        return `${actor} posted a notice.`;
+      default:
+        return `${actor} sent you a notification.`;
+    }
+  }
+
   const actor = withSuffix(displayName);
 
   switch (type) {

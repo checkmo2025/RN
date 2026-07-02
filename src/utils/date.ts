@@ -159,19 +159,28 @@ export function toKstApiLocalDateTime(value: string): string | undefined {
   return withOffset.replace(/[+-]\d{2}:\d{2}$/, '');
 }
 
-export function toKstTimeAgoLabel(value?: string, nowMillis = Date.now()): string {
-  if (!value) return '방금 전';
+export function toKstTimeAgoLabel(
+  value?: string,
+  nowMillis = Date.now(),
+  language: 'ko' | 'en' = 'ko',
+): string {
+  const justNow = language === 'en' ? 'Just now' : '방금 전';
+  if (!value) return justNow;
 
   const parsedMillis = parseApiDateMillis(value);
   if (parsedMillis === null) return value;
 
   const diffMinutes = Math.max(0, Math.floor((nowMillis - parsedMillis) / 60000));
-  if (diffMinutes < 1) return '방금 전';
-  if (diffMinutes < 60) return `${diffMinutes}분전`;
+  if (diffMinutes < 1) return justNow;
+  if (diffMinutes < 60) {
+    return language === 'en' ? `${diffMinutes}m ago` : `${diffMinutes}분전`;
+  }
 
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}시간전`;
+  if (diffHours < 24) {
+    return language === 'en' ? `${diffHours}h ago` : `${diffHours}시간전`;
+  }
 
   const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}일전`;
+  return language === 'en' ? `${diffDays}d ago` : `${diffDays}일전`;
 }

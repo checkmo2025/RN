@@ -30,6 +30,7 @@ import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import { SkeletonBox } from '../components/common/SkeletonBox';
 import { useAuthGate } from '../contexts/AuthGateContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { BOOK_DEFAULT_IMAGE } from '../constants/defaultAssets';
 import { useEdgeBackSwipe } from '../hooks/useEdgeBackSwipe';
@@ -174,6 +175,7 @@ export function UserProfileScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ UserProfile: UserProfileRouteParams }, 'UserProfile'>>();
   const { requireAuth } = useAuthGate();
+  const { l } = useLanguage();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const translateX = useRef(new Animated.Value(0)).current;
   const [activeTab, setActiveTab] = useState<TabKey>('책 이야기');
@@ -254,15 +256,15 @@ export function UserProfileScreen() {
       setStories(allStories.map(mapRemoteStoryToCard));
     } catch (error) {
       setStories([]);
-      showToast(resolveStoryFeedErrorMessage(error, '책이야기를 불러오지 못했습니다.'));
+      showToast(l(resolveStoryFeedErrorMessage(error, '책이야기를 불러오지 못했습니다.')));
     }
-  }, [memberNickname]);
+  }, [l, memberNickname]);
 
   const mapMemberLikedBooksToCards = useCallback((items: MemberLikedBookItem[]): BookCard[] => {
     const mapped = items.map((book, index) => {
       const isbn = book.isbn.trim();
-      const title = book.title?.trim() || '책 제목';
-      const author = book.author?.trim() || '작가 미상';
+      const title = book.title?.trim() || l('책 제목');
+      const author = book.author?.trim() || l('작가 미상');
       const id = isbn || `${title}-${author}-${index}`;
 
       return {
@@ -282,7 +284,7 @@ export function UserProfileScreen() {
       }
     });
     return Array.from(uniqueById.values());
-  }, []);
+  }, [l]);
 
   const loadLikedBooks = useCallback(async () => {
     setLoadingBooks(true);
@@ -292,12 +294,12 @@ export function UserProfileScreen() {
     } catch (error) {
       setBooks([]);
       if (!(error instanceof ApiError)) {
-        showToast('서재를 불러오지 못했습니다.');
+        showToast(l('서재를 불러오지 못했습니다.'));
       }
     } finally {
       setLoadingBooks(false);
     }
-  }, [mapMemberLikedBooksToCards, memberNickname]);
+  }, [l, mapMemberLikedBooksToCards, memberNickname]);
 
   const loadGroups = useCallback(async () => {
     setLoadingGroups(true);
@@ -313,12 +315,12 @@ export function UserProfileScreen() {
     } catch (error) {
       setGroups([]);
       if (!(error instanceof ApiError)) {
-        showToast('모임 목록을 불러오지 못했습니다.');
+        showToast(l('모임 목록을 불러오지 못했습니다.'));
       }
     } finally {
       setLoadingGroups(false);
     }
-  }, [memberNickname]);
+  }, [l, memberNickname]);
 
   const loadFollowUsers = useCallback(async () => {
     setLoadingFollowUsers(true);
@@ -331,12 +333,12 @@ export function UserProfileScreen() {
       setFollowingUsers(followings);
     } catch (error) {
       if (!(error instanceof ApiError)) {
-        showToast('구독 목록을 불러오지 못했습니다.');
+        showToast(l('구독 목록을 불러오지 못했습니다.'));
       }
     } finally {
       setLoadingFollowUsers(false);
     }
-  }, [memberNickname]);
+  }, [l, memberNickname]);
 
   useEffect(() => {
     let cancelled = false;
@@ -348,7 +350,7 @@ export function UserProfileScreen() {
       } catch (error) {
         if (cancelled) return;
         if (!(error instanceof ApiError)) {
-          showToast('프로필을 불러오지 못했습니다.');
+          showToast(l('프로필을 불러오지 못했습니다.'));
         }
       } finally {
         if (!cancelled) {
@@ -362,7 +364,7 @@ export function UserProfileScreen() {
     return () => {
       cancelled = true;
     };
-  }, [loadGroups, loadLikedBooks, loadProfile]);
+  }, [l, loadGroups, loadLikedBooks, loadProfile]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
@@ -372,7 +374,7 @@ export function UserProfileScreen() {
         await Promise.all([loadProfile(), loadLikedBooks(), loadGroups()]);
       } catch (error) {
         if (!(error instanceof ApiError)) {
-          showToast('프로필을 새로고침하지 못했습니다.');
+          showToast(l('프로필을 새로고침하지 못했습니다.'));
         }
       } finally {
         setRefreshing(false);
@@ -380,7 +382,7 @@ export function UserProfileScreen() {
     };
 
     void refresh();
-  }, [loadGroups, loadLikedBooks, loadProfile]);
+  }, [l, loadGroups, loadLikedBooks, loadProfile]);
 
   const handleFollowPageRefresh = useCallback(() => {
     setRefreshing(true);
@@ -406,11 +408,11 @@ export function UserProfileScreen() {
     const submit = async () => {
       try {
         await setFollowingMember(memberNickname, nextFollowing);
-        showToast(nextFollowing ? '구독했습니다.' : '구독을 취소했습니다.');
+        showToast(nextFollowing ? l('구독했습니다.') : l('구독을 취소했습니다.'));
         await loadProfile();
       } catch (error) {
         if (!(error instanceof ApiError)) {
-          showToast('구독 상태를 변경하지 못했습니다.');
+          showToast(l('구독 상태를 변경하지 못했습니다.'));
         }
       } finally {
         setSubmittingFollow(false);
@@ -418,13 +420,13 @@ export function UserProfileScreen() {
     };
 
     void submit();
-  }, [loadProfile, memberNickname, profile, submittingFollow]);
+  }, [l, loadProfile, memberNickname, profile, submittingFollow]);
 
   const following = profile?.following ?? false;
   const profileName = profile?.nickname?.trim() || memberNickname;
   const profileDesc =
     profile?.description?.trim() ||
-    '소개글이 없습니다.';
+    l('소개글이 없습니다.');
   const profileCategories = useMemo(
     () =>
       (profile?.categories ?? []).map((code) => CATEGORY_CODE_TO_LABEL[code as ClubCategoryCode] ?? code),
@@ -495,12 +497,12 @@ export function UserProfileScreen() {
       const submit = async () => {
         try {
           await setFollowingMember(targetNickname, nextFollowing);
-          showToast(nextFollowing ? '구독했습니다.' : '구독을 취소했습니다.');
+        showToast(nextFollowing ? l('구독했습니다.') : l('구독을 취소했습니다.'));
         } catch (error) {
           setFollowerUsers(prevFollowerUsers);
           setFollowingUsers(prevFollowingUsers);
           if (!(error instanceof ApiError)) {
-            showToast('구독 상태를 변경하지 못했습니다.');
+            showToast(l('구독 상태를 변경하지 못했습니다.'));
           }
         } finally {
           setTogglingFollowNickname((prev) => (prev === targetNickname ? null : prev));
@@ -509,7 +511,7 @@ export function UserProfileScreen() {
 
       void submit();
     },
-    [followerUsers, followingUsers, togglingFollowNickname],
+    [followerUsers, followingUsers, l, togglingFollowNickname],
   );
 
   const handleOpenReportModal = useCallback(() => {
@@ -523,22 +525,22 @@ export function UserProfileScreen() {
   const handleConfirmBlockMember = useCallback(() => {
     setShowBlockReportModal(false);
     Alert.alert(
-      '차단하기',
-      `${profileName} 님의 차단을 하시겠습니까?`,
+      l('차단하기'),
+      l('{name} 님의 차단을 하시겠습니까?', { name: profileName }),
       [
-        { text: '취소', style: 'cancel' },
+        { text: l('취소'), style: 'cancel' },
         {
-          text: '차단',
+          text: l('차단'),
           style: 'destructive',
           onPress: () => {
             const submit = async () => {
               setBlockingMember(true);
               try {
                 await blockMember(memberNickname);
-                showToast('차단되었습니다.');
+                showToast(l('차단되었습니다.'));
                 navigation.goBack();
               } catch {
-                showToast('차단에 실패했습니다. 다시 시도해 주세요.');
+                showToast(l('차단에 실패했습니다. 다시 시도해 주세요.'));
               } finally {
                 setBlockingMember(false);
               }
@@ -548,7 +550,7 @@ export function UserProfileScreen() {
         },
       ],
     );
-  }, [memberNickname, profileName, navigation]);
+  }, [l, memberNickname, profileName, navigation]);
 
   const handleOpenGroupMenu = useCallback((pageX: number, pageY: number, clubId: number) => {
     setGroupMenuClubId(clubId);
@@ -572,11 +574,11 @@ export function UserProfileScreen() {
     () => [
       {
         key: 'visit',
-        label: '방문하기',
+        label: l('방문하기'),
         onPress: handleVisitGroup,
       },
     ],
-    [handleVisitGroup],
+    [handleVisitGroup, l],
   );
 
   const handleCloseReportModal = useCallback(() => {
@@ -597,10 +599,10 @@ export function UserProfileScreen() {
               content: payload.content,
             });
             setReportModal(null);
-            showToast('신고가 접수되었습니다.');
+            showToast(l('신고가 접수되었습니다.'));
           } catch (error) {
             if (!(error instanceof ApiError)) {
-              showToast('신고 접수에 실패했습니다.');
+              showToast(l('신고 접수에 실패했습니다.'));
             }
           } finally {
             setSubmittingReport(false);
@@ -609,13 +611,13 @@ export function UserProfileScreen() {
         void submit();
       });
     },
-    [memberNickname, requireAuth],
+    [l, memberNickname, requireAuth],
   );
 
   const handleOpenStoryDetail = useCallback(
     (story: StoryCard) => {
       if (!Number.isInteger(story.remoteId) || story.remoteId <= 0) {
-        showToast('유효한 책이야기 정보가 없습니다.');
+        showToast(l('유효한 책이야기 정보가 없습니다.'));
         return;
       }
 
@@ -635,9 +637,9 @@ export function UserProfileScreen() {
         return;
       }
 
-      showToast('책이야기 화면으로 이동하지 못했습니다.');
+      showToast(l('책이야기 화면으로 이동하지 못했습니다.'));
     },
-    [navigation],
+    [l, navigation],
   );
 
   const handleOpenBookSearchDetail = useCallback(
@@ -660,7 +662,7 @@ export function UserProfileScreen() {
 
   const renderStoryCards = () => (
     <View style={[styles.gridContent, styles.cardWrap]}>
-      {stories.length === 0 ? <Text style={styles.emptyText}>작성한 책이야기가 없습니다.</Text> : null}
+      {stories.length === 0 ? <Text style={styles.emptyText}>{l('작성한 책이야기가 없습니다.')}</Text> : null}
       {stories.map((story) => (
         <Pressable
           key={story.id}
@@ -709,7 +711,7 @@ export function UserProfileScreen() {
           ))}
         </View>
       ) : null}
-      {!loadingBooks && books.length === 0 ? <Text style={styles.emptyText}>공개된 서재가 없습니다.</Text> : null}
+      {!loadingBooks && books.length === 0 ? <Text style={styles.emptyText}>{l('공개된 서재가 없습니다.')}</Text> : null}
       {books.map((book) => (
         <Pressable
           key={book.id}
@@ -745,7 +747,7 @@ export function UserProfileScreen() {
         </View>
       ) : null}
       {!loadingGroups && groups.length === 0 ? (
-        <Text style={styles.emptyText}>공개된 모임이 없습니다.</Text>
+        <Text style={styles.emptyText}>{l('공개된 모임이 없습니다.')}</Text>
       ) : null}
       {groups.map((group) => (
         <View key={group.id} style={styles.groupRow}>
@@ -777,7 +779,7 @@ export function UserProfileScreen() {
         onPress={() => setShowFollowPage(false)}
       >
         <MaterialIcons name="chevron-left" size={18} color={colors.gray5} />
-        <Text style={styles.breadcrumbText}>뒤로가기</Text>
+        <Text style={styles.breadcrumbText}>{l('뒤로가기')}</Text>
       </Pressable>
 
       <View style={styles.followProfileArea}>
@@ -800,7 +802,7 @@ export function UserProfileScreen() {
           }}
         >
           <Text style={[styles.followTabText, activeFollowTab === 'FOLLOWER' && styles.followTabTextActive]}>
-            구독자 {followerCount}
+            {l('구독자 {count}', { count: followerCount })}
           </Text>
         </Pressable>
         <Pressable
@@ -811,7 +813,7 @@ export function UserProfileScreen() {
           }}
         >
           <Text style={[styles.followTabText, activeFollowTab === 'FOLLOWING' && styles.followTabTextActive]}>
-            구독중 {followingCount}
+            {l('구독중 {count}', { count: followingCount })}
           </Text>
         </Pressable>
       </View>
@@ -829,7 +831,7 @@ export function UserProfileScreen() {
           </View>
         ) : null}
         {!loadingFollowUsers && activeFollowUsers.length === 0 ? (
-          <Text style={styles.emptyText}>표시할 사용자가 없습니다.</Text>
+          <Text style={styles.emptyText}>{l('표시할 사용자가 없습니다.')}</Text>
         ) : null}
 
         {activeFollowUsers.map((user) => {
@@ -865,7 +867,7 @@ export function UserProfileScreen() {
                     user.following ? styles.followButtonTextActive : styles.followButtonTextInactive,
                   ]}
                 >
-                  {toggling ? '처리 중...' : user.following ? '구독중' : '구독'}
+                  {toggling ? l('처리 중...') : user.following ? l('구독중') : l('구독')}
                 </Text>
               </Pressable>
             </View>
@@ -888,7 +890,7 @@ export function UserProfileScreen() {
   });
 
   return (
-    <ScreenLayout title="다른사람 프로필">
+    <ScreenLayout title={l('다른사람 프로필')}>
       <Animated.View
         style={[styles.container, { transform: [{ translateX }] }]}
         {...backSwipeResponder.panHandlers}
@@ -912,7 +914,7 @@ export function UserProfileScreen() {
                 onPress={handleGoBack}
               >
                 <MaterialIcons name="chevron-left" size={18} color={colors.gray5} />
-                <Text style={styles.breadcrumbText}>뒤로가기</Text>
+                <Text style={styles.breadcrumbText}>{l('뒤로가기')}</Text>
               </Pressable>
 
               <View style={styles.profileRow}>
@@ -927,11 +929,15 @@ export function UserProfileScreen() {
                   <Text style={styles.profileName}>{profileName}</Text>
                   <View style={styles.profileFollowRow}>
                     <Pressable onPress={openFollowingList} hitSlop={8}>
-                      <Text style={styles.profileSub}>구독중 {followingCount}</Text>
+                      <Text style={styles.profileSub}>
+                        {l('구독중 {count}', { count: followingCount })}
+                      </Text>
                     </Pressable>
                     <Text style={styles.profileSub}> · </Text>
                     <Pressable onPress={openFollowerList} hitSlop={8}>
-                      <Text style={styles.profileSub}>구독자 {followerCount}</Text>
+                      <Text style={styles.profileSub}>
+                        {l('구독자 {count}', { count: followerCount })}
+                      </Text>
                     </Pressable>
                   </View>
                   <Text style={styles.profileDesc} numberOfLines={3}>
@@ -939,7 +945,9 @@ export function UserProfileScreen() {
                   </Text>
                   {profileCategories.length > 0 ? (
                     <Text style={styles.profileCategory}>
-                      관심 카테고리 · {profileCategories.join(', ')}
+                      {l('관심 카테고리 · {categories}', {
+                        categories: profileCategories.map((category) => l(category)).join(', '),
+                      })}
                     </Text>
                   ) : null}
                 </View>
@@ -956,14 +964,14 @@ export function UserProfileScreen() {
                   disabled={submittingFollow || profileLoading}
                 >
                   <Text style={[styles.primaryButtonText, following ? styles.disabledText : null]}>
-                    {submittingFollow ? '처리 중...' : following ? '구독 중' : '구독하기'}
+                    {submittingFollow ? l('처리 중...') : following ? l('구독 중') : l('구독하기')}
                   </Text>
                 </Pressable>
                 <Pressable
                   style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
                   onPress={() => setShowBlockReportModal(true)}
                 >
-                  <Text style={styles.secondaryButtonText}>신고/차단</Text>
+                  <Text style={styles.secondaryButtonText}>{l('신고/차단')}</Text>
                 </Pressable>
               </View>
 
@@ -984,7 +992,7 @@ export function UserProfileScreen() {
                       }}
                     >
                       <Text style={[styles.tabLabel, active ? styles.tabLabelActive : null]}>
-                        {tab}
+                        {l(tab)}
                       </Text>
                     </Pressable>
                   );
@@ -1033,21 +1041,21 @@ export function UserProfileScreen() {
             style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]}
             onPress={() => setShowBlockReportModal(false)}
           >
-            <Text style={styles.modalActionText}>취소</Text>
+            <Text style={styles.modalActionText}>{l('취소')}</Text>
           </Pressable>
           <View style={styles.modalActionDivider} />
           <Pressable
             style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]}
             onPress={handleOpenReportModal}
           >
-            <Text style={styles.modalActionText}>신고하기</Text>
+            <Text style={styles.modalActionText}>{l('신고하기')}</Text>
           </Pressable>
           <View style={styles.modalActionDivider} />
           <Pressable
             style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]}
             onPress={handleConfirmBlockMember}
           >
-            <Text style={[styles.modalActionText, styles.modalActionDestructive]}>차단하기</Text>
+            <Text style={[styles.modalActionText, styles.modalActionDestructive]}>{l('차단하기')}</Text>
           </Pressable>
         </View>
       </DialogOverlay>

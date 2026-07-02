@@ -333,7 +333,7 @@ function NotificationToggle({
 
 export function MyPageScreen() {
   const { isLoggedIn, logout, requireAuth } = useAuthGate();
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage, t, l } = useLanguage();
   const myPageScrollRef = useRef<ScrollView>(null);
   useScrollToTop(myPageScrollRef);
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -1301,7 +1301,7 @@ export function MyPageScreen() {
         </>
       ) : null}
       {!loadingStories && stories.length === 0 ? (
-        <Text style={styles.emptyText}>작성한 책이야기가 없습니다.</Text>
+        <Text style={styles.emptyText}>{l('작성한 책이야기가 없습니다.')}</Text>
       ) : null}
       {stories.map((item) => (
         <Pressable
@@ -1341,7 +1341,7 @@ export function MyPageScreen() {
           <View style={styles.storyActions}>
             {item.status === 'DRAFT' ? (
               <View style={styles.draftActions}>
-                <Text style={styles.draftBadge}>임시저장</Text>
+                <Text style={styles.draftBadge}>{l('임시저장')}</Text>
                 <Pressable
                   style={({ pressed }) => [
                     styles.draftDeleteButton,
@@ -1354,10 +1354,10 @@ export function MyPageScreen() {
                   }}
                   disabled={deletingDraftStoryId === item.remoteId}
                   accessibilityRole="button"
-                  accessibilityLabel={`${item.title} 임시저장 삭제`}
+                  accessibilityLabel={l('{title} 임시저장 삭제', { title: item.title })}
                 >
                   <Text style={styles.draftDeleteButtonText}>
-                    {deletingDraftStoryId === item.remoteId ? '삭제 중...' : '삭제'}
+                    {deletingDraftStoryId === item.remoteId ? l('삭제 중...') : l('삭제')}
                   </Text>
                 </Pressable>
               </View>
@@ -1394,7 +1394,7 @@ export function MyPageScreen() {
         </>
       ) : null}
       {!loadingBooks && books.length === 0 ? (
-        <Text style={styles.emptyText}>내 서재에 표시할 책이 없습니다.</Text>
+        <Text style={styles.emptyText}>{l('내 서재에 표시할 책이 없습니다.')}</Text>
       ) : null}
       {books.map((item) => (
         <View key={item.id} style={[styles.bookCard, { width: bookshelfCardWidth }]}>
@@ -1435,7 +1435,7 @@ export function MyPageScreen() {
         </>
       ) : null}
       {!loadingGroups && groups.length === 0 ? (
-        <Text style={styles.emptyText}>가입한 모임이 없습니다.</Text>
+        <Text style={styles.emptyText}>{l('가입한 모임이 없습니다.')}</Text>
       ) : null}
       {groups.map((group) => (
         <Pressable
@@ -1477,7 +1477,7 @@ export function MyPageScreen() {
         </>
       ) : null}
       {!loadingAlarms && alarms.length === 0 ? (
-        <Text style={styles.emptyText}>도착한 알림이 없습니다.</Text>
+        <Text style={styles.emptyText}>{l('도착한 알림이 없습니다.')}</Text>
       ) : null}
       {alarms.map((alarm) => (
         <Pressable
@@ -1514,7 +1514,7 @@ export function MyPageScreen() {
         </>
       ) : null}
       {!loadingMyNews && myNews.length === 0 ? (
-        <Text style={styles.emptyText}>등록한 소식이 없습니다.</Text>
+        <Text style={styles.emptyText}>{l('등록한 소식이 없습니다.')}</Text>
       ) : null}
       {myNews.map((item) => (
         <Pressable
@@ -1652,7 +1652,7 @@ export function MyPageScreen() {
         ) : null}
 
         {!loadingFollowUsers && activeFollowUsers.length === 0 ? (
-          <Text style={styles.emptyText}>표시할 사용자가 없습니다.</Text>
+          <Text style={styles.emptyText}>{l('표시할 사용자가 없습니다.')}</Text>
         ) : null}
 
         {activeFollowUsers.map((user) => {
@@ -1684,7 +1684,9 @@ export function MyPageScreen() {
                 onPress={() => handleDeleteFollower(user.nickname)}
                 disabled={deleting}
               >
-                <Text style={styles.followDeleteButtonText}>{deleting ? '삭제 중...' : '삭제'}</Text>
+                <Text style={styles.followDeleteButtonText}>
+                  {deleting ? l('삭제 중...') : l('삭제')}
+                </Text>
               </Pressable>
             ) : (
               <Pressable
@@ -1766,10 +1768,10 @@ export function MyPageScreen() {
   }, []);
 
   const handleUnblockMember = useCallback((nickname: string) => {
-    Alert.alert('차단 해제', `${nickname} 님의 차단을 해제하시겠습니까?`, [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(l('차단 해제'), l('{nickname} 님의 차단을 해제하시겠습니까?', { nickname }), [
+      { text: l('취소'), style: 'cancel' },
       {
-        text: '해제',
+        text: l('해제'),
         onPress: async () => {
           try {
             await unblockMember(nickname);
@@ -1832,10 +1834,12 @@ export function MyPageScreen() {
       return;
     }
 
-    Alert.alert('모임 탈퇴', `'${group.name}' 모임에서 탈퇴하시겠습니까?`, [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(l('모임 탈퇴'), l('{clubName} 모임에서 탈퇴하시겠습니까?', {
+      clubName: group.name,
+    }), [
+      { text: l('취소'), style: 'cancel' },
       {
-        text: '탈퇴하기',
+        text: l('탈퇴하기'),
         style: 'destructive',
         onPress: () => {
           const submit = async () => {
@@ -2013,13 +2017,13 @@ export function MyPageScreen() {
           <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
           <View style={styles.formBlock}>
-            <Text style={styles.detailLabel}>닉네임</Text>
+            <Text style={styles.detailLabel}>{l('닉네임')}</Text>
             <View style={styles.nicknameRow}>
               <View style={[styles.inputPlaceholder, styles.nicknameInputWrap]}>
                 <FormTextInput
                   value={profileEditNickname}
                   onChangeText={handleProfileEditNicknameChange}
-                  placeholder="영어 소문자/숫자/특수문자, 최대 20자"
+                  placeholder={l('영어 소문자/숫자/특수문자, 최대 20자')}
                   placeholderTextColor={colors.gray3}
                   style={[styles.inputField, styles.inputFieldDescenderSafe]}
                   maxLength={INPUT_LIMITS.NICKNAME}
@@ -2037,7 +2041,7 @@ export function MyPageScreen() {
                 onPress={handleCheckNickname}
               >
                 <Text style={styles.nicknameCheckButtonText}>
-                  {nicknameChecked ? '확인됨' : checkingNickname ? '확인 중' : '중복확인'}
+                  {nicknameChecked ? l('확인됨') : checkingNickname ? l('확인 중') : l('중복확인')}
                 </Text>
               </Pressable>
             </View>
@@ -2053,20 +2057,22 @@ export function MyPageScreen() {
                 ]}
               >
                 {nicknameStatus === 'available'
-                  ? '사용 가능한 닉네임입니다.'
+                  ? l('사용 가능한 닉네임입니다.')
                   : nicknameStatus === 'duplicate'
-                    ? '이미 사용 중인 닉네임입니다.'
-                    : '닉네임 중복확인을 해주세요.'}
+                    ? l('이미 사용 중인 닉네임입니다.')
+                    : l('닉네임 중복확인을 해주세요.')}
               </Text>
             ) : null}
           </View>
           <View style={styles.formBlock}>
-            <Text style={styles.detailLabel}>소개</Text>
+            <Text style={styles.detailLabel}>{l('소개')}</Text>
             <View style={styles.inputPlaceholder}>
               <FormTextInput
                 value={profileEditDescription}
                 onChangeText={setProfileEditDescription}
-                placeholder={`소개를 입력해주세요 (최대 ${INPUT_LIMITS.USER_DESCRIPTION}자)`}
+                placeholder={l('소개를 입력해주세요 (최대 {limit}자)', {
+                  limit: INPUT_LIMITS.USER_DESCRIPTION,
+                })}
                 placeholderTextColor={colors.gray3}
                 style={[styles.inputField, styles.inputFieldDescenderSafe]}
                 maxLength={INPUT_LIMITS.USER_DESCRIPTION}
@@ -2077,7 +2083,7 @@ export function MyPageScreen() {
             </Text>
           </View>
           <View style={styles.formBlock}>
-            <Text style={styles.detailLabel}>프로필 이미지</Text>
+            <Text style={styles.detailLabel}>{l('프로필 이미지')}</Text>
             <View style={styles.profileImageEditor}>
               <View style={styles.profileImagePreviewWrap}>
                 {profileEditUseDefaultAvatar || !profileEditImageUrl ? (
@@ -2098,7 +2104,7 @@ export function MyPageScreen() {
                   disabled={uploadingProfileImage}
                 >
                   <Text style={styles.profileImageActionText}>
-                    {uploadingProfileImage ? '업로드 중...' : '파일에서 선택'}
+                    {uploadingProfileImage ? l('업로드 중...') : l('파일에서 선택')}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -2108,13 +2114,13 @@ export function MyPageScreen() {
                   ]}
                   onPress={() => { setProfileEditUseDefaultAvatar(true); setProfileEditImageUrl(''); }}
                 >
-                  <Text style={styles.profileImageActionText}>기본 프로필 선택</Text>
+                  <Text style={styles.profileImageActionText}>{l('기본 프로필 선택')}</Text>
                 </Pressable>
               </View>
             </View>
           </View>
           <View style={styles.formBlock}>
-            <Text style={styles.detailLabel}>관심 카테고리</Text>
+            <Text style={styles.detailLabel}>{l('관심 카테고리')}</Text>
             <View style={styles.categoryPickerWrap}>
               {profileEditCategoryOrder.map((code) => {
                 const selected = selectedCategorySet.has(code);
@@ -2136,14 +2142,14 @@ export function MyPageScreen() {
                         selected ? null : styles.categoryChipTextUnselected,
                       ]}
                     >
-                      {CATEGORY_CODE_TO_LABEL[code as ClubCategoryCode] ?? code}
+                      {l(CATEGORY_CODE_TO_LABEL[code as ClubCategoryCode] ?? code)}
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
             <Text style={styles.categoryHintText}>
-              최소 1개, 최대 6개 선택 가능합니다.
+              {l('최소 1개, 최대 6개 선택 가능합니다.')}
             </Text>
           </View>
           <Pressable
@@ -2152,7 +2158,7 @@ export function MyPageScreen() {
             disabled={submittingProfileEdit}
           >
             <Text style={styles.submitButtonText}>
-              {submittingProfileEdit ? '변경 중...' : '변경하기'}
+              {submittingProfileEdit ? l('변경 중...') : l('변경하기')}
             </Text>
           </Pressable>
 
@@ -2167,13 +2173,13 @@ export function MyPageScreen() {
           <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
           <View style={styles.formBlock}>
-            <Text style={styles.detailLabel}>기존 비밀번호</Text>
+            <Text style={styles.detailLabel}>{l('기존 비밀번호')}</Text>
             <View style={styles.inputPlaceholder}>
               <View style={styles.passwordInputRow}>
                 <TextInput
                   value={passwordCurrent}
                   onChangeText={setPasswordCurrent}
-                  placeholder="기존 비밀번호를 입력해주세요"
+                  placeholder={l('기존 비밀번호를 입력해주세요')}
                   placeholderTextColor={colors.gray3}
                   style={[styles.inputField, styles.inputFieldDescenderSafe, styles.passwordInputField]}
                   secureTextEntry={!showPasswordCurrent}
@@ -2196,13 +2202,13 @@ export function MyPageScreen() {
             </View>
           </View>
           <View style={styles.formBlock}>
-            <Text style={styles.detailLabel}>새 비밀번호</Text>
+            <Text style={styles.detailLabel}>{l('새 비밀번호')}</Text>
             <View style={styles.inputPlaceholder}>
               <View style={styles.passwordInputRow}>
                 <TextInput
                   value={passwordNext}
                   onChangeText={setPasswordNext}
-                  placeholder="새 비밀번호를 입력해주세요"
+                  placeholder={l('새 비밀번호를 입력해주세요')}
                   placeholderTextColor={colors.gray3}
                   style={[styles.inputField, styles.inputFieldDescenderSafe, styles.passwordInputField]}
                   secureTextEntry={!showPasswordNext}
@@ -2228,7 +2234,7 @@ export function MyPageScreen() {
                 <TextInput
                   value={passwordConfirm}
                   onChangeText={setPasswordConfirm}
-                  placeholder="비밀번호 확인"
+                  placeholder={l('비밀번호 확인')}
                   placeholderTextColor={colors.gray3}
                   style={[styles.inputField, styles.inputFieldDescenderSafe, styles.passwordInputField]}
                   secureTextEntry={!showPasswordConfirm}
@@ -2256,7 +2262,7 @@ export function MyPageScreen() {
             disabled={submittingPasswordUpdate}
           >
             <Text style={styles.submitButtonText}>
-              {submittingPasswordUpdate ? '변경 중...' : '변경하기'}
+              {submittingPasswordUpdate ? l('변경 중...') : l('변경하기')}
             </Text>
           </Pressable>
         </View>
@@ -2271,16 +2277,13 @@ export function MyPageScreen() {
           <Text style={styles.detailDivider} />
           <View style={styles.detailList}>
             <Text style={styles.detailBody}>
-              1. 탈퇴 신청 후 보류 기간{'\n'}- 탈퇴 신청 시 즉시 탈퇴가 아닌 7일간의 유예 기간이 적용됩니다.{'\n'}- 이 기간
-              동안에는 언제든 탈퇴를 철회할 수 있습니다.
+              {l('1. 탈퇴 신청 후 보류 기간\n- 탈퇴 신청 시 즉시 탈퇴가 아닌 7일간의 유예 기간이 적용됩니다.\n- 이 기간 동안에는 언제든 탈퇴를 철회할 수 있습니다.')}
             </Text>
             <Text style={styles.detailBody}>
-              2. 탈퇴 처리{'\n'}- 유예 기간(7일)이 지나면 회원 정보와 활동 기록은 모두 영구적으로 삭제됩니다.{'\n'}- 단, 법적
-              보관 의무가 있는 데이터는 관련 법령에 따라 일정 기간 보관 후 파기됩니다.
+              {l('2. 탈퇴 처리\n- 유예 기간(7일)이 지나면 회원 정보와 활동 기록은 모두 영구적으로 삭제됩니다.\n- 단, 법적 보관 의무가 있는 데이터는 관련 법령에 따라 일정 기간 보관 후 파기됩니다.')}
             </Text>
             <Text style={styles.detailBody}>
-              3. 주의사항{'\n'}- 유예 기간(7일)이 지나면 복구가 불가능하며, 동일 계정으로 재가입해도 기존 데이터는 복원되지
-              않습니다.
+              {l('3. 주의사항\n- 유예 기간(7일)이 지나면 복구가 불가능하며, 동일 계정으로 재가입해도 기존 데이터는 복원되지 않습니다.')}
             </Text>
           </View>
           <Pressable
@@ -2293,7 +2296,7 @@ export function MyPageScreen() {
             disabled={submittingWithdrawal}
           >
             <Text style={styles.submitButtonText}>
-              {submittingWithdrawal ? '처리 중...' : '탈퇴 신청하기'}
+              {submittingWithdrawal ? l('처리 중...') : l('탈퇴 신청하기')}
             </Text>
           </Pressable>
         </View>
@@ -2332,7 +2335,7 @@ export function MyPageScreen() {
             </View>
           ) : null}
           {!loadingReportHistory && reportHistory.length === 0 ? (
-            <Text style={styles.emptyText}>신고한 내역이 없습니다.</Text>
+            <Text style={styles.emptyText}>{l('신고한 내역이 없습니다.')}</Text>
           ) : null}
           <View style={styles.reportList}>
             {reportHistory.map((report) => (
@@ -2373,7 +2376,7 @@ export function MyPageScreen() {
             </View>
           ) : null}
           {!loadingBlockedMembers && blockedMembers.length === 0 ? (
-            <Text style={styles.emptyText}>차단한 사용자가 없습니다.</Text>
+            <Text style={styles.emptyText}>{l('차단한 사용자가 없습니다.')}</Text>
           ) : null}
           <View style={styles.reportList}>
             {blockedMembers.map((member) => (
@@ -2384,7 +2387,7 @@ export function MyPageScreen() {
                     style={({ pressed }) => [pressed && styles.pressed]}
                     onPress={() => handleUnblockMember(member.nickname)}
                   >
-                    <Text style={styles.unblockButton}>차단 해제</Text>
+                    <Text style={styles.unblockButton}>{l('차단 해제')}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -2442,8 +2445,8 @@ export function MyPageScreen() {
             return (
               <View key={row.type} style={styles.alarmRow}>
                 <View style={styles.alarmInfo}>
-                  <Text style={styles.detailLabel}>{row.label}</Text>
-                  <Text style={styles.detailBody}>내 활동에 대한 알림 수신</Text>
+                  <Text style={styles.detailLabel}>{l(row.label)}</Text>
+                  <Text style={styles.detailBody}>{l('내 활동에 대한 알림 수신')}</Text>
                 </View>
                 <NotificationToggle
                   enabled={enabled}
@@ -2464,12 +2467,12 @@ export function MyPageScreen() {
           <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
           <View style={styles.formBlock}>
-            <Text style={styles.detailLabel}>기존 이메일</Text>
+            <Text style={styles.detailLabel}>{l('기존 이메일')}</Text>
             <View style={styles.inputPlaceholder}>
               <TextInput
                 value={emailCurrent}
                 onChangeText={setEmailCurrent}
-                placeholder="기존 이메일을 입력해주세요"
+                placeholder={l('기존 이메일을 입력해주세요')}
                 placeholderTextColor={colors.gray3}
                 style={[styles.inputField, styles.inputFieldEmail]}
                 autoCapitalize="none"
@@ -2482,7 +2485,7 @@ export function MyPageScreen() {
             </View>
           </View>
           <View style={styles.formBlock}>
-            <Text style={styles.detailLabel}>변경 이메일</Text>
+            <Text style={styles.detailLabel}>{l('변경 이메일')}</Text>
             <View style={styles.inputPlaceholder}>
               <TextInput
                 value={emailNext}
@@ -2490,7 +2493,7 @@ export function MyPageScreen() {
                   setEmailNext(value);
                   resetEmailVerification();
                 }}
-                placeholder="변경할 이메일을 입력해주세요"
+                placeholder={l('변경할 이메일을 입력해주세요')}
                 placeholderTextColor={colors.gray3}
                 style={[styles.inputField, styles.inputFieldEmail]}
                 autoCapitalize="none"
@@ -2512,20 +2515,20 @@ export function MyPageScreen() {
             >
               <Text style={styles.emailVerificationButtonText}>
                 {sendingEmailVerificationCode
-                  ? '발송 중...'
+                  ? l('발송 중...')
                   : emailVerificationSent
-                    ? '인증번호 재발송'
-                    : '인증번호 발송'}
+                    ? l('인증번호 재발송')
+                    : l('인증번호 발송')}
               </Text>
             </Pressable>
           </View>
           <View style={styles.formBlock}>
-            <Text style={styles.detailLabel}>인증번호</Text>
+            <Text style={styles.detailLabel}>{l('인증번호')}</Text>
             <View style={styles.inputPlaceholder}>
               <TextInput
                 value={emailVerificationCode}
                 onChangeText={setEmailVerificationCode}
-                placeholder="인증번호 입력"
+                placeholder={l('인증번호 입력')}
                 placeholderTextColor={colors.gray3}
                 style={[styles.inputField, styles.inputFieldEmail]}
                 keyboardType="number-pad"
@@ -2542,7 +2545,7 @@ export function MyPageScreen() {
                   remainingEmailVerificationSeconds <= 0 ? styles.emailVerificationTimerExpiredText : null,
                 ]}
               >
-                남은 시간 {emailVerificationRemainingText}
+                {l('남은 시간 {time}', { time: emailVerificationRemainingText })}
               </Text>
             ) : null}
             <Pressable
@@ -2561,10 +2564,10 @@ export function MyPageScreen() {
                 ]}
               >
                 {confirmingEmailVerificationCode
-                  ? '확인 중...'
+                  ? l('확인 중...')
                   : emailVerified
-                    ? '인증 완료되었습니다'
-                    : '인증 완료'}
+                    ? l('인증 완료되었습니다')
+                    : l('인증 완료')}
               </Text>
             </Pressable>
           </View>
@@ -2577,7 +2580,7 @@ export function MyPageScreen() {
             disabled={submittingEmailUpdate || !emailVerified}
           >
             <Text style={styles.submitButtonText}>
-              {submittingEmailUpdate ? '변경 중...' : '변경하기'}
+              {submittingEmailUpdate ? l('변경 중...') : l('변경하기')}
             </Text>
           </Pressable>
         </View>

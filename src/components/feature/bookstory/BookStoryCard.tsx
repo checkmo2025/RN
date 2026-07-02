@@ -13,6 +13,7 @@ import { BOOKSTORY_COMMENT_URI } from '../../../constants/iconMap';
 import { colors, interactionOpacity, radius, spacing, typography } from '../../../theme';
 import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../../common/DefaultProfileAvatar';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 type Props = {
   author: string;
@@ -51,6 +52,8 @@ export function BookStoryCard({
   onPressAuthor,
   onPressComment,
 }: Props) {
+  const { l } = useLanguage();
+
   return (
     <Pressable style={styles.card} onPress={onPress}>
       <View style={styles.headerRow}>
@@ -67,7 +70,7 @@ export function BookStoryCard({
           <View style={styles.meta}>
             <Text style={styles.author}>{author}</Text>
             <Text style={styles.subtitle}>
-              {timeAgo} · 조회수 {views}
+              {timeAgo} · {l('조회수 {count}', { count: views })}
             </Text>
           </View>
         </Pressable>
@@ -88,7 +91,7 @@ export function BookStoryCard({
                 subscribed ? styles.subscribeTextActive : styles.subscribeTextInactive,
               ]}
             >
-              {subscribed ? '구독중' : '구독'}
+              {subscribed ? l('구독중') : l('구독')}
             </Text>
           </Pressable>
         ) : null}
@@ -127,7 +130,7 @@ export function BookStoryCard({
             size={20}
             color={liked ? colors.likeRed : colors.gray4}
           />
-          <Text style={styles.actionText}>좋아요 {likes}</Text>
+          <Text style={styles.actionText}>{l('좋아요 {count}', { count: likes })}</Text>
         </Pressable>
         <View style={styles.divider} />
         <Pressable
@@ -138,7 +141,7 @@ export function BookStoryCard({
           }}
         >
           <CommentIcon width={20} height={20} />
-          <Text style={styles.actionText}>댓글 {comments}</Text>
+          <Text style={styles.actionText}>{l('댓글 {count}', { count: comments })}</Text>
         </Pressable>
       </View>
     </Pressable>

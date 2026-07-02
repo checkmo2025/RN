@@ -63,6 +63,7 @@ import { MeetingListCardSkeleton } from '../components/feature/groups/MeetingLis
 import { MyGroupsDropdownCard } from '../components/feature/groups/MyGroupsDropdownCard';
 import { MyGroupsDropdownCardSkeleton } from '../components/feature/groups/MyGroupsDropdownCardSkeleton';
 import { useAuthGate } from '../contexts/AuthGateContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import {
   ApiError,
   PROFILE_INCOMPLETE_MESSAGE,
@@ -411,6 +412,7 @@ export function MeetingScreen() {
   const navigation = useNavigation<NavigationProp<TabParamList, 'Meeting'>>();
   const route = useRoute<RouteProp<TabParamList, 'Meeting'>>();
   const { requireAuth, isLoggedIn } = useAuthGate();
+  const { l } = useLanguage();
   const [showCreate, setShowCreate] = useState(false);
   const [createDraftDirty, setCreateDraftDirty] = useState(false);
   const [activeGroup, setActiveGroup] = useState<Group | null>(null);
@@ -628,8 +630,9 @@ export function MeetingScreen() {
     });
   }, [activeGroup, closeActiveGroupWithLoading, closeCreateFlow, navigation, showLeaveDraftAlert]);
 
-  const selectedOutputFilterLabel =
-    outputFilterOptions.find((option) => option.value === selectedOutputFilter)?.label ?? '전체';
+  const selectedOutputFilterLabel = l(
+    outputFilterOptions.find((option) => option.value === selectedOutputFilter)?.label ?? '전체',
+  );
 
 
   useConsumeRouteParam(
@@ -758,13 +761,13 @@ export function MeetingScreen() {
                   isProfileIncompleteApiError(error)
                     ? PROFILE_INCOMPLETE_MESSAGE
                     : error.status === 404
-                    ? '이전에 방문한 모임을 찾을 수 없습니다.'
-                    : '이전에 방문한 모임에 접근할 수 없습니다.',
+                    ? l('이전에 방문한 모임을 찾을 수 없습니다.')
+                    : l('이전에 방문한 모임에 접근할 수 없습니다.'),
                 );
                 scrollMeetingSearchToTop(false);
                 return;
               }
-              showToast('이전에 방문한 모임을 불러오지 못했습니다.');
+              showToast(l('이전에 방문한 모임을 불러오지 못했습니다.'));
               scrollMeetingSearchToTop(false);
               return;
             }
@@ -914,15 +917,17 @@ export function MeetingScreen() {
     requireAuth(() => {
       const reason = (applyReasonById[group.id] ?? '').trim();
       if (!reason) {
-        showToast('신청 사유를 입력해야 합니다.');
+        showToast(l('신청 사유를 입력해야 합니다.'));
         return;
       }
       if (reason.length > INPUT_LIMITS.APPLY_REASON) {
-        showToast(`신청 사유는 ${INPUT_LIMITS.APPLY_REASON}자 이하여야 합니다.`);
+        showToast(l('신청 사유는 {limit}자 이하여야 합니다.', {
+          limit: INPUT_LIMITS.APPLY_REASON,
+        }));
         return;
       }
       if (typeof group.clubId !== 'number') {
-        showToast('모임 정보를 찾을 수 없습니다.');
+        showToast(l('모임 정보를 찾을 수 없습니다.'));
         return;
       }
       const clubId = group.clubId;
@@ -936,7 +941,9 @@ export function MeetingScreen() {
           const nextStatus = membership?.myStatus ?? getJoinFallbackStatus(group);
           const nextApplicationStatus =
             mapClubStatusToApplication(nextStatus) ??
-            (isJoinedClubStatus(nextStatus) ? '가입 완료되었습니다' : '신청 완료되었습니다');
+            (isJoinedClubStatus(nextStatus)
+              ? l('가입 완료되었습니다')
+              : l('신청 완료되었습니다'));
           const nextGroup = applyGroupMembershipStatus(group, nextStatus);
 
           patchClubInMeetingLists(clubId, (item) => applyGroupMembershipStatus(item, nextStatus));
@@ -947,12 +954,14 @@ export function MeetingScreen() {
           setApplyOpenId(null);
           setApplyReasonById((prev) => ({ ...prev, [group.id]: '' }));
           showToast(
-            isJoinedClubStatus(nextStatus) ? '모임에 가입되었습니다.' : '가입 신청이 완료되었습니다.',
+            isJoinedClubStatus(nextStatus)
+              ? l('모임에 가입되었습니다.')
+              : l('가입 신청이 완료되었습니다.'),
           );
           void refreshMeetingLists();
         } catch (error) {
           if (!(error instanceof ApiError)) {
-            showToast('가입 신청에 실패했습니다.');
+            showToast(l('가입 신청에 실패했습니다.'));
           }
         }
       };
@@ -978,7 +987,7 @@ export function MeetingScreen() {
 
   if (showCreate) {
     return (
-      <ScreenLayout title="모임" onPressLogo={handlePressHeaderLogo}>
+      <ScreenLayout title={l('모임')} onPressLogo={handlePressHeaderLogo}>
         <MeetingCreateFlow
           onClose={closeCreateFlow}
           onCreated={handleClubCreated}
@@ -990,7 +999,7 @@ export function MeetingScreen() {
 
   if (activeGroup) {
     return (
-      <ScreenLayout title="모임" onPressLogo={handlePressHeaderLogo}>
+      <ScreenLayout title={l('모임')} onPressLogo={handlePressHeaderLogo}>
         <View style={styles.screenWrap}>
           <GroupHomeView
             group={activeGroup}
@@ -1011,7 +1020,7 @@ export function MeetingScreen() {
   }
 
   return (
-    <ScreenLayout title="모임" onPressLogo={handlePressHeaderLogo}>
+    <ScreenLayout title={l('모임')} onPressLogo={handlePressHeaderLogo}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1038,7 +1047,7 @@ export function MeetingScreen() {
             />
           }
         >
-      <Text style={styles.sectionTitle}>독서모임</Text>
+      <Text style={styles.sectionTitle}>{l('독서모임')}</Text>
       <Pressable
         style={({ pressed }) => [styles.createButton, pressed && styles.pressed]}
         onPress={() =>
@@ -1048,12 +1057,12 @@ export function MeetingScreen() {
           })
         }
       >
-        <Text style={styles.createButtonText}>+ 모임 생성하기</Text>
+        <Text style={styles.createButtonText}>{l('+ 모임 생성하기')}</Text>
       </Pressable>
 
       {isLoggedIn && myGroups.length > 0 ? (
         <>
-          <Text style={styles.sectionTitle}>내 독서 모임 바로가기</Text>
+          <Text style={styles.sectionTitle}>{l('내 독서 모임 바로가기')}</Text>
           <MyGroupsDropdownCard
             groups={myGroups}
             onPressGroup={openGroupHome}
@@ -1062,18 +1071,18 @@ export function MeetingScreen() {
       ) : null}
       {myGroupsLoading ? <MyGroupsDropdownCardSkeleton /> : null}
       {!myGroupsLoading && isLoggedIn && myGroups.length === 0 ? (
-        <Text style={styles.helperText}>가입한 모임이 없습니다.</Text>
+        <Text style={styles.helperText}>{l('가입한 모임이 없습니다.')}</Text>
       ) : null}
       {!isLoggedIn ? (
-        <Text style={styles.helperText}>로그인 후 내 모임을 확인할 수 있습니다.</Text>
+        <Text style={styles.helperText}>{l('로그인 후 내 모임을 확인할 수 있습니다.')}</Text>
       ) : null}
 
-      <Text style={styles.sectionTitle}>모임 검색하기</Text>
+      <Text style={styles.sectionTitle}>{l('모임 검색하기')}</Text>
       <View style={styles.searchRow}>
         <FormTextInput
           value={search}
           onChangeText={setSearch}
-          placeholder="모임명, 지역별로 원하는 모임을 검색해보세요!"
+          placeholder={l('모임명, 지역별로 원하는 모임을 검색해보세요!')}
           placeholderTextColor={colors.gray3}
           style={styles.searchInput}
           fieldType="search"
@@ -1121,7 +1130,7 @@ export function MeetingScreen() {
                         selected ? styles.outputFilterItemTextSelected : null,
                       ]}
                     >
-                      {option.label}
+                      {l(option.label)}
                     </Text>
                   </Pressable>
                 );
@@ -1152,7 +1161,7 @@ export function MeetingScreen() {
                   active ? styles.filterTextActive : styles.filterTextInactive,
                 ]}
               >
-                {filter}
+                {l(filter)}
               </Text>
             </Pressable>
           );
@@ -1162,7 +1171,7 @@ export function MeetingScreen() {
       {search.trim().length === 0 &&
       activeInputFilter === null &&
       selectedOutputFilter === 'ALL' ? (
-        <Text style={styles.sectionTitle}>독서 모임 추천</Text>
+        <Text style={styles.sectionTitle}>{l('독서 모임 추천')}</Text>
       ) : null}
 
       <View
@@ -1207,7 +1216,7 @@ export function MeetingScreen() {
         ) : null}
         {!discoverLoading && visibleDiscoverGroups.length === 0 ? (
           <View style={styles.emptySearchBox}>
-            <Text style={styles.emptySearchText}>검색 결과가 없습니다.</Text>
+            <Text style={styles.emptySearchText}>{l('검색 결과가 없습니다.')}</Text>
           </View>
         ) : null}
       </View>
@@ -1235,6 +1244,7 @@ function GroupHomeView({
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { requireAuth, isLoggedIn, logout } = useAuthGate();
+  const { l } = useLanguage();
   const isManagedClub = typeof group.clubId === 'number';
   const [managedGroup, setManagedGroup] = useState<Group>(group);
   const [canManageClub, setCanManageClub] = useState(false);
@@ -2481,8 +2491,8 @@ function GroupHomeView({
       : '100%';
   const clubParticipantsTotalText =
     clubParticipantsTotalCount === null
-      ? '참여 인원을 확인하고 있습니다.'
-      : `총 ${clubParticipantsTotalCount}명`;
+      ? l('참여 인원을 확인하고 있습니다.')
+      : l('총 {count}명', { count: clubParticipantsTotalCount });
 
   const handlePressClubParticipantProfile = useCallback(
     (nickname: string) => {
@@ -2514,11 +2524,11 @@ function GroupHomeView({
         const submit = async () => {
           try {
             await setFollowingMember(nickname, nextFollowing);
-            showToast(nextFollowing ? '구독했습니다.' : '구독을 취소했습니다.');
+            showToast(nextFollowing ? l('구독했습니다.') : l('구독을 취소했습니다.'));
           } catch (error) {
             setClubParticipants(previousParticipants);
             if (!(error instanceof ApiError)) {
-              showToast('구독 상태를 변경하지 못했습니다.');
+              showToast(l('구독 상태를 변경하지 못했습니다.'));
             }
           } finally {
             setTogglingParticipantNickname((prev) => (prev === nickname ? null : prev));
@@ -2561,14 +2571,14 @@ function GroupHomeView({
           onPress={handleBackFromGroupHome}
         >
           <MaterialIcons name="chevron-left" size={18} color={colors.gray5} />
-          <Text style={styles.breadcrumbText}>모임 목록</Text>
+          <Text style={styles.breadcrumbText}>{l('모임 목록')}</Text>
         </Pressable>
         {canManageClub ? (
           <Pressable
             style={({ pressed }) => [styles.detailTitleManageLink, pressed && styles.pressed]}
             onPress={openManagementMenu}
           >
-            <Text style={styles.detailTitleManageLinkText}>모임 관리하기</Text>
+            <Text style={styles.detailTitleManageLinkText}>{l('모임 관리하기')}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -2597,7 +2607,7 @@ function GroupHomeView({
                 size={16}
                 color={active ? colors.white : colors.gray4}
               />
-              <Text style={[styles.pillNavText, active && styles.pillNavTextActive]}>{tab.label}</Text>
+              <Text style={[styles.pillNavText, active && styles.pillNavTextActive]}>{l(tab.label)}</Text>
             </Pressable>
           );
         })}
@@ -2644,26 +2654,28 @@ function GroupHomeView({
 
                   return (
                     <View key={tag} style={[styles.tag, toneStyle]}>
-                    <Text style={styles.tagText}>{tag}</Text>
+                    <Text style={styles.tagText}>{l(tag)}</Text>
                     </View>
                   );
                 })}
               </View>
               <View style={styles.metaBlock}>
-                <Text style={styles.metaLabel}>모임 대상</Text>
+                <Text style={styles.metaLabel}>{l('모임 대상')}</Text>
                 <Text style={styles.metaValue}>
-                  {managedGroup.topic.replace(/^모임 대상 · /, '')}
+                  {l(managedGroup.topic.replace(/^모임 대상 · /, ''))}
                 </Text>
               </View>
               <View style={styles.metaBlock}>
-                <Text style={styles.metaLabel}>활동 지역</Text>
+                <Text style={styles.metaLabel}>{l('활동 지역')}</Text>
                 <Text style={styles.metaValue}>
-                  {managedGroup.region.replace(/^활동 지역 · /, '')}
+                  {l(managedGroup.region.replace(/^활동 지역 · /, ''))}
                 </Text>
               </View>
               <View style={styles.metaBlock}>
-                <Text style={styles.metaLabel}>모임 취지</Text>
-                <Text style={styles.metaValue}>{managedGroup.isPrivate ? '비공개, 토론' : '공개, 토론'}</Text>
+                <Text style={styles.metaLabel}>{l('모임 취지')}</Text>
+                <Text style={styles.metaValue}>
+                  {managedGroup.isPrivate ? l('비공개, 토론') : l('공개, 토론')}
+                </Text>
               </View>
               {managedGroup.description ? (
                 <Text style={styles.detailBody}>{managedGroup.description}</Text>
@@ -2683,36 +2695,36 @@ function GroupHomeView({
               disabled={openingNextMeeting}
             >
               <Text style={styles.primaryButtonText}>
-                {openingNextMeeting ? '불러오는 중...' : managedGroup.nextSession ?? '이번 모임 바로가기'}
+                {openingNextMeeting ? l('불러오는 중...') : managedGroup.nextSession ?? l('이번 모임 바로가기')}
               </Text>
             </Pressable>
             <Pressable
               style={({ pressed }) => [styles.outlineButton, styles.detailButton, pressed && styles.pressed]}
               onPress={handlePressContactButton}
             >
-              <Text style={styles.outlineButtonText}>문의하기</Text>
+              <Text style={styles.outlineButtonText}>{l('문의하기')}</Text>
             </Pressable>
           </View>
 
           <View style={styles.clubParticipantsSection}>
             <View style={styles.clubParticipantsHeader}>
               <View style={styles.clubParticipantsTitleBlock}>
-                <Text style={styles.clubParticipantsTitle}>모임 회원</Text>
+                <Text style={styles.clubParticipantsTitle}>{l('모임 회원')}</Text>
                 <Text style={styles.clubParticipantsCount}>{clubParticipantsTotalText}</Text>
               </View>
             </View>
 
             {clubParticipantsLoading ? (
               <View style={styles.clubParticipantsStateBox}>
-                <Text style={styles.clubParticipantsStateText}>모임 회원 불러오는 중...</Text>
+                <Text style={styles.clubParticipantsStateText}>{l('모임 회원 불러오는 중...')}</Text>
               </View>
             ) : clubParticipantsErrorMessage ? (
               <View style={styles.clubParticipantsStateBox}>
-                <Text style={styles.clubParticipantsStateText}>{clubParticipantsErrorMessage}</Text>
+                <Text style={styles.clubParticipantsStateText}>{l(clubParticipantsErrorMessage)}</Text>
               </View>
             ) : clubParticipants.length === 0 ? (
               <View style={styles.clubParticipantsStateBox}>
-                <Text style={styles.clubParticipantsStateText}>아직 참여 중인 회원이 없습니다.</Text>
+                <Text style={styles.clubParticipantsStateText}>{l('아직 참여 중인 회원이 없습니다.')}</Text>
               </View>
             ) : (
               <View style={styles.clubParticipantsGrid}>
@@ -2762,11 +2774,11 @@ function GroupHomeView({
                                   size={13}
                                   color={colors.primary3}
                                 />
-                                <Text style={styles.clubParticipantStaffBadgeText}>운영진</Text>
+                                <Text style={styles.clubParticipantStaffBadgeText}>{l('운영진')}</Text>
                               </View>
                             ) : null}
                           </View>
-                          <Text style={styles.clubParticipantRole}>{roleLabel}</Text>
+                          <Text style={styles.clubParticipantRole}>{l(roleLabel)}</Text>
                         </View>
                       </Pressable>
 
@@ -2789,7 +2801,7 @@ function GroupHomeView({
                                 : styles.clubParticipantFollowTextInactive,
                             ]}
                           >
-                            {isToggling ? '처리 중' : participant.following ? '구독중' : '구독'}
+                            {isToggling ? l('처리 중') : participant.following ? l('구독중') : l('구독')}
                           </Text>
                         </Pressable>
                       ) : null}
@@ -2800,7 +2812,7 @@ function GroupHomeView({
             )}
 
             {clubParticipantsPageState.loadingMore && !clubParticipantsErrorMessage ? (
-              <Text style={styles.infiniteScrollLoadingText}>불러오는 중...</Text>
+              <Text style={styles.infiniteScrollLoadingText}>{l('불러오는 중...')}</Text>
             ) : null}
           </View>
         </View>
@@ -2890,7 +2902,7 @@ function GroupHomeView({
       !meetingChatState.activeGroup ? (
         <FloatingActionButton
           onPress={meetingChatState.openPicker}
-          accessibilityLabel="채팅 조 선택"
+          accessibilityLabel={l('채팅 조 선택')}
         >
           <ChatIcon width={24} height={24} />
         </FloatingActionButton>
@@ -2914,7 +2926,7 @@ function GroupHomeView({
             <Pressable onPress={closeTeamManage} hitSlop={8}>
               <MaterialIcons name="chevron-left" size={24} color={colors.gray6} />
             </Pressable>
-            <Text style={styles.managementScreenTitle}>조 관리하기</Text>
+            <Text style={styles.managementScreenTitle}>{l('조 관리하기')}</Text>
             <View style={styles.managementHeaderSpacer} />
           </View>
 
@@ -2931,10 +2943,10 @@ function GroupHomeView({
             <>
               <View style={styles.teamManageTopBar}>
                 <Text style={styles.teamManageBookTitle}>
-                  {selectedBookshelfBook?.title ?? '정기모임'}
+                  {selectedBookshelfBook?.title ?? l('정기모임')}
                 </Text>
                 <Text style={styles.teamManageHint}>
-                  멤버를 끌어 조에 놓거나, 멤버를 탭한 뒤 조를 눌러 이동할 수 있습니다.
+                  {l('멤버를 끌어 조에 놓거나, 멤버를 탭한 뒤 조를 눌러 이동할 수 있습니다.')}
                 </Text>
               </View>
 
@@ -2956,7 +2968,7 @@ function GroupHomeView({
                     onPress={() => handlePressTeamManageTarget(null)}
                   >
                     <Text style={styles.teamManageDropChipText}>
-                      미배정 {teamManageUnassignedMembers.length}
+                      {l('미배정 {count}', { count: teamManageUnassignedMembers.length })}
                     </Text>
                   </Pressable>
                 </View>
@@ -2982,7 +2994,7 @@ function GroupHomeView({
                       onPress={() => handlePressTeamManageTarget(team.teamNumber)}
                     >
                       <Text style={styles.teamManageDropChipText}>
-                        {formatRegularGroupLabel(team.teamNumber)} {team.memberIds.length}
+                        {l(formatRegularGroupLabel(team.teamNumber))} {team.memberIds.length}
                       </Text>
                     </Pressable>
                   </View>
@@ -3034,7 +3046,7 @@ function GroupHomeView({
                   >
                     <View style={styles.teamManageCardHeader}>
                       <Text style={styles.teamManageCardTitle}>
-                        {formatRegularGroupLabel(team.teamNumber)}
+                        {l(formatRegularGroupLabel(team.teamNumber))}
                       </Text>
                       <Pressable
                         style={({ pressed }) => [
@@ -3089,7 +3101,7 @@ function GroupHomeView({
                       })}
                       {team.memberIds.length === 0 ? (
                         <View style={styles.teamManageEmptySlot}>
-                          <Text style={styles.teamManageEmptySlotText}>여기로 드래그해서 추가</Text>
+                          <Text style={styles.teamManageEmptySlotText}>{l('여기로 드래그해서 추가')}</Text>
                         </View>
                       ) : null}
                     </View>
@@ -3110,7 +3122,7 @@ function GroupHomeView({
                   ]}
                 >
                   <View style={styles.teamManageCardHeader}>
-                    <Text style={styles.teamManageCardTitle}>미배정 참여자</Text>
+                    <Text style={styles.teamManageCardTitle}>{l('미배정 참여자')}</Text>
                   </View>
                   <View style={styles.teamManageMemberList}>
                     {teamManageUnassignedMembers.map((member) => {
@@ -3152,7 +3164,7 @@ function GroupHomeView({
                     })}
                     {teamManageUnassignedMembers.length === 0 ? (
                       <View style={styles.teamManageEmptySlot}>
-                        <Text style={styles.teamManageEmptySlotText}>미배정 참여자가 없습니다.</Text>
+                        <Text style={styles.teamManageEmptySlotText}>{l('미배정 참여자가 없습니다.')}</Text>
                       </View>
                     ) : null}
                   </View>
@@ -3167,7 +3179,7 @@ function GroupHomeView({
                 ]}
               >
                 <Text style={styles.teamManageFooterHint}>
-                  조 편성을 저장하면 정기모임 화면으로 돌아갑니다.
+                  {l('조 편성을 저장하면 정기모임 화면으로 돌아갑니다.')}
                 </Text>
                 <Pressable
                   style={({ pressed }) => [
@@ -3186,7 +3198,7 @@ function GroupHomeView({
                       teamManageSaving && styles.teamManageSaveButtonTextDisabled,
                     ]}
                   >
-                    {teamManageSaving ? '저장 중...' : '조 편성 저장하기'}
+                    {teamManageSaving ? l('저장 중...') : l('조 편성 저장하기')}
                   </Text>
                 </Pressable>
               </View>
@@ -3205,7 +3217,7 @@ function GroupHomeView({
               ]}
             >
               <Text style={styles.teamManageDraggingGhostText}>
-                {teamManageMemberById[draggingTeamMemberId]?.nickname ?? '멤버'}
+                {teamManageMemberById[draggingTeamMemberId]?.nickname ?? l('멤버')}
               </Text>
             </View>
           ) : null}
@@ -3222,11 +3234,11 @@ function GroupHomeView({
 	                <Text style={styles.bookshelfComposerTitle}>
 	                  {bookshelfComposerType === 'TOPIC'
 	                    ? editingBookshelfPost
-	                      ? '발제 수정하기'
-	                      : '발제 추가하기'
+	                      ? l('발제 수정하기')
+	                      : l('발제 추가하기')
 	                    : editingBookshelfPost
-	                      ? '한줄평 수정하기'
-	                      : '한줄평 추가하기'}
+	                      ? l('한줄평 수정하기')
+	                      : l('한줄평 추가하기')}
 	                </Text>
 	                <Pressable onPress={requestCloseBookshelfComposerNow} hitSlop={8}>
 	                  <MaterialIcons name="close" size={22} color={colors.gray5} />
@@ -3235,7 +3247,7 @@ function GroupHomeView({
 
               {bookshelfComposerType === 'REVIEW' ? (
                 <View style={styles.formGroup}>
-                  <Text style={styles.bookshelfComposerLabel}>평점</Text>
+                  <Text style={styles.bookshelfComposerLabel}>{l('평점')}</Text>
                   <View style={styles.bookshelfComposerRatingRow}>
                     {[1, 2, 3, 4, 5].map((value) => (
                       <View
@@ -3278,15 +3290,19 @@ function GroupHomeView({
 
               <View style={styles.formGroup}>
                 <Text style={styles.bookshelfComposerLabel}>
-                  {bookshelfComposerType === 'TOPIC' ? '발제 내용' : '한줄평 내용'}
+                  {bookshelfComposerType === 'TOPIC' ? l('발제 내용') : l('한줄평 내용')}
                 </Text>
                 <FormTextInput
                   value={bookshelfComposerInput}
                   onChangeText={handleChangeBookshelfComposerInput}
                   placeholder={
                     bookshelfComposerType === 'TOPIC'
-                      ? `발제 내용을 입력해주세요. (최대 ${INPUT_LIMITS.BOOKSHELF_COMPOSER}자)`
-                      : `한줄평을 입력해주세요. (최대 ${INPUT_LIMITS.BOOKSHELF_COMPOSER}자)`
+                      ? l('발제 내용을 입력해주세요. (최대 {limit}자)', {
+                          limit: INPUT_LIMITS.BOOKSHELF_COMPOSER,
+                        })
+                      : l('한줄평을 입력해주세요. (최대 {limit}자)', {
+                          limit: INPUT_LIMITS.BOOKSHELF_COMPOSER,
+                        })
                   }
                   placeholderTextColor={colors.gray3}
                   style={[styles.input, styles.textArea, styles.bookshelfComposerInput]}
@@ -3294,7 +3310,9 @@ function GroupHomeView({
                   scrollEnabled
                   textAlignVertical="top"
                   maxLength={INPUT_LIMITS.BOOKSHELF_COMPOSER}
-                  overLimitMessage={`내용은 ${INPUT_LIMITS.BOOKSHELF_COMPOSER}자 이하여야 합니다.`}
+                  overLimitMessage={l('내용은 {limit}자 이하여야 합니다.', {
+                    limit: INPUT_LIMITS.BOOKSHELF_COMPOSER,
+                  })}
                 />
                 <Text style={styles.bookshelfComposerCounter}>
                   {bookshelfComposerInput.length}/{INPUT_LIMITS.BOOKSHELF_COMPOSER}
@@ -3312,7 +3330,7 @@ function GroupHomeView({
                   onPress={requestCloseBookshelfComposerNow}
                   disabled={submittingBookshelfComposer}
                 >
-                  <Text style={styles.secondaryText}>취소</Text>
+                  <Text style={styles.secondaryText}>{l('취소')}</Text>
                 </Pressable>
                 <Pressable
                   style={({ pressed }) => [
@@ -3331,11 +3349,11 @@ function GroupHomeView({
 	                  <Text style={styles.primaryButtonText}>
 	                    {submittingBookshelfComposer
 	                      ? editingBookshelfPost
-	                        ? '수정 중...'
-	                        : '등록 중...'
+	                        ? l('수정 중...')
+	                        : l('등록 중...')
 	                      : editingBookshelfPost
-	                        ? '수정하기'
-	                        : '등록하기'}
+	                        ? l('수정하기')
+	                        : l('등록하기')}
 	                  </Text>
 	                </Pressable>
 	              </View>
@@ -3454,7 +3472,7 @@ function GroupHomeView({
               <MaterialIcons name="chevron-left" size={24} color={colors.gray6} />
             </Pressable>
             <Text style={styles.managementScreenTitle}>
-              {editingNoticeId ? '공지 수정하기' : '공지 작성하기'}
+              {editingNoticeId ? l('공지 수정하기') : l('공지 작성하기')}
             </Text>
             <Pressable onPress={handleCloseNoticeComposer} hitSlop={8}>
               <MaterialIcons name="close" size={22} color={colors.gray6} />
@@ -3473,7 +3491,7 @@ function GroupHomeView({
           >
             <View style={styles.noticeComposerCard}>
               <View style={styles.noticeComposerFieldHeader}>
-                <Text style={styles.noticeComposerLabel}>제목</Text>
+                <Text style={styles.noticeComposerLabel}>{l('제목')}</Text>
                 <Text style={styles.noticeComposerCounter}>
                   {noticeDraft.title.length}/{INPUT_LIMITS.NOTICE_TITLE}
                 </Text>
@@ -3481,7 +3499,9 @@ function GroupHomeView({
               <FormTextInput
                 value={noticeDraft.title}
                 onChangeText={handleChangeNoticeTitle}
-                placeholder={`제목을 입력해야 합니다. (최대 ${INPUT_LIMITS.NOTICE_TITLE}자)`}
+                placeholder={l('제목을 입력해야 합니다. (최대 {limit}자)', {
+                  limit: INPUT_LIMITS.NOTICE_TITLE,
+                })}
                 placeholderTextColor={colors.gray3}
                 style={[
                   styles.input,
@@ -3492,7 +3512,9 @@ function GroupHomeView({
                 textAlignVertical="top"
                 numberOfLines={4}
                 maxLength={INPUT_LIMITS.NOTICE_TITLE}
-                overLimitMessage={`공지 제목은 ${INPUT_LIMITS.NOTICE_TITLE}자 이하여야 합니다.`}
+                overLimitMessage={l('공지 제목은 {limit}자 이하여야 합니다.', {
+                  limit: INPUT_LIMITS.NOTICE_TITLE,
+                })}
                 scrollEnabled
                 onContentSizeChange={(event) =>
                   handleNoticeTitleContentSizeChange(event, noticeDraft.title)
@@ -3500,7 +3522,7 @@ function GroupHomeView({
               />
 
               <View style={styles.noticeComposerFieldHeader}>
-                <Text style={styles.noticeComposerLabel}>내용</Text>
+                <Text style={styles.noticeComposerLabel}>{l('내용')}</Text>
                 <Text style={styles.noticeComposerCounter}>
                   {noticeDraft.content.length}/{INPUT_LIMITS.NOTICE_CONTENT}
                 </Text>
@@ -3508,7 +3530,9 @@ function GroupHomeView({
               <FormTextInput
                 value={noticeDraft.content}
                 onChangeText={handleChangeNoticeContent}
-                placeholder={`내용을 입력해야 합니다. (최대 ${INPUT_LIMITS.NOTICE_CONTENT}자)`}
+                placeholder={l('내용을 입력해야 합니다. (최대 {limit}자)', {
+                  limit: INPUT_LIMITS.NOTICE_CONTENT,
+                })}
                 placeholderTextColor={colors.gray3}
                 style={[
                   styles.input,
@@ -3521,7 +3545,9 @@ function GroupHomeView({
                 multiline
                 textAlignVertical="top"
                 maxLength={INPUT_LIMITS.NOTICE_CONTENT}
-                overLimitMessage={`공지 내용은 ${INPUT_LIMITS.NOTICE_CONTENT}자 이하여야 합니다.`}
+                overLimitMessage={l('공지 내용은 {limit}자 이하여야 합니다.', {
+                  limit: INPUT_LIMITS.NOTICE_CONTENT,
+                })}
                 scrollEnabled
                 onFocus={() => setNoticeContentInputFocused(true)}
                 onBlur={() => setNoticeContentInputFocused(false)}
@@ -3531,7 +3557,7 @@ function GroupHomeView({
               />
 
               <View style={styles.noticeComposerPinRow}>
-                <Text style={styles.noticeAttachmentTitle}>상단 고정</Text>
+                <Text style={styles.noticeAttachmentTitle}>{l('상단 고정')}</Text>
                 <Pressable
                   style={({ pressed }) => [
                     styles.noticeComposerPinButton,
@@ -3556,7 +3582,7 @@ function GroupHomeView({
                       noticeDraft.isPinned && styles.noticeComposerPinButtonTextActive,
                     ]}
                   >
-                    {noticeDraft.isPinned ? '고정 해제하기' : '고정하기'}
+                    {noticeDraft.isPinned ? l('고정 해제하기') : l('고정하기')}
                   </Text>
                 </Pressable>
               </View>
@@ -3587,7 +3613,7 @@ function GroupHomeView({
                       noticeDraft.bookshelfEnabled && styles.noticeComposerToggleTextActive,
                     ]}
                   >
-                    책장
+                    {l('책장')}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -3614,7 +3640,7 @@ function GroupHomeView({
                       noticeDraft.pollEnabled && styles.noticeComposerToggleTextActive,
                     ]}
                   >
-                    투표
+                    {l('투표')}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -3636,7 +3662,7 @@ function GroupHomeView({
                       noticeDraft.photos.length > 0 && styles.noticeComposerToggleTextActive,
                     ]}
                   >
-                    {uploadingNoticePhoto ? '업로드 중' : '사진'}
+                    {uploadingNoticePhoto ? l('업로드 중') : l('사진')}
                   </Text>
                 </Pressable>
               </View>
@@ -3644,13 +3670,13 @@ function GroupHomeView({
               {noticeDraft.bookshelfEnabled ? (
                 <View style={styles.noticeComposerSection}>
                   <View style={styles.noticeComposerSectionHeader}>
-                    <Text style={styles.noticeAttachmentTitle}>책장</Text>
+                    <Text style={styles.noticeAttachmentTitle}>{l('책장')}</Text>
                     <Pressable
                       style={({ pressed }) => [styles.noticeComposerLinkButton, pressed && styles.pressed]}
                       onPress={() => setNoticeBookSelectorVisible(true)}
                     >
                       <Text style={styles.noticeComposerLinkButtonText}>
-                        {noticeDraft.bookshelfId ? '책장 변경' : '책장 연결'}
+                        {noticeDraft.bookshelfId ? l('책장 변경') : l('책장 연결')}
                       </Text>
                     </Pressable>
                   </View>
@@ -3679,7 +3705,7 @@ function GroupHomeView({
                                   getBookshelfCategoryBadgeStyle(attachedBook.category),
                                 ]}
                               >
-                                <Text style={styles.bookshelfBadgeText}>{attachedBook.category}</Text>
+                                <Text style={styles.bookshelfBadgeText}>{l(attachedBook.category)}</Text>
                               </View>
                             </View>
                           </View>
@@ -3687,7 +3713,7 @@ function GroupHomeView({
                       ) : null;
                     })()
                   ) : (
-                    <Text style={styles.helperText}>연결할 책장을 선택해야 합니다.</Text>
+                    <Text style={styles.helperText}>{l('연결할 책장을 선택해야 합니다.')}</Text>
                   )}
                 </View>
               ) : null}
@@ -3695,9 +3721,9 @@ function GroupHomeView({
               {noticeDraft.pollEnabled ? (
                 <View style={styles.noticeComposerSection}>
                   <View style={styles.noticeComposerPollHeader}>
-                    <Text style={styles.noticeAttachmentTitle}>투표</Text>
+                    <Text style={styles.noticeAttachmentTitle}>{l('투표')}</Text>
                     <Text style={styles.noticeComposerPollEditNote}>
-                      투표가 있는 공지사항은 수정이 불가합니다
+                      {l('투표가 있는 공지사항은 수정이 불가합니다')}
                     </Text>
                   </View>
                   <View style={styles.noticeComposerPollOptionList}>
@@ -3712,11 +3738,13 @@ function GroupHomeView({
                           <FormTextInput
                             value={option}
                             onChangeText={(text) => handleUpdateNoticePollOption(index, text)}
-                            placeholder={`투표 항목 ${index + 1}`}
+                            placeholder={l('투표 항목 {number}', { number: index + 1 })}
                             placeholderTextColor={colors.gray3}
                             style={styles.noticeComposerPollOptionInput}
                             maxLength={INPUT_LIMITS.NOTICE_POLL_OPTION}
-                            overLimitMessage={`투표 항목은 ${INPUT_LIMITS.NOTICE_POLL_OPTION}자 이하여야 합니다.`}
+                            overLimitMessage={l('투표 항목은 {limit}자 이하여야 합니다.', {
+                              limit: INPUT_LIMITS.NOTICE_POLL_OPTION,
+                            })}
                           />
                           {removable ? (
                             <Pressable
@@ -3727,7 +3755,7 @@ function GroupHomeView({
                               onPress={() => handleRemoveNoticePollOption(index)}
                               hitSlop={8}
                               accessibilityRole="button"
-                              accessibilityLabel={`투표 항목 ${index + 1} 삭제`}
+                              accessibilityLabel={l('투표 항목 {number} 삭제', { number: index + 1 })}
                             >
                               <MaterialIcons name="close" size={18} color={colors.gray4} />
                             </Pressable>
@@ -3741,7 +3769,7 @@ function GroupHomeView({
                         onPress={handleAddNoticePollOption}
                       >
                         <MaterialIcons name="add" size={18} color={colors.gray5} />
-                        <Text style={styles.noticeComposerAddOptionText}>항목 추가</Text>
+                        <Text style={styles.noticeComposerAddOptionText}>{l('항목 추가')}</Text>
                       </Pressable>
                     ) : null}
                   </View>
@@ -3760,7 +3788,7 @@ function GroupHomeView({
                           noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipTextActive,
                         ]}
                       >
-                        익명
+                        {l('익명')}
                       </Text>
                     </Pressable>
                     <Pressable
@@ -3777,7 +3805,7 @@ function GroupHomeView({
                           !noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipTextActive,
                         ]}
                       >
-                        실명
+                        {l('실명')}
                       </Text>
                     </Pressable>
                     <Pressable
@@ -3800,7 +3828,7 @@ function GroupHomeView({
                             styles.noticeComposerChoiceChipTextActive,
                         ]}
                       >
-                        중복 가능
+                        {l('중복 가능')}
                       </Text>
                     </Pressable>
                   </View>
@@ -3813,7 +3841,7 @@ function GroupHomeView({
                           pollStartsAt: dateToDotDateTime(date),
                         }))
                       }
-                      placeholder="시작 시간"
+                      placeholder={l('시작 시간')}
                       minimumDate={new Date()}
                       style={styles.noticeComposerDateInput}
                     />
@@ -3825,7 +3853,7 @@ function GroupHomeView({
                           pollEndsAt: dateToDotDateTime(date),
                         }))
                       }
-                      placeholder="종료 시간"
+                      placeholder={l('종료 시간')}
                       minimumDate={dotDateTimeToDate(noticeDraft.pollStartsAt) ?? new Date()}
                       style={styles.noticeComposerDateInput}
                     />
@@ -3836,7 +3864,7 @@ function GroupHomeView({
               {noticeDraft.photos.length > 0 ? (
                 <View style={styles.noticeComposerSection}>
                   <View style={styles.noticeComposerSectionHeader}>
-                    <Text style={styles.noticeAttachmentTitle}>사진</Text>
+                    <Text style={styles.noticeAttachmentTitle}>{l('사진')}</Text>
                     <Text style={styles.noticeComposerCounter}>
                       {noticeDraft.photos.length}/{INPUT_LIMITS.NOTICE_IMAGE_COUNT}
                     </Text>
@@ -3874,7 +3902,7 @@ function GroupHomeView({
               onPress={handleCloseNoticeComposer}
               disabled={submittingNotice}
             >
-              <Text style={styles.outlineButtonText}>취소</Text>
+              <Text style={styles.outlineButtonText}>{l('취소')}</Text>
             </Pressable>
             <Pressable
               style={({ pressed }) => [
@@ -3889,11 +3917,11 @@ function GroupHomeView({
               <Text style={styles.primaryButtonText}>
                 {submittingNotice
                   ? editingNoticeId
-                    ? '수정 중'
-                    : '등록 중'
+                    ? l('수정 중')
+                    : l('등록 중')
                   : editingNoticeId
-                    ? '수정하기'
-                    : '등록하기'}
+                    ? l('수정하기')
+                    : l('등록하기')}
               </Text>
             </Pressable>
           </View>
@@ -3907,7 +3935,7 @@ function GroupHomeView({
               />
               <View style={styles.noticeBookSelectorCard}>
                 <View style={styles.managementModalHeader}>
-                  <Text style={styles.managementModalTitle}>책장 선택</Text>
+                  <Text style={styles.managementModalTitle}>{l('책장 선택')}</Text>
                   <Pressable onPress={() => setNoticeBookSelectorVisible(false)} hitSlop={8}>
                     <MaterialIcons name="close" size={20} color={colors.gray6} />
                   </Pressable>
@@ -3941,7 +3969,7 @@ function GroupHomeView({
                   ))}
                   {bookshelfItems.length === 0 ? (
                     <View style={styles.managementEmptyCard}>
-                      <Text style={styles.managementEmptyText}>연결할 책장이 없습니다.</Text>
+                      <Text style={styles.managementEmptyText}>{l('연결할 책장이 없습니다.')}</Text>
                     </View>
                   ) : null}
                 </ScrollView>
@@ -3953,7 +3981,7 @@ function GroupHomeView({
       </Modal>
       <BottomSheetActionMenu
         visible={noticeMenuVisible}
-        title="공지 메뉴"
+        title={l('공지 메뉴')}
         actions={noticeMenuItems}
         onClose={() => setNoticeMenuVisible(false)}
       />
@@ -3996,7 +4024,7 @@ function GroupHomeView({
               </View>
             ) : (
               <View style={styles.contactModalEmptyWrap}>
-                <Text style={styles.contactModalEmptyText}>문의하기 링크가 없습니다.</Text>
+                <Text style={styles.contactModalEmptyText}>{l('문의하기 링크가 없습니다.')}</Text>
               </View>
             )}
       </DialogOverlay>
@@ -4019,7 +4047,7 @@ function GroupHomeView({
                 </View>
               ))}
               {voteVotersModal.voters.length === 0 ? (
-                <Text style={styles.voteVotersEmptyText}>아직 투표자가 없습니다.</Text>
+                <Text style={styles.voteVotersEmptyText}>{l('아직 투표자가 없습니다.')}</Text>
               ) : null}
             </View>
           </>
@@ -4088,6 +4116,7 @@ function MeetingCreateFlow({
   onCreated?: () => Promise<void> | void;
   onDirtyChange?: (dirty: boolean) => void;
 }) {
+  const { l } = useLanguage();
   const [step, setStep] = useState<CreateStep>(1);
   const [maxStep, setMaxStep] = useState<CreateStep>(1);
   const [name, setName] = useState('');
@@ -4150,16 +4179,16 @@ function MeetingCreateFlow({
       return;
     }
 
-    Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
-      { text: '취소', style: 'cancel' },
-      { text: '닫기', style: 'destructive', onPress: onClose },
+    Alert.alert(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
+      { text: l('취소'), style: 'cancel' },
+      { text: l('닫기'), style: 'destructive', onPress: onClose },
     ]);
-  }, [isDirty, onClose]);
+  }, [isDirty, l, onClose]);
 
   const handleCheckName = async () => {
     const normalized = name.trim();
     if (!normalized) {
-      showToast('모임 이름을 입력해야 합니다.');
+      showToast(l('모임 이름을 입력해야 합니다.'));
       return;
     }
 
@@ -4167,10 +4196,10 @@ function MeetingCreateFlow({
     try {
       const duplicate = await checkClubNameDuplicate(normalized);
       setCheckedName({ value: normalized, duplicate });
-      showToast(duplicate ? '이미 사용 중인 모임 이름입니다.' : '사용 가능한 모임 이름입니다.');
+      showToast(duplicate ? l('이미 사용 중인 모임 이름입니다.') : l('사용 가능한 모임 이름입니다.'));
     } catch (error) {
       if (!(error instanceof ApiError)) {
-        showToast('모임 이름 중복 확인에 실패했습니다.');
+        showToast(l('모임 이름 중복 확인에 실패했습니다.'));
       }
     } finally {
       setCheckingName(false);
@@ -4187,10 +4216,10 @@ function MeetingCreateFlow({
         if (!imageUrl) return;
         setClubImageMode('uploaded');
         setClubImageUrl(imageUrl);
-        showToast('모임 이미지를 적용했습니다.');
+        showToast(l('모임 이미지를 적용했습니다.'));
       } catch (error) {
         if (!(error instanceof ApiError)) {
-          showToast('이미지 업로드에 실패했습니다.');
+          showToast(l('이미지 업로드에 실패했습니다.'));
         }
       } finally {
         setUploadingClubImage(false);
@@ -4198,7 +4227,7 @@ function MeetingCreateFlow({
     };
 
     void pick();
-  }, [uploadingClubImage]);
+  }, [l, uploadingClubImage]);
 
   const handleUseDefaultClubImage = useCallback(() => {
     setClubImageMode('default');
@@ -4217,7 +4246,7 @@ function MeetingCreateFlow({
       .filter((code): code is ClubParticipantTypeCode => Boolean(code));
 
     if (categoryCodes.length === 0 || participantCodes.length === 0) {
-      showToast('카테고리와 모임 대상을 확인해야 합니다.');
+      showToast(l('카테고리와 모임 대상을 확인해야 합니다.'));
       return;
     }
 
@@ -4245,14 +4274,14 @@ function MeetingCreateFlow({
         await onCreated?.();
       } catch (refreshError) {
         if (!(refreshError instanceof ApiError)) {
-          showToast('모임 목록을 새로고침하지 못했습니다.');
+          showToast(l('모임 목록을 새로고침하지 못했습니다.'));
         }
       }
-      showToast('모임이 생성되었습니다.');
+      showToast(l('모임이 생성되었습니다.'));
       onClose();
     } catch (error) {
       if (!(error instanceof ApiError)) {
-        showToast('모임 생성에 실패했습니다.');
+        showToast(l('모임 생성에 실패했습니다.'));
       }
     } finally {
       setCreating(false);
@@ -4299,9 +4328,9 @@ function MeetingCreateFlow({
             style={({ pressed }) => [styles.breadcrumbPress, pressed && styles.pressed]}
             onPress={handleRequestClose}
           >
-            <Text style={styles.breadcrumbText}>모임</Text>
+            <Text style={styles.breadcrumbText}>{l('모임')}</Text>
             <MaterialIcons name="chevron-right" size={16} color={colors.gray4} />
-            <Text style={[styles.breadcrumbText, styles.breadcrumbActive]}>새 모임 생성</Text>
+            <Text style={[styles.breadcrumbText, styles.breadcrumbActive]}>{l('새 모임 생성')}</Text>
           </Pressable>
         </View>
         <View style={styles.createBody}>
@@ -4335,7 +4364,7 @@ function MeetingCreateFlow({
 
           {step === 1 && (
             <View style={styles.sectionBox}>
-              <Text style={styles.sectionTitle}>독서 모임 이름을 입력해주세요!</Text>
+              <Text style={styles.sectionTitle}>{l('독서 모임 이름을 입력해주세요!')}</Text>
               <View style={styles.inlineRow}>
                 <FormTextInput
                   value={name}
@@ -4346,7 +4375,7 @@ function MeetingCreateFlow({
                       setCheckedName(null);
                     }
                   }}
-                  placeholder="독서 모임 이름을 입력해주세요"
+                  placeholder={l('독서 모임 이름을 입력해주세요')}
                   placeholderTextColor={colors.gray3}
                   style={[styles.input, styles.inlineInput]}
                   maxLength={INPUT_LIMITS.CLUB_NAME}
@@ -4363,7 +4392,7 @@ function MeetingCreateFlow({
                   disabled={checkingName}
                 >
                   <Text style={styles.dupCheckText}>
-                    {checkingName ? '확인 중...' : '중복확인'}
+                    {checkingName ? l('확인 중...') : l('중복확인')}
                   </Text>
                 </Pressable>
               </View>
@@ -4375,28 +4404,30 @@ function MeetingCreateFlow({
                   ]}
                 >
                   {checkedName.duplicate
-                    ? '이미 사용 중인 모임 이름입니다.'
-                    : '사용 가능한 모임 이름입니다.'}
+                    ? l('이미 사용 중인 모임 이름입니다.')
+                    : l('사용 가능한 모임 이름입니다.')}
                 </Text>
               ) : null}
               <Text style={styles.helperText}>
-                다른 이름을 입력하거나, 기수 또는 지역명을 추가해 구분해주세요. 예) 독서처럼 2기, 독서처럼 서울, 북적북적 인문학팀
+                {l('다른 이름을 입력하거나, 기수 또는 지역명을 추가해 구분해주세요. 예) 독서처럼 2기, 독서처럼 서울, 북적북적 인문학팀')}
               </Text>
 
               <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
-                모임의 소개글을 입력해주세요!
+                {l('모임의 소개글을 입력해주세요!')}
               </Text>
               <FormTextInput
                 value={desc}
                 onChangeText={setDesc}
-                placeholder="자유롭게 입력해주세요! (500자 제한)"
+                placeholder={l('자유롭게 입력해주세요! (500자 제한)')}
                 placeholderTextColor={colors.gray3}
                 style={[styles.input, styles.textArea]}
                 multiline
                 scrollEnabled
                 textAlignVertical="top"
                 maxLength={INPUT_LIMITS.CLUB_DESCRIPTION}
-                overLimitMessage={`모임 소개글은 ${INPUT_LIMITS.CLUB_DESCRIPTION}자 이하여야 합니다.`}
+                overLimitMessage={l('모임 소개글은 {limit}자 이하여야 합니다.', {
+                  limit: INPUT_LIMITS.CLUB_DESCRIPTION,
+                })}
               />
               <Text style={styles.bookshelfComposerCounter}>
                 {desc.length}/{INPUT_LIMITS.CLUB_DESCRIPTION}
@@ -4406,7 +4437,7 @@ function MeetingCreateFlow({
 
           {step === 2 && (
             <View style={styles.sectionBox}>
-              <Text style={styles.sectionTitle}>모임의 프로필 사진을 업로드 해주세요!</Text>
+              <Text style={styles.sectionTitle}>{l('모임의 프로필 사진을 업로드 해주세요!')}</Text>
               <View style={styles.createProfileCard}>
                 <Pressable
                   style={({ pressed }) => [
@@ -4429,9 +4460,9 @@ function MeetingCreateFlow({
                       <View style={styles.createProfileCameraBadge}>
                         <MaterialIcons name="photo-camera" size={26} color={colors.primary1} />
                       </View>
-                      <Text style={styles.createProfileEmptyTitle}>사진 업로드</Text>
+                      <Text style={styles.createProfileEmptyTitle}>{l('사진 업로드')}</Text>
                       <Text style={styles.createProfileEmptyDescription}>
-                        탭하여 앨범에서 사진을 선택하세요
+                        {l('탭하여 앨범에서 사진을 선택하세요')}
                       </Text>
                     </View>
                   )}
@@ -4457,7 +4488,7 @@ function MeetingCreateFlow({
                         clubImageMode === 'default' && styles.createProfileBtnTextSelected,
                       ]}
                     >
-                      기본 이미지
+                      {l('기본 이미지')}
                     </Text>
                   </Pressable>
 
@@ -4473,18 +4504,18 @@ function MeetingCreateFlow({
                   >
                     <MaterialIcons name="photo-camera" size={15} color={colors.primary1} />
                     <Text style={styles.createProfileBtnTextPrimary}>
-                      {uploadingClubImage ? '업로드 중...' : '사진 업로드'}
+                      {uploadingClubImage ? l('업로드 중...') : l('사진 업로드')}
                     </Text>
                   </Pressable>
                 </View>
 
                 <Text style={styles.createProfileHint}>
-                  프로필 이미지는 나중에 모임 관리 화면에서 다시 변경할 수 있습니다.
+                  {l('프로필 이미지는 나중에 모임 관리 화면에서 다시 변경할 수 있습니다.')}
                 </Text>
               </View>
 
               <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
-                모임의 공개여부를 알려주세요!
+                {l('모임의 공개여부를 알려주세요!')}
               </Text>
               <View style={styles.createVisibilityRow}>
                 {[
@@ -4532,7 +4563,7 @@ function MeetingCreateFlow({
                             active && styles.createVisibilityTitleActive,
                           ]}
                         >
-                          {option.label}
+                          {l(option.label)}
                         </Text>
                         <Text
                           style={[
@@ -4540,7 +4571,7 @@ function MeetingCreateFlow({
                             active && styles.createVisibilityDescriptionActive,
                           ]}
                         >
-                          {option.description}
+                          {l(option.description)}
                         </Text>
                       </View>
                     </Pressable>
@@ -4549,14 +4580,14 @@ function MeetingCreateFlow({
               </View>
 
               <Text style={[styles.createProfileHint, { marginTop: spacing.sm }]}>
-                공개여부는 나중에 모임 관리 화면에서 다시 변경할 수 있습니다.
+                {l('공개여부는 나중에 모임 관리 화면에서 다시 변경할 수 있습니다.')}
               </Text>
             </View>
           )}
 
           {step === 3 && (
             <View style={styles.sectionBox}>
-              <Text style={styles.sectionTitle}>선호하는 독서 카테고리를 선택해주세요!</Text>
+              <Text style={styles.sectionTitle}>{l('선호하는 독서 카테고리를 선택해주세요!')}</Text>
               <View style={styles.chipGrid}>
                 {categoryOptions.map((c) => {
                   const active = categories.includes(c);
@@ -4570,26 +4601,26 @@ function MeetingCreateFlow({
                         pressed && styles.pressed,
                       ]}
                     >
-                      <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>{c}</Text>
+                      <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>{l(c)}</Text>
                     </Pressable>
                   );
                 })}
               </View>
 
               <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                활동 지역을 입력해주세요! (40자 제한)
+                {l('활동 지역을 입력해주세요! (40자 제한)')}
               </Text>
               <FormTextInput
                 value={region}
                 onChangeText={setRegion}
-                placeholder="활동 지역을 입력해주세요 (40자 제한)"
+                placeholder={l('활동 지역을 입력해주세요 (40자 제한)')}
                 placeholderTextColor={colors.gray3}
                 style={styles.input}
                 maxLength={INPUT_LIMITS.CLUB_REGION}
               />
 
               <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                모임의 대상을 선택해주세요!
+                {l('모임의 대상을 선택해주세요!')}
               </Text>
               <View style={styles.chipGrid}>
                 {targetOptions.map((t) => {
@@ -4604,7 +4635,7 @@ function MeetingCreateFlow({
                         pressed && styles.pressed,
                       ]}
                     >
-                      <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>{t}</Text>
+                      <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>{l(t)}</Text>
                     </Pressable>
                   );
                 })}
@@ -4614,7 +4645,7 @@ function MeetingCreateFlow({
 
           {step === 4 && (
             <View style={styles.sectionBox}>
-              <Text style={styles.sectionTitle}>SNS나 링크 연동이 있다면 해주세요! (선택)</Text>
+              <Text style={styles.sectionTitle}>{l('SNS나 링크 연동이 있다면 해주세요! (선택)')}</Text>
               {links.map((link, idx) => (
                 <View key={idx} style={styles.formGroup}>
                   <FormTextInput
@@ -4626,7 +4657,7 @@ function MeetingCreateFlow({
                         return copy;
                       });
                     }}
-                    placeholder="링크 대체 텍스트 입력(최대 20자)"
+                    placeholder={l('링크 대체 텍스트 입력(최대 20자)')}
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
                     maxLength={INPUT_LIMITS.CLUB_LINK_LABEL}
@@ -4640,7 +4671,7 @@ function MeetingCreateFlow({
                         return copy;
                       });
                     }}
-                    placeholder="링크 입력(최대 100자)"
+                    placeholder={l('링크 입력(최대 100자)')}
                     placeholderTextColor={colors.gray3}
                     style={styles.input}
                     fieldType="url"
@@ -4656,7 +4687,7 @@ function MeetingCreateFlow({
                   <Text style={styles.addLinkText}>+</Text>
                 </Pressable>
               ) : (
-                <Text style={styles.helperText}>링크는 최대 4개까지 추가할 수 있습니다.</Text>
+                <Text style={styles.helperText}>{l('링크는 최대 4개까지 추가할 수 있습니다.')}</Text>
               )}
             </View>
           )}
@@ -4667,7 +4698,7 @@ function MeetingCreateFlow({
                 style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed, styles.buttonGrow]}
                 onPress={goPrev}
               >
-                <Text style={styles.secondaryText}>이전</Text>
+                <Text style={styles.secondaryText}>{l('이전')}</Text>
               </Pressable>
             ) : null}
             <Pressable
@@ -4692,7 +4723,7 @@ function MeetingCreateFlow({
                   (!canNext || (step === 4 && creating)) && styles.disabledText,
                 ]}
               >
-                {step === 4 ? (creating ? '완료 중...' : '완료') : '다음'}
+                {step === 4 ? (creating ? l('완료 중...') : l('완료')) : l('다음')}
               </Text>
             </Pressable>
           </View>

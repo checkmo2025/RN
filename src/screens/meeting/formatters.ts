@@ -125,7 +125,10 @@ export function parseDotDate(value?: string): Date | null {
   return parsed;
 }
 
-export function formatCalendarMonthLabel(date: Date): string {
+export function formatCalendarMonthLabel(date: Date, language: 'ko' | 'en' = 'ko'): string {
+  if (language === 'en') {
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+  }
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
 }
 

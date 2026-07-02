@@ -35,6 +35,7 @@ import type {
 } from '../../services/api/clubApi';
 import { type BookItem } from '../../services/api/bookApi';
 import { useBookSearch } from '../../hooks/useBookSearch';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { getCurrentKstDateLabel, getCurrentKstYearMonth } from '../../utils/date';
 import { showToast } from '../../utils/toast';
 import { triggerSelectionHaptic } from '../../utils/haptics';
@@ -190,6 +191,7 @@ export function useBookshelfState({
   setActiveTab,
   setActiveManagementScreen,
 }: BookshelfStateParams) {
+  const { l } = useLanguage();
   const [selectedBookshelfSession, setSelectedBookshelfSession] = useState('');
   const [bookshelfViewMode, setBookshelfViewMode] = useState<BookshelfViewMode>('GRID');
   const [bookshelfDetailTab, setBookshelfDetailTab] = useState<BookshelfDetailTab>('TOPIC');
@@ -743,7 +745,7 @@ export function useBookshelfState({
         } catch (error) {
           if (error instanceof ApiError && error.status === 401) throw error;
           if (!(error instanceof ApiError) && !options?.suppressErrorToast) {
-            showToast('정기모임 정보를 불러오지 못했습니다.');
+            showToast(l('정기모임 정보를 불러오지 못했습니다.'));
           }
         }
 
@@ -821,11 +823,11 @@ export function useBookshelfState({
       } catch (error) {
         if (isStale()) return;
         if (error instanceof ApiError && error.status === 401) {
-          if (!options?.suppressErrorToast) showToast('로그인이 만료되었습니다.');
+          if (!options?.suppressErrorToast) showToast(l('로그인이 만료되었습니다.'));
           return;
         }
         if (!options?.suppressErrorToast) {
-          showToast(resolveBookshelfActionErrorMessage(error, '책장 상세를 불러오지 못했습니다.'));
+          showToast(l(resolveBookshelfActionErrorMessage(error, '책장 상세를 불러오지 못했습니다.')));
         }
       } finally {
         setBookshelfDetailLoadingForMeeting(meetingId, false);
@@ -836,6 +838,7 @@ export function useBookshelfState({
       fetchAllBookshelfReviewsForMeeting,
       fetchAllMeetingTeamTopics,
       group.clubId,
+      l,
       setBookshelfDetailLoadingForMeeting,
     ],
   );
@@ -938,11 +941,11 @@ export function useBookshelfState({
           [meetingId]: { ...pageState, loadingMore: false },
         }));
         if (!(error instanceof ApiError)) {
-          showToast('발제를 추가로 불러오지 못했습니다.');
+          showToast(l('발제를 추가로 불러오지 못했습니다.'));
         }
       }
     },
-    [bookshelfTopicPageStateByMeetingId, group.clubId],
+    [bookshelfTopicPageStateByMeetingId, group.clubId, l],
   );
 
   const openBookshelfDetail = useCallback(
@@ -1042,7 +1045,7 @@ export function useBookshelfState({
     (type: 'TOPIC' | 'REVIEW', post?: BookshelfPostItem) => {
       const open = () => {
         if (typeof selectedBookshelfBook?.remoteMeetingId !== 'number') {
-          showToast('책장 정보를 찾을 수 없습니다.');
+          showToast(l('책장 정보를 찾을 수 없습니다.'));
           return;
         }
         setEditingBookshelfPost(post ?? null);
@@ -1056,7 +1059,7 @@ export function useBookshelfState({
       }
       open();
     },
-    [isLoggedIn, requireAuth, selectedBookshelfBook?.remoteMeetingId],
+    [isLoggedIn, l, requireAuth, selectedBookshelfBook?.remoteMeetingId],
   );
 
   const handleSubmitBookshelfComposer = useCallback(() => {
@@ -1065,15 +1068,17 @@ export function useBookshelfState({
     const description = bookshelfComposerInput.trim();
 
     if (typeof clubId !== 'number' || typeof meetingId !== 'number' || !bookshelfComposerType) {
-      showToast('책장 정보를 찾을 수 없습니다.');
+      showToast(l('책장 정보를 찾을 수 없습니다.'));
       return;
     }
     if (!description) {
-      showToast(bookshelfComposerType === 'TOPIC' ? '발제 내용을 입력해야 합니다.' : '한줄평을 입력해야 합니다.');
+      showToast(bookshelfComposerType === 'TOPIC'
+        ? l('발제 내용을 입력해야 합니다.')
+        : l('한줄평을 입력해야 합니다.'));
       return;
     }
     if (bookshelfComposerType === 'REVIEW' && bookshelfComposerRating < 0.5) {
-      showToast('평점을 선택해야 합니다.');
+      showToast(l('평점을 선택해야 합니다.'));
       return;
     }
 
@@ -1091,7 +1096,7 @@ export function useBookshelfState({
           if (selectedBookshelfBook) {
             await reloadBookshelfMeetingDetail(selectedBookshelfBook, { suppressErrorToast: true });
           }
-          showToast(isEditing ? '발제가 수정되었습니다.' : '발제가 등록되었습니다.');
+          showToast(isEditing ? l('발제가 수정되었습니다.') : l('발제가 등록되었습니다.'));
         } else {
           if (isEditing && typeof editingBookshelfPost?.remoteId === 'number') {
             await updateClubBookshelfReview(clubId, meetingId, editingBookshelfPost.remoteId, {
@@ -1105,7 +1110,7 @@ export function useBookshelfState({
             });
           }
           await refreshBookshelfPostsByType(clubId, meetingId, 'REVIEW');
-          showToast(isEditing ? '한줄평이 수정되었습니다.' : '한줄평이 등록되었습니다.');
+          showToast(isEditing ? l('한줄평이 수정되었습니다.') : l('한줄평이 등록되었습니다.'));
         }
         setEditingBookshelfPost(null);
         setBookshelfComposerType(null);
@@ -1113,12 +1118,12 @@ export function useBookshelfState({
         setBookshelfComposerRating(0);
       } catch (error) {
         showToast(
-          resolveBookshelfActionErrorMessage(
+          l(resolveBookshelfActionErrorMessage(
             error,
             bookshelfComposerType === 'TOPIC'
               ? (editingBookshelfPost ? '발제 수정에 실패했습니다.' : '발제 등록에 실패했습니다.')
               : (editingBookshelfPost ? '한줄평 수정에 실패했습니다.' : '한줄평 등록에 실패했습니다.'),
-          ),
+          )),
         );
       } finally {
         setSubmittingBookshelfComposer(false);
@@ -1131,6 +1136,7 @@ export function useBookshelfState({
     bookshelfComposerType,
     editingBookshelfPost,
     group.clubId,
+    l,
     reloadBookshelfMeetingDetail,
     refreshBookshelfPostsByType,
     selectedBookshelfBook,
@@ -1161,6 +1167,7 @@ export function useBookshelfState({
       const clubId = group.clubId;
       const meetingId = selectedBookshelfBook?.remoteMeetingId;
       const postLabel = post.type === 'TOPIC' ? '발제' : '한줄평';
+      const translatedPostLabel = l(postLabel);
 
       if (
         !post.isAuthor ||
@@ -1174,10 +1181,13 @@ export function useBookshelfState({
         return;
       }
 
-      Alert.alert(`${postLabel} 삭제`, `이 ${postLabel}를 삭제하시겠습니까?`, [
-        { text: '취소', style: 'cancel' },
+      Alert.alert(
+        l('{label} 삭제', { label: translatedPostLabel }),
+        l('이 {label}를 삭제하시겠습니까?', { label: translatedPostLabel }),
+        [
+        { text: l('취소'), style: 'cancel' },
         {
-          text: '삭제',
+          text: l('삭제'),
           style: 'destructive',
           onPress: () => {
             const remove = async () => {
@@ -1188,20 +1198,25 @@ export function useBookshelfState({
                   await deleteClubBookshelfReview(clubId, meetingId, post.remoteId);
                 }
                 await refreshBookshelfPostsByType(clubId, meetingId, post.type);
-                showToast(`${postLabel}를 삭제했습니다.`);
+                showToast(l('{label}를 삭제했습니다.', { label: translatedPostLabel }));
               } catch (error) {
-                showToast(resolveBookshelfActionErrorMessage(error, `${postLabel} 삭제에 실패했습니다.`));
+                showToast(l(resolveBookshelfActionErrorMessage(
+                  error,
+                  `${postLabel} 삭제에 실패했습니다.`,
+                )));
               }
             };
             void remove();
           },
         },
-      ]);
+        ],
+      );
     },
     [
       bookshelfPostMenu,
       group.clubId,
       handleOpenBookshelfComposer,
+      l,
       refreshBookshelfPostsByType,
       selectedBookshelfBook?.remoteMeetingId,
       setReportModal,
@@ -1219,28 +1234,28 @@ export function useBookshelfState({
           const nextMeeting = await fetchClubNextMeetingRedirect(clubId);
           const meetingId = nextMeeting?.meetingId;
           if (typeof meetingId !== 'number') {
-            showToast('예정된 정기모임이 없습니다.');
+            showToast(l('예정된 정기모임이 없습니다.'));
             return;
           }
           const opened = await openBookshelfTopicByMeetingId(meetingId);
-          if (!opened) showToast('이번 모임 정보를 찾을 수 없습니다.');
+          if (!opened) showToast(l('이번 모임 정보를 찾을 수 없습니다.'));
         } catch (error) {
           if (error instanceof ApiError) {
             if (error.status === 404) {
-              showToast('예정된 정기모임이 없습니다.');
+              showToast(l('예정된 정기모임이 없습니다.'));
               return;
             }
-            showToast(error.message);
+            showToast(l(error.message));
             return;
           }
-          showToast('이번 모임을 열지 못했습니다.');
+          showToast(l('이번 모임을 열지 못했습니다.'));
         } finally {
           setOpeningNextMeeting(false);
         }
       };
       void open();
     });
-  }, [group.clubId, openBookshelfTopicByMeetingId, openingNextMeeting, requireAuth]);
+  }, [group.clubId, l, openBookshelfTopicByMeetingId, openingNextMeeting, requireAuth]);
 
   const handleBackToBookshelfGrid = useCallback(() => {
     setBookshelfViewMode('GRID');
@@ -1289,7 +1304,7 @@ export function useBookshelfState({
     const posts = regularGroupPostsByIdRef.current[groupId];
     const post = posts?.find((p) => p.id === postId);
     if (post?.remoteTopicId == null) {
-      showToast('발제 정보를 찾을 수 없습니다.');
+      showToast(l('발제 정보를 찾을 수 없습니다.'));
       return;
     }
 
@@ -1307,12 +1322,12 @@ export function useBookshelfState({
       );
 
     if (!canManageClub && !isCurrentMemberGroup) {
-      showToast('현재 조의 발제만 선택할 수 있습니다.');
+      showToast(l('현재 조의 발제만 선택할 수 있습니다.'));
       return;
     }
 
     if (!isRegularGroupStompConnected) {
-      showToast('실시간 연결이 아직 되지 않았습니다.');
+      showToast(l('실시간 연결이 아직 되지 않았습니다.'));
       return;
     }
 
@@ -1325,12 +1340,13 @@ export function useBookshelfState({
       stompPublishToggleRef.current(post.remoteTopicId, !post.completed);
     } catch (error) {
       removeRegularGroupPendingPost(pendingKey);
-      showToast(error instanceof Error ? error.message : '발제 선택을 반영하지 못했습니다.');
+      showToast(l(error instanceof Error ? error.message : '발제 선택을 반영하지 못했습니다.'));
     }
   }, [
     addRegularGroupPendingPost,
     canManageClub,
     isRegularGroupStompConnected,
+    l,
     regularMeetingInfo?.groups,
     removeRegularGroupPendingPost,
   ]);
@@ -1539,7 +1555,7 @@ export function useBookshelfState({
     const clubId = group.clubId;
     const meetingId = selectedRegularMeetingId;
     if (!canManageClub || typeof clubId !== 'number' || typeof meetingId !== 'number') {
-      showToast('정기모임 정보를 찾을 수 없습니다.');
+      showToast(l('정기모임 정보를 찾을 수 없습니다.'));
       return;
     }
 
@@ -1556,7 +1572,7 @@ export function useBookshelfState({
           fetchClubMeetingMembers(clubId, meetingId),
         ]);
         if (!meeting) {
-          showToast('정기모임 정보를 찾을 수 없습니다.');
+          showToast(l('정기모임 정보를 찾을 수 없습니다.'));
           setTeamManageVisible(false);
           return;
         }
@@ -1596,7 +1612,7 @@ export function useBookshelfState({
         );
         setTeamManageTeams(nextTeams.length > 0 ? nextTeams : [{ teamNumber: 1, memberIds: [] }]);
       } catch (error) {
-        showToast(resolveBookshelfActionErrorMessage(error, '조 편성 화면을 불러오지 못했습니다.'));
+        showToast(l(resolveBookshelfActionErrorMessage(error, '조 편성 화면을 불러오지 못했습니다.')));
         setTeamManageVisible(false);
       } finally {
         setTeamManageLoading(false);
@@ -1607,6 +1623,7 @@ export function useBookshelfState({
   }, [
     canManageClub,
     group.clubId,
+    l,
     refreshTeamManageQuickDropLayouts,
     selectedRegularMeetingId,
   ]);
@@ -1614,7 +1631,9 @@ export function useBookshelfState({
   const handleAddTeamManageTeam = useCallback(() => {
     setTeamManageTeams((prev) => {
       if (prev.length >= MAX_REGULAR_GROUP_COUNT) {
-        showToast('조는 최대 10개까지 만들 수 있습니다.');
+        showToast(l('조는 최대 {limit}개까지 만들 수 있습니다.', {
+          limit: MAX_REGULAR_GROUP_COUNT,
+        }));
         return prev;
       }
       const usedNumbers = new Set(prev.map((team) => team.teamNumber));
@@ -1628,20 +1647,20 @@ export function useBookshelfState({
       );
     });
     setTimeout(refreshTeamManageQuickDropLayouts, 0);
-  }, [refreshTeamManageQuickDropLayouts]);
+  }, [l, refreshTeamManageQuickDropLayouts]);
 
   const handleRemoveTeamManageTeam = useCallback(
     (teamNumber: number) => {
       setTeamManageTeams((prev) => {
         if (prev.length <= 1) {
-          showToast('최소 한 개의 조는 필요합니다.');
+          showToast(l('최소 한 개의 조는 필요합니다.'));
           return prev;
         }
         return prev.filter((team) => team.teamNumber !== teamNumber);
       });
       setTimeout(refreshTeamManageQuickDropLayouts, 0);
     },
-    [refreshTeamManageQuickDropLayouts],
+    [l, refreshTeamManageQuickDropLayouts],
   );
 
   const handlePressTeamManageTarget = useCallback(
@@ -1803,11 +1822,11 @@ export function useBookshelfState({
     const meetingId = selectedRegularMeetingId;
     const selectedBook = selectedBookshelfBook;
     if (typeof clubId !== 'number' || typeof meetingId !== 'number' || !selectedBook) {
-      showToast('정기모임 정보를 찾을 수 없습니다.');
+      showToast(l('정기모임 정보를 찾을 수 없습니다.'));
       return;
     }
     if (teamManageTeams.some((team) => team.memberIds.length === 0)) {
-      showToast('빈 조를 삭제하거나 참여자를 배정해야 합니다.');
+      showToast(l('빈 조를 삭제하거나 참여자를 배정해야 합니다.'));
       return;
     }
 
@@ -1826,7 +1845,7 @@ export function useBookshelfState({
           meetingId,
           teamCount: teamManageTeams.length,
         });
-        showToast('조 편성이 저장되었습니다.');
+        showToast(l('조 편성이 저장되었습니다.'));
         setBookshelfDetailTab('REGULAR');
         setBookshelfViewMode('DETAIL');
         setSelectedRegularGroupId(null);
@@ -1838,7 +1857,7 @@ export function useBookshelfState({
           teamCount: teamManageTeams.length,
           message: error instanceof Error ? error.message : String(error),
         });
-        showToast(resolveBookshelfActionErrorMessage(error, '조 편성 저장에 실패했습니다.'));
+        showToast(l(resolveBookshelfActionErrorMessage(error, '조 편성 저장에 실패했습니다.')));
       } finally {
         setTeamManageSaving(false);
       }
@@ -1847,6 +1866,7 @@ export function useBookshelfState({
   }, [
     closeTeamManage,
     group.clubId,
+    l,
     reloadBookshelfMeetingDetail,
     selectedBookshelfBook,
     selectedRegularMeetingId,
@@ -1861,7 +1881,7 @@ export function useBookshelfState({
     const fallbackBook = selectedBookshelfBook;
 
     if (!canManageClub || typeof clubId !== 'number' || typeof meetingId !== 'number' || !fallbackBook) {
-      showToast('수정할 책장 정보를 찾을 수 없습니다.');
+      showToast(l('수정할 책장 정보를 찾을 수 없습니다.'));
       return;
     }
 
@@ -1871,7 +1891,7 @@ export function useBookshelfState({
       try {
         const detail = await fetchClubBookshelfEditInfo(clubId, meetingId);
         if (!detail) {
-          showToast('수정할 책장 정보를 찾을 수 없습니다.');
+          showToast(l('수정할 책장 정보를 찾을 수 없습니다.'));
           setActiveManagementScreen(null);
           setEditingBookshelfMeetingId(null);
           return;
@@ -1900,7 +1920,7 @@ export function useBookshelfState({
           openingBookshelfEditRef.current = false;
         });
       } catch (error) {
-        showToast(resolveBookshelfActionErrorMessage(error, '책장 수정 정보를 불러오지 못했습니다.'));
+        showToast(l(resolveBookshelfActionErrorMessage(error, '책장 수정 정보를 불러오지 못했습니다.')));
         setActiveManagementScreen(null);
         setEditingBookshelfMeetingId(null);
       } finally {
@@ -1915,6 +1935,7 @@ export function useBookshelfState({
     closeBookshelfBookSelector,
     closeBookshelfCalendar,
     group.clubId,
+    l,
     selectedBookshelfBook,
     setActiveManagementScreen,
   ]);
@@ -1975,7 +1996,7 @@ export function useBookshelfState({
         clubId,
         reason: 'missing_source_book',
       });
-      showToast('책을 선택해야 합니다.');
+      showToast(l('책을 선택해야 합니다.'));
       return;
     }
     if (!canManageClub || typeof clubId !== 'number') {
@@ -1985,11 +2006,9 @@ export function useBookshelfState({
         reason: 'unavailable_permission_or_club',
         canManageClub,
       });
-      showToast(
-        isEditMode
-          ? '책장 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'
-          : '책장 생성 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.',
-      );
+      showToast(isEditMode
+        ? l('책장 수정 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.')
+        : l('책장 생성 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'));
       return;
     }
 
@@ -2001,7 +2020,7 @@ export function useBookshelfState({
         reason: 'invalid_generation',
         session: bookshelfCreateDraft.session,
       });
-      showToast('기수를 숫자로 입력해야 합니다.');
+      showToast(l('기수를 숫자로 입력해야 합니다.'));
       return;
     }
 
@@ -2015,7 +2034,9 @@ export function useBookshelfState({
         reason: 'meeting_title_too_long',
         length: regularMeetingName.length,
       });
-      showToast(`정기모임 이름은 ${BOOKSHELF_MEETING_TITLE_MAX_LENGTH}자 이하여야 합니다.`);
+      showToast(l('정기모임 이름은 {limit}자 이하여야 합니다.', {
+        limit: BOOKSHELF_MEETING_TITLE_MAX_LENGTH,
+      }));
       return;
     }
     if (meetingLocation.length > BOOKSHELF_MEETING_LOCATION_MAX_LENGTH) {
@@ -2025,7 +2046,9 @@ export function useBookshelfState({
         reason: 'meeting_location_too_long',
         length: meetingLocation.length,
       });
-      showToast(`모임 장소는 ${BOOKSHELF_MEETING_LOCATION_MAX_LENGTH}자 이하여야 합니다.`);
+      showToast(l('모임 장소는 {limit}자 이하여야 합니다.', {
+        limit: BOOKSHELF_MEETING_LOCATION_MAX_LENGTH,
+      }));
       return;
     }
     if (isEditMode && !sourceBook) {
@@ -2035,7 +2058,7 @@ export function useBookshelfState({
         reason: 'missing_edit_source_book',
         editingMeetingId,
       });
-      showToast('수정할 책장 정보를 다시 불러와주세요.');
+      showToast(l('수정할 책장 정보를 다시 불러와주세요.'));
       return;
     }
     if (!isEditMode && !ISBN13_REGEX.test(sourceBookIsbn)) {
@@ -2046,7 +2069,7 @@ export function useBookshelfState({
         rawIsbn: sourceBook?.isbn ?? null,
         normalizedIsbnLength: sourceBookIsbn.length,
       });
-      showToast('책 정보 형식이 올바르지 않습니다.');
+      showToast(l('책 정보 형식이 올바르지 않습니다.'));
       return;
     }
     const primaryCategory = bookshelfCreateDraft.categories[0];
@@ -2064,7 +2087,7 @@ export function useBookshelfState({
             reason: 'invalid_meeting_date',
             meetingDate,
           });
-          showToast('올바른 모임 날짜를 선택해야 합니다.');
+          showToast(l('올바른 모임 날짜를 선택해야 합니다.'));
           return;
         }
 
@@ -2127,14 +2150,14 @@ export function useBookshelfState({
           }
           setActiveManagementScreen(null);
           setEditingBookshelfMeetingId(null);
-          showToast('책장이 수정되었습니다.');
+          showToast(l('책장이 수정되었습니다.'));
         } else {
           const createdSession = formatGenerationLabel(generation);
           setSelectedBookshelfSession(createdSession);
           setBookshelfViewMode('GRID');
           setActiveManagementScreen(null);
           setBookshelfCreateDraft(buildBookshelfCreateDraft(String(generation)));
-          showToast('책장이 생성되었습니다.');
+          showToast(l('책장이 생성되었습니다.'));
         }
         logMeetingAction('bookshelf_submit_success', {
           mode,
@@ -2151,10 +2174,10 @@ export function useBookshelfState({
           status: error instanceof ApiError ? error.status : undefined,
         });
         showToast(
-          resolveBookshelfActionErrorMessage(
+          l(resolveBookshelfActionErrorMessage(
             error,
             isEditMode ? '책장 수정에 실패했습니다.' : '책장 생성에 실패했습니다.',
-          ),
+          )),
         );
       } finally {
         if (isEditMode) setUpdatingBookshelf(false);
@@ -2174,6 +2197,7 @@ export function useBookshelfState({
     deletingBookshelf,
     editingBookshelfMeetingId,
     group.clubId,
+    l,
     reloadBookshelfMeetingDetail,
     setActiveManagementScreen,
     setActiveTab,
@@ -2184,14 +2208,14 @@ export function useBookshelfState({
     const clubId = group.clubId;
     const meetingId = editingBookshelfMeetingId;
     if (deletingBookshelf || !canManageClub || typeof clubId !== 'number' || typeof meetingId !== 'number') {
-      showToast('책장 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+      showToast(l('책장 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'));
       return;
     }
 
-    Alert.alert('책장 삭제', '이 책장을 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(l('책장 삭제'), l('이 책장을 삭제하시겠습니까?'), [
+      { text: l('취소'), style: 'cancel' },
       {
-        text: '삭제',
+        text: l('삭제'),
         style: 'destructive',
         onPress: () => {
           const submit = async () => {
@@ -2204,9 +2228,9 @@ export function useBookshelfState({
               setBookshelfViewMode('GRID');
               setActiveManagementScreen(null);
               setEditingBookshelfMeetingId(null);
-              showToast('책장이 삭제되었습니다.');
+              showToast(l('책장이 삭제되었습니다.'));
             } catch (error) {
-              showToast(resolveBookshelfActionErrorMessage(error, '책장 삭제에 실패했습니다.'));
+              showToast(l(resolveBookshelfActionErrorMessage(error, '책장 삭제에 실패했습니다.')));
             } finally {
               setDeletingBookshelf(false);
             }
@@ -2215,20 +2239,20 @@ export function useBookshelfState({
         },
       },
     ]);
-  }, [canManageClub, deletingBookshelf, editingBookshelfMeetingId, group.clubId, setActiveManagementScreen]);
+  }, [canManageClub, deletingBookshelf, editingBookshelfMeetingId, group.clubId, l, setActiveManagementScreen]);
 
   const handleDeleteSelectedBookshelf = useCallback(() => {
     const clubId = group.clubId;
     const meetingId = selectedBookshelfBook?.remoteMeetingId;
     if (deletingBookshelf || !canManageClub || typeof clubId !== 'number' || typeof meetingId !== 'number') {
-      showToast('책장 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+      showToast(l('책장 삭제 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.'));
       return;
     }
 
-    Alert.alert('책장 삭제', '이 책장을 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(l('책장 삭제'), l('이 책장을 삭제하시겠습니까?'), [
+      { text: l('취소'), style: 'cancel' },
       {
-        text: '삭제',
+        text: l('삭제'),
         style: 'destructive',
         onPress: () => {
           const submit = async () => {
@@ -2242,9 +2266,9 @@ export function useBookshelfState({
               setSelectedRegularGroupId(null);
               setActiveManagementScreen(null);
               setEditingBookshelfMeetingId(null);
-              showToast('책장이 삭제되었습니다.');
+              showToast(l('책장이 삭제되었습니다.'));
             } catch (error) {
-              showToast(resolveBookshelfActionErrorMessage(error, '책장 삭제에 실패했습니다.'));
+              showToast(l(resolveBookshelfActionErrorMessage(error, '책장 삭제에 실패했습니다.')));
             } finally {
               setDeletingBookshelf(false);
             }
@@ -2257,6 +2281,7 @@ export function useBookshelfState({
     canManageClub,
     deletingBookshelf,
     group.clubId,
+    l,
     selectedBookshelfBook?.remoteMeetingId,
     setActiveManagementScreen,
   ]);

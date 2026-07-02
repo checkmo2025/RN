@@ -10,6 +10,7 @@ import {
 import { colors, radius, scaleSize, spacing, typography } from '../../../theme';
 import { FeedbackPressable as Pressable } from '../../common/FeedbackPressable';
 import { LeftFocalCoverImage } from '../../common/LeftFocalCoverImage';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 export type NewsPromotionCarouselItem = {
   id: string;
@@ -31,6 +32,7 @@ export function NewsPromotionCarousel({
   onPressItem,
   autoPlayIntervalMs = 5000,
 }: Props) {
+  const { l } = useLanguage();
   const { width } = useWindowDimensions();
   const promotionWidth = Math.max(scaleSize(260), width - horizontalInset * 2);
   const promotionStep = promotionWidth + spacing.sm;
@@ -105,7 +107,7 @@ export function NewsPromotionCarousel({
               uri={item.imageUri}
               style={styles.promoCard}
               imageStyle={styles.promoImage}
-              accessibilityLabel={`${item.title} 프로모션`}
+              accessibilityLabel={l('{title} 프로모션', { title: item.title })}
             >
               <View style={styles.promoGradient} />
               <View style={styles.promoContent}>

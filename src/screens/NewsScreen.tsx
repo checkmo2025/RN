@@ -53,6 +53,7 @@ import { resolveApiError } from '../utils/resolveApiError';
 import { useEdgeBackSwipe } from '../hooks/useEdgeBackSwipe';
 import { useConsumeRouteParam } from '../hooks/useConsumeRouteParam';
 import { parsePositiveIntParam, findNavigatorWithRoute } from '../navigation/navigateToHome';
+import { useLanguage } from '../contexts/LanguageContext';
 
 type NewsItem = {
   id: string;
@@ -78,36 +79,39 @@ const DETAIL_BACK_ACTIVATE_DISTANCE = 14;
 const DETAIL_BACK_TRIGGER_DISTANCE = 72;
 const DETAIL_BACK_ACTIVATE_MAX_DY = 16;
 const DETAIL_BACK_TRIGGER_MAX_DY = 60;
-const fallbackPromotions: NewsItem[] = [
-  {
-    id: 'promo-fallback-1',
-    newsId: 0,
-    title: '봄메이트',
-    excerpt: '5월 책 추천\n나의 돈키호테\n할인된 가격에\n만나보세요!',
-    date: '',
-    cover: NEWS_DEFAULT_IMAGE,
-    body: '',
-  },
-  {
-    id: 'promo-fallback-2',
-    newsId: 0,
-    title: '신간 소식',
-    excerpt: '새로운 이야기와 큐레이션을 매주 만나보세요.',
-    date: '',
-    cover: NEWS_DEFAULT_IMAGE,
-    body: '',
-  },
-  {
-    id: 'promo-fallback-3',
-    newsId: 0,
-    title: '이벤트',
-    excerpt: '책모 구독자 전용 굿즈 증정 이벤트',
-    date: '',
-    cover: NEWS_DEFAULT_IMAGE,
-    body: '',
-  },
-];
 const NEWS_CONTACT_URL = PUBLIC_ENV.SUPPORT_FORM_URL;
+
+function getFallbackPromotions(l: (text: string) => string): NewsItem[] {
+  return [
+    {
+      id: 'promo-fallback-1',
+      newsId: 0,
+      title: l('봄메이트'),
+      excerpt: l('5월 책 추천\n나의 돈키호테\n할인된 가격에\n만나보세요!'),
+      date: '',
+      cover: NEWS_DEFAULT_IMAGE,
+      body: '',
+    },
+    {
+      id: 'promo-fallback-2',
+      newsId: 0,
+      title: l('신간 소식'),
+      excerpt: l('새로운 이야기와 큐레이션을 매주 만나보세요.'),
+      date: '',
+      cover: NEWS_DEFAULT_IMAGE,
+      body: '',
+    },
+    {
+      id: 'promo-fallback-3',
+      newsId: 0,
+      title: l('이벤트'),
+      excerpt: l('책모 구독자 전용 굿즈 증정 이벤트'),
+      date: '',
+      cover: NEWS_DEFAULT_IMAGE,
+      body: '',
+    },
+  ];
+}
 
 function shuffleItems<T>(items: T[]): T[] {
   const copied = [...items];
@@ -122,18 +126,17 @@ function toDateLabel(value?: string): string {
   return formatKstDateLabel(value, '-');
 }
 
-const NEWS_ERROR_OVERRIDES = { 401: '로그인 상태를 확인해 주십시오.', 403: '접근 권한이 없습니다.', 404: '요청한 소식을 찾을 수 없습니다.' } as const;
-
 function toNewsItem(
   item: RemoteNewsSummary,
   index: number,
   keyPrefix: 'news' | 'promo',
+  fallbackExcerpt: string,
 ): NewsItem {
   return {
     id: `${keyPrefix}-${item.id}`,
     newsId: item.id,
     title: item.title,
-    excerpt: item.excerpt?.trim() || '소식 내용을 확인해보세요.',
+    excerpt: item.excerpt?.trim() || fallbackExcerpt,
     date: toDateLabel(item.date),
     cover: item.thumbnailUrl ?? NEWS_DEFAULT_IMAGE,
     body: '',
@@ -153,12 +156,12 @@ function applyDetail(item: NewsItem, detail: RemoteNewsDetail): NewsItem {
   };
 }
 
-function toStandaloneNewsItem(detail: RemoteNewsDetail): NewsItem {
+function toStandaloneNewsItem(detail: RemoteNewsDetail, fallbackExcerpt: string): NewsItem {
   return {
     id: `news-${detail.id}`,
     newsId: detail.id,
     title: detail.title,
-    excerpt: detail.excerpt?.trim() || '소식 내용을 확인해보세요.',
+    excerpt: detail.excerpt?.trim() || fallbackExcerpt,
     date: toDateLabel(detail.date),
     cover: detail.thumbnailUrl ?? NEWS_DEFAULT_IMAGE,
     body: detail.content,
@@ -169,6 +172,7 @@ function toStandaloneNewsItem(detail: RemoteNewsDetail): NewsItem {
 export function NewsScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ News: NewsRouteParams }, 'News'>>();
+  const { l } = useLanguage();
   const { width } = useWindowDimensions();
   const horizontalInset = width >= 768 ? spacing.xl : spacing.md;
   const [selected, setSelected] = useState<NewsItem | null>(null);
@@ -200,6 +204,8 @@ export function NewsScreen() {
 
   const loadNews = useCallback(async () => {
     setLoadingNews(true);
+    const fallbackPromotions = getFallbackPromotions(l);
+    const fallbackExcerpt = l('소식 내용을 확인해보세요.');
     try {
       const allItems = await collectAllCursorPages({
         fetchPage: (cursor) => fetchNewsList(cursor),
@@ -207,18 +213,32 @@ export function NewsScreen() {
       });
 
       const promotions = allItems.filter((item) => item.carousel === 'PROMOTION');
-      const mappedPromotions = promotions.map((item, index) => toNewsItem(item, index, 'promo'));
-      const mappedList = allItems.map((item, index) => toNewsItem(item, index, 'news'));
+      const mappedPromotions = promotions.map((item, index) =>
+        toNewsItem(item, index, 'promo', fallbackExcerpt),
+      );
+      const mappedList = allItems.map((item, index) =>
+        toNewsItem(item, index, 'news', fallbackExcerpt),
+      );
 
       setItems(mappedList);
       setPromotions(mappedPromotions.length > 0 ? mappedPromotions : fallbackPromotions);
     } catch (error) {
       setPromotions(fallbackPromotions);
-      showToast(resolveApiError(error, NEWS_ERROR_OVERRIDES, '소식을 불러오지 못했습니다.'));
+      showToast(
+        resolveApiError(
+          error,
+          {
+            401: l('로그인 상태를 확인해 주십시오.'),
+            403: l('접근 권한이 없습니다.'),
+            404: l('요청한 소식을 찾을 수 없습니다.'),
+          },
+          l('소식을 불러오지 못했습니다.'),
+        ),
+      );
     } finally {
       setLoadingNews(false);
     }
-  }, []);
+  }, [l]);
 
   const loadRecommendedBookCards = useCallback(async () => {
     setLoadingBooks(true);
@@ -232,20 +252,20 @@ export function NewsScreen() {
         return {
           ...book,
           id: `${book.isbn || fallbackId}-${index}`,
-          title: book.title || '책 제목',
-          author: book.author || '작가 미상',
-          description: book.description || '책 설명이 없습니다.',
+          title: book.title || l('책 제목'),
+          author: book.author || l('작가 미상'),
+          description: book.description || l('책 설명이 없습니다.'),
         };
       });
       setRecommendedBooks(cards);
     } catch (error) {
       setRecommendedBooks([]);
       if (error instanceof ApiError) return;
-      showToast('추천 책을 불러오지 못했습니다.');
+      showToast(l('추천 책을 불러오지 못했습니다.'));
     } finally {
       setLoadingBooks(false);
     }
-  }, []);
+  }, [l]);
 
   useEffect(() => {
     void loadNews();
@@ -276,14 +296,24 @@ export function NewsScreen() {
             return applyDetail(prev, detail);
           });
         } catch (error) {
-          showToast(resolveApiError(error, NEWS_ERROR_OVERRIDES, '소식 상세를 불러오지 못했습니다.'));
+          showToast(
+            resolveApiError(
+              error,
+              {
+                401: l('로그인 상태를 확인해 주십시오.'),
+                403: l('접근 권한이 없습니다.'),
+                404: l('요청한 소식을 찾을 수 없습니다.'),
+              },
+              l('소식 상세를 불러오지 못했습니다.'),
+            ),
+          );
         } finally {
           setLoadingDetail(false);
         }
       };
       void loadDetail();
     },
-    [animateTransition, detailTranslateX],
+    [animateTransition, detailTranslateX, l],
   );
 
   const openNewsDetailById = useCallback(
@@ -297,8 +327,8 @@ export function NewsScreen() {
       setSelected({
         id: `news-route-${newsId}`,
         newsId,
-        title: '소식',
-        excerpt: '소식 내용을 불러오는 중입니다.',
+        title: l('소식'),
+        excerpt: l('소식 내용을 불러오는 중입니다.'),
         date: '',
         body: '',
       });
@@ -309,13 +339,23 @@ export function NewsScreen() {
           const detail = await fetchNewsDetail(newsId);
           if (!detail) {
             setSelected(null);
-            showToast('소식 상세를 불러오지 못했습니다.');
+            showToast(l('소식 상세를 불러오지 못했습니다.'));
             return;
           }
-          setSelected(toStandaloneNewsItem(detail));
+          setSelected(toStandaloneNewsItem(detail, l('소식 내용을 확인해보세요.')));
         } catch (error) {
           setSelected(null);
-          showToast(resolveApiError(error, NEWS_ERROR_OVERRIDES, '소식 상세를 불러오지 못했습니다.'));
+          showToast(
+            resolveApiError(
+              error,
+              {
+                401: l('로그인 상태를 확인해 주십시오.'),
+                403: l('접근 권한이 없습니다.'),
+                404: l('요청한 소식을 찾을 수 없습니다.'),
+              },
+              l('소식 상세를 불러오지 못했습니다.'),
+            ),
+          );
         } finally {
           setLoadingDetail(false);
         }
@@ -323,7 +363,7 @@ export function NewsScreen() {
 
       void loadDetailById();
     },
-    [animateTransition, detailTranslateX],
+    [animateTransition, detailTranslateX, l],
   );
 
   const openBookSearchDetail = useCallback(
@@ -466,9 +506,9 @@ export function NewsScreen() {
         }
       >
         <Pressable style={styles.breadcrumb} onPress={closeSelectedDetail}>
-          <Text style={styles.breadcrumbText}>소식</Text>
+          <Text style={styles.breadcrumbText}>{l('소식')}</Text>
           <Text style={styles.breadcrumbSep}>›</Text>
-          <Text style={[styles.breadcrumbText, styles.breadcrumbActive]}>상세보기</Text>
+          <Text style={[styles.breadcrumbText, styles.breadcrumbActive]}>{l('상세보기')}</Text>
         </Pressable>
 
         <View style={styles.hero}>
@@ -500,7 +540,7 @@ export function NewsScreen() {
               Linking.openURL(item.originalLink ?? '').catch(() => null);
             }}
           >
-            <Text style={styles.detailLinkText}>원문 보기</Text>
+            <Text style={styles.detailLinkText}>{l('원문 보기')}</Text>
           </Pressable>
         ) : null}
       </ScrollView>
@@ -536,7 +576,7 @@ export function NewsScreen() {
                 )}
               </View>
               <View style={styles.recommendedSection}>
-                <Text style={styles.recommendedTitle}>오늘의 추천 책</Text>
+                <Text style={styles.recommendedTitle}>{l('오늘의 추천 책')}</Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -571,7 +611,7 @@ export function NewsScreen() {
                       ))}
                 </ScrollView>
               </View>
-              <Text style={styles.newsListTitle}>소식</Text>
+              <Text style={styles.newsListTitle}>{l('소식')}</Text>
             </View>
           }
           ListEmptyComponent={
@@ -583,7 +623,7 @@ export function NewsScreen() {
                 <NewsCardSkeleton />
               </View>
             ) : (
-              <Text style={styles.emptyNewsText}>등록된 소식이 없습니다.</Text>
+              <Text style={styles.emptyNewsText}>{l('등록된 소식이 없습니다.')}</Text>
             )
           }
           renderItem={({ item }) => (
@@ -611,7 +651,7 @@ export function NewsScreen() {
             />
           }
         />
-        <FloatingActionButton onPress={handleContact} accessibilityLabel="문의하기">
+        <FloatingActionButton onPress={handleContact} accessibilityLabel={l('문의하기')}>
           <MaterialIcons name="phone-in-talk" size={22} color={colors.white} />
         </FloatingActionButton>
       </View>

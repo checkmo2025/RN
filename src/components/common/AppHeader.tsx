@@ -64,6 +64,7 @@ import { formatNotificationText, resolveNotificationTarget } from '../../utils/n
 import { showToast } from '../../utils/toast';
 import { useConsumeRouteParam } from '../../hooks/useConsumeRouteParam';
 import { useBookSearch } from '../../hooks/useBookSearch';
+import { useLanguage } from '../../contexts/LanguageContext';
 import BookStoryFeedCard from '../feature/bookstory/BookStoryFeedCard';
 import { SkeletonBox } from './SkeletonBox';
 
@@ -112,10 +113,10 @@ function resolveBookStorySearchId(book: BookItem | null): string | null {
   return null;
 }
 
-function toSearchDescription(book: BookItem): string {
+function toSearchDescription(book: BookItem, fallback = '책 설명이 없습니다.'): string {
   if (book.description && book.description.trim()) return book.description;
   if (book.publisher && book.publisher.trim()) return book.publisher;
-  return '책 설명이 없습니다.';
+  return fallback;
 }
 
 function toBookItemFromRouteParam(raw: unknown): BookItem | null {
@@ -161,6 +162,7 @@ export function AppHeader(props: Props) {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ Header: HeaderRouteParams }, 'Header'>>();
   const { isLoggedIn, requireAuth } = useAuthGate();
+  const { language, l } = useLanguage();
   const { top, bottom } = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
 
@@ -233,9 +235,9 @@ export function AppHeader(props: Props) {
     try {
       await Linking.openURL(url);
     } catch {
-      showToast('링크를 열 수 없습니다.');
+      showToast(l('링크를 열 수 없습니다.'));
     }
-  }, []);
+  }, [l]);
 
   const isBookLikeTogglable = useCallback((book: BookItem) => {
     const normalizedIsbn = book.isbn.trim();
@@ -278,7 +280,11 @@ export function AppHeader(props: Props) {
             await toggleBookLikeByIsbn(book.isbn);
           }
           publishBookLikeState(book, !wasLiked);
-          showToast(wasLiked ? '내 서재에서 제거했습니다.' : '내 서재에 담았습니다.');
+          showToast(
+            wasLiked
+              ? l('내 서재에서 제거했습니다.')
+              : l('내 서재에 담았습니다.'),
+          );
         } catch (error) {
           setLikedBookIds((prev) => {
             const rollback = new Set(prev);
@@ -290,15 +296,15 @@ export function AppHeader(props: Props) {
             return rollback;
           });
           if (error instanceof ApiError) {
-            showToast(error.message || '내 서재 업데이트에 실패했습니다.');
+            showToast(error.message || l('내 서재 업데이트에 실패했습니다.'));
             return;
           }
-          showToast('내 서재 업데이트에 실패했습니다.');
+          showToast(l('내 서재 업데이트에 실패했습니다.'));
         }
       };
       void submit();
     },
-    [isBookLikeTogglable, isBookLikedInUi],
+    [isBookLikeTogglable, isBookLikedInUi, l],
   );
 
   useEffect(() => {
@@ -318,12 +324,12 @@ export function AppHeader(props: Props) {
   const handleToggleBookLike = useCallback(
     (book: BookItem) => {
       if (!isLoggedIn) {
-        showToast('로그인이 필요합니다.');
+        showToast(l('로그인이 필요합니다.'));
         return;
       }
       executeBookLikeToggle(book);
     },
-    [isLoggedIn, executeBookLikeToggle],
+    [isLoggedIn, executeBookLikeToggle, l],
   );
 
   const hideDropdownImmediately = useCallback(() => {
@@ -406,12 +412,12 @@ export function AppHeader(props: Props) {
         return;
       }
       if (!(error instanceof ApiError)) {
-        showToast('알림을 불러오지 못했습니다.');
+        showToast(l('알림을 불러오지 못했습니다.'));
       }
     } finally {
       setNotificationPreviewLoading(false);
     }
-  }, [isLoggedIn, refreshUnreadBadge]);
+  }, [isLoggedIn, l, refreshUnreadBadge]);
 
   useEffect(() => {
     void refreshUnreadBadge();
@@ -464,12 +470,12 @@ export function AppHeader(props: Props) {
       setRecommendedBooks(books.slice(0, 3));
     } catch (error) {
       if (!(error instanceof ApiError)) {
-        showToast('추천 책을 불러오지 못했습니다.');
+        showToast(l('추천 책을 불러오지 못했습니다.'));
       }
     } finally {
       setRecommendLoading(false);
     }
-  }, []);
+  }, [l]);
 
   const loadLikedBookIds = useCallback(async () => {
     if (!isLoggedIn) {
@@ -492,12 +498,12 @@ export function AppHeader(props: Props) {
         return;
       }
       if (error instanceof ApiError) {
-        showToast(error.message || '내 서재 정보를 불러오지 못했습니다.');
+        showToast(error.message || l('내 서재 정보를 불러오지 못했습니다.'));
         return;
       }
-      showToast('내 서재 정보를 불러오지 못했습니다.');
+      showToast(l('내 서재 정보를 불러오지 못했습니다.'));
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, l]);
 
   const loadSelectedBookData = useCallback(async (book: BookItem) => {
     const requestId = Date.now();
@@ -524,7 +530,7 @@ export function AppHeader(props: Props) {
         }
       } catch (error) {
         if (!(error instanceof ApiError)) {
-          showToast('도서 상세를 불러오지 못했습니다.');
+          showToast(l('도서 상세를 불러오지 못했습니다.'));
         }
       }
     }
@@ -551,7 +557,7 @@ export function AppHeader(props: Props) {
       }
     } catch (error) {
       if (!(error instanceof ApiError)) {
-        showToast('해당 도서의 책이야기를 불러오지 못했습니다.');
+        showToast(l('해당 도서의 책이야기를 불러오지 못했습니다.'));
       }
       if (activeBookRequestId.current === requestId) {
         setBookStories([]);
@@ -561,7 +567,7 @@ export function AppHeader(props: Props) {
         setBookStoriesLoading(false);
       }
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, l]);
 
   useConsumeRouteParam(
     route.params?.openSearchBook,
@@ -581,7 +587,7 @@ export function AppHeader(props: Props) {
   const handleSearchSubmitFromDropdown = useCallback(() => {
     const keyword = query.trim();
     if (!keyword) {
-      showToast('검색어를 입력해야 합니다.');
+      showToast(l('검색어를 입력해야 합니다.'));
       return;
     }
 
@@ -589,18 +595,18 @@ export function AppHeader(props: Props) {
     setShowSearchPage(true);
     setSearchStage('results');
     void executeSearch(keyword);
-  }, [executeSearch, hideDropdownImmediately, query]);
+  }, [executeSearch, hideDropdownImmediately, l, query]);
 
   const handleSearchSubmitInPage = useCallback(() => {
     const keyword = query.trim();
     if (!keyword) {
-      showToast('검색어를 입력해야 합니다.');
+      showToast(l('검색어를 입력해야 합니다.'));
       return;
     }
 
     setSearchStage('results');
     void executeSearch(keyword);
-  }, [executeSearch, query]);
+  }, [executeSearch, l, query]);
 
   const handleSelectBook = useCallback(
     (book: BookItem) => {
@@ -629,7 +635,7 @@ export function AppHeader(props: Props) {
             isbn: book.isbn,
             title: book.title,
             author: book.author,
-            description: toSearchDescription(book),
+            description: toSearchDescription(book, l('책 설명이 없습니다.')),
             imgUrl: book.imgUrl,
           }
         : undefined;
@@ -638,10 +644,10 @@ export function AppHeader(props: Props) {
       closeSearchPage();
       navigation.navigate('Story', { openCompose: true, composeBook });
     },
-    [closeSearchPage, hideDropdownImmediately, navigation],
+    [closeSearchPage, hideDropdownImmediately, l, navigation],
   );
 
-  const headerTitle = showSearchPage ? '책 검색' : title;
+  const headerTitle = showSearchPage ? l('책 검색') : l(title);
   const searchPageHeight = Math.max(scaleSize(280), windowHeight - top - HEADER_HEIGHT);
   const searchPageBottomPadding = bottom + scaleSize(100);
   const notiCardWidth = Math.min(scaleSize(280), windowWidth - spacing.md * 2);
@@ -715,8 +721,8 @@ export function AppHeader(props: Props) {
     Array.isArray(actions) && actions.length > 0
       ? actions
       : [
-          { key: 'search', icon: 'search', label: '검색', onPress: onPressSearch },
-          { key: 'notifications', icon: 'notifications-none', label: '알림', onPress: onPressBell },
+          { key: 'search', icon: 'search', label: l('검색'), onPress: onPressSearch },
+          { key: 'notifications', icon: 'notifications-none', label: l('알림'), onPress: onPressBell },
         ];
 
   return (
@@ -729,7 +735,7 @@ export function AppHeader(props: Props) {
               color={colors.white}
               size={26}
               onPress={handleHeaderBack}
-              accessibilityLabel="뒤로가기"
+              accessibilityLabel={l('뒤로가기')}
             />
           ) : (
             <Pressable
@@ -737,7 +743,7 @@ export function AppHeader(props: Props) {
               hitSlop={8}
               style={styles.logoPress}
               accessibilityRole="button"
-              accessibilityLabel="홈으로 이동"
+              accessibilityLabel={l('홈으로 이동')}
             >
               <LogoIcon width={44} height={24} />
             </Pressable>
@@ -850,7 +856,7 @@ export function AppHeader(props: Props) {
                 </>
               ) : null}
               {!notificationPreviewLoading && notificationPreview.length === 0 ? (
-                <Text style={styles.notiEmptyText}>표시할 알림이 없습니다.</Text>
+                <Text style={styles.notiEmptyText}>{l('표시할 알림이 없습니다.')}</Text>
               ) : null}
               {!notificationPreviewLoading
                 ? notificationPreview.map((notification) => (
@@ -869,9 +875,12 @@ export function AppHeader(props: Props) {
                         {formatNotificationText(
                           notification.notificationType,
                           notification.displayName,
+                          language,
                         )}
                       </Text>
-                      <Text style={styles.notiTime}>{toKstTimeAgoLabel(notification.createdAt)}</Text>
+                      <Text style={styles.notiTime}>
+                        {toKstTimeAgoLabel(notification.createdAt, Date.now(), language)}
+                      </Text>
                     </Pressable>
                   ))
                 : null}
@@ -882,7 +891,7 @@ export function AppHeader(props: Props) {
                   navigateToMyAlarms(navigation);
                 }}
               >
-                <Text style={styles.notiAllButtonText}>알림 전체보기</Text>
+                <Text style={styles.notiAllButtonText}>{l('알림 전체보기')}</Text>
               </Pressable>
             </Pressable>
             </Animated.View>
@@ -931,7 +940,7 @@ export function AppHeader(props: Props) {
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="책 제목, 작가 이름을 검색해보세요"
+                  placeholder={l('책 제목, 작가 이름을 검색해보세요')}
                   placeholderTextColor={colors.gray3}
                   style={styles.dropdownSearchInput}
                   onSubmitEditing={handleSearchSubmitFromDropdown}
@@ -943,7 +952,7 @@ export function AppHeader(props: Props) {
                     color={colors.gray2}
                     size={20}
                     onPress={() => setQuery('')}
-                    accessibilityLabel="검색어 지우기"
+                    accessibilityLabel={l('검색어 지우기')}
                   />
                 ) : null}
                 <Pressable
@@ -955,14 +964,14 @@ export function AppHeader(props: Props) {
                 </Pressable>
               </View>
 
-              <Text style={styles.dropdownRecoTitle}>오늘의 추천 책</Text>
+              <Text style={styles.dropdownRecoTitle}>{l('오늘의 추천 책')}</Text>
               <View style={styles.dropdownRecoRow}>
                 {(recommendedBooks.length > 0
                   ? recommendedBooks
                   : Array.from({ length: 3 }).map((_, idx) => ({
                       isbn: `placeholder-${idx}`,
-                      title: '책 제목',
-                      author: '작가/작가가',
+                      title: l('책 제목'),
+                      author: l('작가 미상'),
                       description: '',
                       imgUrl: undefined,
                     }))).map((book) => (
@@ -1004,7 +1013,9 @@ export function AppHeader(props: Props) {
               </View>
 
               {recommendLoading ? (
-                <Text style={styles.dropdownRecoLoading}>추천 책을 불러오는 중...</Text>
+                <Text style={styles.dropdownRecoLoading}>
+                  {l('추천 책을 불러오는 중...')}
+                </Text>
               ) : null}
 
               <Pressable
@@ -1013,7 +1024,9 @@ export function AppHeader(props: Props) {
                   void openAladinUrl(ALADIN_RANKING_URL);
                 }}
               >
-                <Text style={styles.dropdownRecoLinkText}>알라딘 랭킹 더 보러가기</Text>
+                <Text style={styles.dropdownRecoLinkText}>
+                  {l('알라딘 랭킹 더 보러가기')}
+                </Text>
                 <MaterialIcons name="north-east" size={16} color={colors.white} />
               </Pressable>
             </Animated.View>
@@ -1057,7 +1070,7 @@ export function AppHeader(props: Props) {
                     <TextInput
                       value={query}
                       onChangeText={setQuery}
-                      placeholder="책 제목, 작가 이름을 검색해보세요"
+                      placeholder={l('책 제목, 작가 이름을 검색해보세요')}
                       placeholderTextColor={colors.gray3}
                       style={styles.searchPageInput}
                       onSubmitEditing={handleSearchSubmitInPage}
@@ -1068,7 +1081,7 @@ export function AppHeader(props: Props) {
                         name="close"
                         color={colors.gray4}
                         size={20}
-                        accessibilityLabel="검색어 지우기"
+                        accessibilityLabel={l('검색어 지우기')}
                         onPress={resetSearch}
                       />
                     ) : null}
@@ -1083,18 +1096,23 @@ export function AppHeader(props: Props) {
 
                   {searched ? (
                     searchLoading ? (
-                      <Text style={styles.searchCount}>검색 중...</Text>
+                      <Text style={styles.searchCount}>{l('검색 중...')}</Text>
                     ) : (
                       <Text style={styles.searchCount}>
-                        "{searchedKeyword}" 총 {searchTotalResults}개의 검색결과가 있습니다.
+                        {l('"{keyword}" 총 {count}개의 검색결과가 있습니다.', {
+                          keyword: searchedKeyword,
+                          count: searchTotalResults,
+                        })}
                       </Text>
                     )
                   ) : (
-                    <Text style={styles.searchGuideText}>검색어를 입력하고 검색해보세요.</Text>
+                    <Text style={styles.searchGuideText}>
+                      {l('검색어를 입력하고 검색해보세요.')}
+                    </Text>
                   )}
 
                   {searched && !searchLoading && searchResults.length === 0 ? (
-                    <Text style={styles.searchEmptyText}>검색 결과가 없습니다.</Text>
+                    <Text style={styles.searchEmptyText}>{l('검색 결과가 없습니다.')}</Text>
                   ) : null}
 
                   <View style={styles.resultList}>
@@ -1132,7 +1150,7 @@ export function AppHeader(props: Props) {
                           </Text>
                           <Text style={styles.resultAuthor}>{book.author}</Text>
                           <Text style={styles.resultDesc} numberOfLines={3}>
-                            {toSearchDescription(book)}
+                            {toSearchDescription(book, l('책 설명이 없습니다.'))}
                           </Text>
                         </View>
 
@@ -1172,7 +1190,7 @@ export function AppHeader(props: Props) {
                         <ActivityIndicator size="small" color={colors.primary1} />
                       </View>
                     ) : (
-                      <Text style={styles.searchEndText}>마지막 검색 결과입니다.</Text>
+                      <Text style={styles.searchEndText}>{l('마지막 검색 결과입니다.')}</Text>
                     )
                   ) : null}
                 </>
@@ -1185,13 +1203,13 @@ export function AppHeader(props: Props) {
                     }}
                   >
                     <MaterialIcons name="chevron-left" size={20} color={colors.gray5} />
-                    <Text style={styles.detailBackText}>검색결과</Text>
+                    <Text style={styles.detailBackText}>{l('검색결과')}</Text>
                   </Pressable>
 
                   <Text style={styles.detailHeaderText}>
-                    도서 선택{' '}
-                    <Text style={styles.detailHeaderTextAccent}>{selectedBook?.title ?? '상세'}</Text>{' '}
-                    중
+                    {l('도서 선택 {title} 중', {
+                      title: selectedBook?.title ?? l('상세'),
+                    })}
                   </Text>
 
                   {selectedBook ? (
@@ -1212,7 +1230,7 @@ export function AppHeader(props: Props) {
                         </Text>
                         <Text style={styles.resultAuthor}>{selectedBook.author}</Text>
                         <Text style={styles.resultDesc} numberOfLines={3}>
-                          {toSearchDescription(selectedBook)}
+                          {toSearchDescription(selectedBook, l('책 설명이 없습니다.'))}
                         </Text>
                       </View>
 
@@ -1245,17 +1263,25 @@ export function AppHeader(props: Props) {
                   ) : null}
 
                   {bookDetailLoading ? (
-                    <Text style={styles.detailLoadingText}>도서 상세를 불러오는 중...</Text>
+                    <Text style={styles.detailLoadingText}>
+                      {l('도서 상세를 불러오는 중...')}
+                    </Text>
                   ) : null}
 
-                  <Text style={styles.detailStoryCountTitle}>책이야기 {bookStories.length}</Text>
+                  <Text style={styles.detailStoryCountTitle}>
+                    {l('책이야기 {count}', { count: bookStories.length })}
+                  </Text>
 
                   {bookStoriesLoading ? (
-                    <Text style={styles.detailLoadingText}>책이야기 목록을 불러오는 중...</Text>
+                    <Text style={styles.detailLoadingText}>
+                      {l('책이야기 목록을 불러오는 중...')}
+                    </Text>
                   ) : null}
 
                   {!bookStoriesLoading && bookStories.length === 0 ? (
-                    <Text style={styles.detailEmptyText}>아직 작성된 책이야기가 없습니다.</Text>
+                    <Text style={styles.detailEmptyText}>
+                      {l('아직 작성된 책이야기가 없습니다.')}
+                    </Text>
                   ) : null}
 
                   <View style={styles.detailStoryList}>
@@ -1266,7 +1292,7 @@ export function AppHeader(props: Props) {
                           key={`book-story-${story.id}`}
                           authorName={story.nickname}
                           profileImgSrc={story.profileImageUrl}
-                          timeAgo={toKstTimeAgoLabel(story.createdAt)}
+                          timeAgo={toKstTimeAgoLabel(story.createdAt, Date.now(), language)}
                           viewCount={story.viewCount}
                           title={story.title}
                           content={story.description}

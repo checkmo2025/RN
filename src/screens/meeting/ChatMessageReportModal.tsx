@@ -7,6 +7,7 @@ import { FeedbackPressable as Pressable } from '../../components/common/Feedback
 import { FormTextInput } from '../../components/common/FormTextInput';
 import { ToastHost } from '../../components/common/ToastHost';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
+import { useLanguage } from '../../contexts/LanguageContext';
 import type { ClubMeetingChatMessage } from '../../services/api/clubApi';
 import type { ReportReason } from '../../services/api/memberApi';
 import {
@@ -37,6 +38,7 @@ type Props = {
 };
 
 export function ChatMessageReportModal({ target, submitting, onClose, onSubmit }: Props) {
+  const { l } = useLanguage();
   const [reason, setReason] = useState<ReportReason>('GENERAL');
   const [content, setContent] = useState('');
   const message: ClubMeetingChatMessage | null = target?.message ?? null;
@@ -55,9 +57,9 @@ export function ChatMessageReportModal({ target, submitting, onClose, onSubmit }
       <View style={styles.card}>
           <View style={styles.header}>
             <Text style={styles.title}>
-              {target.targetType === 'CHAT' ? '메시지 신고' : '사용자 신고'}
+              {target.targetType === 'CHAT' ? l('메시지 신고') : l('사용자 신고')}
             </Text>
-            <Pressable onPress={onClose} hitSlop={8} accessibilityLabel="신고 닫기">
+            <Pressable onPress={onClose} hitSlop={8} accessibilityLabel={l('신고 닫기')}>
               <MaterialIcons name="close" size={24} color={colors.primary1} />
             </Pressable>
           </View>
@@ -77,12 +79,12 @@ export function ChatMessageReportModal({ target, submitting, onClose, onSubmit }
                   {message.content}
                 </Text>
               ) : (
-                <Text style={styles.previewContent}>신고 대상 사용자</Text>
+                <Text style={styles.previewContent}>{l('신고 대상 사용자')}</Text>
               )}
             </View>
           </View>
 
-          <Text style={styles.label}>종류</Text>
+          <Text style={styles.label}>{l('종류')}</Text>
           <View style={styles.reasonRow}>
             {reasonOptions.map((option) => {
               const active = option.type === reason;
@@ -94,19 +96,19 @@ export function ChatMessageReportModal({ target, submitting, onClose, onSubmit }
                   disabled={submitting}
                 >
                   <Text style={[styles.reasonText, active && styles.reasonTextActive]}>
-                    {option.label}
+                    {l(option.label)}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
 
-          <Text style={styles.label}>내용</Text>
+          <Text style={styles.label}>{l('내용')}</Text>
           <FormTextInput
             value={content}
             onChangeText={setContent}
             style={styles.contentInput}
-            placeholder="신고 내용 작성 (최대 500자)"
+            placeholder={l('신고 내용 작성 (최대 {limit}자)', { limit: INPUT_LIMITS.REPORT_CONTENT })}
             placeholderTextColor={colors.gray3}
             multiline
             maxLength={INPUT_LIMITS.REPORT_CONTENT}
@@ -121,7 +123,7 @@ export function ChatMessageReportModal({ target, submitting, onClose, onSubmit }
             onPress={() => onSubmit({ reason, content: content.trim() || undefined })}
             disabled={submitting}
           >
-            <Text style={styles.submitText}>{submitting ? '등록 중...' : '신고 등록'}</Text>
+            <Text style={styles.submitText}>{submitting ? l('등록 중...') : l('신고 등록')}</Text>
           </Pressable>
           <ToastHost />
       </View>

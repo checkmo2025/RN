@@ -17,6 +17,7 @@ import { colors, radius, spacing, typography, buttonSize } from '../../theme';
 import { FeedbackPressable } from '../../components/common/FeedbackPressable';
 import { triggerSelectionHaptic } from '../../utils/haptics';
 import { ONBOARDING_SLIDES, type OnboardingSlide } from '../../constants/onboardingSlides';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface OnboardingScreenProps {
   visible: boolean;
@@ -26,6 +27,7 @@ interface OnboardingScreenProps {
 
 export function OnboardingScreen({ visible, onClose }: OnboardingScreenProps) {
   const insets = useSafeAreaInsets();
+  const { l } = useLanguage();
   const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<OnboardingSlide>>(null);
   const [index, setIndex] = useState(0);
@@ -62,13 +64,13 @@ export function OnboardingScreen({ visible, onClose }: OnboardingScreenProps) {
       <View style={[styles.slide, { width }]}>
         <View style={[styles.phoneFrame, { borderColor: item.accent }]}>
           <MaterialIcons name={item.icon} size={72} color={item.accent} />
-          <Text style={styles.placeholderLabel}>{item.imagePlaceholderLabel}</Text>
+          <Text style={styles.placeholderLabel}>{l(item.imagePlaceholderLabel)}</Text>
         </View>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.body}>{item.body}</Text>
+        <Text style={styles.title}>{l(item.title)}</Text>
+        <Text style={styles.body}>{l(item.body)}</Text>
       </View>
     ),
-    [width],
+    [l, width],
   );
 
   return (
@@ -79,9 +81,9 @@ export function OnboardingScreen({ visible, onClose }: OnboardingScreenProps) {
             onPress={onClose}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="온보딩 건너뛰기"
+            accessibilityLabel={l('온보딩 건너뛰기')}
           >
-            <Text style={styles.skipText}>건너뛰기</Text>
+            <Text style={styles.skipText}>{l('건너뛰기')}</Text>
           </FeedbackPressable>
         </View>
 
@@ -111,9 +113,9 @@ export function OnboardingScreen({ visible, onClose }: OnboardingScreenProps) {
             style={styles.ctaButton}
             onPress={handleNext}
             accessibilityRole="button"
-            accessibilityLabel={isLast ? '시작하기' : '다음'}
+            accessibilityLabel={isLast ? l('시작하기') : l('다음')}
           >
-            <Text style={styles.ctaLabel}>{isLast ? '시작하기' : '다음'}</Text>
+            <Text style={styles.ctaLabel}>{isLast ? l('시작하기') : l('다음')}</Text>
           </FeedbackPressable>
         </View>
       </View>

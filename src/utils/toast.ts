@@ -1,3 +1,5 @@
+import { translateActiveLiteral } from '../i18n/translations';
+
 type ToastListener = (message: string) => void;
 
 const listeners = new Set<ToastListener>();
@@ -6,7 +8,7 @@ let lastToastMessage = '';
 let lastToastTime = 0;
 
 export function showToast(message: string) {
-  const trimmed = message.trim();
+  const trimmed = translateActiveLiteral(message).trim();
   if (!trimmed) return;
   const now = Date.now();
   if (trimmed === lastToastMessage && now - lastToastTime < DUPLICATE_TOAST_WINDOW_MS) {

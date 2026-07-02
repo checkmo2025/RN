@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import { showToast } from '../../utils/toast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 type FieldType =
   | 'text'
@@ -82,7 +83,7 @@ export const FormTextInput = forwardRef<TextInput, Props>(function FormTextInput
     fieldType = 'text',
     maxLength,
     enforceMaxLength = true,
-    overLimitMessage = '입력 가능한 길이를 초과했습니다.',
+    overLimitMessage,
     onChangeText,
     onKeyPress,
     value,
@@ -93,18 +94,21 @@ export const FormTextInput = forwardRef<TextInput, Props>(function FormTextInput
     multiline,
     scrollEnabled,
     textAlignVertical,
+    placeholder,
     ...rest
   },
   ref,
 ) {
+  const { l } = useLanguage();
   const exceededNotifiedRef = useRef(false);
   const typeOptions = FIELD_TYPE_OPTIONS[fieldType];
+  const resolvedOverLimitMessage = overLimitMessage ?? l('입력 가능한 길이를 초과했습니다.');
 
   const notifyOverLimit = useCallback(() => {
     if (exceededNotifiedRef.current) return;
-    showToast(overLimitMessage);
+    showToast(resolvedOverLimitMessage);
     exceededNotifiedRef.current = true;
-  }, [overLimitMessage]);
+  }, [resolvedOverLimitMessage]);
 
   useEffect(() => {
     if (
@@ -169,6 +173,7 @@ export const FormTextInput = forwardRef<TextInput, Props>(function FormTextInput
       multiline={multiline}
       scrollEnabled={scrollEnabled ?? (multiline ? true : undefined)}
       textAlignVertical={textAlignVertical ?? (multiline ? 'top' : undefined)}
+      placeholder={placeholder ? l(placeholder) : placeholder}
       {...rest}
     />
   );

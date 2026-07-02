@@ -7,6 +7,7 @@ import {
   type ClubSearchOutputFilter,
 } from '../../services/api/clubApi';
 import { ApiError } from '../../services/api/http';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { showToast } from '../../utils/toast';
 import {
   mapMyClubToGroup,
@@ -27,6 +28,7 @@ export function useMeetingDiscover({
   selectedOutputFilter: ClubSearchOutputFilter;
   isLoggedIn: boolean;
 }) {
+  const { l } = useLanguage();
   const [myGroups, setMyGroups] = useState<Group[]>([]);
   const [discoverGroups, setDiscoverGroups] = useState<Group[]>([]);
   const [myGroupsLoading, setMyGroupsLoading] = useState(false);
@@ -50,20 +52,22 @@ export function useMeetingDiscover({
         return;
       }
       if (!(error instanceof ApiError)) {
-        showToast('내 모임 목록을 불러오지 못했습니다.');
+        showToast(l('내 모임 목록을 불러오지 못했습니다.'));
       }
       setMyGroups([]);
     } finally {
       setMyGroupsLoading(false);
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, l]);
 
   const loadDiscoverGroups = useCallback(async () => {
     const seq = (discoverSeqRef.current += 1);
     const keyword = search.trim();
     if (keyword.length > MEETING_SEARCH_KEYWORD_MAX_LENGTH) {
       setDiscoverGroups([]);
-      showToast(`검색어는 ${MEETING_SEARCH_KEYWORD_MAX_LENGTH}자 이하여야 합니다.`);
+      showToast(l('검색어는 {limit}자 이하여야 합니다.', {
+        limit: MEETING_SEARCH_KEYWORD_MAX_LENGTH,
+      }));
       return;
     }
 
@@ -123,12 +127,12 @@ export function useMeetingDiscover({
       if (seq !== discoverSeqRef.current) return;
       setDiscoverGroups([]);
       showToast(
-        resolveMeetingSearchErrorMessage(error, { recommendation: shouldLoadRecommendations }),
+        l(resolveMeetingSearchErrorMessage(error, { recommendation: shouldLoadRecommendations })),
       );
     } finally {
       if (seq === discoverSeqRef.current) setDiscoverLoading(false);
     }
-  }, [activeInputFilter, isLoggedIn, search, selectedOutputFilter]);
+  }, [activeInputFilter, isLoggedIn, l, search, selectedOutputFilter]);
 
   useEffect(() => {
     void loadMyGroups();

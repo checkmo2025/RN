@@ -4,7 +4,10 @@ import * as SecureStore from 'expo-secure-store';
 import {
   isLanguageCode,
   translate,
+  translateLiteral,
+  setActiveLanguage,
   type LanguageCode,
+  type TranslationParams,
   type TranslationKey,
 } from '../i18n/translations';
 
@@ -14,7 +17,8 @@ type LanguageContextValue = {
   language: LanguageCode;
   isLanguageReady: boolean;
   setLanguage: (nextLanguage: LanguageCode) => Promise<void>;
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, params?: TranslationParams) => string;
+  l: (text: string, params?: TranslationParams) => string;
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -26,6 +30,10 @@ type Props = {
 export function LanguageProvider({ children }: Props) {
   const [language, setLanguageState] = useState<LanguageCode>('ko');
   const [isLanguageReady, setIsLanguageReady] = useState(false);
+
+  useEffect(() => {
+    setActiveLanguage(language);
+  }, [language]);
 
   useEffect(() => {
     let mounted = true;
@@ -61,7 +69,14 @@ export function LanguageProvider({ children }: Props) {
     }
   }, []);
 
-  const t = useCallback((key: TranslationKey) => translate(language, key), [language]);
+  const t = useCallback(
+    (key: TranslationKey, params?: TranslationParams) => translate(language, key, params),
+    [language],
+  );
+  const l = useCallback(
+    (text: string, params?: TranslationParams) => translateLiteral(language, text, params),
+    [language],
+  );
 
   const value = useMemo(
     () => ({
@@ -69,8 +84,9 @@ export function LanguageProvider({ children }: Props) {
       isLanguageReady,
       setLanguage,
       t,
+      l,
     }),
-    [isLanguageReady, language, setLanguage, t],
+    [isLanguageReady, language, l, setLanguage, t],
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
