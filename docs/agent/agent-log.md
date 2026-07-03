@@ -3337,3 +3337,10 @@ export const interactionOpacity = {
 - 상세 본문 영역을 `소식 제목` → `작성일` → `내용` 순서로 정리
 - `docs/agent/todo.md`에 소식 상세 레이아웃 육안 테스트 항목 추가
 - `npm run typecheck`, `npm run lint`, `git diff --check` 통과 확인
+
+# 2026-07-03 20:10:39 KST 로컬 E2E 러너 및 리포트 추가
+
+- 로컬 전용 Maestro E2E smoke flow(`tests/e2e/ios-guest-smoke.yaml`) 추가
+- E2E 가능 기능 카탈로그와 로컬 실행 가이드 문서화
+- E2E 실행 결과 Markdown/CSV 리포트 생성기 추가 및 iOS guest smoke 결과 기록
+- 로컬 Codex skill `checkmo-e2e-runner` 생성 및 skill 검증 통과

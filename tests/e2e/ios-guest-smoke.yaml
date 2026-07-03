@@ -1,0 +1,34 @@
+appId: kr.co.checkmo.app
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "책모 홈"
+    timeout: 20000
+- assertVisible: "소식"
+- assertVisible: "책이야기"
+
+# Bottom tab smoke. Coordinate taps avoid ambiguous repeated Korean labels in content.
+- tapOn:
+    point: "30%,95%"
+- extendedWaitUntil:
+    visible: "모임"
+    timeout: 10000
+
+- tapOn:
+    point: "50%,95%"
+- extendedWaitUntil:
+    visible: "책 이야기"
+    timeout: 10000
+
+- tapOn:
+    point: "70%,95%"
+- extendedWaitUntil:
+    visible: "소식"
+    timeout: 10000
+
+- tapOn:
+    point: "90%,95%"
+- extendedWaitUntil:
+    visible: "로그인"
+    timeout: 10000
