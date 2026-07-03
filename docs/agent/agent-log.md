@@ -3297,3 +3297,10 @@ export const interactionOpacity = {
 - 30초 주기 및 앱 활성화 시 현재 시간을 갱신하는 `useRelativeNow` 훅 추가
 - 백엔드 KST `LocalDateTime` 문자열을 KST 벽시계 기준으로 파싱하도록 날짜 유틸 보정
 - `npm run typecheck`, `npm run lint`, `git diff --check` 통과 확인
+
+# 2026-07-03 18:45:17 KST 신고 관리 및 프로필 책이야기 이동 보강
+
+- 마이페이지 신고 관리 목록을 백엔드 `ReportInfo` 응답 필드에 맞춰 매핑
+- 신고 카드에 대상 타입, 대상 표시명, 이미지, 신고 사유, 날짜를 표시하고 `redirectUrl` 기반 이동 연결
+- 다른 사람 프로필의 책이야기 카드 클릭 시 `Tabs > Story` 상세 진입을 단일 navigate로 처리
+- `npm run typecheck`, `npm run lint`, `git diff --check` 통과 확인

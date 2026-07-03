@@ -89,7 +89,7 @@ import {
   useNotificationState,
   notificationSettingRows,
 } from './mypage/useNotificationState';
-import { useAccountSettingsState, type ReportHistoryItem } from './mypage/useAccountSettingsState';
+import { useAccountSettingsState } from './mypage/useAccountSettingsState';
 import { SkeletonBox } from '../components/common/SkeletonBox';
 import { languageOptions, type LanguageCode } from '../i18n/translations';
 
@@ -435,6 +435,7 @@ export function MyPageScreen() {
     submittingWithdrawal,
     submittingLogout,
     loadReportHistory,
+    handlePressReportHistory,
     resetEmailVerification,
     handleSendEmailVerificationCode,
     handleConfirmEmailVerificationCode,
@@ -2342,10 +2343,28 @@ export function MyPageScreen() {
           ) : null}
           <View style={styles.reportList}>
             {reportHistory.map((report) => (
-              <View key={report.id} style={styles.reportCard}>
-                <Text style={styles.reportBadge}>{report.reportType}</Text>
+              <Pressable
+                key={report.id}
+                style={({ pressed }) => [styles.reportCard, pressed && styles.pressed]}
+                onPress={() => handlePressReportHistory(report)}
+              >
+                <View style={styles.reportBadgeRow}>
+                  <Text style={styles.reportBadge}>{report.reportType}</Text>
+                  <Text style={styles.reportTargetBadge}>{report.targetTypeLabel}</Text>
+                </View>
                 <View style={styles.reportHeader}>
-                  <Text style={styles.reportUser}>{report.reportedMemberNickname}</Text>
+                  <View style={styles.reportTargetInfo}>
+                    <View style={styles.reportAvatar}>
+                      {report.targetImageUrl ? (
+                        <Image source={{ uri: report.targetImageUrl }} style={styles.reportAvatarImage} />
+                      ) : (
+                        <MaterialIcons name="flag" size={18} color={colors.gray4} />
+                      )}
+                    </View>
+                    <Text style={styles.reportUser} numberOfLines={1}>
+                      {report.targetDisplayName}
+                    </Text>
+                  </View>
                   {report.createdAtLabel ? (
                     <Text style={styles.reportDate}>{report.createdAtLabel}</Text>
                   ) : null}
@@ -2353,7 +2372,7 @@ export function MyPageScreen() {
                 <Text style={styles.reportText}>
                   {formatReportContent(report.content)}
                 </Text>
-              </View>
+              </Pressable>
             ))}
           </View>
         </View>
@@ -3193,10 +3212,24 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.xs,
   },
+  reportBadgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
   reportBadge: {
     alignSelf: 'flex-start',
     backgroundColor: colors.secondary1,
     color: colors.white,
+    ...typography.body2_3,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.lg,
+  },
+  reportTargetBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.subbrown4,
+    color: colors.primary1,
     ...typography.body2_3,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
@@ -3207,6 +3240,28 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  reportTargetInfo: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  reportAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.subbrown3,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  reportAvatarImage: {
+    width: '100%',
+    height: '100%',
   },
   reportUser: {
     flex: 1,

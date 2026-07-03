@@ -93,6 +93,7 @@ export type ReportItem = {
   reason?: string;
   reasonDescription?: string;
   content?: string;
+  redirectUrl?: string;
   displayName?: string;
   displayImageUrl?: string;
   reportedAt?: string;
@@ -141,12 +142,50 @@ function normalizeFollowInfo(item: FollowInfo): FollowInfo {
   };
 }
 
+function toOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function normalizeReportItem(raw: unknown): ReportItem | null {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const record = raw as Record<string, unknown>;
+  const reportId = typeof record.reportId === 'number' ? record.reportId : undefined;
+
+  return {
+    reportId,
+    targetType: toOptionalString(record.targetType),
+    targetTypeDescription: toOptionalString(record.targetTypeDescription),
+    targetId: toOptionalString(record.targetId),
+    targetSummary: toOptionalString(record.targetSummary),
+    reason: toOptionalString(record.reason),
+    reasonDescription: toOptionalString(record.reasonDescription),
+    content: toOptionalString(record.content),
+    redirectUrl: toOptionalString(record.redirectUrl),
+    displayName: toOptionalString(record.displayName),
+    displayImageUrl: normalizeRemoteImageUrl(toOptionalString(record.displayImageUrl)),
+    reportedAt: toOptionalString(record.reportedAt),
+  };
+}
+
 function normalizeReportListPage(payload: unknown): NormalizedReportListPage {
   if (!payload || typeof payload !== 'object') {
     return { items: [], hasNext: false, nextCursor: null };
   }
   const record = payload as Record<string, unknown>;
-  const reports = Array.isArray(record.reports) ? record.reports as ReportItem[] : [];
+  const rawReports = Array.isArray(record.reports)
+    ? record.reports
+    : Array.isArray(record.reportList)
+      ? record.reportList
+      : Array.isArray(record.items)
+        ? record.items
+        : Array.isArray(payload)
+          ? payload
+          : [];
+  const reports = rawReports
+    .map(normalizeReportItem)
+    .filter((item): item is ReportItem => Boolean(item));
+
   return {
     items: reports,
     hasNext: Boolean(record.hasNext),

@@ -26,11 +26,114 @@ const reasonLabelByCode: Record<string, string> = {
 
 export type ReportHistoryItem = {
   id: string;
+  targetType?: string;
+  targetId?: string;
+  targetTypeLabel: string;
+  targetDisplayName: string;
+  targetImageUrl?: string;
+  targetUrl?: string;
   reportType: string;
-  reportedMemberNickname: string;
   content: string;
   createdAtLabel: string;
 };
+
+type ReportNavigationTarget =
+  | { screen: 'UserProfile'; params: { memberNickname: string; fromScreen: string } }
+  | { screen: 'Story'; params: { openStoryId: number; openStoryFocus?: 'comments' } }
+  | { screen: 'Meeting'; params: { openClubId: number; openMeetingId?: number; openNoticeId?: number } };
+
+function parsePositiveInt(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseReportRedirectPath(value: string): { segments: string[]; query: string } {
+  const withoutOrigin = value.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]+/i, '');
+  const [pathname, query = ''] = withoutOrigin.split('?');
+  return {
+    segments: pathname.split('/').filter(Boolean),
+    query,
+  };
+}
+
+function parseReportRedirectTarget(item: ReportHistoryItem): ReportNavigationTarget | null {
+  const url = item.targetUrl?.trim();
+
+  if (url) {
+    try {
+      const { segments, query } = parseReportRedirectPath(url);
+
+      if (segments[0] === 'profile' && segments[1]) {
+        return {
+          screen: 'UserProfile',
+          params: { memberNickname: decodeURIComponent(segments[1]), fromScreen: 'My' },
+        };
+      }
+
+      if (segments[0] === 'stories') {
+        const storyId = parsePositiveInt(segments[1]);
+        if (storyId) {
+          return {
+            screen: 'Story',
+            params: {
+              openStoryId: storyId,
+              ...(/(^|&)commentId=/.test(query) ? { openStoryFocus: 'comments' } : {}),
+            },
+          };
+        }
+      }
+
+      if (segments[0] === 'groups') {
+        const clubId = parsePositiveInt(segments[1]);
+        if (!clubId) return null;
+
+        if (segments[2] === 'notice') {
+          const noticeId = parsePositiveInt(segments[3]);
+          return {
+            screen: 'Meeting',
+            params: {
+              openClubId: clubId,
+              ...(noticeId ? { openNoticeId: noticeId } : {}),
+            },
+          };
+        }
+
+        if (segments[2] === 'bookcase') {
+          const meetingId = parsePositiveInt(segments[3]);
+          return {
+            screen: 'Meeting',
+            params: {
+              openClubId: clubId,
+              ...(meetingId ? { openMeetingId: meetingId } : {}),
+            },
+          };
+        }
+
+        return { screen: 'Meeting', params: { openClubId: clubId } };
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  if (item.targetType === 'MEMBER' && (item.targetId?.trim() || item.targetDisplayName.trim())) {
+    return {
+      screen: 'UserProfile',
+      params: {
+        memberNickname: item.targetId?.trim() || item.targetDisplayName.trim(),
+        fromScreen: 'My',
+      },
+    };
+  }
+
+  if (item.targetType === 'CLUB') {
+    const clubId = parsePositiveInt(item.targetId);
+    if (clubId) return { screen: 'Meeting', params: { openClubId: clubId } };
+  }
+
+  return null;
+}
 
 type Params = {
   isLoggedIn: boolean;
@@ -88,10 +191,22 @@ export function useAccountSettingsState({
       const reportId =
         typeof item.reportId === 'number' ? `report-${item.reportId}` : `report-${index}`;
       const reasonCode = item.reason ?? 'GENERAL';
+      const targetType = item.targetType;
+      const targetDisplayName =
+        item.displayName ??
+        item.targetSummary ??
+        item.targetId ??
+        '알 수 없음';
+
       return {
         id: reportId,
+        targetType,
+        targetId: item.targetId,
+        targetTypeLabel: item.targetTypeDescription ?? targetType ?? '신고 대상',
+        targetDisplayName,
+        targetImageUrl: item.displayImageUrl,
+        targetUrl: item.redirectUrl,
         reportType: item.reasonDescription ?? reasonLabelByCode[reasonCode] ?? reasonCode,
-        reportedMemberNickname: item.displayName ?? item.targetId ?? '알 수 없음',
         content:
           typeof item.content === 'string' && item.content.trim()
             ? item.content
@@ -100,6 +215,16 @@ export function useAccountSettingsState({
       };
     });
   }, []);
+
+  const handlePressReportHistory = useCallback((item: ReportHistoryItem) => {
+    const target = parseReportRedirectTarget(item);
+    if (!target) {
+      showToast('신고 대상을 확인할 수 없습니다.');
+      return;
+    }
+
+    navigation.navigate(target.screen, target.params);
+  }, [navigation]);
 
   const loadReportHistory = useCallback(async () => {
     if (!isLoggedIn) {
@@ -339,6 +464,7 @@ export function useAccountSettingsState({
     submittingWithdrawal,
     submittingLogout,
     loadReportHistory,
+    handlePressReportHistory,
     resetEmailVerification,
     handleSendEmailVerificationCode,
     handleConfirmEmailVerificationCode,

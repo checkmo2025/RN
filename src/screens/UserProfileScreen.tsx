@@ -21,7 +21,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { BOOKSTORY_COMMENT_URI, BOOKSTORY_LIKE_URI } from '../constants/iconMap';
 import { colors, dialog, interactionOpacity, radius, spacing, typography } from '../theme';
-import { navigateToHome, findNavigatorWithRoute } from '../navigation/navigateToHome';
+import { navigateToHome } from '../navigation/navigateToHome';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { DialogOverlay } from '../components/common/DialogOverlay';
@@ -621,23 +621,10 @@ export function UserProfileScreen() {
         return;
       }
 
-      const storyNav = findNavigatorWithRoute(navigation, 'Story');
-      if (storyNav) {
-        storyNav.navigate('Story', { openStoryId: story.remoteId });
-        return;
-      }
-
-      const tabsNav = findNavigatorWithRoute(navigation, 'Tabs');
-      if (tabsNav) {
-        tabsNav.navigate('Tabs', { screen: 'Story' });
-        // Ensure detail params are applied after switching from the stack screen to tabs.
-        setTimeout(() => {
-          tabsNav.navigate('Tabs', { screen: 'Story', params: { openStoryId: story.remoteId } });
-        }, 0);
-        return;
-      }
-
-      showToast(l('책이야기 화면으로 이동하지 못했습니다.'));
+      navigation.navigate('Tabs', {
+        screen: 'Story',
+        params: { openStoryId: story.remoteId },
+      });
     },
     [l, navigation],
   );
