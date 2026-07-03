@@ -209,6 +209,15 @@ function normalizeStringListForCompare(items: string[]) {
   return [...items].map((item) => item.trim()).sort();
 }
 
+function normalizeContactLinksForCompare(items: GroupEditDraft['links']) {
+  return items
+    .map((item) => ({
+      label: item.label?.trim() ?? '',
+      link: item.link.trim(),
+    }))
+    .filter((item) => item.link.length > 0);
+}
+
 function normalizeBookSourceForCompare(source: BookshelfCreateDraft['sourceBook']) {
   if (!source) return null;
   return {
@@ -227,6 +236,8 @@ function areGroupEditDraftsEqual(left: GroupEditDraft, right: GroupEditDraft) {
     left.region.trim() === right.region.trim() &&
     left.isPrivate === right.isPrivate &&
     (left.imageUrl ?? '') === (right.imageUrl ?? '') &&
+    JSON.stringify(normalizeContactLinksForCompare(left.links)) ===
+      JSON.stringify(normalizeContactLinksForCompare(right.links)) &&
     JSON.stringify(normalizeStringListForCompare(left.categories)) ===
       JSON.stringify(normalizeStringListForCompare(right.categories)) &&
     JSON.stringify(normalizeStringListForCompare(left.targets)) ===

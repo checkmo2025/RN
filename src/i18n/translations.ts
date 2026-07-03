@@ -652,9 +652,12 @@ const enLiteralMessages: Record<string, string> = {
   '모임이 생성되었습니다.': 'Club created.',
   '문의 링크 이름은 {limit}자 이하여야 합니다.':
     'Contact link names must be {limit} characters or less.',
+  '문의 링크 삭제': 'Remove contact link',
+  '문의 링크 추가': 'Add contact link',
   '문의 링크는 {limit}자 이하여야 합니다.':
     'Contact links must be {limit} characters or less.',
   '문의 링크는 최대 4개까지 등록할 수 있습니다.': 'You can register up to 4 contact links.',
+  '문의하기 링크를 수정해주세요! (선택)': 'Edit contact links. (Optional)',
   '문의하기 링크를 열 수 없습니다.': 'Could not open contact link.',
   '미배정 {count}': 'Unassigned {count}',
   '미배정 참여자': 'Unassigned Participants',

@@ -185,6 +185,7 @@ export type GroupEditDraft = {
   region: string;
   categories: string[];
   targets: string[];
+  links: ClubContact[];
   isPrivate: boolean;
   imageUrl: string;
 };

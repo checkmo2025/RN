@@ -3311,3 +3311,9 @@ export const interactionOpacity = {
 - Android 공지 작성 모달의 상단 여백 계산을 보정해 화면이 아래로 밀려 보이는 현상 완화
 - 공지 투표의 `실명`/`중복 가능` 선택 칩 터치 영역과 키보드 상태 터치 처리를 보강
 - `npm run typecheck`, `npm run lint`, `git diff --check` 통과 확인
+
+# 2026-07-03 18:58:05 KST 모임 문의 링크 수정 및 QA 체크리스트 정리
+
+- 모임 정보 수정 화면에서 문의 링크 추가/수정/삭제가 가능하도록 `links` draft와 저장 payload 연결
+- 백엔드 `ClubDetail.links` 계약에 맞춰 label/link 제한과 빈 링크 제외 처리 반영
+- `docs/agent/todo.md`에 `7/2 QA 이후 수정한것들 육안 테스트` 섹션을 추가하고 미확인 실기기 항목 정리

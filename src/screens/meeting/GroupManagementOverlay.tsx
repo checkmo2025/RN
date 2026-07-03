@@ -788,6 +788,80 @@ export function GroupManagementOverlay({
                       );
                     })}
                   </View>
+
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
+                    {l('문의하기 링크를 수정해주세요! (선택)')}
+                  </Text>
+                  <Text style={styles.helperText}>
+                    {l('문의 링크는 최대 4개까지 등록할 수 있습니다.')}
+                  </Text>
+                  {editDraft.links.map((link, idx) => (
+                    <View key={`edit-contact-link-${idx}`} style={styles.managementContactLinkRow}>
+                      <View style={styles.managementContactLinkInputs}>
+                        <FormTextInput
+                          value={link.label ?? ''}
+                          onChangeText={(text) => {
+                            setEditDraft((prev) => {
+                              const nextLinks = [...prev.links];
+                              nextLinks[idx] = { ...nextLinks[idx], label: text };
+                              return { ...prev, links: nextLinks };
+                            });
+                          }}
+                          placeholder={l('링크 대체 텍스트 입력(최대 20자)')}
+                          placeholderTextColor={colors.gray3}
+                          style={styles.input}
+                          maxLength={INPUT_LIMITS.CLUB_LINK_LABEL}
+                        />
+                        <FormTextInput
+                          value={link.link}
+                          onChangeText={(text) => {
+                            setEditDraft((prev) => {
+                              const nextLinks = [...prev.links];
+                              nextLinks[idx] = { ...nextLinks[idx], link: text };
+                              return { ...prev, links: nextLinks };
+                            });
+                          }}
+                          placeholder={l('링크 입력(최대 100자)')}
+                          placeholderTextColor={colors.gray3}
+                          style={styles.input}
+                          fieldType="url"
+                          maxLength={INPUT_LIMITS.CLUB_LINK_URL}
+                        />
+                      </View>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.managementContactLinkRemoveButton,
+                          pressed && styles.pressed,
+                        ]}
+                        onPress={() => {
+                          setEditDraft((prev) => ({
+                            ...prev,
+                            links: prev.links.filter((_, linkIdx) => linkIdx !== idx),
+                          }));
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={l('문의 링크 삭제')}
+                        hitSlop={6}
+                      >
+                        <MaterialIcons name="close" size={20} color={colors.gray5} />
+                      </Pressable>
+                    </View>
+                  ))}
+                  {editDraft.links.length < 4 ? (
+                    <Pressable
+                      style={({ pressed }) => [styles.addLinkButton, pressed && styles.pressed]}
+                      onPress={() => {
+                        setEditDraft((prev) => ({
+                          ...prev,
+                          links: [...prev.links, { label: '', link: '' }],
+                        }));
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={l('문의 링크 추가')}
+                    >
+                      <Text style={styles.addLinkText}>+</Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               </View>
             ) : null}

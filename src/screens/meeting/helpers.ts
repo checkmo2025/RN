@@ -149,6 +149,7 @@ export function toEditDraft(group: Group): GroupEditDraft {
     region: group.region.replace(/^활동 지역 · /, ''),
     categories: group.tags,
     targets: toGroupTargets(group.topic),
+    links: normalizeClubContacts(group.links),
     isPrivate: group.isPrivate ?? false,
     imageUrl: group.profileImageUrl ?? '',
   };

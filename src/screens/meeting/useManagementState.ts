@@ -482,7 +482,7 @@ export function useManagementState({
       .map((target) => PARTICIPANT_LABEL_TO_CODE[target])
       .filter((target): target is ClubParticipantTypeCode => Boolean(target));
     const profileImageUrl = editDraft.imageUrl.trim();
-    const links = (group.links ?? [])
+    const links = editDraft.links
       .map((link) => ({
         label: link.label?.trim() ?? '',
         link: link.link.trim(),
@@ -567,6 +567,7 @@ export function useManagementState({
             tags,
             isPrivate: editDraft.isPrivate,
             profileImageUrl: profileImageUrl || undefined,
+            links,
           };
         }
         setManagedGroup(nextGroup);
@@ -592,7 +593,6 @@ export function useManagementState({
     checkedEditName,
     checkingEditName,
     group.clubId,
-    group.links,
     l,
     managedGroup,
     onClubUpdated,

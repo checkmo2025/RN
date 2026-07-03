@@ -1496,6 +1496,25 @@ export const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: radius.md,
   },
+  managementContactLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  managementContactLinkInputs: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  managementContactLinkRemoveButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   managementToggleRow: {
     flexDirection: 'row',
     gap: spacing.xs,
