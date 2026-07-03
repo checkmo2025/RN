@@ -3350,3 +3350,10 @@ export const interactionOpacity = {
 - 테스트 계정 기반 iOS 로그인 성공/세션 유지 E2E를 로컬 Maestro로 실행하고 Markdown/CSV 리포트에 기록
 - 테스트 계정 정보가 레포에 남지 않도록 임시 flow와 런타임 변수 방식으로만 실행
 - `docs/documents/visual-qa-checklist-2026-07-03.md`에 7/2 QA 이후 육안 테스트 항목 스냅샷 작성
+
+# 2026-07-04 03:14:25 KST 로컬 전체 E2E 재실행
+
+- iOS 비로그인 guest smoke, 로그인 smoke, 로그인 세션 유지 E2E를 로컬 Maestro로 실행하고 전부 통과 확인
+- iOS secure storage 잔존으로 guest 전제가 깨지지 않도록 `clearKeychain`을 guest/login smoke flow에 추가
+- 로그인 E2E flow를 레포에 추가하되 테스트 계정 정보는 런타임 변수로만 전달하도록 정리
+- 2026-07-04 Markdown/CSV E2E 리포트와 E2E 카탈로그를 갱신

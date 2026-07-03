@@ -1,0 +1,29 @@
+appId: kr.co.checkmo.app
+---
+- clearKeychain
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "책모 홈"
+    timeout: 20000
+
+- tapOn:
+    point: "90%,95%"
+- extendedWaitUntil:
+    visible: "로그인"
+    timeout: 10000
+- assertVisible: "이메일 또는 닉네임"
+- assertVisible: "비밀번호"
+
+- tapOn: "이메일 또는 닉네임"
+- inputText: ${EMAIL}
+- tapOn: "비밀번호"
+- inputText: ${PASSWORD}
+- tapOn:
+    text: "로그인"
+    index: 1
+
+- extendedWaitUntil:
+    notVisible: "이메일 또는 닉네임"
+    timeout: 20000
+- assertNotVisible: "로그인이 필요해요"

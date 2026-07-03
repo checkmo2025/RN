@@ -23,9 +23,9 @@ This is the local E2E coverage catalog. Status values:
 
 | Area | Test | Status | Notes |
 | --- | --- | --- | --- |
-| Login | Email/nickname login success | Needs account | Requires test account. |
+| Login | Email/nickname login success | Ready | Covered by `ios-login-smoke.yaml`; pass test account via runtime `EMAIL`/`PASSWORD`. |
 | Login | Wrong password error | Needs account | Non-mutating. |
-| Session | App restart keeps login | Needs account | Can be timed/relaunch based. |
+| Session | App restart keeps login | Ready | Covered by `ios-login-persistence.yaml` after a successful login flow. |
 | Refresh | Long idle then authenticated API still works | Needs account | 1-hour wait can be scripted but slow. |
 | Logout | Logout returns to Home guest state | Needs account | Mutates local session only. |
 | Signup | Email verification and profile completion | Needs permission | Creates server account. |

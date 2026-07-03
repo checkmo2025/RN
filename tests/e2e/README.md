@@ -14,6 +14,8 @@ This directory is for local-only Checkmo E2E flows. These tests are intended to 
 | Flow | Platform | Auth | Mutates server data | Purpose |
 | --- | --- | --- | --- | --- |
 | `ios-guest-smoke.yaml` | iOS | Guest | No | Launch app, verify Home, visit Meeting/Story/News/My login gate. |
+| `ios-login-smoke.yaml` | iOS | Test account | No | Launch with clear state, sign in with runtime `EMAIL`/`PASSWORD`, verify auth gate closes. |
+| `ios-login-persistence.yaml` | iOS | Test account | No | Relaunch without clearing state and verify the authenticated My Page remains available. |
 
 ## Reporting
 

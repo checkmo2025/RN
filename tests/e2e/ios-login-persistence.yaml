@@ -1,0 +1,13 @@
+appId: kr.co.checkmo.app
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "책모 홈"
+    timeout: 20000
+- tapOn:
+    point: "90%,95%"
+- extendedWaitUntil:
+    visible: "마이페이지"
+    timeout: 10000
+- assertNotVisible: "로그인이 필요해요"
+- assertNotVisible: "이메일 또는 닉네임"

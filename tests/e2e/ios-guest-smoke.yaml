@@ -1,5 +1,6 @@
 appId: kr.co.checkmo.app
 ---
+- clearKeychain
 - launchApp:
     clearState: true
 - extendedWaitUntil:
