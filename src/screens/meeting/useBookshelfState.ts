@@ -968,8 +968,8 @@ export function useBookshelfState({
     [ensureBookshelfMeetingDetailLoaded, isLoggedIn, requireAuth],
   );
 
-  const openBookshelfTopicByMeetingId = useCallback(
-    async (meetingId: number) => {
+  const openBookshelfDetailByMeetingId = useCallback(
+    async (meetingId: number, tab: BookshelfDetailTab = 'TOPIC') => {
       const clubId = group.clubId;
       if (typeof clubId !== 'number') return false;
 
@@ -980,7 +980,17 @@ export function useBookshelfState({
         ) ?? null;
 
       if (!targetBook) {
-        const detail = await fetchClubBookshelfDetail(clubId, meetingId);
+        let detail = null;
+        try {
+          detail = await fetchClubBookshelfDetail(clubId, meetingId, {
+            suppressErrorToast: true,
+          });
+        } catch (error) {
+          if (error instanceof ApiError) {
+            return false;
+          }
+          throw error;
+        }
         if (detail) {
           targetBook = mapBookshelfDetailToItem(detail, meetingId);
           setBookshelfItems((prev) =>
@@ -1000,10 +1010,15 @@ export function useBookshelfState({
 
       setActiveTab('bookshelf');
       setSelectedBookshelfSession(targetBook.session);
-      openBookshelfDetail(targetBook, 'TOPIC');
+      openBookshelfDetail(targetBook, tab);
       return true;
     },
     [bookshelfItems, group.clubId, openBookshelfDetail, setActiveTab],
+  );
+
+  const openBookshelfTopicByMeetingId = useCallback(
+    (meetingId: number) => openBookshelfDetailByMeetingId(meetingId, 'TOPIC'),
+    [openBookshelfDetailByMeetingId],
   );
 
   const refreshBookshelfPostsByType = useCallback(
@@ -2368,6 +2383,7 @@ export function useBookshelfState({
     handleSelectBookshelfMeetingDate,
     handlePickTodayBookshelfMeetingDate,
     openBookshelfDetail,
+    openBookshelfDetailByMeetingId,
     openBookshelfTopicByMeetingId,
     refreshBookshelfPostsByType,
     closeBookshelfComposer,

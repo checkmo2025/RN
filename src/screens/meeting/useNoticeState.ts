@@ -534,7 +534,12 @@ export function useNoticeState({
   );
 
   const handleOpenNoticeDetailByRemoteId = useCallback(
-    async (remoteNoticeId: number | null) => {
+    async (
+      remoteNoticeId: number | null,
+      options?: { fallbackToFirst?: boolean; missingMessage?: string },
+    ) => {
+      const fallbackToFirst = options?.fallbackToFirst ?? true;
+      const missingMessage = options?.missingMessage ?? '등록된 공지가 없습니다.';
       const existingByRemoteId =
         typeof remoteNoticeId === 'number'
           ? noticeItems.find((item) => item.remoteId === remoteNoticeId) ?? null
@@ -567,10 +572,27 @@ export function useNoticeState({
             return;
           }
         } catch (error) {
+          if (!fallbackToFirst) {
+            if (error instanceof ApiError) {
+              if (error.status === 403) {
+                showToast(l('공지 열람 권한이 없습니다.'));
+              } else if (error.status !== 401) {
+                showToast(l(error.message || missingMessage));
+              }
+              return;
+            }
+            showToast(l(missingMessage));
+            return;
+          }
           if (!(error instanceof ApiError)) {
             showToast(l('공지 상세를 불러오지 못했습니다.'));
           }
         }
+      }
+
+      if (!fallbackToFirst) {
+        showToast(l(missingMessage));
+        return;
       }
 
       if (noticeItems.length > 0) {

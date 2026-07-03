@@ -426,9 +426,13 @@ export function AppHeader(props: Props) {
   const navigateByNotification = useCallback(
     (notification: NotificationItem) => {
       const target = resolveNotificationTarget(notification);
+      if (target.toastMessage) {
+        showToast(l(target.toastMessage));
+      }
+      if (!target.screen) return;
       navigation.navigate(target.screen, target.params);
     },
-    [navigation],
+    [l, navigation],
   );
 
   const handlePressNotification = useCallback(

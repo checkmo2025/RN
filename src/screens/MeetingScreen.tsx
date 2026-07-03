@@ -116,6 +116,12 @@ import {
 } from './meeting/formatters';
 
 const ChatIcon = CHAT_ICON_URI;
+
+type PendingGroupNotificationTarget = {
+  type: 'meeting' | 'notice';
+  id: number;
+};
+
 import {
   formatContactLabel,
   mapClubStatusToApplication,
@@ -424,6 +430,8 @@ export function MeetingScreen() {
   const [appliedById, setAppliedById] = useState<Record<string, string>>({});
   const [applyKeyboardInset, setApplyKeyboardInset] = useState(0);
   const [pendingOpenClubId, setPendingOpenClubId] = useState<number | null>(null);
+  const [pendingOpenMeetingId, setPendingOpenMeetingId] = useState<number | null>(null);
+  const [pendingOpenNoticeId, setPendingOpenNoticeId] = useState<number | null>(null);
   const [openingClubLoading, setOpeningClubLoading] = useState(false);
 
   const [search, setSearch] = useState('');
@@ -633,6 +641,26 @@ export function MeetingScreen() {
     setPendingOpenClubId,
     navigation,
     'openClubId',
+  );
+  useConsumeRouteParam(
+    route.params?.openMeetingId,
+    parsePositiveIntParam,
+    (meetingId) => {
+      setPendingOpenMeetingId(meetingId);
+      setPendingOpenNoticeId(null);
+    },
+    navigation,
+    'openMeetingId',
+  );
+  useConsumeRouteParam(
+    route.params?.openNoticeId,
+    parsePositiveIntParam,
+    (noticeId) => {
+      setPendingOpenNoticeId(noticeId);
+      setPendingOpenMeetingId(null);
+    },
+    navigation,
+    'openNoticeId',
   );
 
   useEffect(() => {
@@ -878,6 +906,21 @@ export function MeetingScreen() {
     setPendingOpenClubId(null);
   }, [discoverGroups, myGroups, openGroupHome, pendingOpenClubId]);
 
+  const pendingNotificationTarget = useMemo<PendingGroupNotificationTarget | null>(() => {
+    if (pendingOpenNoticeId !== null) {
+      return { type: 'notice', id: pendingOpenNoticeId };
+    }
+    if (pendingOpenMeetingId !== null) {
+      return { type: 'meeting', id: pendingOpenMeetingId };
+    }
+    return null;
+  }, [pendingOpenMeetingId, pendingOpenNoticeId]);
+
+  const clearPendingNotificationTarget = useCallback(() => {
+    setPendingOpenMeetingId(null);
+    setPendingOpenNoticeId(null);
+  }, []);
+
   const handleOpenApply = (groupId: string) => {
     requireAuth(() => {
       const willOpen = applyOpenId !== groupId;
@@ -991,12 +1034,15 @@ export function MeetingScreen() {
       <ScreenLayout title={l('모임')} onPressLogo={handlePressHeaderLogo}>
         <View style={styles.screenWrap}>
           <GroupHomeView
+            key={activeGroup.clubId ?? activeGroup.id}
             group={activeGroup}
             onBack={() => {
               void closeActiveGroupWithLoading();
             }}
             onClubUpdated={handleClubUpdated}
             onClubDeleted={handleClubDeleted}
+            pendingNotificationTarget={pendingNotificationTarget}
+            onPendingNotificationTargetHandled={clearPendingNotificationTarget}
           />
           {openingClubLoading ? (
             <View style={styles.loadingOverlay}>
@@ -1218,11 +1264,15 @@ function GroupHomeView({
   onBack,
   onClubUpdated,
   onClubDeleted,
+  pendingNotificationTarget,
+  onPendingNotificationTargetHandled,
 }: {
   group: Group;
   onBack: () => void;
   onClubUpdated: (group: Group) => void;
   onClubDeleted: (clubId: number) => void;
+  pendingNotificationTarget: PendingGroupNotificationTarget | null;
+  onPendingNotificationTargetHandled: () => void;
 }) {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const insets = useSafeAreaInsets();
@@ -1442,6 +1492,7 @@ function GroupHomeView({
     handleSelectBookshelfMeetingDate,
     handlePickTodayBookshelfMeetingDate,
     openBookshelfDetail,
+    openBookshelfDetailByMeetingId,
     openBookshelfTopicByMeetingId,
     refreshBookshelfPostsByType,
     closeBookshelfComposer,
@@ -1562,6 +1613,63 @@ function GroupHomeView({
     handleOpenNoticeBookshelf,
     resetNoticeOnGroupChange,
   } = noticeState;
+
+  useEffect(() => {
+    if (!pendingNotificationTarget || !workspaceLoaded) return;
+
+    let cancelled = false;
+    const openTarget = async () => {
+      try {
+        if (!isMember) {
+          showToast(l('모임 가입 후 확인할 수 있습니다.'));
+          return;
+        }
+
+        if (pendingNotificationTarget.type === 'notice') {
+          setActiveTab('notice');
+          await handleOpenNoticeDetailByRemoteId(pendingNotificationTarget.id, {
+            fallbackToFirst: false,
+            missingMessage: '삭제되었거나 접근할 수 없는 공지입니다.',
+          });
+          return;
+        }
+
+        const opened = await openBookshelfDetailByMeetingId(
+          pendingNotificationTarget.id,
+          'REGULAR',
+        );
+        if (!opened) {
+          showToast(l('삭제되었거나 접근할 수 없는 정기모임입니다.'));
+        }
+      } catch {
+        showToast(
+          l(
+            pendingNotificationTarget.type === 'notice'
+              ? '공지 상세를 불러오지 못했습니다.'
+              : '정기모임 정보를 불러오지 못했습니다.',
+          ),
+        );
+      } finally {
+        if (!cancelled) {
+          onPendingNotificationTargetHandled();
+        }
+      }
+    };
+
+    void openTarget();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    handleOpenNoticeDetailByRemoteId,
+    isMember,
+    l,
+    onPendingNotificationTargetHandled,
+    openBookshelfDetailByMeetingId,
+    pendingNotificationTarget,
+    workspaceLoaded,
+  ]);
 
   const handleChangeNoticeTitle = useCallback(
     (text: string) => {
@@ -1824,6 +1932,7 @@ function GroupHomeView({
     clubWorkspaceRequestIdRef.current += 1;
     clubParticipantsRequestIdRef.current += 1;
     setManagedGroup(group);
+    setWorkspaceLoaded(!isManagedClub);
     setCanManageClub(false);
     setClubParticipants([]);
     setClubParticipantsTotalCount(null);
@@ -1837,7 +1946,7 @@ function GroupHomeView({
     setTogglingParticipantNickname(null);
     resetBookshelfOnGroupChange();
     resetNoticeOnGroupChange();
-  }, [group, resetBookshelfOnGroupChange, resetNoticeOnGroupChange]);
+  }, [group, isManagedClub, resetBookshelfOnGroupChange, resetNoticeOnGroupChange]);
 
   const loadClubParticipants = useCallback(
     async (options?: {

@@ -88,6 +88,10 @@ export function useNotificationState({ isLoggedIn, navigation }: Params) {
   const navigateByNotification = useCallback(
     (notification: NotificationItem) => {
       const target = resolveNotificationTarget(notification);
+      if (target.toastMessage) {
+        showToast(target.toastMessage);
+      }
+      if (!target.screen) return;
       navigation.navigate(target.screen, target.params);
     },
     [navigation],
