@@ -3272,3 +3272,9 @@ export const interactionOpacity = {
 - 책이야기 탭 무한스크롤에 ref 기반 in-flight 락과 짧은 end-reached debounce 추가
 - 책이야기 추가 로드 실패 시 반복 토스트 대신 footer 재시도 상태로 처리
 - `npm run check` 통과 확인
+
+# 2026-07-03 13:52:03 KST 앱/웹 로그인 계약 문서화
+
+- 백엔드 전달용 앱/웹 로그인 계약 정리 문서 추가
+- 쿠키 기반 웹 인증과 Bearer 기반 앱 인증의 분리 방향, WebSocket 인증 요청안, 수용 기준 정리
+- `docs/agent/todo.md`에 최근 변경사항 유관 확인 섹션 추가
