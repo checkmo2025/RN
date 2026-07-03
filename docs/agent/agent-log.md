@@ -3304,3 +3304,10 @@ export const interactionOpacity = {
 - 신고 카드에 대상 타입, 대상 표시명, 이미지, 신고 사유, 날짜를 표시하고 `redirectUrl` 기반 이동 연결
 - 다른 사람 프로필의 책이야기 카드 클릭 시 `Tabs > Story` 상세 진입을 단일 navigate로 처리
 - `npm run typecheck`, `npm run lint`, `git diff --check` 통과 확인
+
+# 2026-07-03 18:50:51 KST 프로필 편집 및 Android 공지 투표 UI 보강
+
+- 프로필 편집 소개글을 멀티라인 입력으로 변경하고 설정 화면 키보드 상태 버튼 터치를 보강
+- Android 공지 작성 모달의 상단 여백 계산을 보정해 화면이 아래로 밀려 보이는 현상 완화
+- 공지 투표의 `실명`/`중복 가능` 선택 칩 터치 영역과 키보드 상태 터치 처리를 보강
+- `npm run typecheck`, `npm run lint`, `git diff --check` 통과 확인

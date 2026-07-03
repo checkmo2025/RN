@@ -2078,8 +2078,14 @@ export function MyPageScreen() {
                   limit: INPUT_LIMITS.USER_DESCRIPTION,
                 })}
                 placeholderTextColor={colors.gray3}
-                style={[styles.inputField, styles.inputFieldDescenderSafe]}
+                style={[
+                  styles.inputField,
+                  styles.inputFieldDescenderSafe,
+                  styles.inputFieldMultiline,
+                ]}
                 maxLength={INPUT_LIMITS.USER_DESCRIPTION}
+                multiline
+                blurOnSubmit={false}
               />
             </View>
             <Text style={styles.inputCounterText}>
@@ -2651,6 +2657,8 @@ export function MyPageScreen() {
           style={styles.container}
           contentContainerStyle={styles.settingsContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
         >
           {selectedSetting ? null : (
             <View style={styles.breadcrumbRow}>

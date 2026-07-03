@@ -3568,7 +3568,17 @@ function GroupHomeView({
           style={styles.managementScreen}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <View style={[styles.managementScreenHeader, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
+          <View
+            style={[
+              styles.managementScreenHeader,
+              {
+                paddingTop:
+                  Platform.OS === 'android'
+                    ? spacing.lg
+                    : Math.max(insets.top, spacing.lg) + spacing.sm,
+              },
+            ]}
+          >
             <Pressable onPress={handleCloseNoticeComposer} hitSlop={8}>
               <MaterialIcons name="chevron-left" size={24} color={colors.gray6} />
             </Pressable>
@@ -3588,7 +3598,8 @@ function GroupHomeView({
               !noticeContentInputFocused ||
               !noticeContentInputScrollEnabled
             }
-            keyboardShouldPersistTaps="handled"
+            keyboardShouldPersistTaps="always"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
           >
             <View style={styles.noticeComposerCard}>
               <View style={styles.noticeComposerFieldHeader}>
@@ -3881,7 +3892,13 @@ function GroupHomeView({
                         noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipActive,
                         pressed && styles.pressed,
                       ]}
-                      onPress={() => setNoticeDraft((prev) => ({ ...prev, pollAnonymous: true }))}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setNoticeDraft((prev) => ({ ...prev, pollAnonymous: true }));
+                      }}
+                      hitSlop={6}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: noticeDraft.pollAnonymous }}
                     >
                       <Text
                         style={[
@@ -3898,7 +3915,13 @@ function GroupHomeView({
                         !noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipActive,
                         pressed && styles.pressed,
                       ]}
-                      onPress={() => setNoticeDraft((prev) => ({ ...prev, pollAnonymous: false }))}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setNoticeDraft((prev) => ({ ...prev, pollAnonymous: false }));
+                      }}
+                      hitSlop={6}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: !noticeDraft.pollAnonymous }}
                     >
                       <Text
                         style={[
@@ -3915,12 +3938,16 @@ function GroupHomeView({
                         noticeDraft.pollAllowDuplicate && styles.noticeComposerChoiceChipActive,
                         pressed && styles.pressed,
                       ]}
-                      onPress={() =>
+                      onPress={() => {
+                        Keyboard.dismiss();
                         setNoticeDraft((prev) => ({
                           ...prev,
                           pollAllowDuplicate: !prev.pollAllowDuplicate,
-                        }))
-                      }
+                        }));
+                      }}
+                      hitSlop={6}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: noticeDraft.pollAllowDuplicate }}
                     >
                       <Text
                         style={[

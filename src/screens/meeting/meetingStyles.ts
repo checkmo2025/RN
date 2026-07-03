@@ -2280,12 +2280,16 @@ export const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   noticeComposerChoiceChip: {
+    minWidth: 92,
+    minHeight: 44,
     borderWidth: 1,
     borderColor: colors.gray2,
     borderRadius: radius.lg,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   noticeComposerChoiceChipActive: {
     borderColor: colors.primary1,
