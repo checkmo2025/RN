@@ -2,7 +2,6 @@ import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import {
   Animated,
   FlatList,
-  Image,
   ImageBackground,
   ScrollView,
   RefreshControl,
@@ -517,12 +516,11 @@ export function NewsScreen() {
           ) : (
             <View style={styles.heroImage} />
           )}
-          <Text style={styles.heroDate}>{item.date}</Text>
         </View>
 
         <View style={styles.detailHeaderRow}>
           <Text style={styles.detailTitle}>{item.title}</Text>
-          <Text style={styles.detailDate}>{item.date}</Text>
+          <Text style={styles.detailDate}>{l('작성일 {date}', { date: item.date })}</Text>
         </View>
         {loadingDetail ? (
           <View style={styles.detailBodySkeleton}>
@@ -879,17 +877,8 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     backgroundColor: colors.gray2,
   },
-  heroDate: {
-    position: 'absolute',
-    bottom: spacing.md,
-    right: spacing.md,
-    ...typography.body2_3,
-    color: colors.gray5,
-  },
   detailHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    gap: spacing.xxs,
   },
   detailTitle: {
     ...typography.subhead2,

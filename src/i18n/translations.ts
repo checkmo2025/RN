@@ -217,6 +217,7 @@ const enLiteralMessages: Record<string, string> = {
   '소식 내용을 확인해보세요.': 'Check out the news details.',
   '소식 내용을 불러오는 중입니다.': 'Loading news details.',
   '새로운 소식을 확인해보세요.': 'Check out the latest news.',
+  '작성일 {date}': 'Created {date}',
   '원문 보기': 'View Original',
   '문의하기': 'Contact',
   '소식 상세를 불러오지 못했습니다.': 'Could not load news details.',

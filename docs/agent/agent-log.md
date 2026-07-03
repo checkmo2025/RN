@@ -3330,3 +3330,10 @@ export const interactionOpacity = {
 - 모임 가입 신청 관리와 모임 회원 관리 화면에 pull-to-refresh 새로고침 연결
 - 비로그인 상태에서 책이야기 신고 진입/제출 시 신고 모달을 먼저 닫고 로그인 화면으로 이동하도록 수정
 - `npm run typecheck`, `npm run lint`, `git diff --check` 통과 확인
+
+# 2026-07-03 19:17:19 KST 소식 상세 작성일 배치 수정
+
+- 소식 상세 히어로 이미지 위 작성일 오버레이를 제거
+- 상세 본문 영역을 `소식 제목` → `작성일` → `내용` 순서로 정리
+- `docs/agent/todo.md`에 소식 상세 레이아웃 육안 테스트 항목 추가
+- `npm run typecheck`, `npm run lint`, `git diff --check` 통과 확인
