@@ -390,18 +390,24 @@ function applyGroupMembershipStatus(group: Group, status: ClubMembershipStatus):
   return {
     ...group,
     membershipStatus: status,
-    applicationStatus: mapClubStatusToApplication(status) ?? group.applicationStatus,
+    applicationStatus: mapClubStatusToApplication(status),
   };
 }
 
 function mergeUpdatedClubGroup(current: Group, updated: Group): Group {
+  const nextApplicationStatus =
+    updated.applicationStatus ??
+    (updated.membershipStatus !== undefined
+      ? mapClubStatusToApplication(updated.membershipStatus)
+      : current.applicationStatus);
+
   return {
     ...current,
     ...updated,
     id: current.id,
     clubId: current.clubId ?? updated.clubId,
     membershipStatus: updated.membershipStatus ?? current.membershipStatus,
-    applicationStatus: updated.applicationStatus ?? current.applicationStatus,
+    applicationStatus: nextApplicationStatus,
   };
 }
 
@@ -499,6 +505,42 @@ export function MeetingScreen() {
       loadDiscoverGroups(),
     ]);
   }, [loadDiscoverGroups, loadMyGroups]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (showCreate || activeGroup) return;
+      void refreshMeetingLists();
+    });
+
+    return unsubscribe;
+  }, [activeGroup, navigation, refreshMeetingLists, showCreate]);
+
+  useEffect(() => {
+    setAppliedById((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      discoverGroups.forEach((group) => {
+        if (!next[group.id]) return;
+
+        const serverApplicationStatus =
+          mapClubStatusToApplication(group.membershipStatus) ?? group.applicationStatus;
+
+        if (serverApplicationStatus) {
+          if (next[group.id] !== serverApplicationStatus) {
+            next[group.id] = serverApplicationStatus;
+            changed = true;
+          }
+          return;
+        }
+
+        delete next[group.id];
+        changed = true;
+      });
+
+      return changed ? next : prev;
+    });
+  }, [discoverGroups]);
 
   const patchClubInMeetingLists = useCallback(
     (clubId: number, updater: (group: Group) => Group) => {

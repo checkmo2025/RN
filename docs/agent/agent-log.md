@@ -3317,3 +3317,9 @@ export const interactionOpacity = {
 - 모임 정보 수정 화면에서 문의 링크 추가/수정/삭제가 가능하도록 `links` draft와 저장 payload 연결
 - 백엔드 `ClubDetail.links` 계약에 맞춰 label/link 제한과 빈 링크 제외 처리 반영
 - `docs/agent/todo.md`에 `7/2 QA 이후 수정한것들 육안 테스트` 섹션을 추가하고 미확인 실기기 항목 정리
+
+# 2026-07-03 19:03:16 KST 거절 후 모임 가입 버튼 상태 갱신
+
+- 모임 탭 focus 시 목록을 재조회해 가입 신청 거절 상태가 바로 반영되도록 보강
+- 서버 membership status가 신청/가입 상태가 아니면 로컬 `신청완료` 오버레이를 제거해 `가입 신청하기` 버튼을 다시 활성화
+- 클럽 목록 병합 시 서버가 명시한 membership status 기준으로 `applicationStatus`를 재계산하도록 수정
