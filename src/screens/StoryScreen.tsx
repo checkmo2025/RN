@@ -1113,9 +1113,22 @@ export function StoryScreen() {
         showToast(l('신고 대상을 확인할 수 없습니다.'));
         return;
       }
-      setReportModal({ nickname: targetNickname, profileImageUrl });
+      setStoryMenu(false);
+      setCommentMenu(null);
+      setReportModal(null);
+
+      const openModal = () => {
+        setReportModal({ nickname: targetNickname, profileImageUrl });
+      };
+
+      if (!isLoggedIn) {
+        requireAuth(openModal);
+        return;
+      }
+
+      openModal();
     },
-    [l],
+    [isLoggedIn, l, requireAuth],
   );
 
   const closeReportModal = useCallback(() => {
@@ -1135,6 +1148,15 @@ export function StoryScreen() {
 
   const submitReport = useCallback((payload: { reason: ReportReason; content?: string }) => {
     if (!reportModal?.nickname) return;
+    const target = reportModal;
+    if (!isLoggedIn) {
+      setReportModal(null);
+      requireAuth(() => {
+        setReportModal(target);
+      });
+      return;
+    }
+
     requireAuth(() => {
       const submit = async () => {
         setSubmittingReport(true);
@@ -1157,7 +1179,7 @@ export function StoryScreen() {
       };
       void submit();
     });
-  }, [l, reportModal, requireAuth]);
+  }, [isLoggedIn, l, reportModal, requireAuth]);
 
   const handleSelectStoryMenuAction = useCallback(
     (action: 'edit' | 'delete' | 'report' | 'share') => {

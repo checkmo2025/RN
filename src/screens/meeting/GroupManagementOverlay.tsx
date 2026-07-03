@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  RefreshControl,
   ScrollView,
   Text,
   TextInput,
@@ -68,8 +69,10 @@ export type GroupManagementOverlayProps = {
   selectedJoinRequestMessage: GroupJoinRequestItem | null;
   selectedJoinRequestAction: GroupJoinRequestItem | null;
   submittingJoinRequestAction: boolean;
+  refreshingJoinRequests: boolean;
   selectedMemberAction: GroupMemberItem | null;
   submittingMemberAction: boolean;
+  refreshingMembers: boolean;
   editDraft: GroupEditDraft;
   checkedEditName: {
     value: string;
@@ -94,6 +97,8 @@ export type GroupManagementOverlayProps = {
   handleCheckEditName: () => void;
   handlePickClubImage: () => void;
   handleSaveGroupEdit: () => void;
+  handleRefreshJoinRequests: () => void;
+  handleRefreshMembers: () => void;
   handleProcessJoinRequest: (request: GroupJoinRequestItem, action: 'APPROVE' | 'REJECT') => void;
   handleChangeMemberRole: (memberId: string, role: GroupMemberRole) => void;
   handleRemoveMember: (memberId: string) => void;
@@ -149,8 +154,10 @@ export function GroupManagementOverlay({
   selectedJoinRequestMessage,
   selectedJoinRequestAction,
   submittingJoinRequestAction,
+  refreshingJoinRequests,
   selectedMemberAction,
   submittingMemberAction,
+  refreshingMembers,
   editDraft,
   checkedEditName,
   checkingEditName,
@@ -169,6 +176,8 @@ export function GroupManagementOverlay({
   handleCheckEditName,
   handlePickClubImage,
   handleSaveGroupEdit,
+  handleRefreshJoinRequests,
+  handleRefreshMembers,
   handleProcessJoinRequest,
   handleChangeMemberRole,
   handleRemoveMember,
@@ -364,6 +373,23 @@ export function GroupManagementOverlay({
             contentContainerStyle={styles.managementScreenContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            refreshControl={
+              activeManagementScreen === 'JOIN_REQUESTS' ? (
+                <RefreshControl
+                  refreshing={refreshingJoinRequests}
+                  onRefresh={handleRefreshJoinRequests}
+                  tintColor={colors.primary1}
+                  colors={[colors.primary1]}
+                />
+              ) : activeManagementScreen === 'MEMBERS' ? (
+                <RefreshControl
+                  refreshing={refreshingMembers}
+                  onRefresh={handleRefreshMembers}
+                  tintColor={colors.primary1}
+                  colors={[colors.primary1]}
+                />
+              ) : undefined
+            }
           >
             {activeManagementScreen === 'JOIN_REQUESTS' ? (
               <>

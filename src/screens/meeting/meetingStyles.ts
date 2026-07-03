@@ -994,7 +994,9 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.overlay30,
     justifyContent: 'flex-end',
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: 0,
   },
   managementOverlayBottom: {
     flex: 1,

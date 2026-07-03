@@ -3323,3 +3323,10 @@ export const interactionOpacity = {
 - 모임 탭 focus 시 목록을 재조회해 가입 신청 거절 상태가 바로 반영되도록 보강
 - 서버 membership status가 신청/가입 상태가 아니면 로컬 `신청완료` 오버레이를 제거해 `가입 신청하기` 버튼을 다시 활성화
 - 클럽 목록 병합 시 서버가 명시한 membership status 기준으로 `applicationStatus`를 재계산하도록 수정
+
+# 2026-07-03 19:10:09 KST 모임 관리 시트 및 비로그인 신고 플로우 보강
+
+- 모임 관리하기 바텀시트가 기기 높이 기준 화면 아래에서 시작해 올라오도록 조정
+- 모임 가입 신청 관리와 모임 회원 관리 화면에 pull-to-refresh 새로고침 연결
+- 비로그인 상태에서 책이야기 신고 진입/제출 시 신고 모달을 먼저 닫고 로그인 화면으로 이동하도록 수정
+- `npm run typecheck`, `npm run lint`, `git diff --check` 통과 확인

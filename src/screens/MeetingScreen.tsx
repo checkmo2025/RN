@@ -1756,8 +1756,10 @@ function GroupHomeView({
     selectedJoinRequestActionId, setSelectedJoinRequestActionId,
     selectedJoinRequestMessage, setSelectedJoinRequestMessage,
     submittingJoinRequestAction,
+    refreshingJoinRequests,
     selectedMemberActionId, setSelectedMemberActionId,
     submittingMemberAction,
+    refreshingMembers,
     reportModal, setReportModal,
     contactModalVisible,
     submittingReport,
@@ -1773,6 +1775,8 @@ function GroupHomeView({
     handleOpenManagementScreen,
     handleCloseManagementScreen,
     handleCloseManagementLayer,
+    handleRefreshJoinRequests,
+    handleRefreshMembers,
     handleProcessJoinRequest,
     handleChangeMemberRole,
     handleRemoveMember,
@@ -3517,8 +3521,10 @@ function GroupHomeView({
         selectedJoinRequestMessage={selectedJoinRequestMessage}
         selectedJoinRequestAction={selectedJoinRequestAction}
         submittingJoinRequestAction={submittingJoinRequestAction}
+        refreshingJoinRequests={refreshingJoinRequests}
         selectedMemberAction={selectedMemberAction}
         submittingMemberAction={submittingMemberAction}
+        refreshingMembers={refreshingMembers}
         editDraft={editDraft}
         checkedEditName={checkedEditName}
         checkingEditName={checkingEditName}
@@ -3537,6 +3543,8 @@ function GroupHomeView({
         handleCheckEditName={handleCheckEditName}
         handlePickClubImage={handlePickClubImage}
         handleSaveGroupEdit={handleSaveGroupEdit}
+        handleRefreshJoinRequests={handleRefreshJoinRequests}
+        handleRefreshMembers={handleRefreshMembers}
         handleProcessJoinRequest={handleProcessJoinRequest}
         handleChangeMemberRole={handleChangeMemberRole}
         handleRemoveMember={handleRemoveMember}

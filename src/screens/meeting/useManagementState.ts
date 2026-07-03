@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { Alert, Animated, Linking, PanResponder } from 'react-native';
+import { Alert, Animated, Dimensions, Linking, PanResponder } from 'react-native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import type { ReportMemberModalState } from '../../components/common/ReportMemberModal';
 import { ApiError } from '../../services/api/http';
@@ -48,7 +48,10 @@ const MGMT_SHEET_DISMISS_DISTANCE = 100;
 const MGMT_SHEET_DISMISS_VELOCITY = 0.5;
 const MGMT_SHEET_EXPAND_DISTANCE = 120;
 const MGMT_SHEET_EXPAND_TRIGGER = 48;
-const MGMT_SHEET_CLOSED_Y = 600;
+
+function getManagementSheetClosedY() {
+  return Dimensions.get('window').height + 80;
+}
 
 export type ManagementStateParams = {
   group: Group;
@@ -95,12 +98,22 @@ export function useManagementState({
   const managementMenuClosingRef = useRef(false);
 
   const openManagementMenu = useCallback(() => {
+    const closedY = getManagementSheetClosedY();
     managementSheetY.stopAnimation();
     managementMenuClosingRef.current = false;
     managementSheetPositionRef.current = 0;
     managementSheetDragStartRef.current = 0;
-    managementSheetY.setValue(0);
+    managementSheetY.setValue(closedY);
     setManagementMenuVisible(true);
+    requestAnimationFrame(() => {
+      Animated.timing(managementSheetY, {
+        toValue: 0,
+        duration: motion.duration.sheet,
+        useNativeDriver: true,
+      }).start(() => {
+        managementSheetPositionRef.current = 0;
+      });
+    });
   }, [managementSheetY]);
 
   const closeManagementMenuImmediately = useCallback(() => {
@@ -117,7 +130,7 @@ export function useManagementState({
     managementMenuClosingRef.current = true;
     managementSheetY.stopAnimation(() => {
       Animated.timing(managementSheetY, {
-        toValue: MGMT_SHEET_CLOSED_Y,
+        toValue: getManagementSheetClosedY(),
         duration: motion.duration.sheet,
         useNativeDriver: true,
       }).start(() => {
@@ -144,7 +157,7 @@ export function useManagementState({
             managementSheetDragStartRef.current + gestureState.dy,
             -MGMT_SHEET_EXPAND_DISTANCE,
           ),
-          600,
+          getManagementSheetClosedY(),
         );
         managementSheetY.setValue(nextY);
       },
@@ -180,6 +193,8 @@ export function useManagementState({
   const [submittingJoinRequestAction, setSubmittingJoinRequestAction] = useState(false);
   const [selectedMemberActionId, setSelectedMemberActionId] = useState<string | null>(null);
   const [submittingMemberAction, setSubmittingMemberAction] = useState(false);
+  const [refreshingJoinRequests, setRefreshingJoinRequests] = useState(false);
+  const [refreshingMembers, setRefreshingMembers] = useState(false);
   const [reportModal, setReportModal] = useState<ReportMemberModalState | null>(null);
   const [contactModalVisible, setContactModalVisible] = useState(false);
   const [submittingReport, setSubmittingReport] = useState(false);
@@ -205,13 +220,6 @@ export function useManagementState({
     setCheckedEditName(null);
     setCheckingEditName(false);
   }, [closeManagementMenuImmediately, group]);
-
-  useEffect(() => {
-    if (managementMenuVisible) {
-      managementSheetPositionRef.current = 0;
-      managementSheetY.setValue(0);
-    }
-  }, [managementMenuVisible, managementSheetY]);
 
   const closeContactModal = useCallback(() => {
     setContactModalVisible(false);
@@ -325,6 +333,56 @@ export function useManagementState({
     closeManagementMenu,
     handleCloseManagementScreen,
   ]);
+
+  const handleRefreshJoinRequests = useCallback(() => {
+    const clubId = group.clubId;
+    if (refreshingJoinRequests) return;
+    if (!canManageClub || typeof clubId !== 'number') {
+      showToast(l('가입 신청 목록을 새로고침하지 못했습니다.'));
+      return;
+    }
+
+    const refresh = async () => {
+      setRefreshingJoinRequests(true);
+      try {
+        const pendingMembers = await fetchClubMembers(clubId, 'PENDING');
+        setJoinRequests(pendingMembers.items.map(mapClubManagedMemberToJoinRequest));
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast(l('가입 신청 목록을 새로고침하지 못했습니다.'));
+        }
+      } finally {
+        setRefreshingJoinRequests(false);
+      }
+    };
+
+    void refresh();
+  }, [canManageClub, group.clubId, l, refreshingJoinRequests]);
+
+  const handleRefreshMembers = useCallback(() => {
+    const clubId = group.clubId;
+    if (refreshingMembers) return;
+    if (!canManageClub || typeof clubId !== 'number') {
+      showToast(l('회원 목록을 새로고침하지 못했습니다.'));
+      return;
+    }
+
+    const refresh = async () => {
+      setRefreshingMembers(true);
+      try {
+        const activeMembers = await fetchClubMembers(clubId, 'ACTIVE');
+        setMembers(activeMembers.items.map(mapClubManagedMemberToGroupMember));
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          showToast(l('회원 목록을 새로고침하지 못했습니다.'));
+        }
+      } finally {
+        setRefreshingMembers(false);
+      }
+    };
+
+    void refresh();
+  }, [canManageClub, group.clubId, l, refreshingMembers]);
 
   const handleProcessJoinRequest = useCallback(
     (request: GroupJoinRequestItem, action: 'APPROVE' | 'REJECT') => {
@@ -771,6 +829,8 @@ export function useManagementState({
     selectedJoinRequestMessage,
     setSelectedJoinRequestMessage,
     submittingJoinRequestAction,
+    refreshingJoinRequests,
+    refreshingMembers,
     selectedMemberActionId,
     setSelectedMemberActionId,
     submittingMemberAction,
@@ -791,6 +851,8 @@ export function useManagementState({
     handleOpenManagementScreen,
     handleCloseManagementScreen,
     handleCloseManagementLayer,
+    handleRefreshJoinRequests,
+    handleRefreshMembers,
     handleProcessJoinRequest,
     handleChangeMemberRole,
     handleRemoveMember,

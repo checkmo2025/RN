@@ -610,6 +610,8 @@ const enLiteralMessages: Record<string, string> = {
   '멤버를 끌어 조에 놓거나, 멤버를 탭한 뒤 조를 눌러 이동할 수 있습니다.':
     'Drag members into groups, or tap a member then tap a group to move them.',
   '모임 가입 신청 관리': 'Manage Club Applications',
+  '가입 신청 목록을 새로고침하지 못했습니다.':
+    'Could not refresh club application list.',
   '모임 날짜 (선택)': 'Meeting Date (optional)',
   '모임 날짜 선택': 'Select Meeting Date',
   '모임 목록을 불러오지 못했습니다.': 'Could not load club list.',
@@ -643,6 +645,7 @@ const enLiteralMessages: Record<string, string> = {
   '모임 정보 수정에 실패했습니다.': 'Could not update club information.',
   '모임 정보가 수정되었습니다.': 'Club information updated.',
   '모임 회원 관리': 'Manage Club Members',
+  '회원 목록을 새로고침하지 못했습니다.': 'Could not refresh member list.',
   '모임의 공개여부를 알려주세요!': 'Choose club visibility!',
   '모임의 대상을 선택해주세요!': 'Choose target members!',
   '모임의 소개글을 입력해주세요!': 'Enter a club description!',
