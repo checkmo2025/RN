@@ -3344,3 +3344,9 @@ export const interactionOpacity = {
 - E2E 가능 기능 카탈로그와 로컬 실행 가이드 문서화
 - E2E 실행 결과 Markdown/CSV 리포트 생성기 추가 및 iOS guest smoke 결과 기록
 - 로컬 Codex skill `checkmo-e2e-runner` 생성 및 skill 검증 통과
+
+# 2026-07-03 20:23:31 KST 로그인 E2E 결과 및 육안 QA 캡처 문서화
+
+- 테스트 계정 기반 iOS 로그인 성공/세션 유지 E2E를 로컬 Maestro로 실행하고 Markdown/CSV 리포트에 기록
+- 테스트 계정 정보가 레포에 남지 않도록 임시 flow와 런타임 변수 방식으로만 실행
+- `docs/documents/visual-qa-checklist-2026-07-03.md`에 7/2 QA 이후 육안 테스트 항목 스냅샷 작성
