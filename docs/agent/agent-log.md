@@ -3278,3 +3278,9 @@ export const interactionOpacity = {
 - 백엔드 전달용 앱/웹 로그인 계약 정리 문서 추가
 - 쿠키 기반 웹 인증과 Bearer 기반 앱 인증의 분리 방향, WebSocket 인증 요청안, 수용 기준 정리
 - `docs/agent/todo.md`에 최근 변경사항 유관 확인 섹션 추가
+
+# 2026-07-03 17:25:23 KST RN 로그인 세션 복원 보강
+
+- 앱 시작·로그인 직후·채팅 연결 전 `silentRefreshSession()`을 먼저 수행해 배포 앱 쿠키 세션 복원을 보강
+- refresh 실패 시 401/세션 초기화 계열에서만 SecureStore refreshToken을 삭제하도록 조정
+- `npm run typecheck`, `npm run lint`, `git diff --check` 통과 확인

@@ -94,6 +94,7 @@ export async function loginByIdentifier(
   }
 
   await saveStoredRefreshToken(refreshToken);
+  await silentRefreshSession();
 }
 
 // Backward-compatible alias for existing callers.
@@ -124,6 +125,7 @@ export async function exchangeOAuthCode(
   }
 
   await saveStoredRefreshToken(refreshToken);
+  await silentRefreshSession();
   // 신규 소셜 가입자는 프로필 미완성 → 프로필 완성 흐름으로 분기. 응답 누락 시 보수적으로 완성 처리.
   return { isProfileCompleted: result?.profileCompleted ?? result?.isProfileCompleted ?? true };
 }
@@ -159,6 +161,7 @@ export async function loginWithApple(
   }
 
   await saveStoredRefreshToken(refreshToken);
+  await silentRefreshSession();
 }
 
 export async function signUpByEmail(

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Client } from '@stomp/stompjs';
 
-import { fetchLoginStatusSilently } from '../api/authApi';
+import { fetchLoginStatusSilently, silentRefreshSession } from '../api/authApi';
 import type { ClubMeetingChatMessage } from '../api/clubApi';
 import { ApiError } from '../api/http';
 import { createLogger } from '../../utils/logger';
@@ -123,6 +123,7 @@ export function useMeetingChatStomp({
       setCloseReason(null);
 
       try {
+        await silentRefreshSession();
         const status = await fetchLoginStatusSilently(true);
         if (cancelled) return;
         if (!status) {

@@ -234,6 +234,11 @@ function shouldAttemptSessionRefresh(
 
 let refreshSessionPromise: Promise<boolean> | null = null;
 
+function shouldClearStoredRefreshTokenAfterRefreshFailure(status: number, parsed: unknown): boolean {
+  const code = getParsedCode(parsed);
+  return status === 401 || code === 'AUTH_412' || code === 'AUTH_405';
+}
+
 async function refreshAppSession(): Promise<boolean> {
   const refreshToken = await getStoredRefreshToken();
   if (!refreshToken) return false;
@@ -255,7 +260,9 @@ async function refreshAppSession(): Promise<boolean> {
   const parsed = await parseResponseBody(response);
 
   if (!response.ok) {
-    await deleteStoredRefreshToken();
+    if (shouldClearStoredRefreshTokenAfterRefreshFailure(response.status, parsed)) {
+      await deleteStoredRefreshToken();
+    }
     return false;
   }
 
@@ -265,13 +272,14 @@ async function refreshAppSession(): Promise<boolean> {
     'isSuccess' in parsed &&
     (parsed as { isSuccess?: unknown }).isSuccess === false
   ) {
-    await deleteStoredRefreshToken();
+    if (shouldClearStoredRefreshTokenAfterRefreshFailure(response.status, parsed)) {
+      await deleteStoredRefreshToken();
+    }
     return false;
   }
 
   const result = unwrapResult(parsed as ApiEnvelope<RefreshTokenResponse>);
   if (!result?.refreshToken) {
-    await deleteStoredRefreshToken();
     return false;
   }
 

@@ -38,8 +38,8 @@ type Props = {
   children: React.ReactNode;
 };
 
-function isSessionExpiredError(error: unknown): boolean {
-  return error instanceof ApiError && (error.status === 401 || error.code === 'AUTH_405');
+function isSessionResetError(error: unknown): boolean {
+  return error instanceof ApiError && error.code === 'AUTH_405';
 }
 
 export function AuthGateProvider({ children }: Props) {
@@ -108,11 +108,19 @@ export function AuthGateProvider({ children }: Props) {
     pendingActionRef.current = null;
   }, [setAuthSessionState]);
 
+  const markSessionLoggedOut = useCallback(() => {
+    setAuthSessionState('loggedOut');
+    setAuthPageMode('login');
+    setAuthPageVisible(false);
+    pendingActionRef.current = null;
+  }, [setAuthSessionState]);
+
   useEffect(() => {
     let cancelled = false;
 
     const syncLoginState = async () => {
       try {
+        await silentRefreshSession();
         const status = await fetchLoginStatusSilently(true);
         if (!cancelled) {
           applyLoginStatus(status);
@@ -139,19 +147,20 @@ export function AuthGateProvider({ children }: Props) {
               if (!cancelled) {
                 if (isProfileIncompleteApiError(refreshStatusError)) {
                   openProfileCompletion({ notify: true });
-                } else {
+                } else if (isSessionResetError(refreshStatusError)) {
                   await clearSessionState();
+                } else {
+                  markSessionLoggedOut();
                 }
               }
             }
           } else {
-            await clearSessionState();
+            markSessionLoggedOut();
           }
-        } else if (isSessionExpiredError(error)) {
+        } else if (isSessionResetError(error)) {
           await clearSessionState();
         } else {
-          setAuthSessionState('loggedOut');
-          setAuthPageVisible(false);
+          markSessionLoggedOut();
         }
         setIsReady(true);
       }
@@ -162,7 +171,7 @@ export function AuthGateProvider({ children }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [applyLoginStatus, clearSessionState, openProfileCompletion, setAuthSessionState]);
+  }, [applyLoginStatus, clearSessionState, markSessionLoggedOut, openProfileCompletion]);
 
   useEffect(() => {
     return () => {
