@@ -11,7 +11,6 @@ import {
   type NotificationSettingType,
 } from '../../services/api/notificationApi';
 import { formatNotificationText, resolveNotificationTarget } from '../../utils/notification';
-import { toKstTimeAgoLabel } from '../../utils/date';
 import { showToast } from '../../utils/toast';
 import { resolveApiError } from '../../utils/resolveApiError';
 
@@ -23,7 +22,7 @@ export type AlarmItem = {
   sourceId?: number;
   displayName: string;
   text: string;
-  time: string;
+  createdAt: string;
   unread?: boolean;
 };
 
@@ -80,7 +79,7 @@ export function useNotificationState({ isLoggedIn, navigation }: Params) {
       sourceId: item.sourceId,
       displayName: item.displayName,
       text: formatNotificationText(item.notificationType, item.displayName),
-      time: toKstTimeAgoLabel(item.createdAt),
+      createdAt: item.createdAt,
       unread: !item.read,
     };
   }, []);
@@ -165,7 +164,7 @@ export function useNotificationState({ isLoggedIn, navigation }: Params) {
         sourceId: alarm.sourceId,
         displayName: alarm.displayName,
         read: !alarm.unread,
-        createdAt: '',
+        createdAt: alarm.createdAt,
       };
 
       setAlarms((prev) =>

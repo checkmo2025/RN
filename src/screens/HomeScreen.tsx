@@ -41,6 +41,7 @@ import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
 import { resolveApiError } from '../utils/resolveApiError';
 import { collectAllCursorPages } from '../utils/pagination';
+import { useRelativeNow } from '../hooks/useRelativeNow';
 
 type Post = {
   id: string;
@@ -48,7 +49,7 @@ type Post = {
   author: string;
   profileImageUrl?: string;
   mine: boolean;
-  timeAgo: string;
+  createdAt?: string;
   views: number;
   title: string;
   body: string;
@@ -98,6 +99,7 @@ export function HomeScreen() {
   const { requireAuth, isLoggedIn } = useAuthGate();
   const { language, l } = useLanguage();
   const accessPolicy = resolveHomeAccessPolicy({ isLoggedIn });
+  const relativeNowMillis = useRelativeNow();
   const { width } = useWindowDimensions();
   const horizontalInset = width >= 768 ? spacing.xl : spacing.md;
   const [userRecommendations, setUserRecommendations] = useState<UserRecommendation[]>([]);
@@ -271,7 +273,7 @@ export function HomeScreen() {
         if (isGuestAll && !reset) {
           mergeGuestAllBookStoriesCache(feed);
         }
-        const mapped = feed.items.map((item) => mapRemoteStoryToPost(item, language));
+        const mapped = feed.items.map(mapRemoteStoryToPost);
 
         setPosts((prev) => {
           if (reset) return mapped;
@@ -296,7 +298,7 @@ export function HomeScreen() {
         }
       }
     },
-    [accessPolicy.canViewBookStoryFeed, isLoggedIn, l, language],
+    [accessPolicy.canViewBookStoryFeed, isLoggedIn, l],
   );
 
   useEffect(() => {
@@ -553,7 +555,10 @@ export function HomeScreen() {
           }
           renderItem={({ item }) => (
             <HomePostCard
-              post={item}
+              post={{
+                ...item,
+                timeAgo: toKstTimeAgoLabel(item.createdAt, relativeNowMillis, language),
+              }}
               viewerIsLoggedIn={isLoggedIn}
               onPress={openPostDetail}
               onPressComment={openPostComments}
@@ -578,14 +583,14 @@ export function HomeScreen() {
   );
 }
 
-function mapRemoteStoryToPost(item: RemoteStoryItem, language: 'ko' | 'en'): Post {
+function mapRemoteStoryToPost(item: RemoteStoryItem): Post {
   return {
     id: `post-${item.id}`,
     remoteId: item.id,
     author: item.nickname,
     profileImageUrl: normalizeRemoteImageUrl(item.profileImageUrl),
     mine: item.mine ?? false,
-    timeAgo: toKstTimeAgoLabel(item.createdAt, Date.now(), language),
+    createdAt: item.createdAt,
     views: item.viewCount,
     title: item.title,
     body: item.description,

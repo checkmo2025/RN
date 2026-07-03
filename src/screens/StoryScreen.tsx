@@ -92,6 +92,7 @@ import { resolveApiError } from '../utils/resolveApiError';
 import { createLogger } from '../utils/logger';
 import { useEdgeBackSwipe } from '../hooks/useEdgeBackSwipe';
 import { useBookSearch } from '../hooks/useBookSearch';
+import { useRelativeNow } from '../hooks/useRelativeNow';
 
 type Book = {
   id: string;
@@ -106,7 +107,7 @@ type Comment = {
   remoteId?: number;
   author: string;
   profileImageUrl?: string;
-  time: string;
+  createdAt?: string;
   text: string;
   mine?: boolean;
   deleted?: boolean;
@@ -119,7 +120,7 @@ type Story = {
   author: string;
   profileImageUrl?: string;
   mine?: boolean;
-  timeAgo: string;
+  createdAt?: string;
   views: number;
   title: string;
   body: string;
@@ -283,6 +284,7 @@ export function StoryScreen() {
   const route = useRoute<RouteProp<{ Story: StoryRouteParams }, 'Story'>>();
   const { requireAuth, isLoggedIn } = useAuthGate();
   const { language, l } = useLanguage();
+  const relativeNowMillis = useRelativeNow();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -859,7 +861,7 @@ export function StoryScreen() {
         if (isGuestAll && !reset) {
           mergeGuestAllBookStoriesCache(feed);
         }
-        const mapped = feed.items.map((item) => mapRemoteStoryToStory(item, language, l));
+        const mapped = feed.items.map((item) => mapRemoteStoryToStory(item, l));
         if (requestId !== storyFeedRequestIdRef.current) return;
 
         setStories((prev) => {
@@ -904,7 +906,7 @@ export function StoryScreen() {
         }
       }
     },
-    [canLoadApiFeed, isLoggedIn, l, language, selectedTab],
+    [canLoadApiFeed, isLoggedIn, l, selectedTab],
   );
 
   useEffect(() => {
@@ -949,7 +951,7 @@ export function StoryScreen() {
           viewerAuthenticated: isLoggedIn,
         });
         if (!detail) return;
-        const mapped = mapRemoteDetailToStory(detail, language, l, story);
+        const mapped = mapRemoteDetailToStory(detail, l, story);
         applyStoryUpdate(mapped);
       } catch (error) {
         if (!(error instanceof ApiError)) {
@@ -959,7 +961,7 @@ export function StoryScreen() {
         setIsDetailLoading(false);
       }
     },
-    [applyStoryUpdate, isLoggedIn, l, language],
+    [applyStoryUpdate, isLoggedIn, l],
   );
 
   const openStoryDetailByRemoteId = useCallback(
@@ -995,7 +997,7 @@ export function StoryScreen() {
           showToast(l('해당 책이야기를 찾을 수 없습니다.'));
           return;
         }
-        const mapped = mapRemoteDetailToStory(detail, language, l);
+        const mapped = mapRemoteDetailToStory(detail, l);
         setStories((prev) => {
           const exists = prev.some((story) => story.id === mapped.id);
           if (!exists) return [mapped, ...prev];
@@ -1009,7 +1011,7 @@ export function StoryScreen() {
         }
       }
     },
-    [animateTransition, detailTranslateX, isLoggedIn, l, language],
+    [animateTransition, detailTranslateX, isLoggedIn, l],
   );
 
   const startEditStory = useCallback(
@@ -1554,7 +1556,7 @@ export function StoryScreen() {
                 viewerAuthenticated: isLoggedIn,
               });
               if (detail) {
-                updatedEditedStory = mapRemoteDetailToStory(detail, language, l);
+                updatedEditedStory = mapRemoteDetailToStory(detail, l);
                 storyLog.info('edit_detail_refetch_success', {
                   remoteId: currentEditingStoryId,
                   commentCount: detail.commentList.length,
@@ -1800,7 +1802,7 @@ export function StoryScreen() {
           showToast(l('해당 책이야기를 찾을 수 없습니다.'));
           return;
         }
-        const mapped = mapRemoteDetailToStory(detail, language, l, selectedStory);
+        const mapped = mapRemoteDetailToStory(detail, l, selectedStory);
         applyStoryUpdate(mapped);
       } catch (error) {
         if (!(error instanceof ApiError)) {
@@ -1812,7 +1814,7 @@ export function StoryScreen() {
     };
 
     void refresh();
-  }, [applyStoryUpdate, l, language, selectedStory]);
+  }, [applyStoryUpdate, l, selectedStory]);
 
   const handleToggleLike = (id: string) => {
     requireAuth(() => {
@@ -1896,7 +1898,7 @@ export function StoryScreen() {
           id: `c-${Date.now()}`,
           author: myNickname || l('나'),
           profileImageUrl: myProfileImageUrl,
-          time: l('방금 전'),
+          createdAt: new Date().toISOString(),
           text: content,
           mine: true,
           replyTo: replyCommentKey,
@@ -1946,7 +1948,7 @@ export function StoryScreen() {
             viewerAuthenticated: isLoggedIn,
           });
           if (detail) {
-            const mapped = mapRemoteDetailToStory(detail, language, l);
+            const mapped = mapRemoteDetailToStory(detail, l);
             setStories((prev) => {
               const exists = prev.some((story) => story.id === mapped.id);
               if (!exists) return [mapped, ...prev];
@@ -2233,7 +2235,9 @@ export function StoryScreen() {
           </View>
 
           <View style={styles.detailMetaRow}>
-            <Text style={styles.detailMetaText}>{selectedStory.timeAgo}</Text>
+            <Text style={styles.detailMetaText}>
+              {toKstTimeAgoLabel(selectedStory.createdAt, relativeNowMillis, language)}
+            </Text>
             <Text style={styles.detailMetaDot}>·</Text>
             <Text style={styles.detailMetaText}>
               {l('조회수 {count}', { count: selectedStory.views })}
@@ -2366,7 +2370,9 @@ export function StoryScreen() {
                             <Text style={styles.commentAuthorBadgeText}>{l('작성자')}</Text>
                           </View>
                         )}
-                        <Text style={styles.commentTime}>{comment.time}</Text>
+                        <Text style={styles.commentTime}>
+                          {toKstTimeAgoLabel(comment.createdAt, relativeNowMillis, language)}
+                        </Text>
                       </View>
                       <Pressable
                         style={styles.commentMenuButton}
@@ -2771,7 +2777,7 @@ export function StoryScreen() {
               <BookStoryFeedCard
                 authorName={story.author}
                 profileImgSrc={story.profileImageUrl}
-                timeAgo={story.timeAgo}
+                timeAgo={toKstTimeAgoLabel(story.createdAt, relativeNowMillis, language)}
                 viewCount={story.views}
                 title={story.title}
                 content={story.body}
@@ -2838,8 +2844,7 @@ export function StoryScreen() {
 }
 
 function mapRemoteStoryToStory(
-  item: RemoteStoryItem,
-  language: 'ko' | 'en',
+  item: RemoteStoryItem | RemoteStoryDetail,
   l: (text: string) => string,
 ): Story {
   const book: Book | undefined = item.bookInfo
@@ -2858,7 +2863,7 @@ function mapRemoteStoryToStory(
     author: item.nickname,
     profileImageUrl: normalizeRemoteImageUrl(item.profileImageUrl),
     mine: item.mine ?? false,
-    timeAgo: toKstTimeAgoLabel(item.createdAt, Date.now(), language),
+    createdAt: item.createdAt,
     views: item.viewCount,
     title: item.title,
     body: item.description,
@@ -2875,7 +2880,6 @@ function mapRemoteStoryToStory(
 
 function mapRemoteCommentToComment(
   comment: RemoteStoryComment,
-  language: 'ko' | 'en',
   l: (text: string) => string,
 ): Comment {
   return {
@@ -2883,7 +2887,7 @@ function mapRemoteCommentToComment(
     remoteId: comment.id,
     author: comment.nickname,
     profileImageUrl: normalizeRemoteImageUrl(comment.profileImageUrl),
-    time: toKstTimeAgoLabel(comment.createdAt, Date.now(), language),
+    createdAt: comment.createdAt,
     text: comment.deleted ? l('삭제된 댓글입니다.') : comment.content,
     mine: comment.mine,
     deleted: comment.deleted,
@@ -2893,17 +2897,16 @@ function mapRemoteCommentToComment(
 
 function mapRemoteDetailToStory(
   detail: RemoteStoryDetail,
-  language: 'ko' | 'en',
   l: (text: string) => string,
   previous?: Story,
 ): Story {
-  const mapped = mapRemoteStoryToStory(detail, language, l);
+  const mapped = mapRemoteStoryToStory(detail, l);
   return {
     ...(previous ?? mapped),
     ...mapped,
     mine: detail.mine,
     fullText: detail.description,
-    commentList: detail.commentList.map((comment) => mapRemoteCommentToComment(comment, language, l)),
+    commentList: detail.commentList.map((comment) => mapRemoteCommentToComment(comment, l)),
   };
 }
 

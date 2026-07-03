@@ -64,6 +64,7 @@ import { formatNotificationText, resolveNotificationTarget } from '../../utils/n
 import { showToast } from '../../utils/toast';
 import { useConsumeRouteParam } from '../../hooks/useConsumeRouteParam';
 import { useBookSearch } from '../../hooks/useBookSearch';
+import { useRelativeNow } from '../../hooks/useRelativeNow';
 import { useLanguage } from '../../contexts/LanguageContext';
 import BookStoryFeedCard from '../feature/bookstory/BookStoryFeedCard';
 import { SkeletonBox } from './SkeletonBox';
@@ -163,6 +164,7 @@ export function AppHeader(props: Props) {
   const route = useRoute<RouteProp<{ Header: HeaderRouteParams }, 'Header'>>();
   const { isLoggedIn, requireAuth } = useAuthGate();
   const { language, l } = useLanguage();
+  const relativeNowMillis = useRelativeNow();
   const { top, bottom } = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
 
@@ -883,7 +885,7 @@ export function AppHeader(props: Props) {
                         )}
                       </Text>
                       <Text style={styles.notiTime}>
-                        {toKstTimeAgoLabel(notification.createdAt, Date.now(), language)}
+                        {toKstTimeAgoLabel(notification.createdAt, relativeNowMillis, language)}
                       </Text>
                     </Pressable>
                   ))
@@ -1296,7 +1298,7 @@ export function AppHeader(props: Props) {
                           key={`book-story-${story.id}`}
                           authorName={story.nickname}
                           profileImgSrc={story.profileImageUrl}
-                          timeAgo={toKstTimeAgoLabel(story.createdAt, Date.now(), language)}
+                          timeAgo={toKstTimeAgoLabel(story.createdAt, relativeNowMillis, language)}
                           viewCount={story.viewCount}
                           title={story.title}
                           content={story.description}

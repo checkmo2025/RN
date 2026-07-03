@@ -3290,3 +3290,10 @@ export const interactionOpacity = {
 - 알림 타입별 redirect에서 공지/정기모임 `sourceId`를 사용해 상세 화면으로 진입하도록 수정
 - 삭제된 모임, 탈퇴한 회원, 누락된 대상 ID는 이동하지 않고 적절한 토스트를 표시하도록 방어
 - 모임 화면 라우트 파라미터와 책장/공지 상세 오픈 경로를 확장하고 `npm run typecheck`, `npm run lint`, `git diff --check` 통과 확인
+
+# 2026-07-03 18:36:33 KST 상대시간 라벨 갱신 보강
+
+- 알림/책이야기/홈 피드의 `방금 전` 등 상대시간을 저장값이 아닌 렌더 시점 계산으로 변경
+- 30초 주기 및 앱 활성화 시 현재 시간을 갱신하는 `useRelativeNow` 훅 추가
+- 백엔드 KST `LocalDateTime` 문자열을 KST 벽시계 기준으로 파싱하도록 날짜 유틸 보정
+- `npm run typecheck`, `npm run lint`, `git diff --check` 통과 확인

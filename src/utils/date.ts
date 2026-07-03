@@ -44,21 +44,21 @@ export function parseApiDateMillis(value?: string): number | null {
     if (!Number.isNaN(direct)) return direct;
   }
 
-  const kstMatch = normalized.match(
+  const localDateTimeMatch = normalized.match(
     /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?)?$/,
   );
 
-  if (kstMatch) {
-    const year = Number(kstMatch[1]);
-    const month = Number(kstMatch[2]);
-    const day = Number(kstMatch[3]);
-    const hour = Number(kstMatch[4] ?? '0');
-    const minute = Number(kstMatch[5] ?? '0');
-    const second = Number(kstMatch[6] ?? '0');
-    const millisecond = Number((kstMatch[7] ?? '0').padEnd(3, '0'));
+  if (localDateTimeMatch) {
+    const year = Number(localDateTimeMatch[1]);
+    const month = Number(localDateTimeMatch[2]);
+    const day = Number(localDateTimeMatch[3]);
+    const hour = Number(localDateTimeMatch[4] ?? '0');
+    const minute = Number(localDateTimeMatch[5] ?? '0');
+    const second = Number(localDateTimeMatch[6] ?? '0');
+    const millisecond = Number((localDateTimeMatch[7] ?? '0').padEnd(3, '0'));
 
-    // Backend often returns UTC clock time without an explicit timezone suffix.
-    return Date.UTC(year, month - 1, day, hour, minute, second, millisecond);
+    // Backend LocalDateTime fields are serialized as Asia/Seoul wall-clock strings.
+    return Date.UTC(year, month - 1, day, hour, minute, second, millisecond) - KST_OFFSET_MS;
   }
 
   const fallback = Date.parse(normalized);

@@ -72,7 +72,7 @@ import {
   type BlockedMember,
 } from '../services/api/memberApi';
 import { fetchMyNewsList, type RemoteNewsSummary } from '../services/api/newsApi';
-import { formatKstDateLabel } from '../utils/date';
+import { formatKstDateLabel, toKstTimeAgoLabel } from '../utils/date';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
@@ -80,6 +80,7 @@ import { pickAndUploadImage } from '../utils/imageUpload';
 import { collectAllCursorPages } from '../utils/pagination';
 import { resolveApiError } from '../utils/resolveApiError';
 import { useConsumeRouteParam } from '../hooks/useConsumeRouteParam';
+import { useRelativeNow } from '../hooks/useRelativeNow';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import { nicknameRegex } from '../constants/validation';
@@ -87,7 +88,6 @@ import { BOOK_DEFAULT_IMAGE } from '../constants/defaultAssets';
 import {
   useNotificationState,
   notificationSettingRows,
-  type AlarmItem,
 } from './mypage/useNotificationState';
 import { useAccountSettingsState, type ReportHistoryItem } from './mypage/useAccountSettingsState';
 import { SkeletonBox } from '../components/common/SkeletonBox';
@@ -334,6 +334,7 @@ function NotificationToggle({
 export function MyPageScreen() {
   const { isLoggedIn, logout, requireAuth } = useAuthGate();
   const { language, setLanguage, t, l } = useLanguage();
+  const relativeNowMillis = useRelativeNow();
   const myPageScrollRef = useRef<ScrollView>(null);
   useScrollToTop(myPageScrollRef);
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -1491,7 +1492,9 @@ export function MyPageScreen() {
               {alarm.text}
             </Text>
           </View>
-          <Text style={styles.alarmTime}>{alarm.time}</Text>
+          <Text style={styles.alarmTime}>
+            {toKstTimeAgoLabel(alarm.createdAt, relativeNowMillis, language)}
+          </Text>
         </Pressable>
       ))}
     </View>
