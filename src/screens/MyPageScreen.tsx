@@ -27,7 +27,6 @@ import {
 import { PUBLIC_ENV } from '../constants/publicEnv';
 import {
   BOOKSTORY_COMMENT_URI,
-  BOOKSTORY_LIKE_URI,
   MYPAGE_SETTING_OTHER_URI,
   MYPAGE_SETTING_PROFILE_URI,
   MYPAGE_SETTING_SERVICE_URI,
@@ -149,6 +148,7 @@ type StoryCard = {
   excerpt: string;
   imageUrl?: string;
   likes: number;
+  liked: boolean;
   comments: number;
   status?: 'DRAFT' | 'PUBLISHED';
   bookInfo?: {
@@ -378,6 +378,7 @@ export function MyPageScreen() {
   const [loadingMyNews, setLoadingMyNews] = useState(false);
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [loadingFollowUsers, setLoadingFollowUsers] = useState(false);
   const [groupMenu, setGroupMenu] = useState<GroupMenuState | null>(null);
   const [profileEditDescription, setProfileEditDescription] = useState('');
@@ -459,7 +460,6 @@ export function MyPageScreen() {
   const settingProfileIcon = MYPAGE_SETTING_PROFILE_URI;
   const settingServiceIcon = MYPAGE_SETTING_SERVICE_URI;
   const settingOtherIcon = MYPAGE_SETTING_OTHER_URI;
-  const LikeIcon = BOOKSTORY_LIKE_URI;
   const CommentIcon = BOOKSTORY_COMMENT_URI;
   const getSettingLabel = useCallback(
     (key: SettingItemKey) => {
@@ -517,6 +517,7 @@ export function MyPageScreen() {
     languageOptions.find((option) => option.code === language)?.label ?? languageOptions[0].label;
   const displayProfileName = isLoggedIn ? profileName : t('profile.needLoginName');
   const displayProfileDesc = isLoggedIn ? profileDesc : t('profile.needLoginDescription');
+  const showProfileSkeleton = !isLoggedIn || loadingProfile || !profileLoaded;
   const handleSelectLanguage = useCallback(
     (nextLanguage: LanguageCode) => {
       if (nextLanguage === language) return;
@@ -620,6 +621,7 @@ export function MyPageScreen() {
       setFollowingUsers([]);
       setFollowerCount(0);
       setFollowingCount(0);
+      setProfileLoaded(false);
       setLoadingProfile(false);
       setLoadingStories(false);
       setLoadingBooks(false);
@@ -630,6 +632,7 @@ export function MyPageScreen() {
     }
 
     setLoadingProfile(true);
+    setProfileLoaded(false);
     setLoadingStories(true);
     setLoadingGroups(true);
 
@@ -656,6 +659,7 @@ export function MyPageScreen() {
             showToast('내 프로필을 불러오지 못했습니다.');
           }
         } finally {
+          setProfileLoaded(true);
           setLoadingProfile(false);
         }
       })(),
@@ -689,6 +693,7 @@ export function MyPageScreen() {
             excerpt: item.description || '내용이 없습니다.',
             imageUrl: normalizeImageUrl(item.bookInfo?.imgUrl),
             likes: item.likeCount ?? 0,
+            liked: item.liked ?? false,
             comments: item.commentCount ?? 0,
             status: item.status,
             bookInfo: item.bookInfo,
@@ -1370,7 +1375,11 @@ export function MyPageScreen() {
             ) : (
               <>
                 <View style={styles.inlineAction}>
-                  <LikeIcon width={18} height={18} />
+                  <MaterialIcons
+                    name={item.liked ? 'favorite' : 'favorite-border'}
+                    size={18}
+                    color={item.liked ? colors.likeRed : colors.gray4}
+                  />
                   <Text style={styles.inlineText}>{item.likes}</Text>
                 </View>
                 <View style={styles.actionDivider} />
@@ -2774,31 +2783,46 @@ export function MyPageScreen() {
         >
         <View style={styles.profileRow}>
           <View style={styles.profileAvatar}>
-            {profileImageUrl ? (
+            {showProfileSkeleton ? (
+              <SkeletonBox style={styles.profileAvatarSkeleton} />
+            ) : profileImageUrl ? (
               <Image source={{ uri: profileImageUrl }} style={styles.profileAvatarImage} />
             ) : (
               <DefaultProfileAvatar size={64} />
             )}
           </View>
           <View style={styles.profileMeta}>
-            <Text style={styles.profileName}>{displayProfileName}</Text>
-            <View style={styles.profileFollowRow}>
-              <Pressable onPress={openFollowerList} hitSlop={8}>
-                <Text style={styles.profileSub}>{t('profile.subscribers')} {followerCount}</Text>
-              </Pressable>
-              <Pressable onPress={openFollowingList} hitSlop={8}>
-                <Text style={styles.profileSub}>{t('profile.subscribing')} {followingCount}</Text>
-              </Pressable>
-            </View>
-            <Text style={styles.profileDesc} numberOfLines={2}>
-              {displayProfileDesc}
-            </Text>
-            {profileCategories.length > 0 ? (
-              <Text style={styles.profileCategory}>
-                {t('profile.interests')} · {profileCategories.join(', ')}
-              </Text>
-            ) : null}
-            {loadingProfile ? <Text style={styles.loadingText}>{t('common.loadingProfile')}</Text> : null}
+            {showProfileSkeleton ? (
+              <View style={styles.profileSkeletonMeta}>
+                <SkeletonBox style={styles.profileSkeletonName} />
+                <View style={styles.profileSkeletonFollowRow}>
+                  <SkeletonBox style={styles.profileSkeletonFollow} />
+                  <SkeletonBox style={styles.profileSkeletonFollow} />
+                </View>
+                <SkeletonBox style={styles.profileSkeletonDesc} />
+                <SkeletonBox style={styles.profileSkeletonDescShort} />
+              </View>
+            ) : (
+              <>
+                <Text style={styles.profileName}>{displayProfileName}</Text>
+                <View style={styles.profileFollowRow}>
+                  <Pressable onPress={openFollowerList} hitSlop={8}>
+                    <Text style={styles.profileSub}>{t('profile.subscribers')} {followerCount}</Text>
+                  </Pressable>
+                  <Pressable onPress={openFollowingList} hitSlop={8}>
+                    <Text style={styles.profileSub}>{t('profile.subscribing')} {followingCount}</Text>
+                  </Pressable>
+                </View>
+                <Text style={styles.profileDesc} numberOfLines={2}>
+                  {displayProfileDesc}
+                </Text>
+                {profileCategories.length > 0 ? (
+                  <Text style={styles.profileCategory}>
+                    {t('profile.interests')} · {profileCategories.join(', ')}
+                  </Text>
+                ) : null}
+              </>
+            )}
           </View>
           <Pressable
             onPress={() => {
@@ -3564,9 +3588,43 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     backgroundColor: colors.gray2,
   },
+  profileAvatarSkeleton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
   profileMeta: {
     flex: 1,
     gap: spacing.xxs,
+  },
+  profileSkeletonMeta: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  profileSkeletonFollowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  profileSkeletonName: {
+    width: 124,
+    height: 18,
+    borderRadius: radius.xs,
+  },
+  profileSkeletonFollow: {
+    width: 64,
+    height: 13,
+    borderRadius: radius.xs,
+  },
+  profileSkeletonDesc: {
+    width: '92%',
+    height: 15,
+    borderRadius: radius.xs,
+  },
+  profileSkeletonDescShort: {
+    width: '68%',
+    height: 15,
+    borderRadius: radius.xs,
   },
   profileFollowRow: {
     flexDirection: 'row',
