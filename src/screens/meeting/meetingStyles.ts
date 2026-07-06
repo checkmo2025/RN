@@ -2058,11 +2058,13 @@ export const styles = StyleSheet.create({
   },
   noticeCommentInputRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+    alignItems: 'flex-end',
+    gap: spacing.xs,
   },
   noticeCommentInput: {
     flex: 1,
+    minHeight: 48,
+    maxHeight: 120,
     borderWidth: 1,
     borderColor: colors.gray2,
     borderRadius: radius.md,
@@ -2076,9 +2078,6 @@ export const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    minWidth: 74,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   noticeCommentSubmitText: {
     ...typography.body1_2,

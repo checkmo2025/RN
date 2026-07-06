@@ -433,7 +433,7 @@ export function GroupNoticeView({
               disabled={submittingNoticeComment || noticeCommentInput.trim().length === 0}
             >
               <Text style={styles.noticeCommentSubmitText}>
-                {submittingNoticeComment ? l('처리 중') : editingNoticeCommentId ? l('수정') : l('입력')}
+                {submittingNoticeComment ? l('처리 중') : editingNoticeCommentId ? l('수정') : l('등록')}
               </Text>
             </Pressable>
           </View>
