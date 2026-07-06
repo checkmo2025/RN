@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { DefaultProfileAvatar } from '../../components/common/DefaultProfileAvatar';
@@ -49,17 +49,31 @@ export function ChatMessageReportModal({ target, submitting, onClose, onSubmit }
     setContent('');
   }, [message]);
 
+  const handleClose = useCallback(() => {
+    if (submitting) return;
+
+    if (!content.trim()) {
+      onClose();
+      return;
+    }
+
+    Alert.alert(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
+      { text: l('취소'), style: 'cancel' },
+      { text: l('닫기'), style: 'destructive', onPress: onClose },
+    ]);
+  }, [content, l, onClose, submitting]);
+
   if (!message || !target) return null;
 
   return (
     <View style={styles.overlay}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} disableFeedback />
+      <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} disableFeedback />
       <View style={styles.card}>
           <View style={styles.header}>
             <Text style={styles.title}>
               {target.targetType === 'CHAT' ? l('메시지 신고') : l('사용자 신고')}
             </Text>
-            <Pressable onPress={onClose} hitSlop={8} accessibilityLabel={l('신고 닫기')}>
+            <Pressable onPress={handleClose} hitSlop={8} accessibilityLabel={l('신고 닫기')}>
               <MaterialIcons name="close" size={24} color={colors.primary1} />
             </Pressable>
           </View>

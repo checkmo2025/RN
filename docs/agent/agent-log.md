@@ -3357,3 +3357,10 @@ export const interactionOpacity = {
 - iOS secure storage 잔존으로 guest 전제가 깨지지 않도록 `clearKeychain`을 guest/login smoke flow에 추가
 - 로그인 E2E flow를 레포에 추가하되 테스트 계정 정보는 런타임 변수로만 전달하도록 정리
 - 2026-07-04 Markdown/CSV E2E 리포트와 E2E 카탈로그를 갱신
+
+# 2026-07-06 11:22:44 KST QA 후속 수정 및 로컬 테스트 리포트 정리
+
+- 로컬 E2E 리포트 생성기를 전체 기능 매트릭스 PASS/FAIL/NOT RUN/BLOCKED 표기 방식으로 확장
+- 신고 작성 중 모달 닫기 시 저장되지 않음 확인창을 표시하도록 보강
+- 비로그인 모임 `방문하기` 취소 시 모임 검색 화면이 유지되도록 수정
+- `docs/agent/todo.md`에 모임 방문하기/책이야기 본문 잘림 육안 테스트 항목 추가

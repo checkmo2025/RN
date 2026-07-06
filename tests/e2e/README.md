@@ -32,6 +32,15 @@ node scripts/e2e-report.js --suite "iOS Guest Smoke" --platform ios --flow tests
 
 The script writes both Markdown and CSV so the CSV can be opened in Excel.
 
+For a full feature matrix, use:
+
+```bash
+node scripts/e2e-report.js --full-matrix --suite "iOS Local E2E Full" --platform ios --preset local-full-smoke
+```
+
+The full matrix writes `docs/e2e-reports/YYYY-MM-DD-e2e-full-matrix.md` and `.csv`.
+Only actually executed checks should be marked `PASS` or `FAIL`; unexecuted checks stay `NOT RUN` or `BLOCKED`.
+
 ## Scope Rules
 
 - Keep all runs local unless explicitly requested.

@@ -939,7 +939,7 @@ export function MeetingScreen() {
     [appliedById, discoverGroups],
   );
 
-  const openGroupHome = useCallback(async (group: Group) => {
+  const openGroupHomeDirect = useCallback(async (group: Group) => {
     if (typeof group.clubId === 'number' && group.clubId > 0) {
       lastVisitedClubIdRef.current = group.clubId;
     }
@@ -950,12 +950,32 @@ export function MeetingScreen() {
     setOpeningClubLoading(false);
   }, []);
 
+  const openGroupHome = useCallback(
+    (group: Group) => {
+      if (isLoggedIn) {
+        void openGroupHomeDirect(group);
+        return;
+      }
+
+      setPendingOpenClubId(null);
+      setPendingOpenMeetingId(null);
+      setPendingOpenNoticeId(null);
+      setActiveGroup(null);
+      setOpeningClubLoading(false);
+      scrollMeetingSearchToTop(false);
+      requireAuth(() => {
+        void openGroupHomeDirect(group);
+      });
+    },
+    [isLoggedIn, openGroupHomeDirect, requireAuth, scrollMeetingSearchToTop],
+  );
+
   useEffect(() => {
     if (pendingOpenClubId === null) return;
     const targetGroup =
       myGroups.find((group) => group.clubId === pendingOpenClubId) ??
       discoverGroups.find((group) => group.clubId === pendingOpenClubId);
-    void openGroupHome(targetGroup ?? createPendingClubGroup(pendingOpenClubId));
+    openGroupHome(targetGroup ?? createPendingClubGroup(pendingOpenClubId));
     setPendingOpenClubId(null);
   }, [discoverGroups, myGroups, openGroupHome, pendingOpenClubId]);
 

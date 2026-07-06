@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -64,6 +65,34 @@ export function ReportMemberModal({
     onSubmit({ reason, content: trimmed || undefined });
   };
 
+  const confirmDiscardIfNeeded = useCallback(
+    (onConfirm: () => void) => {
+      if (submitting) return;
+
+      if (!content.trim()) {
+        onConfirm();
+        return;
+      }
+
+      Alert.alert(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
+        { text: l('취소'), style: 'cancel' },
+        { text: l('닫기'), style: 'destructive', onPress: onConfirm },
+      ]);
+    },
+    [content, l, submitting],
+  );
+
+  const handleClose = useCallback(() => {
+    confirmDiscardIfNeeded(onClose);
+  }, [confirmDiscardIfNeeded, onClose]);
+
+  const handlePressTarget = useCallback(
+    (nickname: string) => {
+      confirmDiscardIfNeeded(() => onPressTarget?.(nickname));
+    },
+    [confirmDiscardIfNeeded, onPressTarget],
+  );
+
   const targetCardContent = target ? (
     <>
       <View style={styles.avatar}>
@@ -81,12 +110,12 @@ export function ReportMemberModal({
   ) : null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-      <Pressable style={styles.backdrop} onPress={onClose} disableFeedback>
+      <Pressable style={styles.backdrop} onPress={handleClose} disableFeedback>
         {target ? (
           <Pressable
             style={styles.card}
@@ -95,7 +124,7 @@ export function ReportMemberModal({
           >
             <View style={styles.header}>
               <Text style={styles.title}>{l('신고하기')}</Text>
-              <Pressable style={styles.closeButton} onPress={onClose}>
+              <Pressable style={styles.closeButton} onPress={handleClose}>
                 <MaterialIcons name="close" size={24} color={colors.primary1} />
               </Pressable>
             </View>
@@ -103,7 +132,7 @@ export function ReportMemberModal({
             {onPressTarget ? (
               <Pressable
                 style={({ pressed }) => [styles.targetCard, pressed ? styles.targetCardPressed : null]}
-                onPress={() => onPressTarget(target.nickname)}
+                onPress={() => handlePressTarget(target.nickname)}
                 disabled={submitting}
               >
                 {targetCardContent}
