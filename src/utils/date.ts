@@ -79,21 +79,21 @@ function parseApiEventDateMillis(value?: string): number | null {
     if (!Number.isNaN(direct)) return direct;
   }
 
-  const utcDateTimeMatch = normalized.match(
+  const localDateTimeMatch = normalized.match(
     /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?)?$/,
   );
 
-  if (utcDateTimeMatch) {
-    const year = Number(utcDateTimeMatch[1]);
-    const month = Number(utcDateTimeMatch[2]);
-    const day = Number(utcDateTimeMatch[3]);
-    const hour = Number(utcDateTimeMatch[4] ?? '0');
-    const minute = Number(utcDateTimeMatch[5] ?? '0');
-    const second = Number(utcDateTimeMatch[6] ?? '0');
-    const millisecond = Number((utcDateTimeMatch[7] ?? '0').padEnd(3, '0'));
+  if (localDateTimeMatch) {
+    const year = Number(localDateTimeMatch[1]);
+    const month = Number(localDateTimeMatch[2]);
+    const day = Number(localDateTimeMatch[3]);
+    const hour = Number(localDateTimeMatch[4] ?? '0');
+    const minute = Number(localDateTimeMatch[5] ?? '0');
+    const second = Number(localDateTimeMatch[6] ?? '0');
+    const millisecond = Number((localDateTimeMatch[7] ?? '0').padEnd(3, '0'));
 
-    // Server-created event timestamps arrive as timezone-less UTC wall-clock strings in production.
-    return Date.UTC(year, month - 1, day, hour, minute, second, millisecond);
+    // Backend event timestamps are serialized as Asia/Seoul wall-clock strings.
+    return Date.UTC(year, month - 1, day, hour, minute, second, millisecond) - KST_OFFSET_MS;
   }
 
   const fallback = Date.parse(normalized);

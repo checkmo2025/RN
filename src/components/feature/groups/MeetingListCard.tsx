@@ -83,6 +83,8 @@ export function MeetingListCard({
   const { l } = useLanguage();
   const applyInputRef = useRef<TextInput>(null);
   const canSubmit = (applyReason ?? '').trim().length > 0;
+  const applyDisabled = Boolean(applicationStatus) || !onPressApply;
+  const canOpenApplyFromCard = !applyOpen && !applyDisabled;
   const setApplyInputRef = useCallback(
     (ref: TextInput | null) => {
       applyInputRef.current = ref;
@@ -101,7 +103,13 @@ export function MeetingListCard({
   }, [applyOpen]);
 
   return (
-    <View style={styles.card}>
+    <Pressable
+      style={styles.card}
+      disabled={!canOpenApplyFromCard}
+      onPress={canOpenApplyFromCard ? onPressApply : undefined}
+      accessibilityRole={canOpenApplyFromCard ? 'button' : undefined}
+      accessibilityLabel={canOpenApplyFromCard ? l('가입 신청하기') : undefined}
+    >
       <View style={styles.header}>
         <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
           {name}
@@ -177,11 +185,20 @@ export function MeetingListCard({
             <Pressable
               style={[styles.applySubmitButton, !canSubmit && styles.applySubmitDisabled]}
               disabled={!canSubmit}
-              onPress={onSubmitApply}
+              onPress={(event) => {
+                event.stopPropagation();
+                onSubmitApply?.();
+              }}
             >
               <Text style={styles.applySubmitText}>{l('가입 신청하기')}</Text>
             </Pressable>
-            <Pressable style={styles.applyCloseButton} onPress={onCloseApply}>
+            <Pressable
+              style={styles.applyCloseButton}
+              onPress={(event) => {
+                event.stopPropagation();
+                onCloseApply?.();
+              }}
+            >
               <Text style={styles.applyCloseText}>{l('닫기')}</Text>
             </Pressable>
           </View>
@@ -189,25 +206,34 @@ export function MeetingListCard({
       ) : (
         <View style={styles.actions}>
           <Pressable
-            style={[styles.applyButton, applicationStatus && styles.applyButtonDisabled]}
-            disabled={Boolean(applicationStatus)}
-            onPress={onPressApply}
+            style={[styles.applyButton, applyDisabled && styles.applyButtonDisabled]}
+            disabled={applyDisabled}
+            onPress={(event) => {
+              event.stopPropagation();
+              onPressApply?.();
+            }}
           >
             <Text
               style={[
                 styles.applyButtonText,
-                applicationStatus ? styles.applyButtonTextDisabled : null,
+                applyDisabled ? styles.applyButtonTextDisabled : null,
               ]}
             >
               {applicationStatus ? l('신청완료') : l('가입 신청하기')}
             </Text>
           </Pressable>
-          <Pressable style={styles.visitButton} onPress={onPressVisit}>
+          <Pressable
+            style={styles.visitButton}
+            onPress={(event) => {
+              event.stopPropagation();
+              onPressVisit?.();
+            }}
+          >
             <Text style={styles.visitButtonText}>{l('방문하기')}</Text>
           </Pressable>
         </View>
       )}
-    </View>
+    </Pressable>
   );
 }
 

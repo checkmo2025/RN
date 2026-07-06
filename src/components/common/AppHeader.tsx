@@ -363,6 +363,13 @@ export function AppHeader(props: Props) {
   const handleToggleBookLike = useCallback(
     (book: BookItem) => {
       if (!isLoggedIn) {
+        if (showSearchPage) {
+          requireAuth(() => {
+            executeBookLikeToggle(book);
+          });
+          return;
+        }
+
         hideDropdownImmediately();
         closeSearchPage();
         requestAnimationFrame(() => {
@@ -380,6 +387,7 @@ export function AppHeader(props: Props) {
       hideDropdownImmediately,
       isLoggedIn,
       requireAuth,
+      showSearchPage,
     ],
   );
 

@@ -2772,12 +2772,6 @@ export function MyPageScreen() {
             />
           }
         >
-        <View style={styles.breadcrumbRow}>
-          <Text style={styles.breadcrumbText}>{t('common.all')}</Text>
-          <MaterialIcons name="chevron-right" size={16} color={colors.gray4} />
-          <Text style={[styles.breadcrumbText, styles.breadcrumbActive]}>{t('profile.screenTitle')}</Text>
-        </View>
-
         <View style={styles.profileRow}>
           <View style={styles.profileAvatar}>
             {profileImageUrl ? (
