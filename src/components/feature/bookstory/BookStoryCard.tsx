@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Image,
-  ImageBackground,
   StyleSheet,
   Text,
   View,
@@ -97,20 +96,13 @@ export function BookStoryCard({
         ) : null}
       </View>
 
-      <ImageBackground
-        source={image ? { uri: image } : undefined}
-        style={styles.coverBg}
-        imageStyle={styles.coverBgImage}
-        blurRadius={18}
-        resizeMode="cover"
-      >
-        <View style={styles.coverOverlay} />
+      <View style={styles.coverBg}>
         {image ? (
           <Image source={{ uri: image }} style={styles.cover} resizeMode="contain" />
         ) : (
           <View style={styles.coverPlaceholder} />
         )}
-      </ImageBackground>
+      </View>
 
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.body} numberOfLines={3}>
@@ -219,14 +211,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  coverBgImage: {
-    opacity: 0.9,
-    transform: [{ scale: 1.08 }],
-  },
-  coverOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.56)',
   },
   cover: {
     width: '52%',

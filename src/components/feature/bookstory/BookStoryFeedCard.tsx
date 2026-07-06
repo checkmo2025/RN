@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Image,
-  ImageBackground,
   StyleSheet,
   Text,
   View,
@@ -125,19 +124,13 @@ export default function BookStoryFeedCard({
       </View>
 
       {/* Cover */}
-      <ImageBackground
-        source={coverImgSrc ? { uri: coverImgSrc } : undefined}
-        style={styles.cover}
-        imageStyle={styles.coverImage}
-        blurRadius={18}
-      >
-        <View style={styles.coverOverlay} />
+      <View style={styles.cover}>
         {coverImgSrc ? (
           <Image source={{ uri: coverImgSrc }} style={styles.coverCenterImage} resizeMode="contain" />
         ) : (
           <View style={styles.coverCenterPlaceholder} />
         )}
-      </ImageBackground>
+      </View>
 
       {/* Title & body */}
       <View style={styles.body}>
@@ -266,15 +259,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  coverImage: {
-    resizeMode: 'cover',
-    opacity: 0.9,
-    transform: [{ scale: 1.08 }],
-  },
-  coverOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.56)',
   },
   coverCenterImage: {
     width: '52%',

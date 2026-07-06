@@ -242,9 +242,10 @@ export function GroupBookshelfView({
           return (
             <Pressable
               key={`${group.id}-session-${session}`}
+              android_ripple={{ color: 'transparent' }}
               style={({ pressed }) => [
                 styles.bookshelfSessionChip,
-                active && styles.bookshelfSessionChipActive,
+                active ? styles.bookshelfSessionChipActive : styles.bookshelfSessionChipInactive,
                 pressed && styles.pressed,
               ]}
               onPress={() => setSelectedBookshelfSession(session)}

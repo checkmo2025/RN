@@ -2809,6 +2809,10 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
+  bookshelfSessionChipInactive: {
+    borderColor: colors.gray2,
+    backgroundColor: colors.white,
+  },
   bookshelfSessionChipActive: {
     borderColor: colors.primary1,
     backgroundColor: colors.subbrown4,

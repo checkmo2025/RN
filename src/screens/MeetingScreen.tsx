@@ -470,6 +470,7 @@ export function MeetingScreen() {
   const [selectedOutputFilter, setSelectedOutputFilter] =
     useState<ClubSearchOutputFilter>('ALL');
   const [outputFilterOpen, setOutputFilterOpen] = useState(false);
+  const [hasInteractedWithDiscoverFilter, setHasInteractedWithDiscoverFilter] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const {
@@ -699,6 +700,14 @@ export function MeetingScreen() {
 
   const selectedOutputFilterLabel = l(
     outputFilterOptions.find((option) => option.value === selectedOutputFilter)?.label ?? '전체',
+  );
+  const discoverSectionTitle = l(
+    hasInteractedWithDiscoverFilter ||
+    search.trim().length > 0 ||
+    activeInputFilter !== null ||
+    selectedOutputFilter !== 'ALL'
+      ? '검색 결과'
+      : '독서 모임 추천',
   );
 
   useConsumeRouteParam(
@@ -1095,6 +1104,7 @@ export function MeetingScreen() {
       setSearch('');
       setActiveInputFilter(null);
       setSelectedOutputFilter('ALL');
+      setHasInteractedWithDiscoverFilter(false);
       setOutputFilterOpen(false);
       setApplyOpenId(null);
       await loadMyGroups();
@@ -1203,7 +1213,10 @@ export function MeetingScreen() {
       <View style={styles.searchRow}>
         <FormTextInput
           value={search}
-          onChangeText={setSearch}
+          onChangeText={(value) => {
+            setSearch(value);
+            setHasInteractedWithDiscoverFilter(true);
+          }}
           placeholder={l('모임명, 지역별로 원하는 모임을 검색해보세요!')}
           placeholderTextColor={colors.gray3}
           style={styles.searchInput}
@@ -1220,7 +1233,10 @@ export function MeetingScreen() {
               styles.outputFilterButton,
               pressed && styles.pressed,
             ]}
-            onPress={() => setOutputFilterOpen((prev) => !prev)}
+            onPress={() => {
+              setHasInteractedWithDiscoverFilter(true);
+              setOutputFilterOpen((prev) => !prev);
+            }}
           >
             <Text style={styles.outputFilterText}>{selectedOutputFilterLabel}</Text>
             <MaterialIcons
@@ -1242,6 +1258,7 @@ export function MeetingScreen() {
                       pressed && styles.pressed,
                     ]}
                     onPress={() => {
+                      setHasInteractedWithDiscoverFilter(true);
                       setSelectedOutputFilter(option.value);
                       setOutputFilterOpen(false);
                     }}
@@ -1267,9 +1284,10 @@ export function MeetingScreen() {
             <Pressable
               key={filter}
               style={styles.filterChip}
-              onPress={() =>
-                setActiveInputFilter((prev) => (prev === filter ? null : filter))
-              }
+              onPress={() => {
+                setHasInteractedWithDiscoverFilter(true);
+                setActiveInputFilter((prev) => (prev === filter ? null : filter));
+              }}
               android_ripple={{ color: colors.gray1 }}
             >
               <MaterialIcons
@@ -1290,11 +1308,7 @@ export function MeetingScreen() {
         })}
       </View>
 
-      {search.trim().length === 0 &&
-      activeInputFilter === null &&
-      selectedOutputFilter === 'ALL' ? (
-        <Text style={styles.sectionTitle}>{l('독서 모임 추천')}</Text>
-      ) : null}
+      <Text style={styles.sectionTitle}>{discoverSectionTitle}</Text>
 
       <View
         style={styles.groupList}

@@ -355,6 +355,7 @@ export function StoryScreen() {
   const detailScrollRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
   const inlineReplyInputRef = useRef<TextInput>(null);
+  const inlineEditCommentInputRef = useRef<TextInput>(null);
   const bodyInputRef = useRef<TextInput>(null);
   const commentSectionYRef = useRef(0);
   const pendingDetailFocusRef = useRef<'comments' | null>(null);
@@ -1279,10 +1280,18 @@ export function StoryScreen() {
     setReplyTarget(null);
     setCommentInput(nextCommentText);
     requestAnimationFrame(() => {
-      scrollToCommentInput();
-      commentInputRef.current?.focus();
+      inlineEditCommentInputRef.current?.focus();
     });
-  }, [scrollToCommentInput]);
+  }, []);
+
+  const cancelEditComment = useCallback(() => {
+    editingCommentIdRef.current = null;
+    editingCommentOriginalTextRef.current = '';
+    commentDraftTextRef.current = '';
+    setEditingCommentId(null);
+    setEditingCommentOriginalText('');
+    setCommentInput('');
+  }, []);
 
   const deleteComment = useCallback(
     (comment: Comment) => {
@@ -2395,20 +2404,14 @@ export function StoryScreen() {
                 ))}
               </View>
             )}
-            {(editingCommentId || !replyTarget) && (
+            {!editingCommentId && !replyTarget && (
               <View style={styles.commentInputRow}>
                 <FormTextInput
                   ref={commentInputRef}
                   style={styles.commentInput}
-                  placeholder={
-                    editingCommentId
-                      ? l('댓글 수정 (최대 {limit}자)', {
-                          limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
-                        })
-                      : l('댓글 내용 (최대 {limit}자)', {
-                          limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
-                        })
-                  }
+                  placeholder={l('댓글 내용 (최대 {limit}자)', {
+                    limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                  })}
                   placeholderTextColor={colors.gray3}
                   value={commentInput}
                   onChangeText={handleChangeCommentInput}
@@ -2433,7 +2436,7 @@ export function StoryScreen() {
                       isCommentSubmitDisabled && styles.commentSubmitTextDisabled,
                     ]}
                   >
-                    {editingCommentId ? l('수정') : l('등록')}
+                    {l('등록')}
                   </Text>
                 </Pressable>
               </View>
@@ -2476,6 +2479,60 @@ export function StoryScreen() {
                       </Pressable>
                     </View>
                     <Text style={styles.commentText}>{comment.text}</Text>
+                    {editingCommentId === comment.remoteId ? (
+                      <View style={styles.inlineCommentEditBlock}>
+                        <View style={styles.inlineReplyRow}>
+                          <FormTextInput
+                            ref={inlineEditCommentInputRef}
+                            style={styles.commentInput}
+                            placeholder={l(
+                              comment.replyTo
+                                ? '대댓글 수정 (최대 {limit}자)'
+                                : '댓글 수정 (최대 {limit}자)',
+                              {
+                                limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                              },
+                            )}
+                            placeholderTextColor={colors.gray3}
+                            value={commentInput}
+                            onChangeText={handleChangeCommentInput}
+                            multiline
+                            maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
+                            overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
+                              limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                            })}
+                          />
+                          <Pressable
+                            style={[
+                              styles.commentSubmit,
+                              isCommentSubmitDisabled && styles.commentSubmitDisabled,
+                            ]}
+                            onPress={handleSubmitComment}
+                            disabled={isCommentSubmitDisabled}
+                          >
+                            <Text
+                              style={[
+                                styles.commentSubmitText,
+                                isCommentSubmitDisabled && styles.commentSubmitTextDisabled,
+                              ]}
+                            >
+                              {l('수정')}
+                            </Text>
+                          </Pressable>
+                        </View>
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.commentEditCancelButton,
+                            pressed && styles.pressed,
+                          ]}
+                          onPress={cancelEditComment}
+                        >
+                          <Text style={styles.commentEditCancelText}>
+                            {l('댓글 수정 취소')}
+                          </Text>
+                        </Pressable>
+                      </View>
+                    ) : null}
                     {!editingCommentId && replyTarget?.commentKey === comment.id && (
                       <View style={styles.inlineReplyRow}>
                         <FormTextInput
@@ -3659,6 +3716,18 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: spacing.xs,
     marginTop: spacing.xs,
+  },
+  inlineCommentEditBlock: {
+    gap: spacing.xs,
+  },
+  commentEditCancelButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xxs,
+  },
+  commentEditCancelText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textDecorationLine: 'underline',
   },
   pressed: {
     opacity: interactionOpacity.pressed,

@@ -283,9 +283,6 @@ export function GroupNoticeView({
             <View style={styles.noticePollMetaRow}>
               <View style={styles.noticePollSchedule}>
                 <Text style={styles.noticeAttachmentTitle}>{l('투표')}</Text>
-                <Text style={styles.noticePollEndText}>
-                  {selectedNotice.poll.startsAt} - {selectedNotice.poll.endsAt}
-                </Text>
               </View>
               <View style={styles.noticePollMetaRight}>
                 <Text style={styles.noticePollMetaText}>
@@ -303,6 +300,9 @@ export function GroupNoticeView({
                 </View>
               </View>
             </View>
+            <Text style={styles.noticePollEndText} numberOfLines={1}>
+              {selectedNotice.poll.startsAt} - {selectedNotice.poll.endsAt}
+            </Text>
 
             <View style={styles.noticePollOptionList}>
               {currentNoticePollOptions.map((option) => {
