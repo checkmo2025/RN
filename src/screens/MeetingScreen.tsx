@@ -271,9 +271,6 @@ const MEETING_TAB_DOUBLE_TAP_WINDOW_MS = 450;
 const GROUP_TITLE_FOCUS_TOP_OFFSET = spacing.xs;
 const GROUP_TITLE_FOCUS_SCROLL_SAFETY = spacing.md;
 const BOOKSHELF_DETAIL_FOCUS_TOP_OFFSET = spacing.sm;
-const APPLY_INPUT_KEYBOARD_GAP = spacing.md;
-const APPLY_KEYBOARD_SCROLL_EXTRA_SPACE = spacing.xxl * 4;
-const APPLY_KEYBOARD_MEASURE_DELAY_MS = 80;
 const NOTICE_TITLE_INPUT_MIN_HEIGHT = 96;
 const NOTICE_TITLE_INPUT_MAX_HEIGHT = 152;
 const NOTICE_CONTENT_INPUT_MIN_HEIGHT = 280;
@@ -441,9 +438,6 @@ function upsertGroupByClubId(groups: Group[], nextGroup: Group): Group[] {
 export function MeetingScreen() {
   const meetingScrollRef = useRef<ScrollView>(null);
   const meetingScrollYRef = useRef(0);
-  const applyInputRefByIdRef = useRef<Record<string, TextInput | null>>({});
-  const keyboardTopYRef = useRef<number | null>(null);
-  const applyKeyboardScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useScrollToTop(meetingScrollRef);
   const navigation = useNavigation<NavigationProp<TabParamList, 'Meeting'>>();
   const route = useRoute<RouteProp<TabParamList, 'Meeting'>>();
@@ -459,7 +453,6 @@ export function MeetingScreen() {
   const [applyOpenId, setApplyOpenId] = useState<string | null>(null);
   const [applyReasonById, setApplyReasonById] = useState<Record<string, string>>({});
   const [appliedById, setAppliedById] = useState<Record<string, string>>({});
-  const [applyKeyboardInset, setApplyKeyboardInset] = useState(0);
   const [pendingOpenClubId, setPendingOpenClubId] = useState<number | null>(null);
   const [pendingOpenMeetingId, setPendingOpenMeetingId] = useState<number | null>(null);
   const [pendingOpenNoticeId, setPendingOpenNoticeId] = useState<number | null>(null);
@@ -607,77 +600,6 @@ export function MeetingScreen() {
     requestAnimationFrame(() => {
       meetingScrollRef.current?.scrollTo({ y: 0, animated });
     });
-  }, []);
-
-  const keepApplyInputAboveKeyboard = useCallback((groupId: string, animated = true) => {
-    const applyInputRef = applyInputRefByIdRef.current[groupId];
-    const keyboardTopY = keyboardTopYRef.current;
-    if (!applyInputRef || typeof keyboardTopY !== 'number') return;
-
-    requestAnimationFrame(() => {
-      applyInputRef.measureInWindow((
-        _x: number,
-        inputY: number,
-        _width: number,
-        inputHeight: number,
-      ) => {
-        const inputBottomY = inputY + inputHeight;
-        const maxInputBottomY = keyboardTopY - APPLY_INPUT_KEYBOARD_GAP;
-        const overlapY = inputBottomY - maxInputBottomY;
-        if (overlapY <= 0) return;
-
-        meetingScrollRef.current?.scrollTo({
-          y: Math.max(0, meetingScrollYRef.current + overlapY),
-          animated,
-        });
-      });
-    });
-  }, []);
-
-  const scheduleKeepApplyInputAboveKeyboard = useCallback(
-    (groupId: string, delayMs = 0) => {
-      if (applyKeyboardScrollTimerRef.current) {
-        clearTimeout(applyKeyboardScrollTimerRef.current);
-      }
-
-      applyKeyboardScrollTimerRef.current = setTimeout(() => {
-        applyKeyboardScrollTimerRef.current = null;
-        keepApplyInputAboveKeyboard(groupId, false);
-      }, delayMs);
-    },
-    [keepApplyInputAboveKeyboard],
-  );
-
-  const focusApplyCard = useCallback((groupId: string) => {
-    if (keyboardTopYRef.current === null) return;
-    scheduleKeepApplyInputAboveKeyboard(groupId);
-  }, [scheduleKeepApplyInputAboveKeyboard]);
-
-  useEffect(() => {
-    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
-      keyboardTopYRef.current = event.endCoordinates.screenY;
-      setApplyKeyboardInset(event.endCoordinates.height);
-      if (applyOpenId) {
-        scheduleKeepApplyInputAboveKeyboard(applyOpenId, APPLY_KEYBOARD_MEASURE_DELAY_MS);
-      }
-    });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      keyboardTopYRef.current = null;
-      setApplyKeyboardInset(0);
-    });
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, [applyOpenId, scheduleKeepApplyInputAboveKeyboard]);
-
-  useEffect(() => {
-    return () => {
-      if (applyKeyboardScrollTimerRef.current) {
-        clearTimeout(applyKeyboardScrollTimerRef.current);
-      }
-    };
   }, []);
 
   const handlePressHeaderLogo = useCallback(() => {
@@ -960,6 +882,30 @@ export function MeetingScreen() {
       })),
     [appliedById, discoverGroups],
   );
+  const applyModalGroup = useMemo(
+    () => visibleDiscoverGroups.find((group) => group.id === applyOpenId) ?? null,
+    [applyOpenId, visibleDiscoverGroups],
+  );
+  const applyModalReason = applyModalGroup
+    ? (applyReasonById[applyModalGroup.id] ?? '')
+    : '';
+
+  const closeApplyModal = useCallback(() => {
+    Keyboard.dismiss();
+    setApplyOpenId(null);
+  }, []);
+
+  const requestCloseApplyModal = useCallback(() => {
+    if (applyModalReason.trim().length === 0) {
+      closeApplyModal();
+      return;
+    }
+
+    Alert.alert(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
+      { text: l('취소'), style: 'cancel' },
+      { text: l('닫기'), style: 'destructive', onPress: closeApplyModal },
+    ]);
+  }, [applyModalReason, closeApplyModal, l]);
 
   const openGroupHomeDirect = useCallback(async (group: Group) => {
     if (typeof group.clubId === 'number' && group.clubId > 0) {
@@ -1018,23 +964,9 @@ export function MeetingScreen() {
 
   const handleOpenApply = (groupId: string) => {
     requireAuth(() => {
-      const willOpen = applyOpenId !== groupId;
-      setApplyOpenId(willOpen ? groupId : null);
+      setApplyOpenId(groupId);
     });
   };
-
-  const handleCloseApply = () => {
-    setApplyOpenId(null);
-  };
-
-  const handleApplyInputLayout = useCallback(
-    (groupId: string) => {
-      if (applyOpenId === groupId) {
-        focusApplyCard(groupId);
-      }
-    },
-    [applyOpenId, focusApplyCard],
-  );
 
   const handleChangeApplyReason = (groupId: string, value: string) => {
     setApplyReasonById((prev) => ({ ...prev, [groupId]: value }));
@@ -1160,12 +1092,7 @@ export function MeetingScreen() {
         <ScrollView
           ref={meetingScrollRef}
           style={styles.container}
-          contentContainerStyle={[
-            styles.content,
-            applyKeyboardInset > 0
-              ? { paddingBottom: applyKeyboardInset + APPLY_KEYBOARD_SCROLL_EXTRA_SPACE }
-              : null,
-          ]}
+          contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           scrollEventThrottle={16}
@@ -1323,17 +1250,7 @@ export function MeetingScreen() {
               profileImageUrl={group.profileImageUrl}
               isPrivate={group.isPrivate}
               applicationStatus={group.applicationStatus}
-              applyOpen={applyOpenId === group.id}
-              applyReason={applyReasonById[group.id] ?? ''}
-              onApplyInputRef={(ref) => {
-                applyInputRefByIdRef.current[group.id] = ref;
-              }}
               onPressApply={() => handleOpenApply(group.id)}
-              onChangeApplyReason={(value) => handleChangeApplyReason(group.id, value)}
-              onApplyInputFocus={() => focusApplyCard(group.id)}
-              onApplyInputLayout={() => handleApplyInputLayout(group.id)}
-              onSubmitApply={() => handleSubmitApply(group)}
-              onCloseApply={handleCloseApply}
               onPressVisit={() => openGroupHome(group)}
             />
           </View>
@@ -1353,6 +1270,84 @@ export function MeetingScreen() {
       </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <Modal
+        visible={Boolean(applyModalGroup)}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={requestCloseApplyModal}
+      >
+        <Pressable style={styles.applyModalBackdrop} onPress={requestCloseApplyModal}>
+          <KeyboardAvoidingView
+            style={styles.applyModalKeyboardWrap}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <Pressable
+              style={styles.applyModalCard}
+              onPress={(event) => event.stopPropagation()}
+            >
+              {applyModalGroup ? (
+                <>
+                  <ScrollView
+                    style={styles.applyModalScroll}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.applyModalContent}
+                  >
+                    <MeetingListCard
+                      name={applyModalGroup.name}
+                      tags={applyModalGroup.tags}
+                      topic={applyModalGroup.topic}
+                      region={applyModalGroup.region}
+                      profileImageUrl={applyModalGroup.profileImageUrl}
+                      isPrivate={applyModalGroup.isPrivate}
+                      applicationStatus={applyModalGroup.applicationStatus}
+                      showActions={false}
+                    />
+                    <View style={styles.applyModalForm}>
+                      <FormTextInput
+                        value={applyModalReason}
+                        onChangeText={(value) => handleChangeApplyReason(applyModalGroup.id, value)}
+                        placeholder={l('신청 사유를 입력해보세요({limit}자 제한)', {
+                          limit: INPUT_LIMITS.APPLY_REASON,
+                        })}
+                        placeholderTextColor={colors.gray3}
+                        multiline
+                        maxLength={INPUT_LIMITS.APPLY_REASON}
+                        overLimitMessage={l('신청 사유는 {limit}자 이하여야 합니다.', {
+                          limit: INPUT_LIMITS.APPLY_REASON,
+                        })}
+                        style={styles.applyModalInput}
+                      />
+                      <Text style={styles.applyModalCounterText}>
+                        {applyModalReason.length}/{INPUT_LIMITS.APPLY_REASON}
+                      </Text>
+                    </View>
+                  </ScrollView>
+                  <View style={styles.applyModalActionRow}>
+                    <Pressable
+                      style={[
+                        styles.applyModalSubmitButton,
+                        applyModalReason.trim().length === 0 && styles.applyModalSubmitDisabled,
+                      ]}
+                      disabled={applyModalReason.trim().length === 0}
+                      onPress={() => handleSubmitApply(applyModalGroup)}
+                    >
+                      <Text style={styles.applyModalSubmitText}>{l('가입 신청하기')}</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.applyModalCloseButton}
+                      onPress={requestCloseApplyModal}
+                    >
+                      <Text style={styles.applyModalCloseText}>{l('닫기')}</Text>
+                    </Pressable>
+                  </View>
+                </>
+              ) : null}
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
     </ScreenLayout>
   );
 }
@@ -1715,6 +1710,7 @@ function GroupHomeView({
     handleOpenNoticeBookshelf,
     resetNoticeOnGroupChange,
   } = noticeState;
+  const pollEditingLocked = editingNoticeId !== null && noticeDraft.pollEnabled;
 
   useEffect(() => {
     if (!pendingNotificationTarget || !workspaceLoaded) return;
@@ -3893,7 +3889,8 @@ function GroupHomeView({
                   style={({ pressed }) => [
                     styles.noticeComposerToggle,
                     noticeDraft.pollEnabled && styles.noticeComposerToggleActive,
-                    pressed && styles.pressed,
+                    pollEditingLocked && styles.noticeComposerDisabled,
+                    pressed && !pollEditingLocked && styles.pressed,
                   ]}
                   onPress={() =>
                     setNoticeDraft((prev) => ({
@@ -3901,6 +3898,8 @@ function GroupHomeView({
                       pollEnabled: !prev.pollEnabled,
                     }))
                   }
+                  disabled={pollEditingLocked}
+                  accessibilityState={{ selected: noticeDraft.pollEnabled, disabled: pollEditingLocked }}
                 >
                   <MaterialIcons
                     name="poll"
@@ -3995,9 +3994,11 @@ function GroupHomeView({
                 <View style={styles.noticeComposerSection}>
                   <View style={styles.noticeComposerPollHeader}>
                     <Text style={styles.noticeAttachmentTitle}>{l('투표')}</Text>
-                    <Text style={styles.noticeComposerPollEditNote}>
-                      {l('투표가 있는 공지사항은 수정이 불가합니다')}
-                    </Text>
+                    {pollEditingLocked ? (
+                      <Text style={styles.noticeComposerPollEditNote}>
+                        {l('투표가 있는 공지사항은 수정이 불가합니다')}
+                      </Text>
+                    ) : null}
                   </View>
                   <View style={styles.noticeComposerPollOptionList}>
                     {noticeDraft.pollOptions.map((option, index) => {
@@ -4006,7 +4007,10 @@ function GroupHomeView({
                       return (
                         <View
                           key={`notice-poll-option-${index}`}
-                          style={styles.noticeComposerPollOptionRow}
+                          style={[
+                            styles.noticeComposerPollOptionRow,
+                            pollEditingLocked && styles.noticeComposerDisabled,
+                          ]}
                         >
                           <FormTextInput
                             value={option}
@@ -4018,8 +4022,9 @@ function GroupHomeView({
                             overLimitMessage={l('투표 항목은 {limit}자 이하여야 합니다.', {
                               limit: INPUT_LIMITS.NOTICE_POLL_OPTION,
                             })}
+                            editable={!pollEditingLocked}
                           />
-                          {removable ? (
+                          {removable && !pollEditingLocked ? (
                             <Pressable
                               style={({ pressed }) => [
                                 styles.noticeComposerPollOptionRemove,
@@ -4036,7 +4041,8 @@ function GroupHomeView({
                         </View>
                       );
                     })}
-                    {noticeDraft.pollOptions.length < INPUT_LIMITS.NOTICE_POLL_OPTION_MAX ? (
+                    {!pollEditingLocked &&
+                    noticeDraft.pollOptions.length < INPUT_LIMITS.NOTICE_POLL_OPTION_MAX ? (
                       <Pressable
                         style={({ pressed }) => [styles.noticeComposerAddOptionButton, pressed && styles.pressed]}
                         onPress={handleAddNoticePollOption}
@@ -4051,15 +4057,17 @@ function GroupHomeView({
                       style={({ pressed }) => [
                         styles.noticeComposerChoiceChip,
                         noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipActive,
-                        pressed && styles.pressed,
+                        pollEditingLocked && styles.noticeComposerDisabled,
+                        pressed && !pollEditingLocked && styles.pressed,
                       ]}
                       onPress={() => {
                         Keyboard.dismiss();
                         setNoticeDraft((prev) => ({ ...prev, pollAnonymous: true }));
                       }}
+                      disabled={pollEditingLocked}
                       hitSlop={6}
                       accessibilityRole="button"
-                      accessibilityState={{ selected: noticeDraft.pollAnonymous }}
+                      accessibilityState={{ selected: noticeDraft.pollAnonymous, disabled: pollEditingLocked }}
                     >
                       <Text
                         style={[
@@ -4074,15 +4082,17 @@ function GroupHomeView({
                       style={({ pressed }) => [
                         styles.noticeComposerChoiceChip,
                         !noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipActive,
-                        pressed && styles.pressed,
+                        pollEditingLocked && styles.noticeComposerDisabled,
+                        pressed && !pollEditingLocked && styles.pressed,
                       ]}
                       onPress={() => {
                         Keyboard.dismiss();
                         setNoticeDraft((prev) => ({ ...prev, pollAnonymous: false }));
                       }}
+                      disabled={pollEditingLocked}
                       hitSlop={6}
                       accessibilityRole="button"
-                      accessibilityState={{ selected: !noticeDraft.pollAnonymous }}
+                      accessibilityState={{ selected: !noticeDraft.pollAnonymous, disabled: pollEditingLocked }}
                     >
                       <Text
                         style={[
@@ -4097,7 +4107,8 @@ function GroupHomeView({
                       style={({ pressed }) => [
                         styles.noticeComposerChoiceChip,
                         noticeDraft.pollAllowDuplicate && styles.noticeComposerChoiceChipActive,
-                        pressed && styles.pressed,
+                        pollEditingLocked && styles.noticeComposerDisabled,
+                        pressed && !pollEditingLocked && styles.pressed,
                       ]}
                       onPress={() => {
                         Keyboard.dismiss();
@@ -4106,9 +4117,10 @@ function GroupHomeView({
                           pollAllowDuplicate: !prev.pollAllowDuplicate,
                         }));
                       }}
+                      disabled={pollEditingLocked}
                       hitSlop={6}
                       accessibilityRole="button"
-                      accessibilityState={{ selected: noticeDraft.pollAllowDuplicate }}
+                      accessibilityState={{ selected: noticeDraft.pollAllowDuplicate, disabled: pollEditingLocked }}
                     >
                       <Text
                         style={[
@@ -4133,6 +4145,7 @@ function GroupHomeView({
                       placeholder={l('시작 시간')}
                       minimumDate={new Date()}
                       style={styles.noticeComposerDateInput}
+                      disabled={pollEditingLocked}
                     />
                     <DateTimeField
                       value={dotDateTimeToDate(noticeDraft.pollEndsAt)}
@@ -4145,6 +4158,7 @@ function GroupHomeView({
                       placeholder={l('종료 시간')}
                       minimumDate={dotDateTimeToDate(noticeDraft.pollStartsAt) ?? new Date()}
                       style={styles.noticeComposerDateInput}
+                      disabled={pollEditingLocked}
                     />
                   </View>
                 </View>

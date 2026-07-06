@@ -136,6 +136,85 @@ export const styles = StyleSheet.create({
   groupList: {
     gap: spacing.sm,
   },
+  applyModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.48)',
+    justifyContent: 'center',
+    padding: spacing.md,
+  },
+  applyModalKeyboardWrap: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  applyModalCard: {
+    width: '100%',
+    maxWidth: 520,
+    maxHeight: '88%',
+    borderRadius: radius.lg,
+    backgroundColor: colors.white,
+    padding: spacing.sm,
+    gap: spacing.sm,
+  },
+  applyModalScroll: {
+    flexShrink: 1,
+  },
+  applyModalContent: {
+    gap: spacing.sm,
+  },
+  applyModalForm: {
+    gap: spacing.xs,
+    paddingHorizontal: spacing.xs,
+  },
+  applyModalInput: {
+    height: 148,
+    maxHeight: 180,
+    borderRadius: radius.md,
+    backgroundColor: colors.gray1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    ...typography.body1_3,
+    color: colors.gray6,
+  },
+  applyModalCounterText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textAlign: 'right',
+  },
+  applyModalActionRow: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: spacing.xs,
+    paddingBottom: spacing.xs,
+  },
+  applyModalSubmitButton: {
+    flex: 1,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyModalSubmitDisabled: {
+    backgroundColor: colors.gray2,
+  },
+  applyModalSubmitText: {
+    ...typography.body1_2,
+    color: colors.white,
+  },
+  applyModalCloseButton: {
+    flex: 1,
+    height: 40,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.subbrown2,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyModalCloseText: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
   emptySearchBox: {
     backgroundColor: colors.white,
     borderWidth: 1,
@@ -2211,6 +2290,9 @@ export const styles = StyleSheet.create({
   },
   noticeComposerToggleTextActive: {
     color: colors.primary1,
+  },
+  noticeComposerDisabled: {
+    opacity: interactionOpacity.disabled,
   },
   noticeComposerPinButton: {
     flexDirection: 'row',

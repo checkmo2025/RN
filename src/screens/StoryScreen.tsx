@@ -2478,7 +2478,6 @@ export function StoryScreen() {
                         />
                       </Pressable>
                     </View>
-                    <Text style={styles.commentText}>{comment.text}</Text>
                     {editingCommentId === comment.remoteId ? (
                       <View style={styles.inlineCommentEditBlock}>
                         <View style={styles.inlineReplyRow}>
@@ -2532,7 +2531,9 @@ export function StoryScreen() {
                           </Text>
                         </Pressable>
                       </View>
-                    ) : null}
+                    ) : (
+                      <Text style={styles.commentText}>{comment.text}</Text>
+                    )}
                     {!editingCommentId && replyTarget?.commentKey === comment.id && (
                       <View style={styles.inlineReplyRow}>
                         <FormTextInput
@@ -3480,6 +3481,7 @@ const styles = StyleSheet.create({
   },
   composeContent: {
     padding: spacing.md,
+    paddingBottom: spacing.xxl * 4,
     gap: spacing.md,
   },
   composeHeader: {

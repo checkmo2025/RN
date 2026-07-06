@@ -23,6 +23,7 @@ type Props = {
   placeholder?: string;
   minimumDate?: Date;
   style?: StyleProp<ViewStyle>;
+  disabled?: boolean;
 };
 
 function formatLabel(date: Date): string {
@@ -49,7 +50,7 @@ function combine(datePart: Date, timePart: Date): Date {
  * - Android: 네이티브 날짜 다이얼로그 → 시간 다이얼로그 순차 호출
  * value/onChange 는 기기 로컬 벽시계 기준 Date 를 사용한다.
  */
-export function DateTimeField({ value, onChange, placeholder, minimumDate, style }: Props) {
+export function DateTimeField({ value, onChange, placeholder, minimumDate, style, disabled = false }: Props) {
   const { language, l } = useLanguage();
   const [iosVisible, setIosVisible] = useState(false);
   const [iosTemp, setIosTemp] = useState<Date | null>(null);
@@ -77,6 +78,7 @@ export function DateTimeField({ value, onChange, placeholder, minimumDate, style
   };
 
   const open = () => {
+    if (disabled) return;
     if (Platform.OS === 'android') {
       openAndroid();
       return;
@@ -93,9 +95,16 @@ export function DateTimeField({ value, onChange, placeholder, minimumDate, style
   return (
     <>
       <Pressable
-        style={({ pressed }) => [styles.field, pressed && styles.pressed, style]}
+        style={({ pressed }) => [
+          styles.field,
+          disabled && styles.disabled,
+          pressed && !disabled && styles.pressed,
+          style,
+        ]}
         onPress={open}
+        disabled={disabled}
         accessibilityRole="button"
+        accessibilityState={{ disabled }}
       >
         <Text style={value ? styles.valueText : styles.placeholderText} numberOfLines={1}>
           {value ? formatLabel(value) : (placeholder ?? l('날짜 선택'))}
@@ -152,6 +161,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.85,
+  },
+  disabled: {
+    opacity: 0.6,
   },
   valueText: {
     ...typography.body1_3,
