@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -20,6 +19,7 @@ import { FormTextInput } from './FormTextInput';
 import { ToastHost } from './ToastHost';
 import type { ReportReason } from '../../services/api/memberApi';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { showAlertAfterKeyboardDismiss } from '../../utils/alertAfterKeyboardDismiss';
 
 export type ReportMemberModalState = {
   nickname: string;
@@ -74,7 +74,7 @@ export function ReportMemberModal({
         return;
       }
 
-      Alert.alert(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
+      showAlertAfterKeyboardDismiss(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
         { text: l('취소'), style: 'cancel' },
         { text: l('닫기'), style: 'destructive', onPress: onConfirm },
       ]);

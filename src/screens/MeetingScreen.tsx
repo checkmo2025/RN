@@ -91,6 +91,7 @@ import { PARTICIPANT_LABEL_TO_CODE } from '../constants/domain/participant';
 import { fetchMyProfile, setFollowingMember } from '../services/api/memberApi';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { showToast } from '../utils/toast';
+import { showAlertAfterKeyboardDismiss } from '../utils/alertAfterKeyboardDismiss';
 import { pickAndUploadImage as pickAndUploadImageUtil } from '../utils/imageUpload';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { INPUT_LIMITS } from '../constants/inputLimits';
@@ -271,6 +272,7 @@ const MEETING_TAB_DOUBLE_TAP_WINDOW_MS = 450;
 const GROUP_TITLE_FOCUS_TOP_OFFSET = spacing.xs;
 const GROUP_TITLE_FOCUS_SCROLL_SAFETY = spacing.md;
 const BOOKSHELF_DETAIL_FOCUS_TOP_OFFSET = spacing.sm;
+const NOTICE_COMMENT_INPUT_KEYBOARD_GAP = spacing.md;
 const NOTICE_TITLE_INPUT_MIN_HEIGHT = 96;
 const NOTICE_TITLE_INPUT_MAX_HEIGHT = 152;
 const NOTICE_CONTENT_INPUT_MIN_HEIGHT = 280;
@@ -438,9 +440,11 @@ function upsertGroupByClubId(groups: Group[], nextGroup: Group): Group[] {
 export function MeetingScreen() {
   const meetingScrollRef = useRef<ScrollView>(null);
   const meetingScrollYRef = useRef(0);
+  const meetingSearchInputRef = useRef<TextInput>(null);
   useScrollToTop(meetingScrollRef);
   const navigation = useNavigation<NavigationProp<TabParamList, 'Meeting'>>();
   const route = useRoute<RouteProp<TabParamList, 'Meeting'>>();
+  const insets = useSafeAreaInsets();
   const { requireAuth, isLoggedIn } = useAuthGate();
   const { l } = useLanguage();
   const [showCreate, setShowCreate] = useState(false);
@@ -464,6 +468,7 @@ export function MeetingScreen() {
     useState<ClubSearchOutputFilter>('ALL');
   const [outputFilterOpen, setOutputFilterOpen] = useState(false);
   const [hasInteractedWithDiscoverFilter, setHasInteractedWithDiscoverFilter] = useState(false);
+  const [meetingSearchDocked, setMeetingSearchDocked] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const {
@@ -477,13 +482,44 @@ export function MeetingScreen() {
     loadDiscoverGroups,
   } = useMeetingDiscover({ search, activeInputFilter, selectedOutputFilter, isLoggedIn });
 
+  const handleChangeMeetingSearch = useCallback((value: string) => {
+    setSearch(value);
+    setHasInteractedWithDiscoverFilter(true);
+  }, []);
+
+  const openDockedMeetingSearch = useCallback(() => {
+    setMeetingSearchDocked(true);
+  }, []);
+
+  const closeDockedMeetingSearch = useCallback(() => {
+    Keyboard.dismiss();
+    setMeetingSearchDocked(false);
+  }, []);
+
+  useEffect(() => {
+    if (!meetingSearchDocked) return;
+    const timer = setTimeout(() => {
+      meetingSearchInputRef.current?.focus();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [meetingSearchDocked]);
+
+  useEffect(() => {
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setMeetingSearchDocked(false);
+    });
+    return () => {
+      hideSubscription.remove();
+    };
+  }, []);
+
   const showLeaveDraftAlert = useCallback((onClose: () => void) => {
     if (!(showCreate && createDraftDirty)) {
       onClose();
       return;
     }
 
-    Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
+    showAlertAfterKeyboardDismiss('알림', '현재 페이지는 저장되지 않습니다.', [
       { text: '취소', style: 'cancel' },
       { text: '닫기', style: 'destructive', onPress: onClose },
     ]);
@@ -833,7 +869,7 @@ export function MeetingScreen() {
         if (!targetRoute || targetRoute.name === 'Meeting') return;
 
         event.preventDefault();
-        Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
+        showAlertAfterKeyboardDismiss('알림', '현재 페이지는 저장되지 않습니다.', [
           { text: '취소', style: 'cancel' },
           {
             text: '닫기',
@@ -857,7 +893,7 @@ export function MeetingScreen() {
         if (!(showCreate && createDraftDirty)) return;
 
         event.preventDefault();
-        Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
+        showAlertAfterKeyboardDismiss('알림', '현재 페이지는 저장되지 않습니다.', [
           { text: '취소', style: 'cancel' },
           {
             text: '닫기',
@@ -901,7 +937,7 @@ export function MeetingScreen() {
       return;
     }
 
-    Alert.alert(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
+    showAlertAfterKeyboardDismiss(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
       { text: l('취소'), style: 'cancel' },
       { text: l('닫기'), style: 'destructive', onPress: closeApplyModal },
     ]);
@@ -1087,7 +1123,7 @@ export function MeetingScreen() {
     <ScreenLayout title={l('모임')} onPressLogo={handlePressHeaderLogo}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
           ref={meetingScrollRef}
@@ -1137,21 +1173,38 @@ export function MeetingScreen() {
       ) : null}
 
       <Text style={styles.sectionTitle}>{l('모임 검색하기')}</Text>
-      <View style={styles.searchRow}>
-        <FormTextInput
-          value={search}
-          onChangeText={(value) => {
-            setSearch(value);
-            setHasInteractedWithDiscoverFilter(true);
-          }}
-          placeholder={l('모임명, 지역별로 원하는 모임을 검색해보세요!')}
-          placeholderTextColor={colors.gray3}
-          style={styles.searchInput}
-          fieldType="search"
-          maxLength={MEETING_SEARCH_KEYWORD_MAX_LENGTH}
-        />
-        <MaterialIcons name="search" size={22} color={colors.gray5} />
-      </View>
+      {meetingSearchDocked ? (
+        <Pressable
+          style={({ pressed }) => [styles.searchRow, pressed && styles.pressed]}
+          onPress={openDockedMeetingSearch}
+        >
+          <Text
+            style={[
+              styles.searchInput,
+              search.trim().length === 0 && styles.searchPlaceholderText,
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {search || l('모임명, 지역별로 원하는 모임을 검색해보세요!')}
+          </Text>
+          <MaterialIcons name="search" size={22} color={colors.gray5} />
+        </Pressable>
+      ) : (
+        <View style={styles.searchRow}>
+          <FormTextInput
+            value={search}
+            onChangeText={handleChangeMeetingSearch}
+            placeholder={l('모임명, 지역별로 원하는 모임을 검색해보세요!')}
+            placeholderTextColor={colors.gray3}
+            style={styles.searchInput}
+            fieldType="search"
+            maxLength={MEETING_SEARCH_KEYWORD_MAX_LENGTH}
+            onFocus={openDockedMeetingSearch}
+          />
+          <MaterialIcons name="search" size={22} color={colors.gray5} />
+        </View>
+      )}
 
       <View style={styles.filterRow}>
         <View style={styles.outputFilterWrap}>
@@ -1269,6 +1322,32 @@ export function MeetingScreen() {
         ) : null}
       </View>
         </ScrollView>
+        {meetingSearchDocked ? (
+          <View
+            style={[
+              styles.keyboardDockFooter,
+              { paddingBottom: Math.max(insets.bottom, spacing.sm) },
+            ]}
+          >
+            <View style={styles.searchRow}>
+              <FormTextInput
+                ref={meetingSearchInputRef}
+                value={search}
+                onChangeText={handleChangeMeetingSearch}
+                placeholder={l('모임명, 지역별로 원하는 모임을 검색해보세요!')}
+                placeholderTextColor={colors.gray3}
+                style={styles.searchInput}
+                fieldType="search"
+                maxLength={MEETING_SEARCH_KEYWORD_MAX_LENGTH}
+                onSubmitEditing={closeDockedMeetingSearch}
+                returnKeyType="search"
+              />
+              <Pressable onPress={closeDockedMeetingSearch} hitSlop={8}>
+                <MaterialIcons name="search" size={22} color={colors.gray5} />
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
       <Modal
         visible={Boolean(applyModalGroup)}
@@ -1386,6 +1465,9 @@ function GroupHomeView({
   const [activeTab, setActiveTab] = useState<'home' | 'notice' | 'bookshelf'>('home');
   const [currentMemberNickname, setCurrentMemberNickname] = useState('');
   const groupHomeScrollRef = useRef<ScrollView>(null);
+  const groupHomeScrollYRef = useRef(0);
+  const groupHomeKeyboardTopYRef = useRef<number | null>(null);
+  const dockedNoticeCommentInputRef = useRef<TextInput>(null);
   const groupTitleFocusOffsetRef = useRef(0);
   const hasFocusedGroupTitleRef = useRef(false);
   const pendingGroupTitleFocusRef = useRef(false);
@@ -1401,6 +1483,7 @@ function GroupHomeView({
   const [noticeTitleInputHeight, setNoticeTitleInputHeight] = useState(
     NOTICE_TITLE_INPUT_MIN_HEIGHT,
   );
+  const [noticeCommentDocked, setNoticeCommentDocked] = useState(false);
   const [noticeContentInputHeight, setNoticeContentInputHeight] = useState(
     NOTICE_CONTENT_INPUT_MIN_HEIGHT,
   );
@@ -1417,6 +1500,38 @@ function GroupHomeView({
     nextCursor: null,
     loadingMore: false,
   });
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
+      groupHomeKeyboardTopYRef.current = event.endCoordinates.screenY;
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      groupHomeKeyboardTopYRef.current = null;
+      setNoticeCommentDocked(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  const openDockedNoticeComment = useCallback(() => {
+    setNoticeCommentDocked(true);
+  }, []);
+
+  const closeDockedNoticeComment = useCallback(() => {
+    Keyboard.dismiss();
+    setNoticeCommentDocked(false);
+  }, []);
+
+  useEffect(() => {
+    if (!noticeCommentDocked) return;
+    const timer = setTimeout(() => {
+      dockedNoticeCommentInputRef.current?.focus();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [noticeCommentDocked]);
   const [togglingParticipantNickname, setTogglingParticipantNickname] = useState<string | null>(null);
 
   const handleNoticeTitleContentSizeChange = useCallback(
@@ -1712,6 +1827,11 @@ function GroupHomeView({
   } = noticeState;
   const pollEditingLocked = editingNoticeId !== null && noticeDraft.pollEnabled;
 
+  const handleSubmitDockedNoticeComment = useCallback(() => {
+    handleSubmitNoticeComment();
+    setNoticeCommentDocked(false);
+  }, [handleSubmitNoticeComment]);
+
   useEffect(() => {
     if (!pendingNotificationTarget || !workspaceLoaded) return;
 
@@ -1977,7 +2097,7 @@ function GroupHomeView({
       return;
     }
 
-    Alert.alert('알림', '현재 페이지는 저장되지 않습니다.', [
+    showAlertAfterKeyboardDismiss('알림', '현재 페이지는 저장되지 않습니다.', [
       { text: '취소', style: 'cancel' },
       { text: '닫기', style: 'destructive', onPress: closeBookshelfComposer },
     ]);
@@ -2301,6 +2421,7 @@ function GroupHomeView({
   const handleGroupHomeScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+      groupHomeScrollYRef.current = contentOffset.y;
       const distanceFromBottom = contentSize.height - (layoutMeasurement.height + contentOffset.y);
       if (distanceFromBottom > 180) return;
 
@@ -2345,6 +2466,23 @@ function GroupHomeView({
       selectedBookshelfBook?.remoteMeetingId,
       selectedNotice,
     ],
+  );
+
+  const scrollNoticeCommentInputAboveKeyboard = useCallback(
+    (inputY: number, inputHeight: number) => {
+      const keyboardTopY =
+        groupHomeKeyboardTopYRef.current ?? screenHeight - Math.max(insets.bottom, 0);
+      const inputBottomY = inputY + inputHeight;
+      const maxInputBottomY = keyboardTopY - NOTICE_COMMENT_INPUT_KEYBOARD_GAP;
+      const overlapY = inputBottomY - maxInputBottomY;
+      if (overlapY <= 0) return;
+
+      groupHomeScrollRef.current?.scrollTo({
+        y: Math.max(0, groupHomeScrollYRef.current + overlapY),
+        animated: true,
+      });
+    },
+    [insets.bottom, screenHeight],
   );
 
   useEffect(() => {
@@ -2783,7 +2921,10 @@ function GroupHomeView({
   );
 
   return (
-    <View style={styles.screenWrap}>
+    <KeyboardAvoidingView
+      style={styles.screenWrap}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <ScrollView
         ref={groupHomeScrollRef}
         style={styles.container}
@@ -3089,6 +3230,9 @@ function GroupHomeView({
           handleSubmitVote={handleSubmitVote}
           handleSubmitNoticeComment={handleSubmitNoticeComment}
           handlePressCommentMenu={handlePressCommentMenu}
+          onCommentInputMeasured={scrollNoticeCommentInputAboveKeyboard}
+          commentInputDocked={noticeCommentDocked}
+          onCommentInputFocus={openDockedNoticeComment}
         />
       ) : null}
 
@@ -3136,6 +3280,59 @@ function GroupHomeView({
         />
       ) : null}
       </ScrollView>
+      {activeTab === 'notice' && selectedNotice && noticeCommentDocked ? (
+        <View
+          style={[
+            styles.keyboardDockFooter,
+            { paddingBottom: Math.max(insets.bottom, spacing.sm) },
+          ]}
+        >
+          <View style={styles.noticeCommentInputRow}>
+            <FormTextInput
+              ref={dockedNoticeCommentInputRef}
+              value={noticeCommentInput}
+              onChangeText={setNoticeCommentInput}
+              placeholder={l('댓글 내용 (최대 {limit}자)', {
+                limit: INPUT_LIMITS.NOTICE_COMMENT,
+              })}
+              placeholderTextColor={colors.gray3}
+              style={styles.noticeCommentInput}
+              editable={!submittingNoticeComment}
+              maxLength={INPUT_LIMITS.NOTICE_COMMENT}
+              overLimitMessage={l('공지사항 댓글은 {limit}자 이하여야 합니다.', {
+                limit: INPUT_LIMITS.NOTICE_COMMENT,
+              })}
+            />
+            <Pressable
+              style={({ pressed }) => [
+                styles.primaryButton,
+                styles.noticeCommentSubmit,
+                (submittingNoticeComment || noticeCommentInput.trim().length === 0) &&
+                  styles.primaryButtonDisabled,
+                pressed && styles.pressed,
+              ]}
+              onPress={handleSubmitDockedNoticeComment}
+              disabled={submittingNoticeComment || noticeCommentInput.trim().length === 0}
+            >
+              <Text style={styles.noticeCommentSubmitText}>
+                {submittingNoticeComment ? l('처리 중') : editingNoticeCommentId ? l('수정') : l('등록')}
+              </Text>
+            </Pressable>
+          </View>
+          {editingNoticeCommentId ? (
+            <Pressable
+              style={({ pressed }) => [styles.breadcrumbPress, pressed && styles.pressed]}
+              onPress={() => {
+                setEditingNoticeCommentId(null);
+                setNoticeCommentInput('');
+                closeDockedNoticeComment();
+              }}
+            >
+              <Text style={styles.breadcrumbText}>{l('댓글 수정 취소')}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       {activeTab === 'bookshelf' &&
       bookshelfViewMode === 'REGULAR_GROUP' &&
       selectedRegularGroup &&
@@ -4406,7 +4603,7 @@ function GroupHomeView({
           </View>
         ) : null}
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -4482,7 +4679,7 @@ function MeetingCreateFlow({
       return;
     }
 
-    Alert.alert(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
+    showAlertAfterKeyboardDismiss(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
       { text: l('취소'), style: 'cancel' },
       { text: l('닫기'), style: 'destructive', onPress: onClose },
     ]);

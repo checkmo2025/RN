@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Image, Keyboard, StyleSheet, Text, View } from 'react-native';
+import { Image, Keyboard, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { DefaultProfileAvatar } from '../../components/common/DefaultProfileAvatar';
@@ -10,6 +10,7 @@ import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { useLanguage } from '../../contexts/LanguageContext';
 import type { ClubMeetingChatMessage } from '../../services/api/clubApi';
 import type { ReportReason } from '../../services/api/memberApi';
+import { showAlertAfterKeyboardDismiss } from '../../utils/alertAfterKeyboardDismiss';
 import {
   buttonSize,
   colors,
@@ -57,7 +58,7 @@ export function ChatMessageReportModal({ target, submitting, onClose, onSubmit }
       return;
     }
 
-    Alert.alert(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
+    showAlertAfterKeyboardDismiss(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
       { text: l('취소'), style: 'cancel' },
       { text: l('닫기'), style: 'destructive', onPress: onClose },
     ]);

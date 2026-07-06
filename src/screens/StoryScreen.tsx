@@ -89,6 +89,7 @@ import { toKstTimeAgoLabel } from '../utils/date';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
+import { showAlertAfterKeyboardDismiss } from '../utils/alertAfterKeyboardDismiss';
 import { resolveApiError } from '../utils/resolveApiError';
 import { createLogger } from '../utils/logger';
 import {
@@ -332,6 +333,7 @@ export function StoryScreen() {
   const [detailRefreshing, setDetailRefreshing] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [commentInput, setCommentInput] = useState('');
+  const [commentComposerDocked, setCommentComposerDocked] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingCommentOriginalText, setEditingCommentOriginalText] = useState('');
   const [replyTarget, setReplyTarget] = useState<{
@@ -356,6 +358,7 @@ export function StoryScreen() {
   const commentInputRef = useRef<TextInput>(null);
   const inlineReplyInputRef = useRef<TextInput>(null);
   const inlineEditCommentInputRef = useRef<TextInput>(null);
+  const dockedCommentInputRef = useRef<TextInput>(null);
   const bodyInputRef = useRef<TextInput>(null);
   const commentSectionYRef = useRef(0);
   const pendingDetailFocusRef = useRef<'comments' | null>(null);
@@ -526,6 +529,7 @@ export function StoryScreen() {
       setEditingCommentOriginalText('');
       setReplyTarget(null);
       setCommentMenu(null);
+      setCommentComposerDocked(false);
       setStoryMenu(false);
       animateTransition();
       setIsComposing(true);
@@ -596,7 +600,7 @@ export function StoryScreen() {
         return;
       }
 
-      Alert.alert(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
+      showAlertAfterKeyboardDismiss(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
         { text: l('취소'), style: 'cancel' },
         { text: l('닫기'), style: 'destructive', onPress: onClose },
       ]);
@@ -617,6 +621,32 @@ export function StoryScreen() {
   const handleChangeCommentInput = useCallback((text: string) => {
     commentDraftTextRef.current = text;
     setCommentInput(text);
+  }, []);
+
+  const openDockedCommentComposer = useCallback(() => {
+    setCommentComposerDocked(true);
+  }, []);
+
+  const closeDockedCommentComposer = useCallback(() => {
+    Keyboard.dismiss();
+    setCommentComposerDocked(false);
+  }, []);
+
+  useEffect(() => {
+    if (!commentComposerDocked) return;
+    const timer = setTimeout(() => {
+      dockedCommentInputRef.current?.focus();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [commentComposerDocked]);
+
+  useEffect(() => {
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setCommentComposerDocked(false);
+    });
+    return () => {
+      hideSubscription.remove();
+    };
   }, []);
 
   const requestCloseCompose = useCallback(() => {
@@ -1392,10 +1422,18 @@ export function StoryScreen() {
       setCommentInput('');
       requestAnimationFrame(() => {
         scrollToCommentInput();
-        inlineReplyInputRef.current?.focus();
+        openDockedCommentComposer();
       });
     },
-    [beginEditComment, commentMenu, deleteComment, l, openReportModal, scrollToCommentInput],
+    [
+      beginEditComment,
+      commentMenu,
+      deleteComment,
+      l,
+      openDockedCommentComposer,
+      openReportModal,
+      scrollToCommentInput,
+    ],
   );
 
   const commentMenuItems = useMemo<ActionMenuItem[]>(() => {
@@ -1742,6 +1780,19 @@ export function StoryScreen() {
 
       void post();
     });
+  };
+
+  const handleOpenComposeSubmitChoice = () => {
+    if (submittingStory) return;
+    if (editingStoryId !== null) {
+      handleSubmit();
+      return;
+    }
+
+    showAlertAfterKeyboardDismiss(l('저장 방식 선택'), undefined, [
+      { text: l('임시저장'), onPress: handleSaveDraft },
+      { text: l('등록'), onPress: handleSubmit },
+    ]);
   };
 
   const handleToggleSubscribe = (id: string) => {
@@ -2177,7 +2228,7 @@ export function StoryScreen() {
         if (!targetRoute || targetRoute.name === 'Story') return;
 
         event.preventDefault();
-        Alert.alert(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
+        showAlertAfterKeyboardDismiss(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
           { text: l('취소'), style: 'cancel' },
           {
             text: l('닫기'),
@@ -2208,7 +2259,7 @@ export function StoryScreen() {
         if (!hasUnsavedStoryChanges) return;
 
         event.preventDefault();
-        Alert.alert(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
+        showAlertAfterKeyboardDismiss(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
           { text: l('취소'), style: 'cancel' },
           {
             text: l('닫기'),
@@ -2404,7 +2455,7 @@ export function StoryScreen() {
                 ))}
               </View>
             )}
-            {!editingCommentId && !replyTarget && (
+            {!editingCommentId && !replyTarget && !commentComposerDocked && (
               <View style={styles.commentInputRow}>
                 <FormTextInput
                   ref={commentInputRef}
@@ -2420,7 +2471,7 @@ export function StoryScreen() {
                   overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
                     limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
                   })}
-                  onFocus={scrollToCommentInput}
+                  onFocus={openDockedCommentComposer}
                 />
                 <Pressable
                   style={[
@@ -2534,7 +2585,7 @@ export function StoryScreen() {
                     ) : (
                       <Text style={styles.commentText}>{comment.text}</Text>
                     )}
-                    {!editingCommentId && replyTarget?.commentKey === comment.id && (
+                    {!editingCommentId && replyTarget?.commentKey === comment.id && !commentComposerDocked && (
                       <View style={styles.inlineReplyRow}>
                         <FormTextInput
                           ref={inlineReplyInputRef}
@@ -2550,7 +2601,7 @@ export function StoryScreen() {
                           overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
                             limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
                           })}
-                          onFocus={scrollToCommentInput}
+                          onFocus={openDockedCommentComposer}
                         />
                         <Pressable
                           style={[
@@ -2577,6 +2628,71 @@ export function StoryScreen() {
             </View>
           </View>
         </ScrollView>
+        {commentComposerDocked && !editingCommentId ? (
+          <View
+            style={[
+              styles.commentDockFooter,
+              { paddingBottom: Math.max(insets.bottom, spacing.sm) },
+            ]}
+          >
+            {replyTarget ? (
+              <View style={styles.commentDockMetaRow}>
+                <Text style={styles.commentDockMetaText} numberOfLines={1}>
+                  {l('{name}님에게 답글', { name: replyTarget.author })}
+                </Text>
+                <Pressable
+                  hitSlop={8}
+                  onPress={() => {
+                    setReplyTarget(null);
+                    handleChangeCommentInput('');
+                    closeDockedCommentComposer();
+                  }}
+                >
+                  <Text style={styles.commentDockCancelText}>{l('취소')}</Text>
+                </Pressable>
+              </View>
+            ) : null}
+            <View style={styles.commentInputRow}>
+              <FormTextInput
+                ref={dockedCommentInputRef}
+                style={styles.commentInput}
+                placeholder={l(
+                  replyTarget
+                    ? '대댓글 내용 (최대 {limit}자)'
+                    : '댓글 내용 (최대 {limit}자)',
+                  {
+                    limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                  },
+                )}
+                placeholderTextColor={colors.gray3}
+                value={commentInput}
+                onChangeText={handleChangeCommentInput}
+                multiline
+                maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
+                overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
+                  limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                })}
+              />
+              <Pressable
+                style={[
+                  styles.commentSubmit,
+                  isCommentSubmitDisabled && styles.commentSubmitDisabled,
+                ]}
+                onPress={handleSubmitComment}
+                disabled={isCommentSubmitDisabled}
+              >
+                <Text
+                  style={[
+                    styles.commentSubmitText,
+                    isCommentSubmitDisabled && styles.commentSubmitTextDisabled,
+                  ]}
+                >
+                  {l('등록')}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
         <ActionMenu
           visible={Boolean(commentMenu)}
           anchor={
@@ -2617,7 +2733,11 @@ export function StoryScreen() {
   if (isComposing) {
     return (
       <ScreenLayout title="책 이야기" onPressLogo={handlePressHeaderLogo}>
-        <KeyboardAvoidingView style={styles.container} behavior="padding">
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + scaleSize(44) : 0}
+        >
           <ScrollView
             contentContainerStyle={styles.composeContent}
             showsVerticalScrollIndicator={false}
@@ -2726,41 +2846,45 @@ export function StoryScreen() {
             <Text style={styles.bodyCounterText}>
               {body.length}/{INPUT_LIMITS.BOOK_STORY_CONTENT}
             </Text>
-            <View style={styles.formActions}>
-              <Pressable
-                style={[styles.secondaryButton, submittingStory && styles.formButtonDisabled]}
-                onPress={requestCloseCompose}
-                disabled={submittingStory}
-              >
-                <Text style={styles.secondaryButtonText}>{l('취소')}</Text>
-              </Pressable>
-              {!editingStoryId && (
-                <Pressable
-                  style={[styles.draftButton, submittingStory && styles.formButtonDisabled]}
-                  onPress={handleSaveDraft}
-                  disabled={submittingStory}
-                >
-                  <Text style={styles.draftButtonText}>{l('임시저장')}</Text>
-                </Pressable>
-              )}
-              <Pressable
-                style={[styles.primaryButton, submittingStory && styles.formButtonDisabled]}
-                onPress={handleSubmit}
-                disabled={submittingStory}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {submittingStory
-                    ? editingStoryId
-                      ? l('수정 중...')
-                      : l('등록 중...')
-                    : editingStoryId
-                      ? l('수정')
-                      : l('등록')}
-                </Text>
-              </Pressable>
-            </View>
           </View>
         </ScrollView>
+        <View
+          style={[
+            styles.composeFooter,
+            { paddingBottom: Math.max(insets.bottom, spacing.lg) },
+          ]}
+        >
+          <Pressable
+            style={[
+              styles.secondaryButton,
+              styles.composeFooterButton,
+              submittingStory && styles.formButtonDisabled,
+            ]}
+            onPress={requestCloseCompose}
+            disabled={submittingStory}
+          >
+            <Text style={styles.secondaryButtonText}>{l('취소')}</Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.primaryButton,
+              styles.composeFooterButton,
+              submittingStory && styles.formButtonDisabled,
+            ]}
+            onPress={handleOpenComposeSubmitChoice}
+            disabled={submittingStory}
+          >
+            <Text style={styles.primaryButtonText}>
+              {submittingStory
+                ? editingStoryId
+                  ? l('수정 중...')
+                  : l('처리 중...')
+                : editingStoryId
+                  ? l('수정하기')
+                  : l('등록/임시저장')}
+            </Text>
+          </Pressable>
+        </View>
         <Modal
           visible={showBookPicker}
           animationType="slide"
@@ -3484,6 +3608,22 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl * 4,
     gap: spacing.md,
   },
+  composeFooter: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray1,
+    backgroundColor: colors.white,
+  },
+  composeFooterButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+  },
   composeHeader: {
     gap: spacing.xs,
   },
@@ -3616,6 +3756,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: spacing.xs,
+  },
+  commentDockFooter: {
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray1,
+    backgroundColor: colors.white,
+  },
+  commentDockMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  commentDockMetaText: {
+    flex: 1,
+    ...typography.body2_3,
+    color: colors.gray5,
+  },
+  commentDockCancelText: {
+    ...typography.body2_2,
+    color: colors.primary1,
   },
   commentInput: {
     flex: 1,

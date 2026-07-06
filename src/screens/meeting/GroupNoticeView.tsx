@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { SkeletonBox } from '../../components/common/SkeletonBox';
-import { Image, Text, View } from 'react-native';
+import { Image, Text, TextInput, View } from 'react-native';
 import type { GestureResponderEvent } from 'react-native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -99,6 +99,9 @@ export type GroupNoticeViewProps = {
   handleSubmitVote: () => void;
   handleSubmitNoticeComment: () => void;
   handlePressCommentMenu: (comment: NoticeComment, event: GestureResponderEvent) => void;
+  onCommentInputMeasured?: (inputY: number, inputHeight: number) => void;
+  commentInputDocked?: boolean;
+  onCommentInputFocus?: () => void;
 };
 
 export function GroupNoticeView({
@@ -129,8 +132,12 @@ export function GroupNoticeView({
   handleSubmitVote,
   handleSubmitNoticeComment,
   handlePressCommentMenu,
+  onCommentInputMeasured,
+  commentInputDocked = false,
+  onCommentInputFocus,
 }: GroupNoticeViewProps) {
   const { l } = useLanguage();
+  const noticeCommentInputRef = useRef<TextInput>(null);
   const selectedNotice = useMemo(
     () => noticeItems.find((item) => item.id === selectedNoticeId) ?? null,
     [noticeItems, selectedNoticeId],
@@ -150,6 +157,22 @@ export function GroupNoticeView({
     if (!selectedNotice?.poll) return [];
     return noticePollOptionsById[selectedNotice.id] ?? selectedNotice.poll.options;
   }, [noticePollOptionsById, selectedNotice]);
+
+  const measureNoticeCommentInput = useCallback(() => {
+    if (!onCommentInputMeasured) return;
+
+    requestAnimationFrame(() => {
+      noticeCommentInputRef.current?.measureInWindow((_x, inputY, _width, inputHeight) => {
+        onCommentInputMeasured(inputY, inputHeight);
+      });
+    });
+  }, [onCommentInputMeasured]);
+
+  const handleNoticeCommentInputFocus = useCallback(() => {
+    onCommentInputFocus?.();
+    measureNoticeCommentInput();
+    setTimeout(measureNoticeCommentInput, 260);
+  }, [measureNoticeCommentInput, onCommentInputFocus]);
 
   const currentSelectedVoteOptionIds = useMemo(() => {
     if (!selectedNotice) return [];
@@ -406,8 +429,10 @@ export function GroupNoticeView({
 
         <View style={styles.noticeCommentSection}>
           <Text style={styles.noticeCommentHeader}>{l('댓글')}</Text>
+          {!commentInputDocked ? (
           <View style={styles.noticeCommentInputRow}>
             <FormTextInput
+              ref={noticeCommentInputRef}
               value={noticeCommentInput}
               onChangeText={setNoticeCommentInput}
               placeholder={l('댓글 내용 (최대 {limit}자)', {
@@ -420,6 +445,7 @@ export function GroupNoticeView({
               overLimitMessage={l('공지사항 댓글은 {limit}자 이하여야 합니다.', {
                 limit: INPUT_LIMITS.NOTICE_COMMENT,
               })}
+              onFocus={handleNoticeCommentInputFocus}
             />
             <Pressable
               style={({ pressed }) => [
@@ -437,6 +463,7 @@ export function GroupNoticeView({
               </Text>
             </Pressable>
           </View>
+          ) : null}
           {editingNoticeCommentId ? (
             <Pressable
               style={({ pressed }) => [styles.breadcrumbPress, pressed && styles.pressed]}

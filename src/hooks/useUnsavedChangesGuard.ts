@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { Alert, BackHandler } from 'react-native';
+import { BackHandler } from 'react-native';
 import {
   useNavigation,
   useRoute,
@@ -8,6 +8,7 @@ import {
   type NavigationProp,
   type ParamListBase,
 } from '@react-navigation/native';
+import { showAlertAfterKeyboardDismiss } from '../utils/alertAfterKeyboardDismiss';
 
 type UseUnsavedChangesGuardParams = {
   enabled: boolean;
@@ -58,7 +59,7 @@ export function useUnsavedChangesGuard({
         return;
       }
 
-      Alert.alert(title, message, [
+      showAlertAfterKeyboardDismiss(title, message, [
         { text: cancelText, style: 'cancel' },
         { text: confirmText, style: 'destructive', onPress: leave },
       ]);

@@ -68,6 +68,17 @@ export const styles = StyleSheet.create({
     ...typography.body1_3,
     color: colors.gray6,
   },
+  searchPlaceholderText: {
+    color: colors.gray3,
+  },
+  keyboardDockFooter: {
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray1,
+    backgroundColor: colors.white,
+  },
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3366,8 +3377,8 @@ export const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   bookshelfGroupPostCardCompleted: {
-    backgroundColor: colors.subbrown4,
-    borderColor: colors.primary1,
+    backgroundColor: '#E7F2E6',
+    borderColor: '#D2E7CF',
     borderWidth: 2,
   },
   bookshelfGroupPostCardPending: {
