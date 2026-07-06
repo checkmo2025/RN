@@ -687,17 +687,6 @@ export function MeetingScreen() {
     outputFilterOptions.find((option) => option.value === selectedOutputFilter)?.label ?? '전체',
   );
 
-  const discoverSectionTitle = useMemo(() => {
-    const hasSearchOrFilter =
-      search.trim().length > 0 ||
-      activeInputFilter !== null ||
-      selectedOutputFilter !== 'ALL';
-
-    if (hasSearchOrFilter) return l('검색 결과');
-    return isLoggedIn ? l('독서 모임 추천') : l('전체 독서 모임');
-  }, [activeInputFilter, isLoggedIn, l, search, selectedOutputFilter]);
-
-
   useConsumeRouteParam(
     route.params?.openClubId,
     parsePositiveIntParam,
@@ -1286,7 +1275,11 @@ export function MeetingScreen() {
         })}
       </View>
 
-      <Text style={styles.sectionTitle}>{discoverSectionTitle}</Text>
+      {search.trim().length === 0 &&
+      activeInputFilter === null &&
+      selectedOutputFilter === 'ALL' ? (
+        <Text style={styles.sectionTitle}>{l('독서 모임 추천')}</Text>
+      ) : null}
 
       <View
         style={styles.groupList}

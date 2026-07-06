@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, radius, spacing } from '../../theme';
+import { colors, motion, radius, spacing } from '../../theme';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
 
 interface BottomSheetProps {
@@ -27,9 +27,6 @@ interface BottomSheetProps {
 
 const DISMISS_DRAG_DISTANCE = 96;
 const DISMISS_DRAG_VELOCITY = 1.1;
-const RESET_ANIMATION_DURATION = 180;
-const DISMISS_ANIMATION_DURATION = 180;
-
 export function BottomSheet({
   visible,
   onClose,
@@ -40,7 +37,7 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const translateY = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(windowHeight)).current;
   const onCloseRef = useRef(onClose);
 
   useEffect(() => {
@@ -48,10 +45,21 @@ export function BottomSheet({
   }, [onClose]);
 
   useEffect(() => {
-    if (visible) {
-      translateY.setValue(0);
-    }
-  }, [translateY, visible]);
+    if (!visible) return;
+
+    translateY.stopAnimation();
+    translateY.setValue(windowHeight);
+
+    const frame = requestAnimationFrame(() => {
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: motion.duration.sheet,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [translateY, visible, windowHeight]);
 
   const panResponder = useMemo(
     () =>
@@ -70,7 +78,7 @@ export function BottomSheet({
           if (shouldDismiss) {
             Animated.timing(translateY, {
               toValue: windowHeight,
-              duration: DISMISS_ANIMATION_DURATION,
+              duration: motion.duration.sheet,
               useNativeDriver: true,
             }).start(() => {
               onCloseRef.current();
@@ -78,17 +86,17 @@ export function BottomSheet({
             return;
           }
 
-          Animated.timing(translateY, {
+          Animated.spring(translateY, {
             toValue: 0,
-            duration: RESET_ANIMATION_DURATION,
             useNativeDriver: true,
+            bounciness: 6,
           }).start();
         },
         onPanResponderTerminate: () => {
-          Animated.timing(translateY, {
+          Animated.spring(translateY, {
             toValue: 0,
-            duration: RESET_ANIMATION_DURATION,
             useNativeDriver: true,
+            bounciness: 6,
           }).start();
         },
       }),
@@ -96,7 +104,7 @@ export function BottomSheet({
   );
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={styles.root}
         behavior={keyboardBehavior ?? (Platform.OS === 'ios' ? 'padding' : 'height')}
