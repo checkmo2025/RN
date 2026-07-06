@@ -171,6 +171,7 @@ type StoryRouteParams = {
   composeBook?: unknown;
   openStoryId?: number | string;
   openStoryFocus?: 'comments';
+  openStoryReturnTarget?: 'MY_STORIES';
   openDraftId?: number;
   openDraftTitle?: string;
   openDraftBody?: string;
@@ -357,6 +358,7 @@ export function StoryScreen() {
   const selectedBookValueRef = useRef<Book | null>(null);
   const composeInitialDraftRef = useRef<ComposeInitialDraft>(EMPTY_COMPOSE_INITIAL_DRAFT);
   const selectedStoryValueRef = useRef<Story | null>(null);
+  const storyReturnTargetRef = useRef<StoryRouteParams['openStoryReturnTarget'] | null>(null);
   const commentDraftTextRef = useRef('');
   const editingCommentIdRef = useRef<number | null>(null);
   const editingCommentOriginalTextRef = useRef('');
@@ -405,6 +407,8 @@ export function StoryScreen() {
   }, []);
 
   const closeStoryDetail = useCallback(() => {
+    const returnTarget = storyReturnTargetRef.current;
+    storyReturnTargetRef.current = null;
     animateTransition();
     detailTranslateX.stopAnimation(() => {
       detailTranslateX.setValue(0);
@@ -422,7 +426,11 @@ export function StoryScreen() {
     setEditingCommentOriginalText('');
     pendingDetailFocusRef.current = null;
     commentSectionYRef.current = 0;
-  }, [animateTransition, detailTranslateX]);
+
+    if (returnTarget === 'MY_STORIES') {
+      navigation.navigate('My', { openMyTab: '내 책 이야기' });
+    }
+  }, [animateTransition, detailTranslateX, navigation]);
 
   const scrollToCommentSection = useCallback((animated = true) => {
     if (commentSectionYRef.current <= 0) return false;
@@ -966,7 +974,7 @@ export function StoryScreen() {
 
   const openStoryDetailByRemoteId = useCallback(
     async (remoteId: number, options?: { focusComments?: boolean }) => {
-      if (!Number.isInteger(remoteId) || remoteId <= 0) return;
+      if (!Number.isInteger(remoteId) || remoteId <= 0) return false;
       pendingDetailFocusRef.current = options?.focusComments ? 'comments' : null;
       commentSectionYRef.current = 0;
 
@@ -995,7 +1003,7 @@ export function StoryScreen() {
         });
         if (!detail) {
           showToast(l('해당 책이야기를 찾을 수 없습니다.'));
-          return;
+          return false;
         }
         const mapped = mapRemoteDetailToStory(detail, l);
         setStories((prev) => {
@@ -1005,10 +1013,12 @@ export function StoryScreen() {
         });
         selectedStoryValueRef.current = mapped;
         setSelectedStory(mapped);
+        return true;
       } catch (error) {
         if (!(error instanceof ApiError)) {
           showToast(l('책이야기 상세를 불러오지 못했습니다.'));
         }
+        return false;
       }
     },
     [animateTransition, detailTranslateX, isLoggedIn, l],
@@ -2038,9 +2048,31 @@ export function StoryScreen() {
     const remoteId = parsePositiveIntParam(route.params?.openStoryId);
     if (remoteId === null) return;
     const shouldFocusComments = route.params?.openStoryFocus === 'comments';
-    void openStoryDetailByRemoteId(remoteId, { focusComments: shouldFocusComments });
-    navigation.setParams({ openStoryId: undefined, openStoryFocus: undefined });
-  }, [navigation, openStoryDetailByRemoteId, route.params?.openStoryFocus, route.params?.openStoryId]);
+    const returnTarget = route.params?.openStoryReturnTarget === 'MY_STORIES'
+      ? route.params.openStoryReturnTarget
+      : null;
+    storyReturnTargetRef.current = returnTarget;
+    const openDetail = async () => {
+      const opened = await openStoryDetailByRemoteId(remoteId, {
+        focusComments: shouldFocusComments,
+      });
+      if (!opened) {
+        storyReturnTargetRef.current = null;
+      }
+    };
+    void openDetail();
+    navigation.setParams({
+      openStoryId: undefined,
+      openStoryFocus: undefined,
+      openStoryReturnTarget: undefined,
+    });
+  }, [
+    navigation,
+    openStoryDetailByRemoteId,
+    route.params?.openStoryFocus,
+    route.params?.openStoryId,
+    route.params?.openStoryReturnTarget,
+  ]);
 
   useEffect(() => {
     const parent = navigation.getParent() as

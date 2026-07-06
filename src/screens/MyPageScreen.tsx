@@ -1323,7 +1323,10 @@ export function MyPageScreen() {
                 openDraftBook: item.bookInfo,
               });
             } else {
-              navigation.navigate('Story', { openStoryId: item.remoteId });
+              navigation.navigate('Story', {
+                openStoryId: item.remoteId,
+                openStoryReturnTarget: 'MY_STORIES',
+              });
             }
           }}
         >

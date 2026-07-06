@@ -15,6 +15,7 @@ export type TabParamList = {
         composeBook?: unknown;
         openStoryId?: number | string;
         openStoryFocus?: 'comments';
+        openStoryReturnTarget?: 'MY_STORIES';
         openDraftId?: number;
         openDraftTitle?: string;
         openDraftBody?: string;

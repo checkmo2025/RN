@@ -326,12 +326,14 @@ export function AppHeader(props: Props) {
   const handleToggleBookLike = useCallback(
     (book: BookItem) => {
       if (!isLoggedIn) {
-        showToast(l('로그인이 필요합니다.'));
+        requireAuth(() => {
+          executeBookLikeToggle(book);
+        });
         return;
       }
       executeBookLikeToggle(book);
     },
-    [isLoggedIn, executeBookLikeToggle, l],
+    [isLoggedIn, executeBookLikeToggle, requireAuth],
   );
 
   const hideDropdownImmediately = useCallback(() => {
@@ -635,22 +637,31 @@ export function AppHeader(props: Props) {
 
   const openStoryCompose = useCallback(
     (book?: BookItem | null) => {
-      const composeBook = book
-        ? {
-            bookId: book.bookId,
-            isbn: book.isbn,
-            title: book.title,
-            author: book.author,
-            description: toSearchDescription(book, l('책 설명이 없습니다.')),
-            imgUrl: book.imgUrl,
-          }
-        : undefined;
+      const openCompose = () => {
+        const composeBook = book
+          ? {
+              bookId: book.bookId,
+              isbn: book.isbn,
+              title: book.title,
+              author: book.author,
+              description: toSearchDescription(book, l('책 설명이 없습니다.')),
+              imgUrl: book.imgUrl,
+            }
+          : undefined;
 
-      hideDropdownImmediately();
-      closeSearchPage();
-      navigation.navigate('Story', { openCompose: true, composeBook });
+        hideDropdownImmediately();
+        closeSearchPage();
+        navigation.navigate('Story', { openCompose: true, composeBook });
+      };
+
+      if (!isLoggedIn) {
+        requireAuth(openCompose);
+        return;
+      }
+
+      openCompose();
     },
-    [closeSearchPage, hideDropdownImmediately, l, navigation],
+    [closeSearchPage, hideDropdownImmediately, isLoggedIn, l, navigation, requireAuth],
   );
 
   const headerTitle = showSearchPage ? l('책 검색') : l(title);
