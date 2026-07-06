@@ -626,18 +626,22 @@ export function NewsScreen() {
           }
           renderItem={({ item }) => (
             <Pressable style={styles.card} onPress={() => onSelect(item)}>
-              {item.cover ? (
-                <LeftFocalCoverImage uri={item.cover} style={styles.cardThumb} />
-              ) : (
-                <View style={styles.cardThumb} />
-              )}
+              <View style={styles.cardMediaColumn}>
+                {item.cover ? (
+                  <LeftFocalCoverImage uri={item.cover} style={styles.cardThumb} />
+                ) : (
+                  <View style={styles.cardThumb} />
+                )}
+                <Text style={styles.cardDate}>{item.date}</Text>
+              </View>
               <View style={styles.cardBody}>
-                <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardExcerpt} numberOfLines={1}>
+                <Text style={styles.cardTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <Text style={styles.cardExcerpt} numberOfLines={2}>
                   {item.excerpt}
                 </Text>
               </View>
-              <Text style={styles.cardDate}>{item.date}</Text>
             </Pressable>
           )}
           contentContainerStyle={[styles.listContent, { paddingBottom: spacing.xl * 3 }]}
@@ -812,7 +816,7 @@ const styles = StyleSheet.create({
   },
   card: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: colors.white,
     borderRadius: radius.md,
     padding: spacing.md,
@@ -820,15 +824,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.subbrown4,
   },
+  cardMediaColumn: {
+    width: 80,
+    gap: spacing.xs,
+    alignItems: 'center',
+    flexShrink: 0,
+  },
   cardThumb: {
-    width: 60,
+    width: 80,
     height: 80,
     borderRadius: radius.sm,
     backgroundColor: colors.gray1,
   },
   cardBody: {
     flex: 1,
-    gap: spacing.xxs,
+    gap: spacing.xs,
+    paddingTop: spacing.xxs,
+    minWidth: 0,
   },
   cardTitle: {
     ...typography.subhead4_1,
@@ -841,6 +853,7 @@ const styles = StyleSheet.create({
   cardDate: {
     ...typography.body2_3,
     color: colors.gray4,
+    textAlign: 'center',
   },
   detailContent: {
     padding: spacing.md,

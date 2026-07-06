@@ -323,19 +323,6 @@ export function AppHeader(props: Props) {
     });
   }, []);
 
-  const handleToggleBookLike = useCallback(
-    (book: BookItem) => {
-      if (!isLoggedIn) {
-        requireAuth(() => {
-          executeBookLikeToggle(book);
-        });
-        return;
-      }
-      executeBookLikeToggle(book);
-    },
-    [isLoggedIn, executeBookLikeToggle, requireAuth],
-  );
-
   const hideDropdownImmediately = useCallback(() => {
     dropdownAnim.setValue(0);
     setShowSearchDropdown(false);
@@ -372,6 +359,29 @@ export function AppHeader(props: Props) {
     setBookDetailLoading(false);
     setBookStoriesLoading(false);
   }, []);
+
+  const handleToggleBookLike = useCallback(
+    (book: BookItem) => {
+      if (!isLoggedIn) {
+        hideDropdownImmediately();
+        closeSearchPage();
+        requestAnimationFrame(() => {
+          requireAuth(() => {
+            executeBookLikeToggle(book);
+          });
+        });
+        return;
+      }
+      executeBookLikeToggle(book);
+    },
+    [
+      closeSearchPage,
+      executeBookLikeToggle,
+      hideDropdownImmediately,
+      isLoggedIn,
+      requireAuth,
+    ],
+  );
 
   const refreshUnreadBadge = useCallback(
     async (previewItems?: NotificationItem[]) => {

@@ -2707,6 +2707,10 @@ export function MyPageScreen() {
                               handleLogoutPress();
                               return;
                             }
+                            if (item.key === 'language') {
+                              showToast('다른 언어 버전은 준비중입니다!');
+                              return;
+                            }
                             setSelectedSetting(item.key);
                           }}
                         >

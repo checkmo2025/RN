@@ -6,12 +6,14 @@ import { colors, radius, spacing } from '../../../theme';
 export function NewsCardSkeleton() {
   return (
     <View style={styles.card}>
-      <SkeletonBox style={styles.thumb} />
+      <View style={styles.mediaColumn}>
+        <SkeletonBox style={styles.thumb} />
+        <SkeletonBox style={styles.dateLine} />
+      </View>
       <View style={styles.body}>
         <SkeletonBox style={styles.titleLine} />
         <SkeletonBox style={styles.excerptLine} />
       </View>
-      <SkeletonBox style={styles.dateLine} />
     </View>
   );
 }
@@ -19,7 +21,7 @@ export function NewsCardSkeleton() {
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: colors.white,
     borderRadius: radius.md,
     padding: spacing.md,
@@ -27,14 +29,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.subbrown4,
   },
+  mediaColumn: {
+    width: 80,
+    gap: spacing.xs,
+    alignItems: 'center',
+    flexShrink: 0,
+  },
   thumb: {
-    width: 60,
+    width: 80,
     height: 80,
     borderRadius: radius.sm,
   },
   body: {
     flex: 1,
     gap: spacing.xs,
+    paddingTop: spacing.xxs,
   },
   titleLine: {
     width: '80%',
@@ -45,7 +54,7 @@ const styles = StyleSheet.create({
     height: 12,
   },
   dateLine: {
-    width: 44,
+    width: 64,
     height: 12,
   },
 });
