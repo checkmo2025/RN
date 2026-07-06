@@ -432,6 +432,7 @@ export function MyPageScreen() {
     submittingPasswordUpdate,
     reportHistory,
     loadingReportHistory,
+    reportHistoryErrorMessage,
     submittingWithdrawal,
     submittingLogout,
     loadReportHistory,
@@ -2347,7 +2348,10 @@ export function MyPageScreen() {
               ))}
             </View>
           ) : null}
-          {!loadingReportHistory && reportHistory.length === 0 ? (
+          {!loadingReportHistory && reportHistoryErrorMessage ? (
+            <Text style={styles.emptyText}>{reportHistoryErrorMessage}</Text>
+          ) : null}
+          {!loadingReportHistory && !reportHistoryErrorMessage && reportHistory.length === 0 ? (
             <Text style={styles.emptyText}>{l('신고한 내역이 없습니다.')}</Text>
           ) : null}
           <View style={styles.reportList}>

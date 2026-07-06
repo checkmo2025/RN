@@ -67,6 +67,41 @@ export function parseApiDateMillis(value?: string): number | null {
   return null;
 }
 
+function parseApiEventDateMillis(value?: string): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const normalized = normalizeTimezoneSuffix(trimmed);
+
+  if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(trimmed)) {
+    const direct = Date.parse(normalized);
+    if (!Number.isNaN(direct)) return direct;
+  }
+
+  const utcDateTimeMatch = normalized.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?)?$/,
+  );
+
+  if (utcDateTimeMatch) {
+    const year = Number(utcDateTimeMatch[1]);
+    const month = Number(utcDateTimeMatch[2]);
+    const day = Number(utcDateTimeMatch[3]);
+    const hour = Number(utcDateTimeMatch[4] ?? '0');
+    const minute = Number(utcDateTimeMatch[5] ?? '0');
+    const second = Number(utcDateTimeMatch[6] ?? '0');
+    const millisecond = Number((utcDateTimeMatch[7] ?? '0').padEnd(3, '0'));
+
+    // Server-created event timestamps arrive as timezone-less UTC wall-clock strings in production.
+    return Date.UTC(year, month - 1, day, hour, minute, second, millisecond);
+  }
+
+  const fallback = Date.parse(normalized);
+  if (!Number.isNaN(fallback)) return fallback;
+
+  return null;
+}
+
 export function formatKstDateLabel(value?: string, separator = '.'): string {
   if (!value) return '';
   const parsedMillis = parseApiDateMillis(value);
@@ -167,7 +202,7 @@ export function toKstTimeAgoLabel(
   const justNow = language === 'en' ? 'Just now' : '방금 전';
   if (!value) return justNow;
 
-  const parsedMillis = parseApiDateMillis(value);
+  const parsedMillis = parseApiEventDateMillis(value);
   if (parsedMillis === null) return value;
 
   const diffMinutes = Math.max(0, Math.floor((nowMillis - parsedMillis) / 60000));

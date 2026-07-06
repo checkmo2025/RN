@@ -146,25 +146,36 @@ function toOptionalString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+function toOptionalNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
 function normalizeReportItem(raw: unknown): ReportItem | null {
   if (!raw || typeof raw !== 'object') return null;
 
   const record = raw as Record<string, unknown>;
-  const reportId = typeof record.reportId === 'number' ? record.reportId : undefined;
+  const reportId = toOptionalNumber(record.reportId ?? record.id);
 
   return {
     reportId,
     targetType: toOptionalString(record.targetType),
     targetTypeDescription: toOptionalString(record.targetTypeDescription),
     targetId: toOptionalString(record.targetId),
-    targetSummary: toOptionalString(record.targetSummary),
+    targetSummary: toOptionalString(record.targetSummary ?? record.targetLabel),
     reason: toOptionalString(record.reason),
     reasonDescription: toOptionalString(record.reasonDescription),
     content: toOptionalString(record.content),
-    redirectUrl: toOptionalString(record.redirectUrl),
-    displayName: toOptionalString(record.displayName),
-    displayImageUrl: normalizeRemoteImageUrl(toOptionalString(record.displayImageUrl)),
-    reportedAt: toOptionalString(record.reportedAt),
+    redirectUrl: toOptionalString(record.redirectUrl ?? record.targetUrl),
+    displayName: toOptionalString(record.displayName ?? record.targetName),
+    displayImageUrl: normalizeRemoteImageUrl(
+      toOptionalString(record.displayImageUrl ?? record.targetImageUrl ?? record.profileImageUrl),
+    ),
+    reportedAt: toOptionalString(record.reportedAt ?? record.createdAt),
   };
 }
 

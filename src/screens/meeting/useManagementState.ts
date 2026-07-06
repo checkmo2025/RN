@@ -846,6 +846,7 @@ export function useManagementState({
     selectedJoinRequestAction,
     selectedMemberAction,
     closeManagementMenu,
+    closeManagementMenuImmediately,
     closeContactModal,
     runAfterClosingManagementMenu,
     handleOpenManagementScreen,

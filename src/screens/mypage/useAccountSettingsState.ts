@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { type NavigationProp, type ParamListBase } from '@react-navigation/native';
-import { ApiError } from '../../services/api/http';
+import { ApiError, resolveErrorMessage } from '../../services/api/http';
 import { clearStoredAuthSession, logoutSession } from '../../services/api/authApi';
 import {
   fetchMyReports,
@@ -165,6 +165,7 @@ export function useAccountSettingsState({
   const [submittingPasswordUpdate, setSubmittingPasswordUpdate] = useState(false);
   const [reportHistory, setReportHistory] = useState<ReportHistoryItem[]>([]);
   const [loadingReportHistory, setLoadingReportHistory] = useState(false);
+  const [reportHistoryErrorMessage, setReportHistoryErrorMessage] = useState<string | null>(null);
   const [submittingWithdrawal, setSubmittingWithdrawal] = useState(false);
   const [submittingLogout, setSubmittingLogout] = useState(false);
 
@@ -229,19 +230,22 @@ export function useAccountSettingsState({
   const loadReportHistory = useCallback(async () => {
     if (!isLoggedIn) {
       setReportHistory([]);
+      setReportHistoryErrorMessage(null);
       return;
     }
 
     setLoadingReportHistory(true);
+    setReportHistoryErrorMessage(null);
     try {
       const reports = await fetchMyReports();
       setReportHistory(mapReportItems(reports));
     } catch (error) {
-      if (error instanceof ApiError) {
-        setReportHistory([]);
-        return;
+      const message = resolveErrorMessage(error, '신고 목록을 불러오지 못했습니다.');
+      setReportHistory([]);
+      setReportHistoryErrorMessage(message);
+      if (!(error instanceof ApiError && error.status === 401)) {
+        showToast(message);
       }
-      showToast('신고 목록을 불러오지 못했습니다.');
     } finally {
       setLoadingReportHistory(false);
     }
@@ -461,6 +465,7 @@ export function useAccountSettingsState({
     submittingPasswordUpdate,
     reportHistory,
     loadingReportHistory,
+    reportHistoryErrorMessage,
     submittingWithdrawal,
     submittingLogout,
     loadReportHistory,

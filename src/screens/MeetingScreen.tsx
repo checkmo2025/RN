@@ -1796,6 +1796,7 @@ function GroupHomeView({
     selectedJoinRequestAction,
     selectedMemberAction,
     closeManagementMenu,
+    closeManagementMenuImmediately,
     closeContactModal,
     runAfterClosingManagementMenu,
     handleOpenManagementScreen,
@@ -3560,6 +3561,7 @@ function GroupHomeView({
         handleCloseManagementLayer={handleCloseManagementLayerWithGuard}
         handleCloseManagementScreen={requestCloseManagementScreen}
         closeManagementMenu={closeManagementMenu}
+        closeManagementMenuImmediately={closeManagementMenuImmediately}
         setSelectedJoinRequestMessage={setSelectedJoinRequestMessage}
         setSelectedJoinRequestActionId={setSelectedJoinRequestActionId}
         handleOpenJoinRequestProfile={handleOpenJoinRequestProfile}

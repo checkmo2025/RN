@@ -88,6 +88,7 @@ export type GroupManagementOverlayProps = {
   handleCloseManagementLayer: () => void;
   handleCloseManagementScreen: () => void;
   closeManagementMenu: () => void;
+  closeManagementMenuImmediately: () => void;
   setSelectedJoinRequestMessage: (item: GroupJoinRequestItem | null) => void;
   setSelectedJoinRequestActionId: (id: string | null) => void;
   handleOpenJoinRequestProfile: (nickname: string) => void;
@@ -167,6 +168,7 @@ export function GroupManagementOverlay({
   handleCloseManagementLayer,
   handleCloseManagementScreen,
   closeManagementMenu,
+  closeManagementMenuImmediately,
   setSelectedJoinRequestMessage,
   setSelectedJoinRequestActionId,
   handleOpenJoinRequestProfile,
@@ -1433,7 +1435,7 @@ export function GroupManagementOverlay({
         <View style={styles.managementOverlay}>
           <Pressable
             style={styles.managementOverlayBackdrop}
-            onPress={closeManagementMenu}
+            onPress={closeManagementMenuImmediately}
             disableFeedback
           />
           <Animated.View
