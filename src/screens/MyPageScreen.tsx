@@ -3016,7 +3016,7 @@ const styles = StyleSheet.create({
   },
   languageItemSelected: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown3,
+    backgroundColor: colors.subbrown4,
   },
   languageItemText: {
     ...typography.body1_2,
@@ -3249,7 +3249,7 @@ const styles = StyleSheet.create({
   },
   reportTypeChipActive: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown3,
+    backgroundColor: colors.subbrown4,
   },
   reportTypeChipText: {
     ...typography.body2_3,
@@ -3559,7 +3559,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   followButtonActive: {
-    backgroundColor: colors.subbrown3,
+    backgroundColor: colors.subbrown4,
   },
   followButtonInactive: {
     backgroundColor: colors.primary1,

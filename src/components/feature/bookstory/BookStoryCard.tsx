@@ -196,8 +196,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   subscribeActive: {
-    backgroundColor: colors.subbrown3,
-    borderColor: colors.subbrown3,
+    backgroundColor: colors.subbrown4,
+    borderColor: colors.subbrown4,
   },
   subscribeInactive: {
     backgroundColor: colors.primary1,

@@ -2250,7 +2250,7 @@ const styles = StyleSheet.create({
   avatarCircleDefaultSelected: {
     borderColor: colors.primary1,
     borderWidth: 2,
-    backgroundColor: colors.subbrown3,
+    backgroundColor: colors.subbrown4,
   },
   avatarImage: {
     width: '100%',
@@ -2282,7 +2282,7 @@ const styles = StyleSheet.create({
   },
   chipActive: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown3,
+    backgroundColor: colors.subbrown4,
   },
   chipText: {
     ...typography.body2_3,

@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   subButtonActive: {
-    backgroundColor: colors.subbrown3,
+    backgroundColor: colors.subbrown4,
   },
   subButtonInactive: {
     backgroundColor: colors.primary1,

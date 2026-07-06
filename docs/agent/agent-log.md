@@ -3457,3 +3457,9 @@ export const interactionOpacity = {
 - 책장 기수/정기모임 칩, 모임 생성·수정 칩, 공지 투표/작성 옵션 등 active 배경을 `subbrown4`에서 `subbrown3`로 상향
 - 마이페이지 언어/신고/팔로우, 책이야기 구독, 회원가입 장르 선택 등 같은 연한 선택 배경 계열도 함께 보정
 - 세션 만료 로그인 화면 이동, 소셜 로그인 이메일 변경 메뉴 숨김, Android footer padding 보정 변경과 함께 타입 검증/커밋 준비
+
+# 2026-07-06 16:12:23 KST 선택형 칩/버튼 활성 배경 대비 원복
+
+- 사용자 요청에 따라 active/selected 배경을 `subbrown3`에서 기존 `subbrown4`로 원복
+- 방금 추가했던 `선택형 칩/버튼 활성 배경 대비` 육안 테스트 항목을 제거
+- 세션 만료 로그인 화면 이동, 소셜 로그인 이메일 변경 메뉴 숨김, Android footer padding 보정은 유지

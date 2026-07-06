@@ -3365,7 +3365,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   chipActive: {
-    backgroundColor: colors.subbrown3,
+    backgroundColor: colors.subbrown4,
   },
   chipInactive: {
     backgroundColor: colors.primary1,
