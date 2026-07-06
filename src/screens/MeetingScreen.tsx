@@ -263,6 +263,8 @@ function areBookshelfCreateDraftsEqual(
 
 const BOOKSHELF_MEETING_TITLE_MAX_LENGTH = 12;
 const BOOKSHELF_MEETING_LOCATION_MAX_LENGTH = 12;
+const BOOKSHELF_RATING_MAX = 5;
+const BOOKSHELF_RATING_STEP = 0.5;
 const ISBN13_REGEX = /^\d{13}$/;
 const MAX_REGULAR_GROUP_COUNT = 10;
 const MEETING_TAB_DOUBLE_TAP_WINDOW_MS = 450;
@@ -284,6 +286,18 @@ const CLUB_PARTICIPANT_GRID_BREAKPOINT = 640;
 
 
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
+
+function getBookshelfRatingFromTrackLocation(locationX: number, width: number) {
+  if (width <= 0) return BOOKSHELF_RATING_STEP;
+  const clampedX = Math.max(0, Math.min(width, locationX));
+  const stepCount = BOOKSHELF_RATING_MAX / BOOKSHELF_RATING_STEP;
+  const selectedStep = Math.ceil((clampedX / width) * stepCount);
+  return Math.max(
+    BOOKSHELF_RATING_STEP,
+    Math.min(BOOKSHELF_RATING_MAX, selectedStep * BOOKSHELF_RATING_STEP),
+  );
+}
+
 function ClubDefaultProfileArtwork({
   variant = 'detail',
 }: {
@@ -1821,6 +1835,7 @@ function GroupHomeView({
   const bookshelfComposerTypeRef = useRef<typeof bookshelfComposerType>(bookshelfComposerType);
   const bookshelfComposerInputRef = useRef(bookshelfComposerInput);
   const bookshelfComposerRatingRef = useRef(bookshelfComposerRating);
+  const bookshelfRatingTrackWidthRef = useRef(0);
   const editingBookshelfPostRef = useRef(editingBookshelfPost);
 
   useEffect(() => {
@@ -1848,6 +1863,46 @@ function GroupHomeView({
       setBookshelfComposerRating(rating);
     },
     [setBookshelfComposerRating],
+  );
+  const handleBookshelfRatingTrackLayout = useCallback((event: LayoutChangeEvent) => {
+    bookshelfRatingTrackWidthRef.current = event.nativeEvent.layout.width;
+  }, []);
+  const updateBookshelfComposerRatingFromTrack = useCallback(
+    (locationX: number) => {
+      const rating = getBookshelfRatingFromTrackLocation(
+        locationX,
+        bookshelfRatingTrackWidthRef.current,
+      );
+      handleChangeBookshelfComposerRating(rating);
+    },
+    [handleChangeBookshelfComposerRating],
+  );
+  const adjustBookshelfComposerRating = useCallback(
+    (direction: 'increment' | 'decrement') => {
+      const delta = direction === 'increment' ? BOOKSHELF_RATING_STEP : -BOOKSHELF_RATING_STEP;
+      const nextRating = Math.max(
+        BOOKSHELF_RATING_STEP,
+        Math.min(BOOKSHELF_RATING_MAX, bookshelfComposerRatingRef.current + delta),
+      );
+      handleChangeBookshelfComposerRating(nextRating);
+    },
+    [handleChangeBookshelfComposerRating],
+  );
+  const bookshelfRatingPanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (_event, gestureState) =>
+          Math.abs(gestureState.dx) > 2 && Math.abs(gestureState.dx) >= Math.abs(gestureState.dy),
+        onPanResponderGrant: (event) => {
+          updateBookshelfComposerRatingFromTrack(event.nativeEvent.locationX);
+        },
+        onPanResponderMove: (event) => {
+          updateBookshelfComposerRatingFromTrack(event.nativeEvent.locationX);
+        },
+        onShouldBlockNativeResponder: () => true,
+      }),
+    [updateBookshelfComposerRatingFromTrack],
   );
 
   useEffect(() => {
@@ -3426,38 +3481,45 @@ function GroupHomeView({
                 <View style={styles.formGroup}>
                   <Text style={styles.bookshelfComposerLabel}>{l('평점')}</Text>
                   <View style={styles.bookshelfComposerRatingRow}>
-                    {[1, 2, 3, 4, 5].map((value) => (
-                      <View
-                        key={`bookshelf-review-rating-${value}`}
-                        style={styles.bookshelfComposerRatingStarShell}
-                      >
-                        <MaterialIcons
-                          name={getStarIconName(bookshelfComposerRating, value - 1)}
-                          size={28}
-                          color={
-                            getStarIconName(bookshelfComposerRating, value - 1) === 'star-border'
-                              ? colors.gray2
-                              : colors.secondary2
-                          }
-                        />
-                        <Pressable
-                          style={({ pressed }) => [
-                            styles.bookshelfComposerRatingButton,
-                            styles.bookshelfComposerRatingButtonLeft,
-                            pressed && styles.pressed,
-                          ]}
-                          onPress={() => handleChangeBookshelfComposerRating(value - 0.5)}
-                        />
-                        <Pressable
-                          style={({ pressed }) => [
-                            styles.bookshelfComposerRatingButton,
-                            styles.bookshelfComposerRatingButtonRight,
-                            pressed && styles.pressed,
-                          ]}
-                          onPress={() => handleChangeBookshelfComposerRating(value)}
-                        />
-                      </View>
-                    ))}
+                    <View
+                      style={styles.bookshelfComposerRatingTrack}
+                      onLayout={handleBookshelfRatingTrackLayout}
+                      accessible
+                      accessibilityRole="adjustable"
+                      accessibilityLabel={l('평점')}
+                      accessibilityValue={{ text: formatRatingLabel(bookshelfComposerRating) }}
+                      accessibilityActions={[
+                        { name: 'increment', label: l('평점 올리기') },
+                        { name: 'decrement', label: l('평점 내리기') },
+                      ]}
+                      onAccessibilityAction={(event) => {
+                        if (event.nativeEvent.actionName === 'increment') {
+                          adjustBookshelfComposerRating('increment');
+                          return;
+                        }
+                        if (event.nativeEvent.actionName === 'decrement') {
+                          adjustBookshelfComposerRating('decrement');
+                        }
+                      }}
+                      {...bookshelfRatingPanResponder.panHandlers}
+                    >
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <View
+                          key={`bookshelf-review-rating-${value}`}
+                          style={styles.bookshelfComposerRatingStarShell}
+                        >
+                          <MaterialIcons
+                            name={getStarIconName(bookshelfComposerRating, value - 1)}
+                            size={28}
+                            color={
+                              getStarIconName(bookshelfComposerRating, value - 1) === 'star-border'
+                                ? colors.gray2
+                                : colors.secondary2
+                            }
+                          />
+                        </View>
+                      ))}
+                    </View>
                     <Text style={styles.bookshelfComposerRatingValue}>
                       {formatRatingLabel(bookshelfComposerRating)}
                     </Text>

@@ -3030,24 +3030,18 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xxs,
   },
+  bookshelfComposerRatingTrack: {
+    minHeight: buttonSize.icon,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+  },
   bookshelfComposerRatingStarShell: {
     position: 'relative',
     width: 28,
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  bookshelfComposerRatingButton: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: '50%',
-  },
-  bookshelfComposerRatingButtonLeft: {
-    left: 0,
-  },
-  bookshelfComposerRatingButtonRight: {
-    right: 0,
   },
   bookshelfComposerRatingValue: {
     ...typography.body2_2,
