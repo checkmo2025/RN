@@ -59,6 +59,7 @@ import {
   type RemoteStoryItem,
 } from '../services/api/bookStoryApi';
 import { normalizeRemoteImageUrl } from '../utils/image';
+import { emitMemberBlocked, isSameMemberNickname } from '../utils/blockedMembers';
 
 type TabKey = '책 이야기' | '서재' | '모임';
 type UserProfileRouteParams = {
@@ -537,6 +538,10 @@ export function UserProfileScreen() {
               setBlockingMember(true);
               try {
                 await blockMember(memberNickname);
+                emitMemberBlocked(memberNickname);
+                if (profile?.nickname && !isSameMemberNickname(memberNickname, profile.nickname)) {
+                  emitMemberBlocked(profile.nickname);
+                }
                 showToast(l('차단되었습니다.'));
                 navigation.goBack();
               } catch {
@@ -550,7 +555,7 @@ export function UserProfileScreen() {
         },
       ],
     );
-  }, [l, memberNickname, profileName, navigation]);
+  }, [l, memberNickname, navigation, profile?.nickname, profileName]);
 
   const handleOpenGroupMenu = useCallback((pageX: number, pageY: number, clubId: number) => {
     setGroupMenuClubId(clubId);

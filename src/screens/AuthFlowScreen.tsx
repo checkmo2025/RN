@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -465,6 +466,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   }, []);
 
   const handleLogin = async () => {
+    Keyboard.dismiss();
     const identifier = loginIdentifier.trim();
     const password = loginPassword.trim();
 
@@ -605,6 +607,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   );
 
   const handleSendVerificationCode = async () => {
+    Keyboard.dismiss();
     if (ev.verified) return;
     const email = signUpEmail.trim();
     if (!emailRegex.test(email)) {
@@ -615,6 +618,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   };
 
   const handleConfirmVerificationCode = async () => {
+    Keyboard.dismiss();
     const email = signUpEmail.trim();
     const code = verificationCode.trim();
     if (!ev.sent) {
@@ -654,6 +658,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   };
 
   const handlePasswordStepNext = async () => {
+    Keyboard.dismiss();
     const password = signUpPassword.trim();
     const passwordConfirm = signUpPasswordConfirm.trim();
 
@@ -728,6 +733,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   };
 
   const handleCheckNickname = async () => {
+    Keyboard.dismiss();
     const normalized = nickname.trim();
     if (!normalized) {
       showToast('닉네임을 입력해야 합니다.');
@@ -758,6 +764,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   };
 
   const handleProfileBasicNext = () => {
+    Keyboard.dismiss();
     const normalizedNickname = nickname.trim();
 
     if (!normalizedNickname) {
@@ -827,6 +834,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   };
 
   const handleSubmitSignUp = async () => {
+    Keyboard.dismiss();
     if (selectedCategories.length === 0) {
       showToast('관심 카테고리를 1개 이상 선택해야 합니다.');
       return;
@@ -975,6 +983,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   };
 
   const handleFindEmail = async () => {
+    Keyboard.dismiss();
     const normalizedName = findName.trim();
     const normalizedPhone = formatPhoneNumberInput(findPhoneNumber.trim());
 
@@ -1009,6 +1018,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   };
 
   const handleSendTempPassword = async () => {
+    Keyboard.dismiss();
     const email = resetPasswordEmail.trim();
     if (!emailRegex.test(email)) {
       showToast('올바른 이메일 형식이어야 합니다.');

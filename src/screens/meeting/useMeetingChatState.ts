@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Keyboard } from 'react-native';
 
 import {
   fetchClubMeetingTeamChatMessages,
@@ -283,6 +284,7 @@ export function useMeetingChatState({
       showToast(l('채팅 메시지는 {limit}자 이하여야 합니다.', { limit: INPUT_LIMITS.CHAT_MESSAGE }));
       return;
     }
+    Keyboard.dismiss();
     try {
       publish(content);
       triggerSelectionHaptic();
@@ -310,6 +312,7 @@ export function useMeetingChatState({
 
   const submitReport = useCallback(
     async (payload: { reason: ReportReason; content?: string }) => {
+      Keyboard.dismiss();
       if (
         !reportTarget ||
         isSameNickname(reportTarget.message.senderNickname, currentMemberNickname)

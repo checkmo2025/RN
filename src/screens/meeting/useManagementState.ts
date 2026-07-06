@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { Alert, Animated, Dimensions, Linking, PanResponder } from 'react-native';
+import { Alert, Animated, Dimensions, Keyboard, Linking, PanResponder } from 'react-native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import type { ReportMemberModalState } from '../../components/common/ReportMemberModal';
 import { ApiError } from '../../services/api/http';
@@ -282,6 +282,7 @@ export function useManagementState({
   const handleCheckEditName = useCallback(() => {
     if (checkingEditName) return;
 
+    Keyboard.dismiss();
     const normalized = editDraft.name.trim();
     const currentName = managedGroup.name.trim();
 
@@ -577,6 +578,7 @@ export function useManagementState({
   );
 
   const handleSaveGroupEdit = useCallback(() => {
+    Keyboard.dismiss();
     const name = editDraft.name.trim();
     const region = editDraft.region.trim();
     const description = editDraft.description.trim();
@@ -798,6 +800,7 @@ export function useManagementState({
 
   const handleSubmitReport = useCallback(
     (payload: { reason: ReportReason; content?: string }) => {
+      Keyboard.dismiss();
       if (!reportModal?.nickname) return;
       requireAuth(() => {
         const submit = async () => {

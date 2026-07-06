@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, PanResponder, View } from 'react-native';
+import { Alert, Keyboard, PanResponder, View } from 'react-native';
 import type {
   GestureResponderEvent,
   LayoutChangeEvent,
@@ -1078,6 +1078,7 @@ export function useBookshelfState({
   );
 
   const handleSubmitBookshelfComposer = useCallback(() => {
+    Keyboard.dismiss();
     const clubId = group.clubId;
     const meetingId = selectedBookshelfBook?.remoteMeetingId;
     const description = bookshelfComposerInput.trim();
@@ -1956,6 +1957,7 @@ export function useBookshelfState({
   ]);
 
   const handleSubmitBookshelfBookSearch = useCallback(() => {
+    Keyboard.dismiss();
     void runBookshelfBookSearch(bookshelfBookSearchQuery);
   }, [bookshelfBookSearchQuery, runBookshelfBookSearch]);
 
@@ -1978,6 +1980,7 @@ export function useBookshelfState({
   );
 
   const handleSubmitBookshelfCreate = useCallback(() => {
+    Keyboard.dismiss();
     const editingMeetingId = editingBookshelfMeetingId;
     const isEditMode = typeof editingMeetingId === 'number';
     const mode = isEditMode ? 'edit' : 'create';

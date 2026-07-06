@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Keyboard } from 'react-native';
 import { type NavigationProp, type ParamListBase } from '@react-navigation/native';
 import { ApiError, resolveErrorMessage } from '../../services/api/http';
 import { clearStoredAuthSession, logoutSession } from '../../services/api/authApi';
@@ -252,6 +252,7 @@ export function useAccountSettingsState({
   }, [isLoggedIn, mapReportItems]);
 
   const handleSendEmailVerificationCode = useCallback(() => {
+    Keyboard.dismiss();
     if (ev.verified) return;
 
     const currentEmail = emailCurrent.trim();
@@ -274,6 +275,7 @@ export function useAccountSettingsState({
   }, [emailCurrent, emailNext, ev]);
 
   const handleConfirmEmailVerificationCode = useCallback(() => {
+    Keyboard.dismiss();
     const newEmail = emailNext.trim();
     const verificationCode = emailVerificationCode.trim();
 
@@ -298,6 +300,7 @@ export function useAccountSettingsState({
   }, [emailNext, emailVerificationCode, ev]);
 
   const handleSubmitEmailUpdate = useCallback(() => {
+    Keyboard.dismiss();
     const currentEmail = emailCurrent.trim();
     const newEmail = emailNext.trim();
     const verificationCode = emailVerificationCode.trim();
@@ -336,6 +339,7 @@ export function useAccountSettingsState({
   }, [emailCurrent, emailNext, emailVerificationCode, ev]);
 
   const handleSubmitPasswordUpdate = useCallback(() => {
+    Keyboard.dismiss();
     const currentPassword = passwordCurrent.trim();
     const newPassword = passwordNext.trim();
     const confirmPassword = passwordConfirm.trim();

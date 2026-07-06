@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import {
   Animated,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -257,7 +258,12 @@ export function GroupManagementOverlay({
 
           <View style={[styles.managementScreenContent, styles.bookshelfBookSearchScreen]}>
             <View style={styles.bookshelfBookSearchInputRow}>
-              <Pressable onPress={handleSubmitBookshelfBookSearch}>
+              <Pressable
+                onPress={() => {
+                  Keyboard.dismiss();
+                  handleSubmitBookshelfBookSearch();
+                }}
+              >
                 <MaterialIcons name="search" size={22} color={colors.gray4} />
               </Pressable>
               <TextInput
@@ -266,7 +272,10 @@ export function GroupManagementOverlay({
                 placeholder={l('책 제목, 작가 이름을 검색해보세요')}
                 placeholderTextColor={colors.gray3}
                 style={[styles.bookshelfBookSearchInput, styles.bookshelfBookSearchInputDescenderSafe]}
-                onSubmitEditing={handleSubmitBookshelfBookSearch}
+                onSubmitEditing={() => {
+                  Keyboard.dismiss();
+                  handleSubmitBookshelfBookSearch();
+                }}
                 returnKeyType="search"
                 autoFocus
               />
@@ -314,7 +323,10 @@ export function GroupManagementOverlay({
                       styles.bookshelfBookSearchItemActive,
                     pressed && styles.pressed,
                   ]}
-                  onPress={() => handleSelectBookshelfSourceBook(book)}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    handleSelectBookshelfSourceBook(book);
+                  }}
                 >
                   {book.imgUrl ? (
                     <Image
@@ -571,6 +583,7 @@ export function GroupManagementOverlay({
                         pressed && !checkingEditName && styles.pressed,
                       ]}
                       onPress={() => {
+                        Keyboard.dismiss();
                         handleCheckEditName();
                       }}
                       disabled={checkingEditName}
@@ -657,9 +670,10 @@ export function GroupManagementOverlay({
                           !editDraft.imageUrl && styles.createProfileBtnSelected,
                           pressed && styles.pressed,
                         ]}
-                        onPress={() =>
-                          setEditDraft((prev) => ({ ...prev, imageUrl: '' }))
-                        }
+                        onPress={() => {
+                          Keyboard.dismiss();
+                          setEditDraft((prev) => ({ ...prev, imageUrl: '' }));
+                        }}
                       >
                         <MaterialIcons
                           name="auto-awesome"
@@ -707,7 +721,10 @@ export function GroupManagementOverlay({
                         !editDraft.isPrivate && styles.managementToggleChipActive,
                         pressed && styles.pressed,
                       ]}
-                      onPress={() => setEditDraft((prev) => ({ ...prev, isPrivate: false }))}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setEditDraft((prev) => ({ ...prev, isPrivate: false }));
+                      }}
                     >
                       <Text
                         style={[
@@ -724,7 +741,10 @@ export function GroupManagementOverlay({
                         editDraft.isPrivate && styles.managementToggleChipActive,
                         pressed && styles.pressed,
                       ]}
-                      onPress={() => setEditDraft((prev) => ({ ...prev, isPrivate: true }))}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setEditDraft((prev) => ({ ...prev, isPrivate: true }));
+                      }}
                     >
                       <Text
                         style={[
@@ -746,7 +766,8 @@ export function GroupManagementOverlay({
                       return (
                         <Pressable
                           key={`edit-category-${category}`}
-                          onPress={() =>
+                          onPress={() => {
+                            Keyboard.dismiss();
                             setEditDraft((prev) => ({
                               ...prev,
                               categories: prev.categories.includes(category)
@@ -754,8 +775,8 @@ export function GroupManagementOverlay({
                                 : prev.categories.length >= 6
                                   ? prev.categories
                                   : [...prev.categories, category],
-                            }))
-                          }
+                            }));
+                          }}
                           style={({ pressed }) => [
                             styles.chip,
                             active ? styles.chipActive : null,
@@ -795,14 +816,15 @@ export function GroupManagementOverlay({
                       return (
                         <Pressable
                           key={`edit-target-${target}`}
-                          onPress={() =>
+                          onPress={() => {
+                            Keyboard.dismiss();
                             setEditDraft((prev) => ({
                               ...prev,
                               targets: prev.targets.includes(target)
                                 ? prev.targets.filter((item) => item !== target)
                                 : [...prev.targets, target],
-                            }))
-                          }
+                            }));
+                          }}
                           style={({ pressed }) => [
                             styles.chip,
                             active ? styles.chipActive : null,
@@ -862,6 +884,7 @@ export function GroupManagementOverlay({
                           pressed && styles.pressed,
                         ]}
                         onPress={() => {
+                          Keyboard.dismiss();
                           setEditDraft((prev) => ({
                             ...prev,
                             links: prev.links.filter((_, linkIdx) => linkIdx !== idx),
@@ -879,6 +902,7 @@ export function GroupManagementOverlay({
                     <Pressable
                       style={({ pressed }) => [styles.addLinkButton, pressed && styles.pressed]}
                       onPress={() => {
+                        Keyboard.dismiss();
                         setEditDraft((prev) => ({
                           ...prev,
                           links: [...prev.links, { label: '', link: '' }],
@@ -919,7 +943,10 @@ export function GroupManagementOverlay({
                       typeof editingBookshelfMeetingId === 'number' && styles.bookshelfCreateSelectorDisabled,
                     ]}
                     disabled={typeof editingBookshelfMeetingId === 'number'}
-                    onPress={() => setBookshelfBookSelectorVisible(true)}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setBookshelfBookSelectorVisible(true);
+                    }}
                   >
                     <Text
                       style={[
@@ -967,14 +994,15 @@ export function GroupManagementOverlay({
                       return (
                         <Pressable
                           key={`bookshelf-create-category-${category}`}
-                          onPress={() =>
+                          onPress={() => {
+                            Keyboard.dismiss();
                             setBookshelfCreateDraft((prev) => ({
                               ...prev,
                               categories: prev.categories.includes(category)
                                 ? []
                                 : [category],
-                            }))
-                          }
+                            }));
+                          }}
                           style={({ pressed }) => [
                             styles.chip,
                             active ? styles.chipActive : null,
@@ -1074,7 +1102,10 @@ export function GroupManagementOverlay({
                       (updatingBookshelf || deletingBookshelf) && styles.managementFooterDangerButtonDisabled,
                       pressed && !(updatingBookshelf || deletingBookshelf) && styles.pressed,
                     ]}
-                    onPress={handleDeleteEditingBookshelf}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      handleDeleteEditingBookshelf();
+                    }}
                     disabled={updatingBookshelf || deletingBookshelf}
                   >
                     <Text style={styles.managementFooterDangerButtonText}>
@@ -1088,7 +1119,10 @@ export function GroupManagementOverlay({
                       (updatingBookshelf || deletingBookshelf) && styles.primaryButtonDisabled,
                       pressed && !(updatingBookshelf || deletingBookshelf) && styles.pressed,
                     ]}
-                    onPress={handleSubmitBookshelfCreate}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      handleSubmitBookshelfCreate();
+                    }}
                     disabled={updatingBookshelf || deletingBookshelf}
                   >
                     <Text style={styles.managementFooterPrimaryButtonText}>
@@ -1106,11 +1140,14 @@ export function GroupManagementOverlay({
                     !primaryActionDisabled &&
                     styles.pressed,
                   ]}
-                  onPress={
-                    activeManagementScreen === 'EDIT'
-                      ? handleSaveGroupEdit
-                      : handleSubmitBookshelfCreate
-                  }
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    if (activeManagementScreen === 'EDIT') {
+                      handleSaveGroupEdit();
+                      return;
+                    }
+                    handleSubmitBookshelfCreate();
+                  }}
                   disabled={primaryActionDisabled}
                 >
                   <Text style={styles.managementFooterPrimaryButtonText}>

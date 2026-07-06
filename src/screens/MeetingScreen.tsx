@@ -1019,6 +1019,7 @@ export function MeetingScreen() {
 
   const handleSubmitApply = (group: Group) => {
     requireAuth(() => {
+      Keyboard.dismiss();
       const reason = (applyReasonById[group.id] ?? '').trim();
       if (!reason) {
         showToast(l('신청 사유를 입력해야 합니다.'));
@@ -4397,6 +4398,7 @@ function MeetingCreateFlow({
   }, [isDirty, l, onClose]);
 
   const handleCheckName = async () => {
+    Keyboard.dismiss();
     const normalized = name.trim();
     if (!normalized) {
       showToast(l('모임 이름을 입력해야 합니다.'));
@@ -4598,6 +4600,7 @@ function MeetingCreateFlow({
                     pressed && styles.pressed,
                   ]}
                   onPress={() => {
+                    Keyboard.dismiss();
                     void handleCheckName();
                   }}
                   disabled={checkingName}
@@ -4753,7 +4756,10 @@ function MeetingCreateFlow({
                         active && styles.createVisibilityCardActive,
                         pressed && styles.pressed,
                       ]}
-                      onPress={() => setIsPublic(value)}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setIsPublic(value);
+                    }}
                     >
                       <View
                         style={[
@@ -4805,7 +4811,10 @@ function MeetingCreateFlow({
                   return (
                     <Pressable
                       key={c}
-                      onPress={() => toggleItem(c, categories, setCategories)}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        toggleItem(c, categories, setCategories);
+                      }}
                       style={({ pressed }) => [
                         styles.chip,
                         active ? styles.chipActive : null,
@@ -4839,7 +4848,10 @@ function MeetingCreateFlow({
                   return (
                     <Pressable
                       key={t}
-                      onPress={() => toggleItem(t, targets, setTargets)}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        toggleItem(t, targets, setTargets);
+                      }}
                       style={({ pressed }) => [
                         styles.chip,
                         active ? styles.chipActive : null,
@@ -4893,7 +4905,10 @@ function MeetingCreateFlow({
               {links.length < 4 ? (
                 <Pressable
                   style={({ pressed }) => [styles.addLinkButton, pressed && styles.pressed]}
-                  onPress={() => setLinks((prev: LinkItem[]) => [...prev, { text: '', url: '' }])}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setLinks((prev: LinkItem[]) => [...prev, { text: '', url: '' }]);
+                  }}
                 >
                   <Text style={styles.addLinkText}>+</Text>
                 </Pressable>
@@ -4907,7 +4922,10 @@ function MeetingCreateFlow({
             {step > 1 ? (
               <Pressable
                 style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed, styles.buttonGrow]}
-                onPress={goPrev}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  goPrev();
+                }}
               >
                 <Text style={styles.secondaryText}>{l('이전')}</Text>
               </Pressable>
@@ -4921,6 +4939,7 @@ function MeetingCreateFlow({
               ]}
               disabled={!canNext || (step === 4 && creating)}
               onPress={() => {
+                Keyboard.dismiss();
                 if (step === 4) {
                   void handleCreateClub();
                   return;

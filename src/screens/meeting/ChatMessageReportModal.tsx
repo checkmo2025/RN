@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Keyboard, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { DefaultProfileAvatar } from '../../components/common/DefaultProfileAvatar';
@@ -134,7 +134,10 @@ export function ChatMessageReportModal({ target, submitting, onClose, onSubmit }
 
           <Pressable
             style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-            onPress={() => onSubmit({ reason, content: content.trim() || undefined })}
+            onPress={() => {
+              Keyboard.dismiss();
+              onSubmit({ reason, content: content.trim() || undefined });
+            }}
             disabled={submitting}
           >
             <Text style={styles.submitText}>{submitting ? l('등록 중...') : l('신고 등록')}</Text>

@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Animated,
   Image,
+  Keyboard,
   Linking,
   Modal,
   ScrollView,
@@ -62,6 +63,11 @@ import {
 import { toKstTimeAgoLabel } from '../../utils/date';
 import { formatNotificationText, resolveNotificationTarget } from '../../utils/notification';
 import { showToast } from '../../utils/toast';
+import {
+  isBlockedMemberNickname,
+  isSameMemberNickname,
+  subscribeBlockedMemberChanges,
+} from '../../utils/blockedMembers';
 import { useConsumeRouteParam } from '../../hooks/useConsumeRouteParam';
 import { useBookSearch } from '../../hooks/useBookSearch';
 import { useRelativeNow } from '../../hooks/useRelativeNow';
@@ -204,6 +210,15 @@ export function AppHeader(props: Props) {
   const notiAnim = useRef(new Animated.Value(0)).current;
   const dropdownOpenGuardUntil = useRef(0);
   const activeBookRequestId = useRef(0);
+
+  useEffect(() => {
+    return subscribeBlockedMemberChanges(({ nickname, blocked }) => {
+      if (!blocked) return;
+      setBookStories((prev) =>
+        prev.filter((story) => !isSameMemberNickname(story.nickname, nickname)),
+      );
+    });
+  }, []);
 
   const openNoti = useCallback(() => {
     setShowNoti(true);
@@ -579,7 +594,7 @@ export function AppHeader(props: Props) {
         viewerAuthenticated: isLoggedIn,
       });
       if (activeBookRequestId.current === requestId) {
-        setBookStories(feed.items);
+        setBookStories(feed.items.filter((story) => !isBlockedMemberNickname(story.nickname)));
       }
     } catch (error) {
       if (!(error instanceof ApiError)) {
@@ -611,6 +626,7 @@ export function AppHeader(props: Props) {
   );
 
   const handleSearchSubmitFromDropdown = useCallback(() => {
+    Keyboard.dismiss();
     const keyword = query.trim();
     if (!keyword) {
       showToast(l('검색어를 입력해야 합니다.'));
@@ -624,6 +640,7 @@ export function AppHeader(props: Props) {
   }, [executeSearch, hideDropdownImmediately, l, query]);
 
   const handleSearchSubmitInPage = useCallback(() => {
+    Keyboard.dismiss();
     const keyword = query.trim();
     if (!keyword) {
       showToast(l('검색어를 입력해야 합니다.'));

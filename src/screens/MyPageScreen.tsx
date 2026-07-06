@@ -4,6 +4,7 @@ import {
   Animated,
   BackHandler,
   Easing,
+  Keyboard,
   ScrollView,
   StyleSheet,
   Text,
@@ -78,6 +79,7 @@ import { showToast } from '../utils/toast';
 import { pickAndUploadImage } from '../utils/imageUpload';
 import { collectAllCursorPages } from '../utils/pagination';
 import { resolveApiError } from '../utils/resolveApiError';
+import { emitMemberUnblocked } from '../utils/blockedMembers';
 import { useConsumeRouteParam } from '../hooks/useConsumeRouteParam';
 import { useRelativeNow } from '../hooks/useRelativeNow';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
@@ -841,6 +843,7 @@ export function MyPageScreen() {
   }, [profileName]);
 
   const handleCheckNickname = useCallback(() => {
+    Keyboard.dismiss();
     const nickname = profileEditNickname.trim();
     if (!nickname) {
       showToast('닉네임을 입력해주세요.');
@@ -877,6 +880,7 @@ export function MyPageScreen() {
   }, [profileEditNickname, profileName]);
 
   const handleSubmitProfileEdit = useCallback(() => {
+    Keyboard.dismiss();
     const nickname = profileEditNickname.trim();
     if (!nickname) {
       showToast('닉네임을 입력해주세요.');
@@ -1792,6 +1796,7 @@ export function MyPageScreen() {
         onPress: async () => {
           try {
             await unblockMember(nickname);
+            emitMemberUnblocked(nickname);
             setBlockedMembers((prev) => prev.filter((m) => m.nickname !== nickname));
             showToast('차단이 해제되었습니다.');
           } catch {

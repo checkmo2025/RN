@@ -5,6 +5,7 @@ import {
   FlatList,
   GestureResponderEvent,
   InteractionManager,
+  Keyboard,
   KeyboardAvoidingView,
   LayoutChangeEvent,
   Modal,
@@ -90,6 +91,11 @@ import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
 import { resolveApiError } from '../utils/resolveApiError';
 import { createLogger } from '../utils/logger';
+import {
+  isBlockedMemberNickname,
+  isSameMemberNickname,
+  subscribeBlockedMemberChanges,
+} from '../utils/blockedMembers';
 import { useEdgeBackSwipe } from '../hooks/useEdgeBackSwipe';
 import { useBookSearch } from '../hooks/useBookSearch';
 import { useRelativeNow } from '../hooks/useRelativeNow';
@@ -364,6 +370,25 @@ export function StoryScreen() {
   const editingCommentOriginalTextRef = useRef('');
   const WriteIcon = PENCIL_ICON_URI;
   const detailTranslateX = useRef(new Animated.Value(0)).current;
+
+  const removeBlockedMemberLocally = useCallback((nickname: string) => {
+    setStories((prev) => prev.filter((story) => !isSameMemberNickname(story.author, nickname)));
+    setRecommendedUsers((prev) =>
+      prev.filter((user) => !isSameMemberNickname(user.nickname, nickname)),
+    );
+    setSelectedStory((prev) => {
+      if (!prev || !isSameMemberNickname(prev.author, nickname)) return prev;
+      selectedStoryValueRef.current = null;
+      return null;
+    });
+  }, []);
+
+  useEffect(() => {
+    return subscribeBlockedMemberChanges(({ nickname, blocked }) => {
+      if (!blocked) return;
+      removeBlockedMemberLocally(nickname);
+    });
+  }, [removeBlockedMemberLocally]);
 
   useEffect(() => {
     isComposingRef.current = isComposing;
@@ -736,12 +761,15 @@ export function StoryScreen() {
     try {
       const users = await fetchRecommendedMembers({ suppressErrorToast: true });
       setRecommendedUsers(
-        users.slice(0, 4).map((user) => ({
-          id: user.nickname,
-          nickname: user.nickname,
-          profileImageUrl: user.profileImageUrl,
-          subscribed: false,
-        })),
+        users
+          .filter((user) => !isBlockedMemberNickname(user.nickname))
+          .slice(0, 4)
+          .map((user) => ({
+            id: user.nickname,
+            nickname: user.nickname,
+            profileImageUrl: user.profileImageUrl,
+            subscribed: false,
+          })),
       );
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
@@ -869,7 +897,9 @@ export function StoryScreen() {
         if (isGuestAll && !reset) {
           mergeGuestAllBookStoriesCache(feed);
         }
-        const mapped = feed.items.map((item) => mapRemoteStoryToStory(item, l));
+        const mapped = feed.items
+          .map((item) => mapRemoteStoryToStory(item, l))
+          .filter((story) => !isBlockedMemberNickname(story.author));
         if (requestId !== storyFeedRequestIdRef.current) return;
 
         setStories((prev) => {
@@ -1437,6 +1467,7 @@ export function StoryScreen() {
   }, []);
 
   const handleSubmitBookSearch = useCallback(() => {
+    Keyboard.dismiss();
     const keyword = bookSearchQuery.trim();
     if (!keyword) {
       showToast(l('검색어를 입력해야 합니다.'));
@@ -1455,6 +1486,7 @@ export function StoryScreen() {
     if (submittingStory) return;
 
     requireAuth(() => {
+      Keyboard.dismiss();
       const nextTitle = title.trim();
       const nextBody = body.trim();
 
@@ -1513,6 +1545,7 @@ export function StoryScreen() {
       return;
     }
 
+    Keyboard.dismiss();
     const nextTitle = title.trim();
     const nextDescription = body.trim();
     const currentEditingStoryId = editingStoryId;
@@ -1894,6 +1927,7 @@ export function StoryScreen() {
 
   const handleSubmitComment = () => {
     requireAuth(() => {
+      Keyboard.dismiss();
       if (!selectedStory || !commentInput.trim()) {
         showToast(l('댓글 내용을 입력해야 합니다.'));
         return;
@@ -2212,6 +2246,7 @@ export function StoryScreen() {
             ref={detailScrollRef}
             contentContainerStyle={styles.detailContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             refreshControl={
               <RefreshControl
                 refreshing={detailRefreshing}

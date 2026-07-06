@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Keyboard } from 'react-native';
 import type { GestureResponderEvent } from 'react-native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import type { ReportMemberModalState } from '../../components/common/ReportMemberModal';
@@ -607,6 +607,7 @@ export function useNoticeState({
   );
 
   const handleSubmitNoticeComment = useCallback(() => {
+    Keyboard.dismiss();
     if (!selectedNotice) return;
     const content = noticeCommentInput.trim();
     if (!content) {
@@ -1079,6 +1080,7 @@ export function useNoticeState({
   const handleSubmitNotice = useCallback(() => {
     if (submittingNotice) return;
 
+    Keyboard.dismiss();
     const title = noticeDraft.title.trim();
     const content = noticeDraft.content.trim();
     if (!title || !content) {

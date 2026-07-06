@@ -41,6 +41,11 @@ import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
 import { resolveApiError } from '../utils/resolveApiError';
 import { collectAllCursorPages } from '../utils/pagination';
+import {
+  isBlockedMemberNickname,
+  isSameMemberNickname,
+  subscribeBlockedMemberChanges,
+} from '../utils/blockedMembers';
 import { useRelativeNow } from '../hooks/useRelativeNow';
 
 type Post = {
@@ -118,6 +123,20 @@ export function HomeScreen() {
   const listRef = useRef<FlatList>(null);
   useScrollToTop(listRef);
 
+  const removeBlockedMemberLocally = useCallback((nickname: string) => {
+    setPosts((prev) => prev.filter((post) => !isSameMemberNickname(post.author, nickname)));
+    setUserRecommendations((prev) =>
+      prev.filter((user) => !isSameMemberNickname(user.nickname, nickname)),
+    );
+  }, []);
+
+  useEffect(() => {
+    return subscribeBlockedMemberChanges(({ nickname, blocked }) => {
+      if (!blocked) return;
+      removeBlockedMemberLocally(nickname);
+    });
+  }, [removeBlockedMemberLocally]);
+
   const loadRecommendedUsers = useCallback(async () => {
     if (!isLoggedIn) {
       setUserRecommendations([]);
@@ -132,7 +151,9 @@ export function HomeScreen() {
         return;
       }
 
-      const topUsers = users.slice(0, 3);
+      const topUsers = users
+        .filter((user) => !isBlockedMemberNickname(user.nickname))
+        .slice(0, 3);
       const resolvedUsers = await Promise.all(
         topUsers.map(async (user) => {
           let subscribed = false;
@@ -154,7 +175,9 @@ export function HomeScreen() {
         }),
       );
 
-      setUserRecommendations(resolvedUsers);
+      setUserRecommendations(
+        resolvedUsers.filter((user) => !isBlockedMemberNickname(user.nickname)),
+      );
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         setUserRecommendations([]);
@@ -273,7 +296,9 @@ export function HomeScreen() {
         if (isGuestAll && !reset) {
           mergeGuestAllBookStoriesCache(feed);
         }
-        const mapped = feed.items.map(mapRemoteStoryToPost);
+        const mapped = feed.items
+          .map(mapRemoteStoryToPost)
+          .filter((post) => !isBlockedMemberNickname(post.author));
 
         setPosts((prev) => {
           if (reset) return mapped;
