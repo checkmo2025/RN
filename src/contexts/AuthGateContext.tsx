@@ -5,6 +5,7 @@ import {
   PROFILE_INCOMPLETE_MESSAGE,
   isProfileIncompleteApiError,
   subscribeProfileIncompleteSession,
+  subscribeUnauthorizedSession,
 } from '../services/api/http';
 import {
   clearStoredAuthSession,
@@ -186,6 +187,18 @@ export function AuthGateProvider({ children }: Props) {
       openProfileCompletion({ notify: true });
     });
   }, [openProfileCompletion]);
+
+  useEffect(() => {
+    return subscribeUnauthorizedSession((message) => {
+      void clearStoredAuthSession();
+      showToast(message || '로그인 상태를 확인해 주십시오.');
+      setAuthSessionState('loggedOut');
+      pendingActionRef.current = null;
+      setAuthPageMode('login');
+      setAuthPageVisible(true);
+      startAuthTransitionLoading('authRequired');
+    });
+  }, [setAuthSessionState, startAuthTransitionLoading]);
 
   const closeAuthPage = useCallback(() => {
     if (authSessionStateRef.current === 'profileIncomplete') {

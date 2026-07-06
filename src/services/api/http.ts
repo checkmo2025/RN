@@ -64,8 +64,10 @@ type RefreshTokenResponse = {
 };
 
 type ProfileIncompleteSessionListener = () => void;
+type UnauthorizedSessionListener = (message: string) => void;
 
 const profileIncompleteSessionListeners = new Set<ProfileIncompleteSessionListener>();
+const unauthorizedSessionListeners = new Set<UnauthorizedSessionListener>();
 
 export function subscribeProfileIncompleteSession(
   listener: ProfileIncompleteSessionListener,
@@ -76,8 +78,21 @@ export function subscribeProfileIncompleteSession(
   };
 }
 
+export function subscribeUnauthorizedSession(
+  listener: UnauthorizedSessionListener,
+): () => void {
+  unauthorizedSessionListeners.add(listener);
+  return () => {
+    unauthorizedSessionListeners.delete(listener);
+  };
+}
+
 function notifyProfileIncompleteSession(): void {
   profileIncompleteSessionListeners.forEach((listener) => listener());
+}
+
+function notifyUnauthorizedSession(message: string): void {
+  unauthorizedSessionListeners.forEach((listener) => listener(message));
 }
 
 function normalizeApiBaseUrl(rawBaseUrl: string): string {
@@ -197,6 +212,14 @@ function notifyProfileIncompleteSessionIfNeeded(status: number, parsed: unknown)
   if (status === 403 && getParsedCode(parsed) === 'AUTH_403') {
     notifyProfileIncompleteSession();
   }
+}
+
+function isUnauthorizedSessionCode(code: string | undefined): boolean {
+  return code === 'AUTH_405' || code === 'AUTH_412';
+}
+
+function shouldNotifyUnauthorizedSession(status: number, code: string | undefined): boolean {
+  return status === 401 || isUnauthorizedSessionCode(code);
 }
 
 async function parseResponseBody(response: Response): Promise<unknown> {
@@ -371,14 +394,13 @@ async function requestJsonInternal<T>(
     throw new ApiError(message, 0, 'NETWORK_ERROR', error);
   }
 
-  if (
-    shouldAttemptSessionRefresh(path, response.status, {
-      credentials,
-      retryOnUnauthorized: options.retryOnUnauthorized,
-      didRetry,
-    }) &&
-    (await silentRefreshSession())
-  ) {
+  const shouldRefreshSession = shouldAttemptSessionRefresh(path, response.status, {
+    credentials,
+    retryOnUnauthorized: options.retryOnUnauthorized,
+    didRetry,
+  });
+  const shouldNotifyUnrecoverableUnauthorized = shouldRefreshSession || didRetry;
+  if (shouldRefreshSession && (await silentRefreshSession())) {
     return requestJsonInternal<T>(path, options, true);
   }
 
@@ -395,6 +417,9 @@ async function requestJsonInternal<T>(
       await deleteStoredRefreshToken();
     }
     notifyProfileIncompleteSessionIfNeeded(response.status, parsed);
+    if (shouldNotifyUnrecoverableUnauthorized && shouldNotifyUnauthorizedSession(response.status, code)) {
+      notifyUnauthorizedSession(message);
+    }
 
     if (!suppressErrorToast) {
       showToast(message);
@@ -412,6 +437,10 @@ async function requestJsonInternal<T>(
     const message =
       code === 'AUTH_403' ? PROFILE_INCOMPLETE_MESSAGE : getParsedMessage(parsed, '요청에 실패했습니다.');
     notifyProfileIncompleteSessionIfNeeded(response.status, parsed);
+    if (isUnauthorizedSessionCode(code)) {
+      await deleteStoredRefreshToken();
+      notifyUnauthorizedSession(message);
+    }
     if (!suppressErrorToast) {
       showToast(message);
     }
@@ -444,19 +473,20 @@ export async function fetchApi(path: string, options: FetchApiOptions = {}): Pro
     throw new ApiError('네트워크 연결을 확인해 주십시오.', 0, 'NETWORK_ERROR', error);
   }
 
-  if (
-    shouldAttemptSessionRefresh(path, response.status, {
-      credentials,
-      retryOnUnauthorized,
-      didRetry: false,
-    }) &&
-    (await silentRefreshSession())
-  ) {
+  const shouldRefreshSession = shouldAttemptSessionRefresh(path, response.status, {
+    credentials,
+    retryOnUnauthorized,
+    didRetry: false,
+  });
+  if (shouldRefreshSession && (await silentRefreshSession())) {
     try {
       const retryResponse = await fetch(buildApiUrl(path, query, apiVersion), {
         ...fetchOptions,
         credentials,
       });
+      if (retryResponse.status === 401) {
+        notifyUnauthorizedSession(toDefaultHttpErrorMessage(retryResponse.status));
+      }
       if (retryResponse.status === 403) {
         try {
           const parsed = await parseResponseBody(retryResponse.clone());
@@ -469,6 +499,10 @@ export async function fetchApi(path: string, options: FetchApiOptions = {}): Pro
     } catch (error) {
       throw new ApiError('네트워크 연결을 확인해 주십시오.', 0, 'NETWORK_ERROR', error);
     }
+  }
+
+  if (shouldRefreshSession && response.status === 401) {
+    notifyUnauthorizedSession(toDefaultHttpErrorMessage(response.status));
   }
 
   if (response.status === 403) {

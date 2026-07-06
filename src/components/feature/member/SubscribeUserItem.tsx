@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   subscribeButtonActive: {
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   subscribeButtonText: {
     ...typography.body1_2,

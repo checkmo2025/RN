@@ -1428,7 +1428,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   followButtonActive: {
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   followButtonInactive: {
     backgroundColor: colors.primary1,

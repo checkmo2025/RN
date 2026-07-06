@@ -26,6 +26,7 @@ type DetailInfo = {
   phone?: string;
   mobilePhoneNumber?: string;
   categories?: string[];
+  social?: boolean;
 };
 
 type RecommendedMemberResult = {
@@ -50,6 +51,7 @@ export type MyProfile = {
   profileImageUrl?: string;
   phoneNumber?: string;
   categories: string[];
+  social?: boolean;
 };
 
 export type UpdateMyProfilePayload = {
@@ -258,6 +260,7 @@ export async function fetchMyProfile(options?: {
     categories: Array.isArray(result.categories)
       ? result.categories.filter((value): value is string => typeof value === 'string')
       : [],
+    social: typeof result.social === 'boolean' ? result.social : undefined,
   };
 }
 
@@ -431,6 +434,7 @@ export async function updateMyProfile(payload: UpdateMyProfilePayload): Promise<
     categories: Array.isArray(result.categories)
       ? result.categories.filter((value): value is string => typeof value === 'string')
       : [],
+    social: typeof result.social === 'boolean' ? result.social : undefined,
   };
 }
 

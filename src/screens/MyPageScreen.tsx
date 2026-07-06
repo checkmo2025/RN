@@ -366,6 +366,7 @@ export function MyPageScreen() {
   );
   const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>(undefined);
   const [profilePhoneNumber, setProfilePhoneNumber] = useState('');
+  const [profileSocial, setProfileSocial] = useState(false);
   const [profileCategoryCodes, setProfileCategoryCodes] = useState<string[]>([]);
   const [profileCategories, setProfileCategories] = useState<string[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
@@ -617,6 +618,7 @@ export function MyPageScreen() {
       setProfileDesc('로그인 후 마이페이지 기능을 이용할 수 있습니다.');
       setProfileImageUrl(undefined);
       setProfilePhoneNumber('');
+      setProfileSocial(false);
       setProfileCategoryCodes([]);
       setProfileCategories([]);
       setFollowerUsers([]);
@@ -647,6 +649,7 @@ export function MyPageScreen() {
             setProfileDesc(profile.description || '소개글이 없습니다.');
             setProfileImageUrl(normalizeImageUrl(profile.profileImageUrl));
             setProfilePhoneNumber(profile.phoneNumber ?? '');
+            setProfileSocial(profile.social === true);
             setProfileCategoryCodes(profile.categories);
             setProfileCategories(
               profile.categories
@@ -655,6 +658,7 @@ export function MyPageScreen() {
             );
           } else {
             setProfilePhoneNumber('');
+            setProfileSocial(false);
           }
         } catch (error) {
           if (!(error instanceof ApiError)) {
@@ -930,6 +934,7 @@ export function MyPageScreen() {
         setProfileDesc(nextDescription || '소개글이 없습니다.');
         setProfileImageUrl(nextImageUrl);
         setProfilePhoneNumber(nextPhoneNumber);
+        setProfileSocial(updated?.social ?? profileSocial);
         setProfileCategoryCodes(nextCategoryCodes);
         setProfileCategories(
           nextCategoryCodes
@@ -961,6 +966,7 @@ export function MyPageScreen() {
     profileEditImageUrl,
     profileEditUseDefaultAvatar,
     profilePhoneNumber,
+    profileSocial,
     profileEditNickname,
     profileName,
     nicknameChecked,
@@ -1005,6 +1011,12 @@ export function MyPageScreen() {
   const handleCloseSelectedSetting = useCallback(() => {
     setSelectedSetting(null);
   }, []);
+
+  useEffect(() => {
+    if (profileSocial && selectedSetting === 'emailChange') {
+      setSelectedSetting(null);
+    }
+  }, [profileSocial, selectedSetting]);
 
   const passwordUpdateDirty = useMemo(
     () =>
@@ -1922,39 +1934,45 @@ export function MyPageScreen() {
     Linking.openURL(PUBLIC_ENV.SUPPORT_FORM_URL).catch(() => null);
   }, []);
 
-  const settingsSections = useMemo<SettingsSection[]>(() => [
-    {
-      title: t('settings.sections.account'),
-      iconUri: settingProfileIcon,
-      items: [
-        { key: 'profileEdit', label: getSettingLabel('profileEdit') },
-        { key: 'emailChange', label: getSettingLabel('emailChange') },
-        { key: 'passwordChange', label: getSettingLabel('passwordChange') },
-        { key: 'withdrawal', label: getSettingLabel('withdrawal') },
-      ],
-    },
-    {
-      title: t('settings.sections.service'),
-      iconUri: settingServiceIcon,
-      items: [
-        { key: 'myNews', label: getSettingLabel('myNews') },
-        { key: 'report', label: getSettingLabel('report') },
-        { key: 'blocked', label: getSettingLabel('blocked') },
-        { key: 'notifications', label: getSettingLabel('notifications') },
-      ],
-    },
-    {
-      title: t('settings.sections.other'),
-      iconUri: settingOtherIcon,
-      items: [
-        { key: 'contact', label: getSettingLabel('contact') },
-        { key: 'terms', label: getSettingLabel('terms') },
-        { key: 'language', label: getSettingLabel('language') },
-        { key: 'version', label: getSettingLabel('version') },
-        { key: 'logout', label: getSettingLabel('logout') },
-      ],
-    },
-  ], [getSettingLabel, settingOtherIcon, settingProfileIcon, settingServiceIcon, t]);
+  const settingsSections = useMemo<SettingsSection[]>(() => {
+    const accountItems: SettingsItem[] = [
+      { key: 'profileEdit', label: getSettingLabel('profileEdit') },
+      ...(!profileSocial
+        ? [{ key: 'emailChange' as const, label: getSettingLabel('emailChange') }]
+        : []),
+      { key: 'passwordChange', label: getSettingLabel('passwordChange') },
+      { key: 'withdrawal', label: getSettingLabel('withdrawal') },
+    ];
+
+    return [
+      {
+        title: t('settings.sections.account'),
+        iconUri: settingProfileIcon,
+        items: accountItems,
+      },
+      {
+        title: t('settings.sections.service'),
+        iconUri: settingServiceIcon,
+        items: [
+          { key: 'myNews', label: getSettingLabel('myNews') },
+          { key: 'report', label: getSettingLabel('report') },
+          { key: 'blocked', label: getSettingLabel('blocked') },
+          { key: 'notifications', label: getSettingLabel('notifications') },
+        ],
+      },
+      {
+        title: t('settings.sections.other'),
+        iconUri: settingOtherIcon,
+        items: [
+          { key: 'contact', label: getSettingLabel('contact') },
+          { key: 'terms', label: getSettingLabel('terms') },
+          { key: 'language', label: getSettingLabel('language') },
+          { key: 'version', label: getSettingLabel('version') },
+          { key: 'logout', label: getSettingLabel('logout') },
+        ],
+      },
+    ];
+  }, [getSettingLabel, profileSocial, settingOtherIcon, settingProfileIcon, settingServiceIcon, t]);
 
   const renderSettingDetail = () => {
     if (!selectedSetting) return null;
@@ -2998,7 +3016,7 @@ const styles = StyleSheet.create({
   },
   languageItemSelected: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   languageItemText: {
     ...typography.body1_2,
@@ -3231,7 +3249,7 @@ const styles = StyleSheet.create({
   },
   reportTypeChipActive: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   reportTypeChipText: {
     ...typography.body2_3,
@@ -3541,7 +3559,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   followButtonActive: {
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   followButtonInactive: {
     backgroundColor: colors.primary1,

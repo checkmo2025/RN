@@ -46,6 +46,7 @@ import type { BookItem } from '../../services/api/bookApi';
 
 const BOOKSHELF_MEETING_TITLE_MAX_LENGTH = 12;
 const BOOKSHELF_MEETING_LOCATION_MAX_LENGTH = 12;
+const MANAGEMENT_FOOTER_BUTTON_HEIGHT = 52;
 const MANAGEMENT_MENU_PULL_CLOSE_OFFSET = -88;
 const calendarWeekdayLabels = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
@@ -57,6 +58,21 @@ const categoryCodeLabels = [
 const participantCodeLabels = [
   '대학생', '직장인', '온라인', '동아리', '모임', '오프라인',
 ];
+
+function getManagementFooterBottomPadding(bottomInset: number) {
+  return Math.max(
+    bottomInset + spacing.sm,
+    Platform.OS === 'android' ? spacing.xl : spacing.lg,
+  );
+}
+
+function getManagementScreenContentBottomPadding(bottomInset: number, hasFooter: boolean) {
+  if (!hasFooter) return spacing.xxl * 3;
+
+  const footerHeight =
+    spacing.sm + MANAGEMENT_FOOTER_BUTTON_HEIGHT + getManagementFooterBottomPadding(bottomInset);
+  return Math.max(spacing.xxl * 3, footerHeight + spacing.md);
+}
 
 export type GroupManagementOverlayProps = {
   // Visibility
@@ -223,6 +239,13 @@ export function GroupManagementOverlay({
     activeManagementScreen === 'EDIT'
       ? checkingEditName
       : activeManagementScreen === 'BOOKSHELF_CREATE' && creatingBookshelf;
+  const hasManagementFooter =
+    activeManagementScreen === 'EDIT' || activeManagementScreen === 'BOOKSHELF_CREATE';
+  const managementFooterBottomPadding = getManagementFooterBottomPadding(insets.bottom);
+  const managementScreenContentBottomPadding = getManagementScreenContentBottomPadding(
+    insets.bottom,
+    hasManagementFooter,
+  );
   const handleManagementMenuScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       if (closingManagementMenuByPullRef.current) return;
@@ -384,7 +407,10 @@ export function GroupManagementOverlay({
 
           <ScrollView
             style={styles.managementScreenScroll}
-            contentContainerStyle={styles.managementScreenContent}
+            contentContainerStyle={[
+              styles.managementScreenContent,
+              { paddingBottom: managementScreenContentBottomPadding },
+            ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             refreshControl={
@@ -1089,8 +1115,8 @@ export function GroupManagementOverlay({
             ) : null}
           </ScrollView>
 
-          {activeManagementScreen === 'EDIT' || activeManagementScreen === 'BOOKSHELF_CREATE' ? (
-            <View style={[styles.managementFooter, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+          {hasManagementFooter ? (
+            <View style={[styles.managementFooter, { paddingBottom: managementFooterBottomPadding }]}>
               {activeManagementScreen === 'BOOKSHELF_CREATE' &&
               typeof editingBookshelfMeetingId === 'number' ? (
                 <View style={styles.managementFooterButtonRow}>

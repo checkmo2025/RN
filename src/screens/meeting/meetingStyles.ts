@@ -110,7 +110,7 @@ export const styles = StyleSheet.create({
     borderBottomColor: colors.gray1,
   },
   outputFilterItemSelected: {
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   outputFilterItemText: {
     ...typography.body2_2,
@@ -517,7 +517,7 @@ export const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   createVisibilityCardActive: {
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
     borderColor: colors.primary1,
   },
   createVisibilityIconWrap: {
@@ -613,7 +613,7 @@ export const styles = StyleSheet.create({
   },
   chipActive: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   chipText: {
     ...typography.body1_3,
@@ -1175,7 +1175,7 @@ export const styles = StyleSheet.create({
   },
   teamManageDropChipActive: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   teamManageDropChipDragActive: {
     borderColor: colors.green,
@@ -1247,7 +1247,7 @@ export const styles = StyleSheet.create({
   },
   teamManageMemberChipSelected: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   teamManageMemberChipDragging: {
     opacity: 0.35,
@@ -1536,7 +1536,7 @@ export const styles = StyleSheet.create({
   },
   managementToggleChipActive: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   managementToggleChipText: {
     ...typography.body1_3,
@@ -1825,7 +1825,7 @@ export const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   noticePageButtonActive: {
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   noticePageText: {
     ...typography.body2_2,
@@ -1995,7 +1995,7 @@ export const styles = StyleSheet.create({
   },
   noticePollOptionRowSelected: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   noticePollOptionRowDisabled: {
     opacity: interactionOpacity.disabled,
@@ -2203,7 +2203,7 @@ export const styles = StyleSheet.create({
   },
   noticeComposerToggleActive: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   noticeComposerToggleText: {
     ...typography.body2_2,
@@ -2226,7 +2226,7 @@ export const styles = StyleSheet.create({
   },
   noticeComposerPinButtonActive: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   noticeComposerPinButtonText: {
     ...typography.body2_2,
@@ -2316,7 +2316,7 @@ export const styles = StyleSheet.create({
   },
   noticeComposerChoiceChipActive: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   noticeComposerChoiceChipText: {
     ...typography.body2_2,
@@ -2423,7 +2423,7 @@ export const styles = StyleSheet.create({
   },
   noticeBookSelectorItemActive: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   noticeBookSelectorCover: {
     width: '100%',
@@ -2485,7 +2485,7 @@ export const styles = StyleSheet.create({
   },
   bookshelfBookSearchItemActive: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   bookshelfBookSearchCover: {
     width: 56,
@@ -2811,7 +2811,7 @@ export const styles = StyleSheet.create({
   },
   bookshelfSessionChipActive: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   bookshelfSessionText: {
     ...typography.body2_2,
@@ -3158,7 +3158,7 @@ export const styles = StyleSheet.create({
   },
   bookshelfGroupChipActive: {
     borderColor: colors.primary1,
-    backgroundColor: colors.subbrown4,
+    backgroundColor: colors.subbrown3,
   },
   bookshelfGroupChipText: {
     ...typography.body2_2,
