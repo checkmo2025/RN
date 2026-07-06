@@ -3489,3 +3489,9 @@ export const interactionOpacity = {
 - 모임 검색, 공지 댓글, 책이야기 댓글/답글/수정 포커스 시 실제 입력칸이 화면 아래에서 60% 지점에 오도록 스크롤 기준 변경
 - 이전 docked 입력 footer와 `showSoftInputOnFocus` 우회 로직 제거
 - `typecheck`/`lint`로 변경 검증
+
+# 2026-07-06 18:17:29 KST 1.1.2 제출 버전 반영
+
+- `app.json`, package metadata, iOS marketing version, Android versionName을 1.1.2로 갱신
+- Expo public config에서 `version`/`runtimeVersion` 1.1.2 반영 확인
+- `npm run check`로 제출 전 정적 검증 수행
