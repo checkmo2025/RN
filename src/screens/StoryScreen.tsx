@@ -208,6 +208,8 @@ const DETAIL_BACK_ACTIVATE_DISTANCE = 14;
 const DETAIL_BACK_TRIGGER_DISTANCE = 72;
 const DETAIL_BACK_ACTIVATE_MAX_DY = 16;
 const DETAIL_BACK_TRIGGER_MAX_DY = 60;
+const FOCUSED_INPUT_TARGET_FROM_BOTTOM_RATIO = 0.6;
+const FOCUSED_INPUT_SCROLL_RETRY_DELAYS_MS = [0, 120, 300] as const;
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
 const ISBN13_REGEX = /^\d{13}$/;
 const EMPTY_COMPOSE_INITIAL_DRAFT: ComposeInitialDraft = {
@@ -216,6 +218,10 @@ const EMPTY_COMPOSE_INITIAL_DRAFT: ComposeInitialDraft = {
   bookKey: null,
 };
 const storyLog = createLogger('story');
+
+function getFocusedInputTargetCenterY(screenHeight: number) {
+  return screenHeight * (1 - FOCUSED_INPUT_TARGET_FROM_BOTTOM_RATIO);
+}
 
 async function waitForMinimumLoading(startedAt: number, minimumMs = MIN_BOOK_FLIP_LOADING_MS) {
   const elapsed = Date.now() - startedAt;
@@ -333,7 +339,6 @@ export function StoryScreen() {
   const [detailRefreshing, setDetailRefreshing] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [commentInput, setCommentInput] = useState('');
-  const [commentComposerDocked, setCommentComposerDocked] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingCommentOriginalText, setEditingCommentOriginalText] = useState('');
   const [replyTarget, setReplyTarget] = useState<{
@@ -355,10 +360,10 @@ export function StoryScreen() {
   const storyFeedRequestIdRef = useRef(0);
   const lastEndReachedAtRef = useRef(0);
   const detailScrollRef = useRef<ScrollView>(null);
+  const detailScrollYRef = useRef(0);
   const commentInputRef = useRef<TextInput>(null);
   const inlineReplyInputRef = useRef<TextInput>(null);
   const inlineEditCommentInputRef = useRef<TextInput>(null);
-  const dockedCommentInputRef = useRef<TextInput>(null);
   const bodyInputRef = useRef<TextInput>(null);
   const commentSectionYRef = useRef(0);
   const pendingDetailFocusRef = useRef<'comments' | null>(null);
@@ -470,14 +475,44 @@ export function StoryScreen() {
     return true;
   }, []);
 
-  const scrollToCommentInput = useCallback(() => {
-    requestAnimationFrame(() => {
-      scrollToCommentSection(true);
-      setTimeout(() => {
-        scrollToCommentSection(true);
-      }, 260);
-    });
-  }, [scrollToCommentSection]);
+  const scrollStoryInputToFocusTarget = useCallback(
+    (input: TextInput | null) => {
+      if (!input) return;
+
+      requestAnimationFrame(() => {
+        input.measureInWindow((_x, inputY, _width, inputHeight) => {
+          const inputCenterY = inputY + inputHeight / 2;
+          const targetCenterY = getFocusedInputTargetCenterY(screenHeight);
+          detailScrollRef.current?.scrollTo({
+            y: Math.max(0, detailScrollYRef.current + inputCenterY - targetCenterY),
+            animated: true,
+          });
+        });
+      });
+    },
+    [screenHeight],
+  );
+
+  const scheduleStoryInputFocusScroll = useCallback(
+    (getInput: () => TextInput | null) => {
+      FOCUSED_INPUT_SCROLL_RETRY_DELAYS_MS.forEach((delay) => {
+        setTimeout(() => scrollStoryInputToFocusTarget(getInput()), delay);
+      });
+    },
+    [scrollStoryInputToFocusTarget],
+  );
+
+  const handleFocusCommentInput = useCallback(() => {
+    scheduleStoryInputFocusScroll(() => commentInputRef.current);
+  }, [scheduleStoryInputFocusScroll]);
+
+  const handleFocusInlineReplyInput = useCallback(() => {
+    scheduleStoryInputFocusScroll(() => inlineReplyInputRef.current);
+  }, [scheduleStoryInputFocusScroll]);
+
+  const handleFocusInlineEditCommentInput = useCallback(() => {
+    scheduleStoryInputFocusScroll(() => inlineEditCommentInputRef.current);
+  }, [scheduleStoryInputFocusScroll]);
 
   const scrollDetailToTop = useCallback((animated = true) => {
     detailScrollRef.current?.scrollTo({ y: 0, animated });
@@ -529,7 +564,6 @@ export function StoryScreen() {
       setEditingCommentOriginalText('');
       setReplyTarget(null);
       setCommentMenu(null);
-      setCommentComposerDocked(false);
       setStoryMenu(false);
       animateTransition();
       setIsComposing(true);
@@ -621,32 +655,6 @@ export function StoryScreen() {
   const handleChangeCommentInput = useCallback((text: string) => {
     commentDraftTextRef.current = text;
     setCommentInput(text);
-  }, []);
-
-  const openDockedCommentComposer = useCallback(() => {
-    setCommentComposerDocked(true);
-  }, []);
-
-  const closeDockedCommentComposer = useCallback(() => {
-    Keyboard.dismiss();
-    setCommentComposerDocked(false);
-  }, []);
-
-  useEffect(() => {
-    if (!commentComposerDocked) return;
-    const timer = setTimeout(() => {
-      dockedCommentInputRef.current?.focus();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [commentComposerDocked]);
-
-  useEffect(() => {
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      setCommentComposerDocked(false);
-    });
-    return () => {
-      hideSubscription.remove();
-    };
   }, []);
 
   const requestCloseCompose = useCallback(() => {
@@ -1298,21 +1306,25 @@ export function StoryScreen() {
     [],
   );
 
-  const beginEditComment = useCallback((comment: Comment) => {
-    if (typeof comment.remoteId !== 'number') return;
-    const nextCommentText = comment.deleted ? '' : comment.text;
-    editingCommentIdRef.current = comment.remoteId;
-    editingCommentOriginalTextRef.current = nextCommentText;
-    commentDraftTextRef.current = nextCommentText;
-    setCommentMenu(null);
-    setEditingCommentId(comment.remoteId);
-    setEditingCommentOriginalText(nextCommentText);
-    setReplyTarget(null);
-    setCommentInput(nextCommentText);
-    requestAnimationFrame(() => {
-      inlineEditCommentInputRef.current?.focus();
-    });
-  }, []);
+  const beginEditComment = useCallback(
+    (comment: Comment) => {
+      if (typeof comment.remoteId !== 'number') return;
+      const nextCommentText = comment.deleted ? '' : comment.text;
+      editingCommentIdRef.current = comment.remoteId;
+      editingCommentOriginalTextRef.current = nextCommentText;
+      commentDraftTextRef.current = nextCommentText;
+      setCommentMenu(null);
+      setEditingCommentId(comment.remoteId);
+      setEditingCommentOriginalText(nextCommentText);
+      setReplyTarget(null);
+      setCommentInput(nextCommentText);
+      requestAnimationFrame(() => {
+        inlineEditCommentInputRef.current?.focus();
+        scheduleStoryInputFocusScroll(() => inlineEditCommentInputRef.current);
+      });
+    },
+    [scheduleStoryInputFocusScroll],
+  );
 
   const cancelEditComment = useCallback(() => {
     editingCommentIdRef.current = null;
@@ -1421,8 +1433,10 @@ export function StoryScreen() {
       });
       setCommentInput('');
       requestAnimationFrame(() => {
-        scrollToCommentInput();
-        openDockedCommentComposer();
+        setTimeout(() => {
+          inlineReplyInputRef.current?.focus();
+          scheduleStoryInputFocusScroll(() => inlineReplyInputRef.current);
+        }, 0);
       });
     },
     [
@@ -1430,9 +1444,8 @@ export function StoryScreen() {
       commentMenu,
       deleteComment,
       l,
-      openDockedCommentComposer,
       openReportModal,
-      scrollToCommentInput,
+      scheduleStoryInputFocusScroll,
     ],
   );
 
@@ -2307,6 +2320,10 @@ export function StoryScreen() {
             contentContainerStyle={styles.detailContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            scrollEventThrottle={16}
+            onScroll={(event) => {
+              detailScrollYRef.current = event.nativeEvent.contentOffset.y;
+            }}
             refreshControl={
               <RefreshControl
                 refreshing={detailRefreshing}
@@ -2455,7 +2472,7 @@ export function StoryScreen() {
                 ))}
               </View>
             )}
-            {!editingCommentId && !replyTarget && !commentComposerDocked && (
+            {!editingCommentId && !replyTarget && (
               <View style={styles.commentInputRow}>
                 <FormTextInput
                   ref={commentInputRef}
@@ -2471,7 +2488,7 @@ export function StoryScreen() {
                   overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
                     limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
                   })}
-                  onFocus={openDockedCommentComposer}
+                  onFocus={handleFocusCommentInput}
                 />
                 <Pressable
                   style={[
@@ -2551,6 +2568,7 @@ export function StoryScreen() {
                             overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
                               limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
                             })}
+                            onFocus={handleFocusInlineEditCommentInput}
                           />
                           <Pressable
                             style={[
@@ -2585,7 +2603,7 @@ export function StoryScreen() {
                     ) : (
                       <Text style={styles.commentText}>{comment.text}</Text>
                     )}
-                    {!editingCommentId && replyTarget?.commentKey === comment.id && !commentComposerDocked && (
+                    {!editingCommentId && replyTarget?.commentKey === comment.id && (
                       <View style={styles.inlineReplyRow}>
                         <FormTextInput
                           ref={inlineReplyInputRef}
@@ -2601,7 +2619,7 @@ export function StoryScreen() {
                           overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
                             limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
                           })}
-                          onFocus={openDockedCommentComposer}
+                          onFocus={handleFocusInlineReplyInput}
                         />
                         <Pressable
                           style={[
@@ -2628,71 +2646,6 @@ export function StoryScreen() {
             </View>
           </View>
         </ScrollView>
-        {commentComposerDocked && !editingCommentId ? (
-          <View
-            style={[
-              styles.commentDockFooter,
-              { paddingBottom: Math.max(insets.bottom, spacing.sm) },
-            ]}
-          >
-            {replyTarget ? (
-              <View style={styles.commentDockMetaRow}>
-                <Text style={styles.commentDockMetaText} numberOfLines={1}>
-                  {l('{name}님에게 답글', { name: replyTarget.author })}
-                </Text>
-                <Pressable
-                  hitSlop={8}
-                  onPress={() => {
-                    setReplyTarget(null);
-                    handleChangeCommentInput('');
-                    closeDockedCommentComposer();
-                  }}
-                >
-                  <Text style={styles.commentDockCancelText}>{l('취소')}</Text>
-                </Pressable>
-              </View>
-            ) : null}
-            <View style={styles.commentInputRow}>
-              <FormTextInput
-                ref={dockedCommentInputRef}
-                style={styles.commentInput}
-                placeholder={l(
-                  replyTarget
-                    ? '대댓글 내용 (최대 {limit}자)'
-                    : '댓글 내용 (최대 {limit}자)',
-                  {
-                    limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
-                  },
-                )}
-                placeholderTextColor={colors.gray3}
-                value={commentInput}
-                onChangeText={handleChangeCommentInput}
-                multiline
-                maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
-                overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
-                  limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
-                })}
-              />
-              <Pressable
-                style={[
-                  styles.commentSubmit,
-                  isCommentSubmitDisabled && styles.commentSubmitDisabled,
-                ]}
-                onPress={handleSubmitComment}
-                disabled={isCommentSubmitDisabled}
-              >
-                <Text
-                  style={[
-                    styles.commentSubmitText,
-                    isCommentSubmitDisabled && styles.commentSubmitTextDisabled,
-                  ]}
-                >
-                  {l('등록')}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : null}
         <ActionMenu
           visible={Boolean(commentMenu)}
           anchor={
@@ -3756,29 +3709,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: spacing.xs,
-  },
-  commentDockFooter: {
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray1,
-    backgroundColor: colors.white,
-  },
-  commentDockMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  commentDockMetaText: {
-    flex: 1,
-    ...typography.body2_3,
-    color: colors.gray5,
-  },
-  commentDockCancelText: {
-    ...typography.body2_2,
-    color: colors.primary1,
   },
   commentInput: {
     flex: 1,

@@ -272,7 +272,8 @@ const MEETING_TAB_DOUBLE_TAP_WINDOW_MS = 450;
 const GROUP_TITLE_FOCUS_TOP_OFFSET = spacing.xs;
 const GROUP_TITLE_FOCUS_SCROLL_SAFETY = spacing.md;
 const BOOKSHELF_DETAIL_FOCUS_TOP_OFFSET = spacing.sm;
-const NOTICE_COMMENT_INPUT_KEYBOARD_GAP = spacing.md;
+const FOCUSED_INPUT_TARGET_FROM_BOTTOM_RATIO = 0.6;
+const FOCUSED_INPUT_SCROLL_RETRY_DELAYS_MS = [0, 120, 300] as const;
 const NOTICE_TITLE_INPUT_MIN_HEIGHT = 96;
 const NOTICE_TITLE_INPUT_MAX_HEIGHT = 152;
 const NOTICE_CONTENT_INPUT_MIN_HEIGHT = 280;
@@ -372,6 +373,10 @@ function getInitialNoticeContentInputHeight(text: string) {
     : NOTICE_CONTENT_INPUT_MIN_HEIGHT;
 }
 
+function getFocusedInputTargetCenterY(screenHeight: number) {
+  return screenHeight * (1 - FOCUSED_INPUT_TARGET_FROM_BOTTOM_RATIO);
+}
+
 
 
 function createPendingClubGroup(clubId: number): Group {
@@ -444,6 +449,7 @@ export function MeetingScreen() {
   useScrollToTop(meetingScrollRef);
   const navigation = useNavigation<NavigationProp<TabParamList, 'Meeting'>>();
   const route = useRoute<RouteProp<TabParamList, 'Meeting'>>();
+  const { height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { requireAuth, isLoggedIn } = useAuthGate();
   const { l } = useLanguage();
@@ -468,7 +474,6 @@ export function MeetingScreen() {
     useState<ClubSearchOutputFilter>('ALL');
   const [outputFilterOpen, setOutputFilterOpen] = useState(false);
   const [hasInteractedWithDiscoverFilter, setHasInteractedWithDiscoverFilter] = useState(false);
-  const [meetingSearchDocked, setMeetingSearchDocked] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const {
@@ -487,31 +492,31 @@ export function MeetingScreen() {
     setHasInteractedWithDiscoverFilter(true);
   }, []);
 
-  const openDockedMeetingSearch = useCallback(() => {
-    setMeetingSearchDocked(true);
-  }, []);
+  const scrollMeetingInputToFocusTarget = useCallback(
+    (inputY: number, inputHeight: number) => {
+      const inputCenterY = inputY + inputHeight / 2;
+      const targetCenterY = getFocusedInputTargetCenterY(screenHeight);
+      meetingScrollRef.current?.scrollTo({
+        y: Math.max(0, meetingScrollYRef.current + inputCenterY - targetCenterY),
+        animated: true,
+      });
+    },
+    [screenHeight],
+  );
 
-  const closeDockedMeetingSearch = useCallback(() => {
-    Keyboard.dismiss();
-    setMeetingSearchDocked(false);
-  }, []);
-
-  useEffect(() => {
-    if (!meetingSearchDocked) return;
-    const timer = setTimeout(() => {
-      meetingSearchInputRef.current?.focus();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [meetingSearchDocked]);
-
-  useEffect(() => {
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      setMeetingSearchDocked(false);
+  const focusMeetingSearchAtTarget = useCallback(() => {
+    requestAnimationFrame(() => {
+      meetingSearchInputRef.current?.measureInWindow((_x, inputY, _width, inputHeight) => {
+        scrollMeetingInputToFocusTarget(inputY, inputHeight);
+      });
     });
-    return () => {
-      hideSubscription.remove();
-    };
-  }, []);
+  }, [scrollMeetingInputToFocusTarget]);
+
+  const handleFocusMeetingSearch = useCallback(() => {
+    FOCUSED_INPUT_SCROLL_RETRY_DELAYS_MS.forEach((delay) => {
+      setTimeout(focusMeetingSearchAtTarget, delay);
+    });
+  }, [focusMeetingSearchAtTarget]);
 
   const showLeaveDraftAlert = useCallback((onClose: () => void) => {
     if (!(showCreate && createDraftDirty)) {
@@ -1173,38 +1178,21 @@ export function MeetingScreen() {
       ) : null}
 
       <Text style={styles.sectionTitle}>{l('모임 검색하기')}</Text>
-      {meetingSearchDocked ? (
-        <Pressable
-          style={({ pressed }) => [styles.searchRow, pressed && styles.pressed]}
-          onPress={openDockedMeetingSearch}
-        >
-          <Text
-            style={[
-              styles.searchInput,
-              search.trim().length === 0 && styles.searchPlaceholderText,
-            ]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {search || l('모임명, 지역별로 원하는 모임을 검색해보세요!')}
-          </Text>
-          <MaterialIcons name="search" size={22} color={colors.gray5} />
-        </Pressable>
-      ) : (
-        <View style={styles.searchRow}>
-          <FormTextInput
-            value={search}
-            onChangeText={handleChangeMeetingSearch}
-            placeholder={l('모임명, 지역별로 원하는 모임을 검색해보세요!')}
-            placeholderTextColor={colors.gray3}
-            style={styles.searchInput}
-            fieldType="search"
-            maxLength={MEETING_SEARCH_KEYWORD_MAX_LENGTH}
-            onFocus={openDockedMeetingSearch}
-          />
-          <MaterialIcons name="search" size={22} color={colors.gray5} />
-        </View>
-      )}
+      <View style={styles.searchRow}>
+        <FormTextInput
+          ref={meetingSearchInputRef}
+          value={search}
+          onChangeText={handleChangeMeetingSearch}
+          placeholder={l('모임명, 지역별로 원하는 모임을 검색해보세요!')}
+          placeholderTextColor={colors.gray3}
+          style={styles.searchInput}
+          fieldType="search"
+          maxLength={MEETING_SEARCH_KEYWORD_MAX_LENGTH}
+          onFocus={handleFocusMeetingSearch}
+          returnKeyType="search"
+        />
+        <MaterialIcons name="search" size={22} color={colors.gray5} />
+      </View>
 
       <View style={styles.filterRow}>
         <View style={styles.outputFilterWrap}>
@@ -1322,32 +1310,6 @@ export function MeetingScreen() {
         ) : null}
       </View>
         </ScrollView>
-        {meetingSearchDocked ? (
-          <View
-            style={[
-              styles.keyboardDockFooter,
-              { paddingBottom: Math.max(insets.bottom, spacing.sm) },
-            ]}
-          >
-            <View style={styles.searchRow}>
-              <FormTextInput
-                ref={meetingSearchInputRef}
-                value={search}
-                onChangeText={handleChangeMeetingSearch}
-                placeholder={l('모임명, 지역별로 원하는 모임을 검색해보세요!')}
-                placeholderTextColor={colors.gray3}
-                style={styles.searchInput}
-                fieldType="search"
-                maxLength={MEETING_SEARCH_KEYWORD_MAX_LENGTH}
-                onSubmitEditing={closeDockedMeetingSearch}
-                returnKeyType="search"
-              />
-              <Pressable onPress={closeDockedMeetingSearch} hitSlop={8}>
-                <MaterialIcons name="search" size={22} color={colors.gray5} />
-              </Pressable>
-            </View>
-          </View>
-        ) : null}
       </KeyboardAvoidingView>
       <Modal
         visible={Boolean(applyModalGroup)}
@@ -1466,8 +1428,6 @@ function GroupHomeView({
   const [currentMemberNickname, setCurrentMemberNickname] = useState('');
   const groupHomeScrollRef = useRef<ScrollView>(null);
   const groupHomeScrollYRef = useRef(0);
-  const groupHomeKeyboardTopYRef = useRef<number | null>(null);
-  const dockedNoticeCommentInputRef = useRef<TextInput>(null);
   const groupTitleFocusOffsetRef = useRef(0);
   const hasFocusedGroupTitleRef = useRef(false);
   const pendingGroupTitleFocusRef = useRef(false);
@@ -1483,7 +1443,6 @@ function GroupHomeView({
   const [noticeTitleInputHeight, setNoticeTitleInputHeight] = useState(
     NOTICE_TITLE_INPUT_MIN_HEIGHT,
   );
-  const [noticeCommentDocked, setNoticeCommentDocked] = useState(false);
   const [noticeContentInputHeight, setNoticeContentInputHeight] = useState(
     NOTICE_CONTENT_INPUT_MIN_HEIGHT,
   );
@@ -1501,37 +1460,6 @@ function GroupHomeView({
     loadingMore: false,
   });
 
-  useEffect(() => {
-    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
-      groupHomeKeyboardTopYRef.current = event.endCoordinates.screenY;
-    });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      groupHomeKeyboardTopYRef.current = null;
-      setNoticeCommentDocked(false);
-    });
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
-
-  const openDockedNoticeComment = useCallback(() => {
-    setNoticeCommentDocked(true);
-  }, []);
-
-  const closeDockedNoticeComment = useCallback(() => {
-    Keyboard.dismiss();
-    setNoticeCommentDocked(false);
-  }, []);
-
-  useEffect(() => {
-    if (!noticeCommentDocked) return;
-    const timer = setTimeout(() => {
-      dockedNoticeCommentInputRef.current?.focus();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [noticeCommentDocked]);
   const [togglingParticipantNickname, setTogglingParticipantNickname] = useState<string | null>(null);
 
   const handleNoticeTitleContentSizeChange = useCallback(
@@ -1826,11 +1754,6 @@ function GroupHomeView({
     resetNoticeOnGroupChange,
   } = noticeState;
   const pollEditingLocked = editingNoticeId !== null && noticeDraft.pollEnabled;
-
-  const handleSubmitDockedNoticeComment = useCallback(() => {
-    handleSubmitNoticeComment();
-    setNoticeCommentDocked(false);
-  }, [handleSubmitNoticeComment]);
 
   useEffect(() => {
     if (!pendingNotificationTarget || !workspaceLoaded) return;
@@ -2468,21 +2391,16 @@ function GroupHomeView({
     ],
   );
 
-  const scrollNoticeCommentInputAboveKeyboard = useCallback(
+  const scrollNoticeCommentInputToFocusTarget = useCallback(
     (inputY: number, inputHeight: number) => {
-      const keyboardTopY =
-        groupHomeKeyboardTopYRef.current ?? screenHeight - Math.max(insets.bottom, 0);
-      const inputBottomY = inputY + inputHeight;
-      const maxInputBottomY = keyboardTopY - NOTICE_COMMENT_INPUT_KEYBOARD_GAP;
-      const overlapY = inputBottomY - maxInputBottomY;
-      if (overlapY <= 0) return;
-
+      const inputCenterY = inputY + inputHeight / 2;
+      const targetCenterY = getFocusedInputTargetCenterY(screenHeight);
       groupHomeScrollRef.current?.scrollTo({
-        y: Math.max(0, groupHomeScrollYRef.current + overlapY),
+        y: Math.max(0, groupHomeScrollYRef.current + inputCenterY - targetCenterY),
         animated: true,
       });
     },
-    [insets.bottom, screenHeight],
+    [screenHeight],
   );
 
   useEffect(() => {
@@ -3230,9 +3148,7 @@ function GroupHomeView({
           handleSubmitVote={handleSubmitVote}
           handleSubmitNoticeComment={handleSubmitNoticeComment}
           handlePressCommentMenu={handlePressCommentMenu}
-          onCommentInputMeasured={scrollNoticeCommentInputAboveKeyboard}
-          commentInputDocked={noticeCommentDocked}
-          onCommentInputFocus={openDockedNoticeComment}
+          onCommentInputMeasured={scrollNoticeCommentInputToFocusTarget}
         />
       ) : null}
 
@@ -3280,59 +3196,6 @@ function GroupHomeView({
         />
       ) : null}
       </ScrollView>
-      {activeTab === 'notice' && selectedNotice && noticeCommentDocked ? (
-        <View
-          style={[
-            styles.keyboardDockFooter,
-            { paddingBottom: Math.max(insets.bottom, spacing.sm) },
-          ]}
-        >
-          <View style={styles.noticeCommentInputRow}>
-            <FormTextInput
-              ref={dockedNoticeCommentInputRef}
-              value={noticeCommentInput}
-              onChangeText={setNoticeCommentInput}
-              placeholder={l('댓글 내용 (최대 {limit}자)', {
-                limit: INPUT_LIMITS.NOTICE_COMMENT,
-              })}
-              placeholderTextColor={colors.gray3}
-              style={styles.noticeCommentInput}
-              editable={!submittingNoticeComment}
-              maxLength={INPUT_LIMITS.NOTICE_COMMENT}
-              overLimitMessage={l('공지사항 댓글은 {limit}자 이하여야 합니다.', {
-                limit: INPUT_LIMITS.NOTICE_COMMENT,
-              })}
-            />
-            <Pressable
-              style={({ pressed }) => [
-                styles.primaryButton,
-                styles.noticeCommentSubmit,
-                (submittingNoticeComment || noticeCommentInput.trim().length === 0) &&
-                  styles.primaryButtonDisabled,
-                pressed && styles.pressed,
-              ]}
-              onPress={handleSubmitDockedNoticeComment}
-              disabled={submittingNoticeComment || noticeCommentInput.trim().length === 0}
-            >
-              <Text style={styles.noticeCommentSubmitText}>
-                {submittingNoticeComment ? l('처리 중') : editingNoticeCommentId ? l('수정') : l('등록')}
-              </Text>
-            </Pressable>
-          </View>
-          {editingNoticeCommentId ? (
-            <Pressable
-              style={({ pressed }) => [styles.breadcrumbPress, pressed && styles.pressed]}
-              onPress={() => {
-                setEditingNoticeCommentId(null);
-                setNoticeCommentInput('');
-                closeDockedNoticeComment();
-              }}
-            >
-              <Text style={styles.breadcrumbText}>{l('댓글 수정 취소')}</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
       {activeTab === 'bookshelf' &&
       bookshelfViewMode === 'REGULAR_GROUP' &&
       selectedRegularGroup &&

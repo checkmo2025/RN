@@ -100,8 +100,6 @@ export type GroupNoticeViewProps = {
   handleSubmitNoticeComment: () => void;
   handlePressCommentMenu: (comment: NoticeComment, event: GestureResponderEvent) => void;
   onCommentInputMeasured?: (inputY: number, inputHeight: number) => void;
-  commentInputDocked?: boolean;
-  onCommentInputFocus?: () => void;
 };
 
 export function GroupNoticeView({
@@ -133,8 +131,6 @@ export function GroupNoticeView({
   handleSubmitNoticeComment,
   handlePressCommentMenu,
   onCommentInputMeasured,
-  commentInputDocked = false,
-  onCommentInputFocus,
 }: GroupNoticeViewProps) {
   const { l } = useLanguage();
   const noticeCommentInputRef = useRef<TextInput>(null);
@@ -169,10 +165,10 @@ export function GroupNoticeView({
   }, [onCommentInputMeasured]);
 
   const handleNoticeCommentInputFocus = useCallback(() => {
-    onCommentInputFocus?.();
     measureNoticeCommentInput();
-    setTimeout(measureNoticeCommentInput, 260);
-  }, [measureNoticeCommentInput, onCommentInputFocus]);
+    setTimeout(measureNoticeCommentInput, 120);
+    setTimeout(measureNoticeCommentInput, 300);
+  }, [measureNoticeCommentInput]);
 
   const currentSelectedVoteOptionIds = useMemo(() => {
     if (!selectedNotice) return [];
@@ -429,7 +425,6 @@ export function GroupNoticeView({
 
         <View style={styles.noticeCommentSection}>
           <Text style={styles.noticeCommentHeader}>{l('댓글')}</Text>
-          {!commentInputDocked ? (
           <View style={styles.noticeCommentInputRow}>
             <FormTextInput
               ref={noticeCommentInputRef}
@@ -463,7 +458,6 @@ export function GroupNoticeView({
               </Text>
             </Pressable>
           </View>
-          ) : null}
           {editingNoticeCommentId ? (
             <Pressable
               style={({ pressed }) => [styles.breadcrumbPress, pressed && styles.pressed]}

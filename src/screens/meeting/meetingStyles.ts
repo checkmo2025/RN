@@ -71,14 +71,6 @@ export const styles = StyleSheet.create({
   searchPlaceholderText: {
     color: colors.gray3,
   },
-  keyboardDockFooter: {
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray1,
-    backgroundColor: colors.white,
-  },
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
