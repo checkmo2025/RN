@@ -998,6 +998,9 @@ export const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: 0,
   },
+  managementOverlayBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
   managementOverlayBottom: {
     flex: 1,
     backgroundColor: colors.overlay30,
@@ -3284,8 +3287,9 @@ export const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   bookshelfGroupPostCardCompleted: {
-    backgroundColor: '#E7F2E6',
-    borderColor: '#D2E7CF',
+    backgroundColor: colors.subbrown4,
+    borderColor: colors.primary1,
+    borderWidth: 2,
   },
   bookshelfGroupPostCardPending: {
     opacity: interactionOpacity.disabled,

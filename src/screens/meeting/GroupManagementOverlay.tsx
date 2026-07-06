@@ -1430,11 +1430,12 @@ export function GroupManagementOverlay({
           ) : null}
         </KeyboardAvoidingView>
       ) : (
-        <Pressable
-          style={styles.managementOverlay}
-          onPress={() => closeManagementMenu()}
-          disableFeedback
-        >
+        <View style={styles.managementOverlay}>
+          <Pressable
+            style={styles.managementOverlayBackdrop}
+            onPress={closeManagementMenu}
+            disableFeedback
+          />
           <Animated.View
             style={[styles.managementMenuSheet, { transform: [{ translateY: managementSheetY }] }]}
             onStartShouldSetResponder={() => true}
@@ -1522,7 +1523,7 @@ export function GroupManagementOverlay({
               ))}
             </ScrollView>
           </Animated.View>
-        </Pressable>
+        </View>
       )}
       <ToastHost />
     </Modal>

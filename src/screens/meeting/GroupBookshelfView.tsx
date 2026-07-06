@@ -808,7 +808,7 @@ export function GroupBookshelfView({
                             <MaterialIcons
                               name="check"
                               size={28}
-                              color={post.completed ? '#3FBE78' : colors.gray2}
+                              color={post.completed ? colors.primary1 : colors.gray2}
                             />
                           </View>
                           <Text style={styles.bookshelfPostContent}>{post.content}</Text>

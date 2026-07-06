@@ -103,7 +103,9 @@ export function MeetingListCard({
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title}>{name}</Text>
+        <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
+          {name}
+        </Text>
         <View style={styles.headerRight}>
           {isPrivate ? (
             <View style={styles.privateWrap}>
@@ -140,8 +142,12 @@ export function MeetingListCard({
           <Image source={{ uri: profileImageUrl || CLUB_DEFAULT_IMAGE }} style={styles.thumbImage} resizeMode="cover" />
         </View>
         <View style={styles.metaWrap}>
-          <Text style={styles.metaText}>{l(topic)}</Text>
-          <Text style={styles.metaText}>{l(region)}</Text>
+          <Text style={styles.metaText} numberOfLines={2} ellipsizeMode="tail">
+            {l(topic)}
+          </Text>
+          <Text style={styles.metaText} numberOfLines={2} ellipsizeMode="tail">
+            {l(region)}
+          </Text>
         </View>
       </View>
 
@@ -226,6 +232,7 @@ const styles = StyleSheet.create({
     ...typography.subhead3,
     color: colors.gray7,
     flex: 1,
+    flexShrink: 1,
     marginRight: spacing.xs,
   },
   headerRight: {
@@ -298,6 +305,7 @@ const styles = StyleSheet.create({
   metaText: {
     ...typography.caption1_3,
     color: colors.gray4,
+    flexShrink: 1,
   },
   actions: {
     flexDirection: 'row',
