@@ -1478,6 +1478,7 @@ function GroupHomeView({
     group,
     managedGroup,
     canManageClub,
+    currentMemberNickname,
     navigation,
     requireAuth,
     onClubUpdated,

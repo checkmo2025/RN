@@ -10,6 +10,7 @@ import {
   deleteClub,
   fetchClubDetail,
   fetchClubMembers,
+  leaveClub,
   updateClub,
   updateClubMemberStatus,
   type ClubCategoryCode,
@@ -57,6 +58,7 @@ export type ManagementStateParams = {
   group: Group;
   managedGroup: Group;
   canManageClub: boolean;
+  currentMemberNickname: string;
   navigation: NavigationProp<ParamListBase>;
   requireAuth: (callback?: () => void) => void;
   onClubUpdated: (group: Group) => void;
@@ -76,6 +78,7 @@ export function useManagementState({
   group,
   managedGroup,
   canManageClub,
+  currentMemberNickname,
   navigation,
   requireAuth,
   onClubUpdated,
@@ -494,6 +497,41 @@ export function useManagementState({
         setSelectedMemberActionId(null);
         return;
       }
+      const isCurrentMember =
+        currentMemberNickname.trim().length > 0 &&
+        targetMember.nickname.trim() === currentMemberNickname.trim();
+
+      if (isCurrentMember) {
+        Alert.alert(l('모임 탈퇴'), l('{clubName} 모임에서 탈퇴하시겠습니까?', {
+          clubName: managedGroup.name || group.name || l('모임'),
+        }), [
+          { text: l('취소'), style: 'cancel' },
+          {
+            text: l('탈퇴하기'),
+            style: 'destructive',
+            onPress: () => {
+              const leaveCurrentMember = async () => {
+                setSubmittingMemberAction(true);
+                try {
+                  await leaveClub(clubId);
+                  setSelectedMemberActionId(null);
+                  onClubDeleted(clubId);
+                  navigation.navigate('Home');
+                  showToast(l('모임에서 탈퇴했습니다.'));
+                } catch (error) {
+                  if (!(error instanceof ApiError)) {
+                    showToast(l('모임 탈퇴에 실패했습니다.'));
+                  }
+                } finally {
+                  setSubmittingMemberAction(false);
+                }
+              };
+              void leaveCurrentMember();
+            },
+          },
+        ]);
+        return;
+      }
 
       Alert.alert(l('회원 탈퇴'), l('{nickname}님을 모임에서 제외하시겠습니까?', {
         nickname: targetMember.nickname,
@@ -524,7 +562,18 @@ export function useManagementState({
         },
       ]);
     },
-    [canManageClub, group.clubId, l, members, submittingMemberAction],
+    [
+      canManageClub,
+      currentMemberNickname,
+      group.clubId,
+      group.name,
+      l,
+      managedGroup.name,
+      members,
+      navigation,
+      onClubDeleted,
+      submittingMemberAction,
+    ],
   );
 
   const handleSaveGroupEdit = useCallback(() => {

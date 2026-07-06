@@ -2398,7 +2398,7 @@ export function StoryScreen() {
                       isCommentSubmitDisabled && styles.commentSubmitTextDisabled,
                     ]}
                   >
-                    {editingCommentId ? l('수정') : l('입력')}
+                    {editingCommentId ? l('수정') : l('등록')}
                   </Text>
                 </Pressable>
               </View>
@@ -2473,7 +2473,7 @@ export function StoryScreen() {
                               isCommentSubmitDisabled && styles.commentSubmitTextDisabled,
                             ]}
                           >
-                            {l('입력')}
+                            {l('등록')}
                           </Text>
                         </Pressable>
                       </View>
