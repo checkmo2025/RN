@@ -2732,6 +2732,7 @@ function GroupHomeView({
         onLayout={handleGroupHomeLayout}
         onContentSizeChange={handleGroupHomeContentSizeChange}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         onScroll={handleGroupHomeScroll}
         scrollEventThrottle={16}
         refreshControl={
