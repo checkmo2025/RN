@@ -59,6 +59,11 @@ function isMine(message: ClubMeetingChatMessage, currentMemberNickname: string):
   );
 }
 
+function formatChatDiagnosticValue(value: unknown): string {
+  const text = value == null || value === '' ? '-' : String(value);
+  return text.length > 90 ? `${text.slice(0, 87)}...` : text;
+}
+
 export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
@@ -75,6 +80,13 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
   const lastMessageIsMine = lastMessage ? isMine(lastMessage, currentMemberNickname) : false;
   const hasConnectionError =
     state.connectionStatus === 'error' || state.connectionStatus === 'closed';
+  const chatDiagnosticText = [
+    `status=${state.connectionStatus}`,
+    `connected=${state.isConnected ? 'true' : 'false'}`,
+    `code=${formatChatDiagnosticValue(state.closeCode)}`,
+    `reason=${formatChatDiagnosticValue(state.closeReason)}`,
+    `error=${formatChatDiagnosticValue(state.connectionError)}`,
+  ].join(' ');
   const translateX = useRef(new Animated.Value(0)).current;
 
   const backSwipe = useEdgeBackSwipe({
@@ -186,7 +198,7 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                 >
                   <MaterialIcons name="chevron-left" size={26} color={colors.gray6} />
                 </Pressable>
-                <View>
+                <View style={styles.chatHeaderContent}>
                   <Text style={styles.chatTitle}>{l(state.activeGroup?.label ?? '조 채팅')}</Text>
                   <View style={styles.connectionRow}>
                     <View
@@ -208,6 +220,9 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                       {state.connectionLabel}
                     </Text>
                   </View>
+                  <Text style={styles.chatDiagnosticText} numberOfLines={2} selectable>
+                    {chatDiagnosticText}
+                  </Text>
                 </View>
               </View>
               <Pressable onPress={state.closeChat} hitSlop={8} accessibilityLabel={l('채팅 닫기')}>
@@ -475,7 +490,14 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.gray2,
     backgroundColor: colors.white,
   },
-  chatHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  chatHeaderLeft: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  chatHeaderContent: { flex: 1, minWidth: 0 },
   chatTitle: { ...typography.subhead4_1, color: colors.gray6 },
   connectionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   connectionDot: { width: 6, height: 6, borderRadius: 3 },
@@ -484,6 +506,7 @@ const styles = StyleSheet.create({
   connectionDotError: { backgroundColor: colors.likeRed },
   connectionText: { ...typography.body2_3, color: colors.gray4 },
   connectionTextError: { color: colors.likeRed },
+  chatDiagnosticText: { ...typography.body2_3, color: colors.gray4, marginTop: spacing.xxs },
   centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   stateText: { ...typography.body1_3, color: colors.gray4, textAlign: 'center' },
   retryButton: {

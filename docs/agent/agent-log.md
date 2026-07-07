@@ -3495,3 +3495,10 @@ export const interactionOpacity = {
 - `app.json`, package metadata, iOS marketing version, Android versionName을 1.1.2로 갱신
 - Expo public config에서 `version`/`runtimeVersion` 1.1.2 반영 확인
 - `npm run check`로 제출 전 정적 검증 수행
+
+# 2026-07-07 10:59:37 KST 채팅 진단 표시 및 1.1.3 제출 버전 반영
+
+- 채팅 헤더에 STOMP 상태, 연결 여부, close code/reason, connection error 진단값을 표시
+- 채팅 상태 훅에서 release 진단에 필요한 `connectionError`, `closeCode`, `closeReason`을 화면 state로 전달
+- 앱/package/iOS marketing/runtime 버전을 1.1.3으로 갱신
+- `npm run typecheck`로 변경 검증
