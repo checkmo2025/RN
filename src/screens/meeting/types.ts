@@ -138,6 +138,7 @@ export type RegularMeetingInfo = {
   id: string;
   name: string;
   date: string;
+  meetingTime?: string;
   location: string;
   groups: RegularMeetingGroupItem[];
 };

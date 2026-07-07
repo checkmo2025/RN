@@ -3520,3 +3520,10 @@ export const interactionOpacity = {
 
 - EAS Submit production iOS profile에 `ascAppId`를 추가해 App Store Connect 앱 확인 단계의 대화형 로그인을 방지
 - 1.1.4 iOS 빌드 성공 후 제출 재시도를 위한 설정 반영
+
+# 2026-07-07 14:36:32 KST 채팅 안내 모달 및 진단 로그 제거
+
+- 첫 채팅 접근 시 동의 필수 안내 모달을 표시하고 기기 단위 동의 상태를 SecureStore에 저장
+- 채팅 헤더의 release 진단 텍스트와 STOMP debug 화면 상태 업데이트 제거
+- 모임 시간이 없는 정기모임 채팅은 입력을 막고 안내 문구를 표시하도록 처리
+- `npm run typecheck`로 변경 검증

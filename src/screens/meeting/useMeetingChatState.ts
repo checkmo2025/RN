@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
 import {
   fetchClubMeetingTeamChatMessages,
@@ -16,6 +17,9 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { triggerSelectionHaptic } from '../../utils/haptics';
 import { showToast } from '../../utils/toast';
 import type { RegularMeetingGroupItem, RegularMeetingInfo } from './types';
+
+const CHAT_POLICY_AGREEMENT_KEY = 'checkmo.chat.policyAgreement.v1';
+const CHAT_POLICY_AGREED_VALUE = 'agreed';
 
 function isSameNickname(left: string, right: string): boolean {
   return left.trim().localeCompare(right.trim(), 'ko', { sensitivity: 'accent' }) === 0;
@@ -67,6 +71,7 @@ export function useMeetingChatState({
   const [hasNext, setHasNext] = useState(false);
   const [reportTarget, setReportTarget] = useState<MeetingChatReportTarget | null>(null);
   const [submittingReport, setSubmittingReport] = useState(false);
+  const [chatPolicyModalVisible, setChatPolicyModalVisible] = useState(false);
 
   const activeGroupRef = useRef<RegularMeetingGroupItem | null>(null);
   const roomVersionRef = useRef(0);
@@ -146,8 +151,6 @@ export function useMeetingChatState({
     connectionStatus,
     connectionError,
     closeCode,
-    closeReason,
-    lastStompDebug,
     publish,
   } = useMeetingChatStomp({
     clubId,
@@ -180,6 +183,22 @@ export function useMeetingChatState({
     }
   }, [closeCode, connectionError, connectionStatus, l]);
 
+  const chatDisabledMessage = useMemo(() => {
+    if (!activeGroup) return null;
+    if (regularMeetingInfo?.meetingTime?.trim()) return null;
+    return l('모임 시간이 설정되지 않아 채팅을 사용할 수 없습니다.');
+  }, [activeGroup, l, regularMeetingInfo?.meetingTime]);
+
+  const acceptChatPolicyNotice = useCallback(async () => {
+    try {
+      await SecureStore.setItemAsync(CHAT_POLICY_AGREEMENT_KEY, CHAT_POLICY_AGREED_VALUE);
+    } catch {
+      // 동의는 즉시 반영하고, 저장 실패 시 다음 진입 때 다시 안내한다.
+    }
+    setChatPolicyModalVisible(false);
+    setPickerVisible(true);
+  }, []);
+
   const resetRoom = useCallback(() => {
     roomVersionRef.current += 1;
     activeGroupRef.current = null;
@@ -196,11 +215,25 @@ export function useMeetingChatState({
   const openPicker = useCallback(() => {
     triggerSelectionHaptic();
     resetRoom();
-    setPickerVisible(true);
+    setPickerVisible(false);
+    setChatPolicyModalVisible(false);
+    void (async () => {
+      try {
+        const agreed = await SecureStore.getItemAsync(CHAT_POLICY_AGREEMENT_KEY);
+        if (agreed === CHAT_POLICY_AGREED_VALUE) {
+          setPickerVisible(true);
+          return;
+        }
+      } catch {
+        // 저장소 조회 실패 시 동의를 다시 받는다.
+      }
+      setChatPolicyModalVisible(true);
+    })();
   }, [resetRoom]);
 
   const closeChat = useCallback(() => {
     setPickerVisible(false);
+    setChatPolicyModalVisible(false);
     setReportTarget(null);
     resetRoom();
   }, [resetRoom]);
@@ -280,6 +313,10 @@ export function useMeetingChatState({
   }, [clubId, l, loadingOlder, meetingId, updatePagination]);
 
   const submitMessage = useCallback(() => {
+    if (chatDisabledMessage) {
+      showToast(chatDisabledMessage);
+      return;
+    }
     const content = input.trim();
     if (!content) return;
     if (content.length > INPUT_LIMITS.CHAT_MESSAGE) {
@@ -294,7 +331,7 @@ export function useMeetingChatState({
     } catch (error) {
       showToast(l(error instanceof Error ? error.message : '채팅 전송에 실패했습니다.'));
     }
-  }, [input, l, publish]);
+  }, [chatDisabledMessage, input, l, publish]);
 
   const openMessageReport = useCallback(
     (message: ClubMeetingChatMessage) => {
@@ -362,9 +399,9 @@ export function useMeetingChatState({
     connectionStatus,
     connectionError,
     closeCode,
-    closeReason,
-    lastStompDebug,
     connectionLabel,
+    chatDisabledMessage,
+    chatPolicyModalVisible,
     reportTarget,
     submittingReport,
     setReportTarget,
@@ -378,5 +415,6 @@ export function useMeetingChatState({
     openMessageReport,
     openMemberReport,
     submitReport,
+    acceptChatPolicyNotice,
   };
 }

@@ -580,6 +580,7 @@ export function mapMeetingToRegularMeetingInfo(
     id: `${book.id}-regular`,
     name: meeting.title?.trim() || `${book.title} 정기모임`,
     date: formatDotDate(meeting.meetingTime),
+    meetingTime: meeting.meetingTime,
     location: meeting.location?.trim() || '장소 미정',
     groups,
   };
@@ -592,6 +593,7 @@ export function ensureRegularMeetingInfo(
 ): RegularMeetingInfo {
   const preferredName = book.regularMeetingName?.trim() || detail?.title?.trim();
   const preferredDate = book.meetingDate?.trim() || formatDotDate(detail?.meetingTime);
+  const preferredMeetingTime = detail?.meetingTime ?? info?.meetingTime;
   const preferredLocation = book.meetingLocation?.trim() || detail?.location?.trim();
 
   if (!info) {
@@ -599,6 +601,7 @@ export function ensureRegularMeetingInfo(
       id: `${book.id}-regular`,
       name: preferredName || `${book.title} 정기모임`,
       date: preferredDate || '날짜 미정',
+      meetingTime: preferredMeetingTime,
       location: preferredLocation || '장소 미정',
       groups: [],
     };
@@ -608,6 +611,7 @@ export function ensureRegularMeetingInfo(
     ...info,
     name: preferredName || info.name?.trim() || `${book.title} 정기모임`,
     date: preferredDate || info.date?.trim() || '날짜 미정',
+    meetingTime: preferredMeetingTime,
     location: preferredLocation || info.location?.trim() || '장소 미정',
   };
 }

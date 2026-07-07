@@ -451,6 +451,13 @@ const enLiteralMessages: Record<string, string> = {
   '채팅 연결이 끊어졌습니다.': 'Chat connection closed.',
   '채팅 서버 오류가 발생했습니다.': 'A chat server error occurred.',
   '채팅 닫기': 'Close chat',
+  '채팅 안내': 'Chat Notice',
+  '채팅 메시지는 운영정책이 적용되며, 부적절한 내용은 신고 및 이용 제한 대상이 될 수 있습니다.':
+    'Chat messages are subject to service policies, and inappropriate content may be reported or restricted.',
+  '채팅 안내 동의': 'Agree to chat notice',
+  '동의': 'Agree',
+  '모임 시간이 설정되지 않아 채팅을 사용할 수 없습니다.':
+    'Chat is unavailable because the meeting time has not been set.',
   '채팅 내역을 불러오는 중...': 'Loading chat history...',
   '다시 시도': 'Try Again',
   '이전 채팅을 불러오는 중...': 'Loading older messages...',

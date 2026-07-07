@@ -725,6 +725,7 @@ export function useBookshelfState({
               id: `${book.id}-regular`,
               name: richDetail.title?.trim() || `${book.title} 정기모임`,
               date: formatDotDate(richDetail.meetingTime),
+              meetingTime: richDetail.meetingTime,
               location: richDetail.location?.trim() || '장소 미정',
               groups: [],
             },

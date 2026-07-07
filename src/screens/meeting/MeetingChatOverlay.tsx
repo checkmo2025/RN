@@ -59,11 +59,6 @@ function isMine(message: ClubMeetingChatMessage, currentMemberNickname: string):
   );
 }
 
-function formatChatDiagnosticValue(value: unknown): string {
-  const text = value == null || value === '' ? '-' : String(value);
-  return text.length > 90 ? `${text.slice(0, 87)}...` : text;
-}
-
 export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
@@ -80,14 +75,12 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
   const lastMessageIsMine = lastMessage ? isMine(lastMessage, currentMemberNickname) : false;
   const hasConnectionError =
     state.connectionStatus === 'error' || state.connectionStatus === 'closed';
-  const chatDiagnosticText = [
-    `status=${state.connectionStatus}`,
-    `connected=${state.isConnected ? 'true' : 'false'}`,
-    `code=${formatChatDiagnosticValue(state.closeCode)}`,
-    `reason=${formatChatDiagnosticValue(state.closeReason)}`,
-    `error=${formatChatDiagnosticValue(state.connectionError)}`,
-    `debug=${formatChatDiagnosticValue(state.lastStompDebug)}`,
-  ].join(' ');
+  const chatInputDisabled = Boolean(state.chatDisabledMessage);
+  const chatInputPlaceholder = state.chatDisabledMessage
+    ? state.chatDisabledMessage
+    : l('채팅 입력 (최대 {limit}자)', { limit: INPUT_LIMITS.CHAT_MESSAGE });
+  const isSendDisabled =
+    !state.isConnected || chatInputDisabled || !state.input.trim();
   const translateX = useRef(new Animated.Value(0)).current;
 
   const backSwipe = useEdgeBackSwipe({
@@ -143,6 +136,35 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
 
   return (
     <>
+      <Modal
+        visible={state.chatPolicyModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => undefined}
+      >
+        <View style={styles.policyModalOverlay}>
+          <View style={styles.policyModalCard}>
+            <View style={styles.policyModalIconWrap}>
+              <MaterialIcons name="info-outline" size={24} color={colors.gray6} />
+            </View>
+            <Text style={styles.policyModalTitle}>{l('채팅 안내')}</Text>
+            <Text style={styles.policyModalDescription}>
+              {l('채팅 메시지는 운영정책이 적용되며, 부적절한 내용은 신고 및 이용 제한 대상이 될 수 있습니다.')}
+            </Text>
+            <Pressable
+              style={({ pressed }) => [
+                styles.policyModalAgreeButton,
+                pressed && styles.pressed,
+              ]}
+              onPress={() => void state.acceptChatPolicyNotice()}
+              accessibilityLabel={l('채팅 안내 동의')}
+            >
+              <Text style={styles.policyModalAgreeButtonText}>{l('동의')}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       <DialogOverlay
         visible={state.pickerVisible}
         onClose={state.closeChat}
@@ -221,15 +243,19 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                       {state.connectionLabel}
                     </Text>
                   </View>
-                  <Text style={styles.chatDiagnosticText} numberOfLines={3} selectable>
-                    {chatDiagnosticText}
-                  </Text>
                 </View>
               </View>
               <Pressable onPress={state.closeChat} hitSlop={8} accessibilityLabel={l('채팅 닫기')}>
                 <MaterialIcons name="close" size={24} color={colors.gray6} />
               </Pressable>
             </View>
+
+            {state.chatDisabledMessage ? (
+              <View style={styles.chatUnavailableNotice}>
+                <MaterialIcons name="event-busy" size={18} color={colors.likeRed} />
+                <Text style={styles.chatUnavailableNoticeText}>{state.chatDisabledMessage}</Text>
+              </View>
+            ) : null}
 
             {state.initialLoading ? (
               <View style={styles.centerState}>
@@ -314,9 +340,10 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
               <FormTextInput
                 value={state.input}
                 onChangeText={state.setInput}
-                style={styles.chatInput}
-                placeholder={l('채팅 입력 (최대 {limit}자)', { limit: INPUT_LIMITS.CHAT_MESSAGE })}
+                style={[styles.chatInput, chatInputDisabled && styles.chatInputDisabled]}
+                placeholder={chatInputPlaceholder}
                 placeholderTextColor={colors.gray3}
+                editable={!chatInputDisabled}
                 returnKeyType="send"
                 maxLength={INPUT_LIMITS.CHAT_MESSAGE}
                 overLimitMessage={l('채팅 메시지는 {limit}자 이하여야 합니다.', {
@@ -327,10 +354,10 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
               <Pressable
                 style={[
                   styles.sendButton,
-                  (!state.isConnected || !state.input.trim()) && styles.sendButtonDisabled,
+                  isSendDisabled && styles.sendButtonDisabled,
                 ]}
                 onPress={state.submitMessage}
-                disabled={!state.isConnected || !state.input.trim()}
+                disabled={isSendDisabled}
                 accessibilityLabel={l('채팅 전송')}
               >
                 <MaterialIcons name="send" size={20} color={colors.white} />
@@ -480,6 +507,42 @@ const styles = StyleSheet.create({
   groupItemMeta: { ...typography.body2_3, color: colors.gray4 },
   pressed: { opacity: interactionOpacity.pressed },
   emptyText: { ...typography.body1_3, color: colors.gray4, textAlign: 'center' },
+  policyModalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  policyModalCard: {
+    width: '100%',
+    maxWidth: dialog.maxWidth,
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.xl,
+    borderRadius: dialog.borderRadius,
+    backgroundColor: colors.white,
+  },
+  policyModalIconWrap: {
+    width: buttonSize.field,
+    height: buttonSize.field,
+    borderRadius: buttonSize.field / 2,
+    backgroundColor: colors.gray1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  policyModalTitle: { ...typography.subhead3, color: colors.gray6, textAlign: 'center' },
+  policyModalDescription: { ...typography.body1_3, color: colors.gray5, textAlign: 'center' },
+  policyModalAgreeButton: {
+    width: '100%',
+    minHeight: buttonSize.cta,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primary1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+  },
+  policyModalAgreeButtonText: { ...typography.body1_2, color: colors.white },
   chatScreen: { flex: 1, backgroundColor: colors.background },
   chatHeader: {
     flexDirection: 'row',
@@ -507,7 +570,21 @@ const styles = StyleSheet.create({
   connectionDotError: { backgroundColor: colors.likeRed },
   connectionText: { ...typography.body2_3, color: colors.gray4 },
   connectionTextError: { color: colors.likeRed },
-  chatDiagnosticText: { ...typography.body2_3, color: colors.gray4, marginTop: spacing.xxs },
+  chatUnavailableNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.gray2,
+    backgroundColor: colors.white,
+  },
+  chatUnavailableNoticeText: {
+    flex: 1,
+    ...typography.body2_3,
+    color: colors.likeRed,
+  },
   centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   stateText: { ...typography.body1_3, color: colors.gray4, textAlign: 'center' },
   retryButton: {
@@ -572,6 +649,7 @@ const styles = StyleSheet.create({
     ...typography.body1_3,
     color: colors.gray6,
   },
+  chatInputDisabled: { backgroundColor: colors.gray1, color: colors.gray4 },
   sendButton: {
     width: buttonSize.field,
     height: buttonSize.field,
