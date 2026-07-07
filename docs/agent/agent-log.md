@@ -3502,3 +3502,10 @@ export const interactionOpacity = {
 - 채팅 상태 훅에서 release 진단에 필요한 `connectionError`, `closeCode`, `closeReason`을 화면 state로 전달
 - 앱/package/iOS marketing/runtime 버전을 1.1.3으로 갱신
 - `npm run typecheck`로 변경 검증
+
+# 2026-07-07 13:13:49 KST 앱 WebSocket 인증 헤더 및 진단 보강
+
+- 채팅 STOMP WebSocket 생성 시 SecureStore refresh token을 `X-Refresh-Token` HTTP header로 전달
+- release 앱 진단에 마지막 STOMP debug 메시지를 추가하고 토큰 값은 노출하지 않도록 처리
+- STOMP CONNECT가 15초 안에 완료되지 않으면 timeout 오류를 표시하도록 보강
+- `npm run typecheck`로 변경 검증

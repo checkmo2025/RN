@@ -86,6 +86,7 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
     `code=${formatChatDiagnosticValue(state.closeCode)}`,
     `reason=${formatChatDiagnosticValue(state.closeReason)}`,
     `error=${formatChatDiagnosticValue(state.connectionError)}`,
+    `debug=${formatChatDiagnosticValue(state.lastStompDebug)}`,
   ].join(' ');
   const translateX = useRef(new Animated.Value(0)).current;
 
@@ -220,7 +221,7 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                       {state.connectionLabel}
                     </Text>
                   </View>
-                  <Text style={styles.chatDiagnosticText} numberOfLines={2} selectable>
+                  <Text style={styles.chatDiagnosticText} numberOfLines={3} selectable>
                     {chatDiagnosticText}
                   </Text>
                 </View>

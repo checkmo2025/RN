@@ -17,16 +17,21 @@ type CheckmoStompConfig = Pick<
   | 'onStompError'
   | 'onWebSocketError'
   | 'onWebSocketClose'
->;
+> & {
+  webSocketHeaders?: Record<string, string>;
+};
 
-export function createCheckmoStompClient(config: CheckmoStompConfig): Client {
+export function createCheckmoStompClient({
+  webSocketHeaders,
+  ...config
+}: CheckmoStompConfig): Client {
   const NativeWebSocket = WebSocket as unknown as NativeWebSocketConstructor;
   return new Client({
     webSocketFactory: () =>
       new NativeWebSocket(
         PUBLIC_ENV.WS_BASE_URL,
         ['v12.stomp', 'v11.stomp', 'v10.stomp'],
-        { headers: { 'User-Agent': 'checkmo-app' } },
+        { headers: { 'User-Agent': 'checkmo-app', ...webSocketHeaders } },
       ),
     heartbeatOutgoing: 25000,
     heartbeatIncoming: 20000,

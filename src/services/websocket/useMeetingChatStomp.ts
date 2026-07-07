@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Client } from '@stomp/stompjs';
 
 import { fetchLoginStatusSilently, silentRefreshSession } from '../api/authApi';
+import { getStoredRefreshToken } from '../api/authTokenStore';
 import type { ClubMeetingChatMessage } from '../api/clubApi';
 import { ApiError } from '../api/http';
 import { createLogger } from '../../utils/logger';
@@ -9,6 +10,7 @@ import { createCheckmoStompClient } from './createCheckmoStompClient';
 
 const chatLog = createLogger('chat');
 const stompLog = createLogger('stomp');
+const STOMP_CONNECT_TIMEOUT_MS = 15000;
 
 export type MeetingChatConnectionStatus =
   | 'idle'
@@ -79,6 +81,12 @@ function parseUserQueueError(raw: string): string {
   }
 }
 
+function formatStompDebugMessage(message: string): string {
+  const normalized = message.replace(/\s+/g, ' ').trim();
+  if (!normalized) return '-';
+  return normalized.length > 160 ? `${normalized.slice(0, 157)}...` : normalized;
+}
+
 export function useMeetingChatStomp({
   clubId,
   meetingId,
@@ -93,6 +101,7 @@ export function useMeetingChatStomp({
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [closeCode, setCloseCode] = useState<number | null>(null);
   const [closeReason, setCloseReason] = useState<string | null>(null);
+  const [lastStompDebug, setLastStompDebug] = useState<string | null>(null);
   const clientRef = useRef<Client | null>(null);
   const onMessageRef = useRef(onMessage);
   const onConnectedRef = useRef(onConnected);
@@ -106,14 +115,22 @@ export function useMeetingChatStomp({
       setConnectionError(null);
       setCloseCode(null);
       setCloseReason(null);
+      setLastStompDebug(null);
       return;
     }
 
     let cancelled = false;
     let client: Client | null = null;
+    let connectTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    let latestDebugMessage = 'session preflight';
     const subDestination = `/sub/clubs/${clubId}/meetings/${meetingId}/teams/${teamId}/chat/messages`;
 
     const isCurrentClient = (target: Client) => !cancelled && clientRef.current === target;
+    const clearConnectTimeout = () => {
+      if (connectTimeoutId == null) return;
+      clearTimeout(connectTimeoutId);
+      connectTimeoutId = null;
+    };
 
     const activate = async () => {
       setIsConnected(false);
@@ -121,6 +138,8 @@ export function useMeetingChatStomp({
       setConnectionError(null);
       setCloseCode(null);
       setCloseReason(null);
+      latestDebugMessage = 'session preflight';
+      setLastStompDebug('session preflight');
 
       try {
         await silentRefreshSession();
@@ -141,15 +160,37 @@ export function useMeetingChatStomp({
 
       if (cancelled) return;
 
+      let appRefreshToken: string | undefined;
+      let appRefreshTokenReadFailed = false;
+      try {
+        appRefreshToken = (await getStoredRefreshToken())?.trim() || undefined;
+      } catch (error) {
+        appRefreshTokenReadFailed = true;
+        chatLog.warn('failed to read app refresh token for websocket', error);
+      }
+      if (cancelled) return;
+
+      const updateStompDebug = (message: string) => {
+        if (cancelled) return;
+        latestDebugMessage = formatStompDebugMessage(message);
+        setLastStompDebug(latestDebugMessage);
+        if (__DEV__) stompLog.debug(message);
+      };
+
       client = createCheckmoStompClient({
-        debug: __DEV__ ? (message) => stompLog.debug(message) : undefined,
+        webSocketHeaders: appRefreshToken
+          ? { 'X-Refresh-Token': appRefreshToken }
+          : undefined,
+        debug: updateStompDebug,
         onConnect: () => {
           if (!client || !isCurrentClient(client)) return;
+          clearConnectTimeout();
           setIsConnected(true);
           setConnectionStatus('connected');
           setConnectionError(null);
           setCloseCode(null);
           setCloseReason(null);
+          setLastStompDebug('onConnect');
           chatLog.debug('connected', subDestination);
           client.subscribe('/user/queue/errors', (frame) => {
             if (!client || !isCurrentClient(client)) return;
@@ -157,6 +198,7 @@ export function useMeetingChatStomp({
             setIsConnected(false);
             setConnectionStatus('error');
             setConnectionError(message);
+            setLastStompDebug(`user queue error: ${formatStompDebugMessage(message)}`);
             chatLog.warn('user queue error', message);
           });
           client.subscribe(subDestination, (frame) => {
@@ -171,47 +213,83 @@ export function useMeetingChatStomp({
         },
         onDisconnect: () => {
           if (!client || !isCurrentClient(client)) return;
+          clearConnectTimeout();
           setIsConnected(false);
           setConnectionStatus('closed');
+          setLastStompDebug('onDisconnect');
         },
         onStompError: (frame) => {
           if (!client || !isCurrentClient(client)) return;
+          clearConnectTimeout();
           setIsConnected(false);
           setConnectionStatus('error');
           setConnectionError(frame.headers?.message || parseUserQueueError(frame.body));
+          setLastStompDebug(`onStompError: ${formatStompDebugMessage(frame.body)}`);
           chatLog.warn('stomp error', frame.headers?.message, frame.body);
         },
         onWebSocketError: (event) => {
           if (!client || !isCurrentClient(client)) return;
+          clearConnectTimeout();
           setIsConnected(false);
           setConnectionStatus('error');
           setConnectionError('채팅 연결을 확인해 주십시오.');
+          setLastStompDebug('onWebSocketError');
           chatLog.warn('websocket error', event);
         },
         onWebSocketClose: (event) => {
           if (!client || !isCurrentClient(client)) return;
+          clearConnectTimeout();
           setIsConnected(false);
           setConnectionStatus('closed');
           setCloseCode(event.code);
           setCloseReason(event.reason || null);
+          setLastStompDebug(`onWebSocketClose code=${event.code} reason=${event.reason || '-'}`);
           chatLog.debug('websocket closed', event.code, event.reason);
         },
       });
 
       clientRef.current = client;
       setConnectionStatus('connecting');
-      client.activate();
+      latestDebugMessage = appRefreshToken
+        ? 'activating STOMP client with app auth header'
+        : appRefreshTokenReadFailed
+          ? 'activating STOMP client without app auth header: token read failed'
+          : 'activating STOMP client without app auth header';
+      setLastStompDebug(latestDebugMessage);
+      connectTimeoutId = setTimeout(() => {
+        if (!client || !isCurrentClient(client) || client.connected) return;
+        connectTimeoutId = null;
+        setIsConnected(false);
+        setConnectionStatus('error');
+        setConnectionError('채팅 연결 시간이 초과되었습니다.');
+        setLastStompDebug(`connect timeout: ${latestDebugMessage}`);
+        const timedOutClient = client;
+        clientRef.current = null;
+        void timedOutClient.deactivate();
+      }, STOMP_CONNECT_TIMEOUT_MS);
+      try {
+        client.activate();
+      } catch (error) {
+        if (!isCurrentClient(client)) return;
+        clearConnectTimeout();
+        setIsConnected(false);
+        setConnectionStatus('error');
+        setConnectionError(getConnectionErrorMessage(error));
+        setLastStompDebug('client.activate threw');
+      }
     };
 
     void activate();
 
     return () => {
       cancelled = true;
+      clearConnectTimeout();
       setIsConnected(false);
       setConnectionStatus('idle');
       setConnectionError(null);
       setCloseCode(null);
       setCloseReason(null);
+      setLastStompDebug(null);
       clientRef.current = null;
       if (client) void client.deactivate();
     };
@@ -243,6 +321,7 @@ export function useMeetingChatStomp({
     connectionError,
     closeCode,
     closeReason,
+    lastStompDebug,
     publish,
   };
 }

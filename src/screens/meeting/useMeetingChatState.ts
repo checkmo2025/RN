@@ -147,6 +147,7 @@ export function useMeetingChatState({
     connectionError,
     closeCode,
     closeReason,
+    lastStompDebug,
     publish,
   } = useMeetingChatStomp({
     clubId,
@@ -362,6 +363,7 @@ export function useMeetingChatState({
     connectionError,
     closeCode,
     closeReason,
+    lastStompDebug,
     connectionLabel,
     reportTarget,
     submittingReport,
