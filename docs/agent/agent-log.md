@@ -3546,3 +3546,9 @@ export const interactionOpacity = {
 - 로그인 후 Expo Push Token을 백엔드 push-devices API에 등록하고 installationId를 SecureStore에 저장
 - 로그아웃/비밀번호 변경/회원탈퇴/푸시 수신 해제 시 디바이스 해제 흐름 연결
 - 푸시 알림 탭 라우팅과 마이페이지 푸시 수신 전역 토글 추가
+
+# 2026-07-07 16:27:37 KST 푸시 알림 credentials 설정 문서화
+
+- 실제 배포 앱 기준 iOS APNs capability/Auth Key 설정 절차 정리
+- Android Firebase/FCM V1 service account 및 `google-services.json` 설정 절차 정리
+- iOS/Android 배포 빌드 후 백엔드 push-devices 검증 체크리스트 추가
