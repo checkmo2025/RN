@@ -3515,3 +3515,8 @@ export const interactionOpacity = {
 - `app.json`, package metadata, Expo runtimeVersion을 1.1.4로 갱신
 - iOS `CFBundleShortVersionString`, `MARKETING_VERSION`, Expo runtime plist를 1.1.4로 갱신
 - `npm run typecheck`와 앱 버전 필드 검색으로 제출 전 검증
+
+# 2026-07-07 13:26:33 KST EAS iOS 제출 App Store Connect ID 설정
+
+- EAS Submit production iOS profile에 `ascAppId`를 추가해 App Store Connect 앱 확인 단계의 대화형 로그인을 방지
+- 1.1.4 iOS 빌드 성공 후 제출 재시도를 위한 설정 반영
