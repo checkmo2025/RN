@@ -4,6 +4,7 @@ import {
   useFocusEffect,
   useNavigation,
   useRoute,
+  type EventArg,
   type NavigationProp,
   type ParamListBase,
   type RouteProp,
@@ -103,7 +104,19 @@ type HeaderRouteParams = {
   openSearchBook?: unknown;
 };
 
+type TabPressNavigation = NavigationProp<ParamListBase> & {
+  addListener: (
+    eventName: 'tabPress',
+    listener: (event: EventArg<'tabPress', true, undefined>) => void,
+  ) => () => void;
+};
+
 const HEADER_HEIGHT = scaleSize(44);
+const TAB_ROUTE_NAMES = new Set(['Home', 'Meeting', 'Story', 'News', 'My']);
+
+function isTabNavigation(navigation: NavigationProp<ParamListBase>): boolean {
+  return navigation.getState().routeNames.some((routeName) => TAB_ROUTE_NAMES.has(routeName));
+}
 
 function resolveBookStorySearchId(book: BookItem | null): string | null {
   if (!book) return null;
@@ -768,6 +781,45 @@ export function AppHeader(props: Props) {
       };
     }, [closeNotiImmediate]),
   );
+
+  useEffect(() => {
+    const tabNavigation = (
+      isTabNavigation(navigation)
+        ? navigation
+        : navigation.getParent()
+    ) as TabPressNavigation | undefined;
+    if (!tabNavigation) return undefined;
+
+    const unsubscribe = tabNavigation.addListener(
+      'tabPress',
+      (event: EventArg<'tabPress', true, undefined>) => {
+        if (!navigation.isFocused()) return;
+
+        const targetKey = event.target;
+        const tabState = tabNavigation.getState();
+        const focusedRoute = tabState.routes[tabState.index];
+        const isCurrentTabRetap = Boolean(targetKey) && focusedRoute?.key === targetKey;
+        if (!isCurrentTabRetap) return;
+
+        if (showSearchPage) {
+          closeSearchPage();
+          return;
+        }
+
+        if (showSearchDropdown) {
+          closeSearchDropdown();
+        }
+      },
+    );
+
+    return unsubscribe;
+  }, [
+    closeSearchDropdown,
+    closeSearchPage,
+    navigation,
+    showSearchDropdown,
+    showSearchPage,
+  ]);
 
   const derivedActions: HeaderAction[] =
     Array.isArray(actions) && actions.length > 0
