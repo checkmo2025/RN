@@ -3509,3 +3509,9 @@ export const interactionOpacity = {
 - release 앱 진단에 마지막 STOMP debug 메시지를 추가하고 토큰 값은 노출하지 않도록 처리
 - STOMP CONNECT가 15초 안에 완료되지 않으면 timeout 오류를 표시하도록 보강
 - `npm run typecheck`로 변경 검증
+
+# 2026-07-07 13:17:22 KST 1.1.4 제출 버전 반영
+
+- `app.json`, package metadata, Expo runtimeVersion을 1.1.4로 갱신
+- iOS `CFBundleShortVersionString`, `MARKETING_VERSION`, Expo runtime plist를 1.1.4로 갱신
+- `npm run typecheck`와 앱 버전 필드 검색으로 제출 전 검증
