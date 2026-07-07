@@ -3539,3 +3539,10 @@ export const interactionOpacity = {
 - `app.json`, package metadata, Expo runtimeVersion을 1.1.6으로 갱신
 - iOS `CFBundleShortVersionString`, `MARKETING_VERSION`, Expo runtime plist를 1.1.6으로 갱신
 - `npm run typecheck`와 앱 버전 필드 검색으로 제출 전 검증
+
+# 2026-07-07 16:23:51 KST Expo 푸시 알림 연동
+
+- Expo Notifications 의존성, Android 알림 권한, iOS APNs production entitlement 설정 추가
+- 로그인 후 Expo Push Token을 백엔드 push-devices API에 등록하고 installationId를 SecureStore에 저장
+- 로그아웃/비밀번호 변경/회원탈퇴/푸시 수신 해제 시 디바이스 해제 흐름 연결
+- 푸시 알림 탭 라우팅과 마이페이지 푸시 수신 전역 토글 추가

@@ -399,12 +399,15 @@ export function MyPageScreen() {
     alarms,
     loadingAlarms,
     notificationSettings,
+    pushNotificationsEnabled,
     loadingNotificationSettings,
     togglingNotificationSetting,
+    togglingPushNotifications,
     loadAllNotifications,
     loadNotificationSettingInfo,
     handlePressAlarm,
     handleToggleNotificationSetting,
+    handleTogglePushNotifications,
   } = useNotificationState({ isLoggedIn, navigation });
 
   const {
@@ -2495,7 +2498,7 @@ export function MyPageScreen() {
           <Text style={styles.detailDivider} />
           {loadingNotificationSettings ? (
             <>
-              {[0, 1, 2, 3, 4, 5].map((i) => (
+              {[0, 1, 2, 3, 4, 5, 6].map((i) => (
                 <View key={i} style={styles.alarmRow}>
                   <View style={styles.alarmInfo}>
                     <SkeletonBox style={{ height: 16, width: '60%', borderRadius: radius.xs }} />
@@ -2505,6 +2508,19 @@ export function MyPageScreen() {
                 </View>
               ))}
             </>
+          ) : null}
+          {!loadingNotificationSettings ? (
+            <View style={styles.alarmRow}>
+              <View style={styles.alarmInfo}>
+                <Text style={styles.detailLabel}>{l('푸시 알림 수신')}</Text>
+                <Text style={styles.detailBody}>{l('이 기기에서 앱 푸시 알림 받기')}</Text>
+              </View>
+              <NotificationToggle
+                enabled={pushNotificationsEnabled}
+                disabled={togglingPushNotifications}
+                onPress={handleTogglePushNotifications}
+              />
+            </View>
           ) : null}
           {notificationSettingRows.map((row) => {
             const enabled = notificationSettings[row.key];

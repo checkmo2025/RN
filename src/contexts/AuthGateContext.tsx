@@ -12,6 +12,7 @@ import {
   fetchLoginStatusSilently,
   silentRefreshSession,
 } from '../services/api/authApi';
+import { clearStoredPushRegistrationCache } from '../services/push/pushDeviceStorage';
 import { showToast } from '../utils/toast';
 
 const AUTH_TRANSITION_MS = 1000;
@@ -95,6 +96,7 @@ export function AuthGateProvider({ children }: Props) {
         return;
       }
 
+      void clearStoredPushRegistrationCache();
       setAuthSessionState('loggedOut');
       setAuthPageVisible(false);
     },
@@ -102,7 +104,10 @@ export function AuthGateProvider({ children }: Props) {
   );
 
   const clearSessionState = useCallback(async () => {
-    await clearStoredAuthSession();
+    await Promise.all([
+      clearStoredAuthSession(),
+      clearStoredPushRegistrationCache(),
+    ]);
     setAuthSessionState('loggedOut');
     setAuthPageMode('login');
     setAuthPageVisible(false);
@@ -110,6 +115,7 @@ export function AuthGateProvider({ children }: Props) {
   }, [setAuthSessionState]);
 
   const markSessionLoggedOut = useCallback(() => {
+    void clearStoredPushRegistrationCache();
     setAuthSessionState('loggedOut');
     setAuthPageMode('login');
     setAuthPageVisible(false);
@@ -190,7 +196,10 @@ export function AuthGateProvider({ children }: Props) {
 
   useEffect(() => {
     return subscribeUnauthorizedSession((message) => {
-      void clearStoredAuthSession();
+      void Promise.all([
+        clearStoredAuthSession(),
+        clearStoredPushRegistrationCache(),
+      ]);
       showToast(message || '로그인 상태를 확인해 주십시오.');
       setAuthSessionState('loggedOut');
       pendingActionRef.current = null;

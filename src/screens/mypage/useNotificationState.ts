@@ -10,6 +10,14 @@ import {
   type NotificationSettingInfo,
   type NotificationSettingType,
 } from '../../services/api/notificationApi';
+import {
+  getStoredPushNotificationsEnabled,
+} from '../../services/push/pushDeviceStorage';
+import {
+  logPushRegistrationError,
+  setPushNotificationsEnabledAsync,
+  type PushPreferenceUpdateResult,
+} from '../../services/push/pushNotificationService';
 import { formatNotificationText, resolveNotificationTarget } from '../../utils/notification';
 import { showToast } from '../../utils/toast';
 import { resolveApiError } from '../../utils/resolveApiError';
@@ -66,9 +74,11 @@ export function useNotificationState({ isLoggedIn, navigation }: Params) {
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettingInfo>(
     defaultNotificationSettings,
   );
+  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(true);
   const [loadingNotificationSettings, setLoadingNotificationSettings] = useState(false);
   const [togglingNotificationSetting, setTogglingNotificationSetting] =
     useState<NotificationSettingType | null>(null);
+  const [togglingPushNotifications, setTogglingPushNotifications] = useState(false);
 
   const mapNotificationToAlarm = useCallback((item: NotificationItem): AlarmItem => {
     return {
@@ -135,13 +145,18 @@ export function useNotificationState({ isLoggedIn, navigation }: Params) {
   const loadNotificationSettingInfo = useCallback(async () => {
     if (!isLoggedIn) {
       setNotificationSettings(defaultNotificationSettings);
+      setPushNotificationsEnabled(true);
       return;
     }
 
     setLoadingNotificationSettings(true);
     try {
-      const settingInfo = await fetchNotificationSettings();
+      const [settingInfo, storedPushNotificationsEnabled] = await Promise.all([
+        fetchNotificationSettings(),
+        getStoredPushNotificationsEnabled(),
+      ]);
       setNotificationSettings(settingInfo);
+      setPushNotificationsEnabled(storedPushNotificationsEnabled);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         setNotificationSettings(defaultNotificationSettings);
@@ -154,6 +169,57 @@ export function useNotificationState({ isLoggedIn, navigation }: Params) {
       setLoadingNotificationSettings(false);
     }
   }, [isLoggedIn]);
+
+  const resolvePushPreferenceMessage = useCallback(
+    (result: PushPreferenceUpdateResult): string | null => {
+      if (result.status !== 'skipped') return null;
+
+      switch (result.reason) {
+        case 'permission-denied':
+          return '기기 설정에서 책모 알림 권한을 허용해 주세요.';
+        case 'permission-undetermined':
+          return '알림 권한을 허용해야 푸시 알림을 받을 수 있습니다.';
+        case 'not-physical-device':
+          return '푸시 알림은 실제 기기에서만 사용할 수 있습니다.';
+        case 'missing-project-id':
+          return '푸시 알림 프로젝트 설정을 확인할 수 없습니다.';
+        case 'unsupported-platform':
+          return '이 기기에서는 푸시 알림을 사용할 수 없습니다.';
+        case 'user-disabled':
+        default:
+          return null;
+      }
+    },
+    [],
+  );
+
+  const handleTogglePushNotifications = useCallback(() => {
+    const previous = pushNotificationsEnabled;
+    const next = !previous;
+
+    setPushNotificationsEnabled(next);
+    setTogglingPushNotifications(true);
+
+    const submit = async () => {
+      try {
+        const result = await setPushNotificationsEnabledAsync(next);
+        if (next && result.status !== 'registered') {
+          setPushNotificationsEnabled(false);
+          const message = resolvePushPreferenceMessage(result);
+          if (message) showToast(message);
+          return;
+        }
+        setPushNotificationsEnabled(next);
+      } catch (error) {
+        logPushRegistrationError(error);
+        setPushNotificationsEnabled(previous);
+        showToast('푸시 알림 설정을 변경하지 못했습니다.');
+      } finally {
+        setTogglingPushNotifications(false);
+      }
+    };
+    void submit();
+  }, [pushNotificationsEnabled, resolvePushPreferenceMessage]);
 
   const handlePressAlarm = useCallback(
     (alarm: AlarmItem) => {
@@ -226,11 +292,14 @@ export function useNotificationState({ isLoggedIn, navigation }: Params) {
     alarms,
     loadingAlarms,
     notificationSettings,
+    pushNotificationsEnabled,
     loadingNotificationSettings,
     togglingNotificationSetting,
+    togglingPushNotifications,
     loadAllNotifications,
     loadNotificationSettingInfo,
     handlePressAlarm,
     handleToggleNotificationSetting,
+    handleTogglePushNotifications,
   };
 }

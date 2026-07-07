@@ -1,9 +1,10 @@
 import { View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import RootNavigator from './src/navigation/RootNavigator';
+import type { RootStackParamList } from './src/navigation/types';
 import { AuthGateProvider, useAuthGate } from './src/contexts/AuthGateContext';
 import { AuthFlowScreen } from './src/screens/AuthFlowScreen';
 import { ToastHost } from './src/components/common/ToastHost';
@@ -11,6 +12,9 @@ import { BookFlipLoadingScreen } from './src/components/common/BookFlipLoadingSc
 import { AppUpdateGateModal } from './src/components/common/AppUpdateGateModal';
 import { useAppVersionGate } from './src/hooks/useAppVersionGate';
 import { LanguageProvider, useLanguage } from './src/contexts/LanguageContext';
+import { PushNotificationCoordinator } from './src/components/common/PushNotificationCoordinator';
+
+const rootNavigationRef = createNavigationContainerRef<RootStackParamList>();
 
 function AppRoutes() {
   const appVersionGate = useAppVersionGate();
@@ -73,8 +77,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <LanguageProvider>
-        <NavigationContainer>
+        <NavigationContainer ref={rootNavigationRef}>
           <AuthGateProvider>
+            <PushNotificationCoordinator navigationRef={rootNavigationRef} />
             <AppRoutes />
             <StatusBar style="dark" backgroundColor="transparent" translucent />
           </AuthGateProvider>

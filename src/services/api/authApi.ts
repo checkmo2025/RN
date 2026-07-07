@@ -4,6 +4,10 @@ import {
   getStoredRefreshToken,
   saveStoredRefreshToken,
 } from './authTokenStore';
+import {
+  logPushUnregistrationError,
+  unregisterCurrentPushDeviceAsync,
+} from '../push/pushNotificationService';
 
 type SignUpResult = {
   email?: string;
@@ -363,6 +367,12 @@ export async function logoutSession(): Promise<void> {
   const refreshToken = await getStoredRefreshToken();
 
   try {
+    try {
+      await unregisterCurrentPushDeviceAsync();
+    } catch (error) {
+      logPushUnregistrationError(error);
+    }
+
     if (refreshToken) {
       await requestJson<ApiEnvelope<null>>('/auth/app/logout', {
         method: 'POST',

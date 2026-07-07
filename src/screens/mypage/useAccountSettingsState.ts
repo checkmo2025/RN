@@ -10,6 +10,11 @@ import {
   withdrawMember,
   type ReportItem,
 } from '../../services/api/memberApi';
+import {
+  logPushUnregistrationError,
+  unregisterCurrentPushDeviceAsync,
+} from '../../services/push/pushNotificationService';
+import { clearStoredPushRegistrationCache } from '../../services/push/pushDeviceStorage';
 import { formatKstDateLabel } from '../../utils/date';
 import { showToast } from '../../utils/toast';
 import { navigateToHome } from '../../navigation/navigateToHome';
@@ -361,6 +366,11 @@ export function useAccountSettingsState({
     const submit = async () => {
       try {
         await updateMyPassword({ currentPassword, newPassword, confirmPassword });
+        try {
+          await unregisterCurrentPushDeviceAsync();
+        } catch (error) {
+          logPushUnregistrationError(error);
+        }
         await clearStoredAuthSession();
         showToast('비밀번호가 변경되었습니다. 다시 로그인해 주세요.');
         logout();
@@ -373,7 +383,7 @@ export function useAccountSettingsState({
       }
     };
     void submit();
-  }, [passwordConfirm, passwordCurrent, passwordNext]);
+  }, [logout, passwordConfirm, passwordCurrent, passwordNext]);
 
   const handleWithdrawMember = useCallback(() => {
     if (submittingWithdrawal) return;
@@ -387,7 +397,13 @@ export function useAccountSettingsState({
           setSubmittingWithdrawal(true);
           const submit = async () => {
             try {
+              try {
+                await unregisterCurrentPushDeviceAsync();
+              } catch (error) {
+                logPushUnregistrationError(error);
+              }
               await withdrawMember();
+              await clearStoredPushRegistrationCache({ deleteInstallationId: true });
               await clearStoredAuthSession();
               showToast('탈퇴가 신청되었습니다.');
               logout();
