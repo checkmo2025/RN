@@ -1,13 +1,13 @@
 appId: kr.co.checkmo.app
 ---
-- launchApp
-- extendedWaitUntil:
-    visible: "책모 홈"
-    timeout: 20000
+- openLink: "checkmo://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+- waitForAnimationToEnd:
+    timeout: 5000
 - tapOn:
-    point: "90%,95%"
+    text: "열기"
+    optional: true
 - extendedWaitUntil:
     visible: "마이페이지"
-    timeout: 10000
+    timeout: 20000
 - assertNotVisible: "로그인이 필요해요"
 - assertNotVisible: "이메일 또는 닉네임"

@@ -3552,3 +3552,10 @@ export const interactionOpacity = {
 - 실제 배포 앱 기준 iOS APNs capability/Auth Key 설정 절차 정리
 - Android Firebase/FCM V1 service account 및 `google-services.json` 설정 절차 정리
 - iOS/Android 배포 빌드 후 백엔드 push-devices 검증 체크리스트 추가
+
+# 2026-07-07 18:30:10 KST iOS 로컬 E2E 재검증
+
+- iOS Maestro 플로우가 Expo dev-client URL로 Metro에 연결되도록 시작부 보강
+- 하단 탭 클릭을 좌표 기반에서 접근성 라벨 기반으로 안정화
+- 비로그인 게스트, 로그인, 로그인 세션 유지 플로우를 iPhone 16 Pro iOS 18.6 시뮬레이터에서 통과 확인
+- E2E 결과를 `docs/e2e-reports/2026-07-07-e2e-report.*`에 추가

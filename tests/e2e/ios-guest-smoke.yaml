@@ -3,33 +3,35 @@ appId: kr.co.checkmo.app
 - clearKeychain
 - launchApp:
     clearState: true
+- openLink: "checkmo://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    text: "열기"
+    optional: true
 - extendedWaitUntil:
     visible: "책모 홈"
     timeout: 20000
 - assertVisible: "소식"
 - assertVisible: "책이야기"
 
-# Bottom tab smoke. Coordinate taps avoid ambiguous repeated Korean labels in content.
-- tapOn:
-    point: "30%,95%"
+# Bottom tab smoke. Use accessibility labels from React Navigation tabs.
+- tapOn: "모임, tab, 2 of 5"
 - extendedWaitUntil:
-    visible: "모임"
+    visible: "모임 검색하기"
     timeout: 10000
 
-- tapOn:
-    point: "50%,95%"
+- tapOn: "책 이야기, tab, 3 of 5"
 - extendedWaitUntil:
     visible: "책 이야기"
     timeout: 10000
 
-- tapOn:
-    point: "70%,95%"
+- tapOn: "소식, tab, 4 of 5"
 - extendedWaitUntil:
     visible: "소식"
     timeout: 10000
 
-- tapOn:
-    point: "90%,95%"
+- tapOn: "마이페이지, tab, 5 of 5"
 - extendedWaitUntil:
     visible: "로그인"
     timeout: 10000

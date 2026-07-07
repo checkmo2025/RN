@@ -3,12 +3,17 @@ appId: kr.co.checkmo.app
 - clearKeychain
 - launchApp:
     clearState: true
+- openLink: "checkmo://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    text: "열기"
+    optional: true
 - extendedWaitUntil:
     visible: "책모 홈"
     timeout: 20000
 
-- tapOn:
-    point: "90%,95%"
+- tapOn: "마이페이지, tab, 5 of 5"
 - extendedWaitUntil:
     visible: "로그인"
     timeout: 10000
