@@ -3533,3 +3533,9 @@ export const interactionOpacity = {
 - 공통 헤더에서 현재 하단 탭을 다시 누르면 책 검색 드롭다운/검색 페이지가 닫히도록 처리
 - 탭 네비게이터 직접 사용 화면과 부모 탭 네비게이터 화면을 모두 감지하도록 보강
 - `npm run typecheck`로 변경 검증
+
+# 2026-07-07 15:14:59 KST 1.1.6 제출 버전 반영
+
+- `app.json`, package metadata, Expo runtimeVersion을 1.1.6으로 갱신
+- iOS `CFBundleShortVersionString`, `MARKETING_VERSION`, Expo runtime plist를 1.1.6으로 갱신
+- `npm run typecheck`와 앱 버전 필드 검색으로 제출 전 검증
