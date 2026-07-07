@@ -3559,3 +3559,8 @@ export const interactionOpacity = {
 - 하단 탭 클릭을 좌표 기반에서 접근성 라벨 기반으로 안정화
 - 비로그인 게스트, 로그인, 로그인 세션 유지 플로우를 iPhone 16 Pro iOS 18.6 시뮬레이터에서 통과 확인
 - E2E 결과를 `docs/e2e-reports/2026-07-07-e2e-report.*`에 추가
+
+# 2026-07-07 18:43:19 KST Android production 빌드 버전명 정정
+
+- EAS Android 빌드 메타데이터가 `versionName 1.1.2`로 잡히는 원인을 native Gradle 설정에서 확인
+- 잘못 시작된 Android production 빌드를 취소하고 `android/app/build.gradle`의 `versionName`을 1.1.6으로 정정
