@@ -9,12 +9,15 @@ import {
   KeyboardAvoidingView,
   LayoutChangeEvent,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   ScrollView,
   RefreshControl,
   Share,
   StyleSheet,
   Text,
   TextInput,
+  TextInputContentSizeChangeEventData,
   View,
   Platform,
   useWindowDimensions,
@@ -365,6 +368,10 @@ export function StoryScreen() {
   const inlineReplyInputRef = useRef<TextInput>(null);
   const inlineEditCommentInputRef = useRef<TextInput>(null);
   const bodyInputRef = useRef<TextInput>(null);
+  const composeScrollRef = useRef<ScrollView>(null);
+  const composeScrollYRef = useRef(0);
+  const composeBodyFocusedRef = useRef(false);
+  const composeBodyContentHeightRef = useRef(0);
   const commentSectionYRef = useRef(0);
   const pendingDetailFocusRef = useRef<'comments' | null>(null);
   const isComposingRef = useRef(false);
@@ -546,6 +553,9 @@ export function StoryScreen() {
       bodyValueRef.current = nextBody;
       selectedBookValueRef.current = nextBook;
       composeInitialDraftRef.current = nextInitialDraft;
+      composeScrollYRef.current = 0;
+      composeBodyFocusedRef.current = false;
+      composeBodyContentHeightRef.current = 0;
       commentDraftTextRef.current = '';
       editingCommentIdRef.current = null;
       editingCommentOriginalTextRef.current = '';
@@ -574,6 +584,8 @@ export function StoryScreen() {
     animateTransition();
     isComposingRef.current = false;
     composeInitialDraftRef.current = EMPTY_COMPOSE_INITIAL_DRAFT;
+    composeBodyFocusedRef.current = false;
+    composeBodyContentHeightRef.current = 0;
     editingCommentIdRef.current = null;
     editingCommentOriginalTextRef.current = '';
     commentDraftTextRef.current = '';
@@ -650,6 +662,54 @@ export function StoryScreen() {
   const handleChangeStoryBody = useCallback((text: string) => {
     bodyValueRef.current = text;
     setBody(text);
+  }, []);
+
+  const scrollComposeBodyCursorToTarget = useCallback(
+    (animated = true) => {
+      if (!composeBodyFocusedRef.current) return;
+
+      requestAnimationFrame(() => {
+        bodyInputRef.current?.measureInWindow((_x, inputY, _width, inputHeight) => {
+          const contentHeight = composeBodyContentHeightRef.current || inputHeight;
+          const estimatedCursorY = inputY + Math.min(inputHeight, contentHeight) - spacing.md;
+          const targetY = getFocusedInputTargetCenterY(screenHeight);
+          if (estimatedCursorY <= targetY + spacing.xs) return;
+
+          composeScrollRef.current?.scrollTo({
+            y: Math.max(0, composeScrollYRef.current + estimatedCursorY - targetY),
+            animated,
+          });
+        });
+      });
+    },
+    [screenHeight],
+  );
+
+  const scheduleComposeBodyCursorScroll = useCallback(() => {
+    FOCUSED_INPUT_SCROLL_RETRY_DELAYS_MS.forEach((delay) => {
+      setTimeout(() => scrollComposeBodyCursorToTarget(true), delay);
+    });
+  }, [scrollComposeBodyCursorToTarget]);
+
+  const handleFocusStoryBodyInput = useCallback(() => {
+    composeBodyFocusedRef.current = true;
+    scheduleComposeBodyCursorScroll();
+  }, [scheduleComposeBodyCursorScroll]);
+
+  const handleBlurStoryBodyInput = useCallback(() => {
+    composeBodyFocusedRef.current = false;
+  }, []);
+
+  const handleStoryBodyContentSizeChange = useCallback(
+    (event: NativeSyntheticEvent<TextInputContentSizeChangeEventData>) => {
+      composeBodyContentHeightRef.current = event.nativeEvent.contentSize.height;
+      scrollComposeBodyCursorToTarget(true);
+    },
+    [scrollComposeBodyCursorToTarget],
+  );
+
+  const handleComposeScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    composeScrollYRef.current = event.nativeEvent.contentOffset.y;
   }, []);
 
   const handleChangeCommentInput = useCallback((text: string) => {
@@ -1114,6 +1174,9 @@ export function StoryScreen() {
       bodyValueRef.current = nextBody;
       selectedBookValueRef.current = nextBook;
       composeInitialDraftRef.current = nextInitialDraft;
+      composeScrollYRef.current = 0;
+      composeBodyFocusedRef.current = false;
+      composeBodyContentHeightRef.current = 0;
       commentDraftTextRef.current = '';
       editingCommentIdRef.current = null;
       editingCommentOriginalTextRef.current = '';
@@ -2692,9 +2755,12 @@ export function StoryScreen() {
           keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + scaleSize(44) : 0}
         >
           <ScrollView
+            ref={composeScrollRef}
             contentContainerStyle={styles.composeContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            onScroll={handleComposeScroll}
+            scrollEventThrottle={16}
           >
           <View style={styles.composeHeader}>
             <Pressable
@@ -2789,8 +2855,11 @@ export function StoryScreen() {
               placeholderTextColor={colors.gray3}
               style={styles.bodyInput}
               multiline
-              scrollEnabled
+              scrollEnabled={false}
               textAlignVertical="top"
+              onFocus={handleFocusStoryBodyInput}
+              onBlur={handleBlurStoryBodyInput}
+              onContentSizeChange={handleStoryBodyContentSizeChange}
               maxLength={INPUT_LIMITS.BOOK_STORY_CONTENT}
               overLimitMessage={l('책이야기 본문은 {limit}자 이하여야 합니다.', {
                 limit: INPUT_LIMITS.BOOK_STORY_CONTENT,
@@ -3449,7 +3518,6 @@ const styles = StyleSheet.create({
     ...typography.body1_3,
     color: colors.gray6,
     minHeight: 160,
-    maxHeight: 320,
     paddingTop: spacing.sm,
     paddingRight: spacing.lg,
     paddingBottom: spacing.lg,

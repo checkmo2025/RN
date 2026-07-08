@@ -3576,3 +3576,9 @@ export const interactionOpacity = {
 - iOS Associated Domains와 Android App Links intent filter 설정 추가
 - 공유 웹 URL을 앱 내 Story/Meeting/News/Profile 화면으로 라우팅하는 DeepLinkCoordinator 추가
 - `checkmo://` 커스텀 스킴 fallback도 동일 parser로 처리
+
+# 2026-07-08 15:14:09 KST 책이야기 작성 커서 스크롤 보정
+
+- 책이야기 작성 본문 입력이 길어질 때 외부 ScrollView를 움직여 커서 라인을 화면 상단 40% 지점 근처에 유지
+- 본문 입력창 내부 스크롤을 끄고 작성 화면 전체 스크롤로 줄 증가를 처리
+- 웹 URL 앱 열기 후속 작업 메모를 `docs/documents/web-to-app-deep-link-followup.md`에 저장
