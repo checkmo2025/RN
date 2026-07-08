@@ -3605,3 +3605,8 @@ export const interactionOpacity = {
 - 앱 foreground 복귀 시 세션 refresh/login-status 재확인으로 장시간 로그인 유지 보강
 - 앱 버전 정책 조회에 재시도, 타임아웃 확장, 실패 로그 상세화를 추가
 - `npm run check`로 typography/spacing/typecheck/expo-doctor 검증
+
+# 2026-07-08 19:24:13 KST 앱 버전 정책 조회 타임아웃 복구
+
+- 앱 버전 정책 조회 timeout을 기존 기준인 5초로 복구
+- CTA 수정은 FE `feat-483-cta` 브랜치에서 별도 커밋/푸시 완료 상태로 확인

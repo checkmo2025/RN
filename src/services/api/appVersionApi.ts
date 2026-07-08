@@ -27,7 +27,7 @@ export async function fetchAppVersionPolicy(platform: AppPlatform): Promise<AppV
     },
     retryOnUnauthorized: false,
     suppressErrorToast: true,
-    timeoutMs: 15_000,
+    timeoutMs: 5_000,
   });
   const result = unwrapResult(response);
 
