@@ -3587,3 +3587,8 @@ export const interactionOpacity = {
 
 - Play 배포 전 Android에서 웹 링크 앱 열기 유도가 뜨지 않도록 `app.json`의 Android HTTPS intent filter 제거
 - 웹→앱 후속 문서에 Android App Links, assetlinks, Android CTA 보류 기준 추가
+
+# 2026-07-08 16:21:29 KST 책이야기 상세 뒤로가기 스크롤 복원
+
+- 책이야기 리스트 스크롤 offset을 저장해 상세 화면에서 뒤로가기 시 직전 위치로 복원
+- 새 글 등록 후 맨 위 이동 동작과 복원 예약 상태가 충돌하지 않도록 정리

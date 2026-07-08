@@ -356,6 +356,8 @@ export function StoryScreen() {
   const [submittingStory, setSubmittingStory] = useState(false);
   const listRef = useRef<FlatList<StoryFeedItem>>(null);
   useScrollToTop(listRef);
+  const listScrollOffsetRef = useRef(0);
+  const pendingListScrollRestoreRef = useRef<number | null>(null);
   const loadingStoriesRef = useRef(false);
   const loadingMoreStoriesRef = useRef(false);
   const hasNextStoriesRef = useRef(false);
@@ -447,9 +449,33 @@ export function StoryScreen() {
     // 비활성화해 크래시를 막는다.
   }, []);
 
+  const handleStoryListScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    listScrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+  }, []);
+
+  const restoreStoryListScrollIfNeeded = useCallback(() => {
+    const offset = pendingListScrollRestoreRef.current;
+    if (offset === null) return;
+
+    const restoredOffset = Math.max(0, offset);
+    pendingListScrollRestoreRef.current = null;
+
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: restoredOffset, animated: false });
+      InteractionManager.runAfterInteractions(() => {
+        listRef.current?.scrollToOffset({ offset: restoredOffset, animated: false });
+      });
+    });
+  }, []);
+
   const closeStoryDetail = useCallback(() => {
     const returnTarget = storyReturnTargetRef.current;
     storyReturnTargetRef.current = null;
+    if (returnTarget === 'MY_STORIES') {
+      pendingListScrollRestoreRef.current = null;
+    } else {
+      pendingListScrollRestoreRef.current = listScrollOffsetRef.current;
+    }
     animateTransition();
     detailTranslateX.stopAnimation(() => {
       detailTranslateX.setValue(0);
@@ -472,6 +498,11 @@ export function StoryScreen() {
       navigation.navigate('My', { openMyTab: '내 책 이야기' });
     }
   }, [animateTransition, detailTranslateX, navigation]);
+
+  useEffect(() => {
+    if (selectedStory || isComposing) return;
+    restoreStoryListScrollIfNeeded();
+  }, [isComposing, restoreStoryListScrollIfNeeded, selectedStory]);
 
   const scrollToCommentSection = useCallback((animated = true) => {
     if (commentSectionYRef.current <= 0) return false;
@@ -1829,6 +1860,8 @@ export function StoryScreen() {
             });
           } else {
             selectedStoryValueRef.current = null;
+            listScrollOffsetRef.current = 0;
+            pendingListScrollRestoreRef.current = null;
             listRef.current?.scrollToOffset({ offset: 0, animated: true });
           }
         } catch (error) {
@@ -3092,6 +3125,8 @@ export function StoryScreen() {
           }}
           ItemSeparatorComponent={() => <View style={styles.storyItemSeparator} />}
           contentContainerStyle={styles.listContent}
+          onScroll={handleStoryListScroll}
+          scrollEventThrottle={16}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}
           showsVerticalScrollIndicator={false}
