@@ -1,8 +1,8 @@
 # checkmo_rn 기능명세서 (코드 기준)
 
 - 작성일: 2026-04-25
-- 갱신일: 2026-06-22 (조별 채팅 재도입: REST 히스토리/STOMP 송수신/메시지 신고)
-- 기준 코드: `src/screens/*`, `src/components/common/AppHeader.tsx`, `src/services/api/*`, BE `develop`
+- 갱신일: 2026-07-08 (소셜 로그인/약관/프로필 완성/세션 선제 갱신/푸시·딥링크·버전 게이트 반영)
+- 기준 코드: `App.tsx`, `src/screens/*`, `src/components/common/*`, `src/services/api/*`, `src/services/auth/*`, `src/services/push/*`, `src/services/deepLinking.ts`, BE `develop`
 - 목적: 현재 앱에 구현된 기능의 동작/권한/API 연동 범위를 정리
 
 ## 1) 공통 정책
@@ -10,8 +10,11 @@
 ### 1.1 로그인 게이트
 
 - 공통 인증 게이트: `AuthGateContext.requireAuth()`
+- 인증 상태: `loggedOut` / `profileIncomplete` / `loggedIn`
 - 비로그인 시 동작: 인증 플로우(`AuthFlowScreen`)를 오버레이로 표시
 - 로그인 완료 시: 로그인 전 요청한 콜백 액션 재실행(pending action)
+- 프로필 미완성 세션(`AUTH_403` 또는 소셜 로그인 응답 `profileCompleted=false`)은 `profileCompletion` 모드로 인증 플로우를 열고 닫기 동작을 막음
+- 세션 초기화/만료(`AUTH_405`, `AUTH_412`, 복구 불가 401)는 저장 refresh token과 푸시 등록 캐시를 정리하고 로그인 화면을 다시 표시
 
 ### 1.2 홈 권한 정책 (`homeAccessPolicy`)
 
@@ -23,6 +26,8 @@
 
 ### 1.3 공통 UX
 
+- 앱 부팅 중 `AuthGate.isReady`가 될 때까지 책 넘김 로딩 화면 표시
+- 로그인 필요 액션은 1초 인증 전환 로딩(`AUTH_TRANSITION_MS`) 후 인증 오버레이 표시
 - 주요 액션 후 Toast 피드백 제공
 - 일부 토글 액션은 낙관적 업데이트 후 실패 시 롤백
 - 스크롤 화면 대부분 Pull-to-refresh 지원
@@ -38,41 +43,120 @@
 - `content`: 선택, 최대 500자
 - 현재 RN 신고 진입점은 모두 **대상 작성자(MEMBER) 신고**로 호출(닉네임 기반). BE는 글/공지/댓글 단위(`BOOK_STORY`, `CLUB_NOTICE` 등) 신고도 지원하나 RN UI는 아직 작성자 신고만 연결.
 
+### 1.5 앱 버전 게이트 (`APP-UPDATE-01`)
+
+- 앱 시작 시 `useAppVersionGate`가 `GET /api/v1/app/version?platform=ios|android` 조회
+- 현재 버전: `app.json`의 `expo.version`
+- `minSupportedVersion` 미만이면 강제 업데이트 모달(닫기 불가), `latestVersion` 미만이면 권장 업데이트 모달(나중에 가능)
+- 업데이트 버튼은 BE 응답 `storeUrl`을 `Linking.openURL`로 열며, 정책 조회 실패 시 앱 진입은 막지 않음
+
+### 1.6 딥링크/유니버설 링크 (`DEEPLINK-01`)
+
+- 지원 링크: 앱 스킴 `checkmo://...`, 웹 링크 `https://checkmo.co.kr/...`, `https://www.checkmo.co.kr/...`
+- 라우팅:
+  - `stories/{id}`, `book-stories/{id}` -> `Story openStoryId` (`focus=comments` 지원)
+  - `groups/{clubId}`, `clubs/{clubId}` -> `Meeting openClubId`
+  - `groups|clubs/{clubId}/meetings/{meetingId}` -> `Meeting openClubId/openMeetingId`
+  - `groups|clubs/{clubId}/notice(s)/{noticeId}` -> `Meeting openClubId/openNoticeId`
+  - `news/{newsId}` -> `News openNewsId`
+  - `profile|members/{nickname}` -> `UserProfile`
+  - `profile/me`, `members/me`, `profile/mypage` -> `My`
+- 네비게이션 준비 전 받은 링크는 pending target으로 보관했다가 준비 후 이동
+
+### 1.7 푸시 알림 (`PUSH-01`)
+
+- `PushNotificationCoordinator`가 앱 루트에서 Expo notification handler를 설정
+- 로그인 완료 후 실제 iOS/Android 기기에서 알림 권한, EAS projectId, Expo push token을 확인해 `PUT /notifications/push-devices`로 기기 등록
+- 앱 active 복귀/Expo push token 변경 시 등록 정보를 재동기화
+- 로그아웃/비밀번호 변경/회원 탈퇴 시 `DELETE /notifications/push-devices/{installationId}` 후 로컬 푸시 등록 캐시 정리
+- 푸시 탭:
+  - 로그인 상태면 payload를 `NotificationItem`으로 파싱해 `Story`/`Meeting`/`My`/`UserProfile`로 이동하고 읽음 처리
+  - 비로그인 상태면 로그인 유도 후 `My` 탭의 알림 화면으로 이동
+
 ## 2) 인증/계정
 
-### 2.1 로그인 (`AUTH-01`)
+### 2.1 이메일/닉네임 로그인 (`AUTH-01`)
 
 - 입력: 아이디(이메일/닉네임), 비밀번호
 - 검증: 공백 체크
 - 처리: `loginByIdentifier`
 - 결과: 성공 시 인증 완료 처리(`completeAuthFlow`), 실패 시 오류 토스트
+- 프로필 미완성 오류(`AUTH_403`)는 프로필 완성 플로우로 전환
 
-### 2.2 회원가입 (`AUTH-02`)
+### 2.2 소셜 로그인 (`AUTH-02`)
+
+- 로그인 화면 노출:
+  - iOS + Apple 인증 가능 기기: Apple 아이콘
+  - 공통: Kakao / Google / Naver 아이콘
+- Kakao/Google/Naver:
+  - `WebBrowser.openAuthSessionAsync`로 `${API_ORIGIN}/oauth2/authorization/{provider}?client=app` 오픈
+  - BE 성공 콜백은 `checkmo://oauth-callback?code=...`
+  - RN은 일회용 `code`를 `POST /auth/app/oauth/exchange`로 교환해 refresh token을 SecureStore에 저장
+  - 응답 `profileCompleted=false`이면 프로필 완성 플로우로 전환
+- Apple:
+  - `expo-apple-authentication` native Sign in with Apple 사용(iOS only)
+  - nonce 생성/해시 후 Apple credential의 `identityToken`, `rawNonce`, 선택 `authorizationCode`를 `POST /auth/app/apple/login`으로 전송
+  - 성공 시 이메일 로그인과 동일하게 refresh token 저장 + 세션 확인
+- 취소(`cancel`/`dismiss`)는 무동작, 실패는 provider별 오류 토스트
+- 주요 오류:
+  - `AUTH_414`: 이미 다른 계정으로 가입된 이메일
+  - `AUTH_415`: Apple 인증 정보 유효하지 않음
+  - `AUTH_416`: OAuth 일회용 코드 만료
+
+### 2.3 회원가입/프로필 완성 (`AUTH-03`)
 
 - 단계:
   - 약관 동의
   - 이메일 인증번호 발송/검증
-  - 비밀번호 설정(6~12자, 영문/특수문자 조건)
+  - 비밀번호 설정(6~24자, 영문/특수문자 조건)
   - 기본 정보(닉네임 중복 확인, 이름, 전화번호, 소개)
-  - 추가 정보(프로필 이미지/기본 색상, 관심 카테고리)
+  - 추가 정보(프로필 이미지/기본 프로필 이미지, 관심 카테고리)
   - 완료
 - 주요 API:
+  - 약관: `fetchActiveTerms`, `fetchMyTermsStatus`, `updateMyTermsAgreements`
   - `requestEmailVerification`, `confirmEmailVerification`
   - `checkNicknameDuplicate`
   - `signUpByEmail` -> `loginByIdentifier` -> `submitAdditionalInfo`
   - 이미지 업로드 시 `issueProfileImageUploadUrl` + presigned `PUT`
+- 약관:
+  - 일반 회원가입은 `GET /terms`로 활성 약관을 불러오고 필수 약관 동의가 필요
+  - 프로필 완성 모드는 `GET /members/me/terms`로 현재 동의 상태를 불러온 뒤 `POST /members/me/terms` 저장
+- 프로필 완성 모드:
+  - 이메일 회원가입 중 계정 생성 후 추가 정보 저장이 실패했거나, 소셜 로그인 후 프로필이 미완성인 경우 진입
+  - 약관 -> 기본 프로필 -> 추가 프로필 3단계로 진행
+  - 닫기 버튼/취소 경로 없음
+- 입력 정책:
+  - 닉네임 최대 20자, 영어 소문자/숫자/허용 특수문자, 중복 확인 필수
+  - 이름 최대 10자, 소개 최대 40자, 전화번호 `010-0000-0000` 형식
+  - 관심 카테고리 최소 1개, 최대 6개 선택
+- 완료 화면 CTA:
+  - 모임 검색하기
+  - 모임 생성하기
+  - 모임 없이 이용하기
 
-### 2.3 아이디/비밀번호 찾기 (`AUTH-03`)
+### 2.4 아이디/비밀번호 찾기 (`AUTH-04`)
 
 - 아이디 찾기: `findEmailByNamePhone`
 - 임시 비밀번호 발급: `sendTemporaryPassword`
 
-### 2.4 세션 동기화/로그아웃 (`AUTH-04`)
+### 2.5 세션 동기화/로그아웃 (`AUTH-05`)
 
-- 앱 로그인: `POST /auth/app/login` — 응답의 `refreshToken`을 로컬에 저장
-- 토큰 로테이션: 401 응답 시 `POST /auth/app/refresh`로 access token 자동 재발급(`http.ts`), 갱신 실패 시 로컬 토큰 폐기
-- 앱 부팅 후 로그인 상태 확인: `fetchLoginStatusSilently`
-- 로그아웃: `POST /auth/app/logout` + 저장된 refresh token/로컬 인증 상태 초기화
+- 앱 로그인: `POST /auth/app/login` — 응답 `refreshToken`을 SecureStore에 저장(`checkmo.refreshToken`)
+- refresh token 저장 시 갱신 시각(`checkmo.refreshTokenUpdatedAt`)도 함께 저장
+- 토큰 로테이션:
+  - 앱 부팅 시 `silentRefreshSession` -> `fetchLoginStatusSilently`
+  - 일반 API 요청 전 저장 refresh token이 1시간 이상 지난 경우 `ensureFreshAppSessionIfNeeded`로 선제 갱신
+  - 앱이 foreground로 복귀했을 때도 필요 시 선제 갱신
+  - 401 응답 시 `POST /auth/app/refresh`로 access token 자동 재발급 후 원 요청 1회 재시도
+  - `auth/*`, `members/check-nickname`, `members/find-email`, `credentials: omit`, `retryOnUnauthorized: false` 요청은 자동 갱신 제외
+- 갱신 실패/세션 무효:
+  - refresh 실패가 401, `AUTH_405`, `AUTH_412`이면 로컬 refresh token 삭제
+  - 복구 불가 401 또는 무효 세션은 인증 오버레이 재표시
+- 로그아웃:
+  - 현재 푸시 디바이스 등록 해제 시도
+  - refresh token이 있으면 `POST /auth/app/logout`(`X-Refresh-Token` 헤더)
+  - refresh token이 없으면 `POST /auth/logout`
+  - 최종적으로 저장 refresh token/로컬 인증 상태 초기화
 
 ## 3) Home (책모 홈)
 
@@ -120,10 +204,10 @@
 ### 4.3 모임 생성 플로우 (`MTG-03`)
 
 - 4단계 입력:
-  - 이름/소개(이름 중복 확인 `checkClubNameDuplicate`)
+  - 모임명/소개(모임명 중복 확인 `checkClubNameDuplicate`)
   - 프로필 이미지/공개여부
   - 카테고리/지역/대상
-  - 외부 링크(선택)
+  - 문의 링크(선택, 최대 4개)
 - 생성: `createClub`
 - 이미지 업로드: `pickAndUploadImage('CLUB')` -> `issueImageUploadUrl`
 
@@ -159,9 +243,12 @@
 - 작성/수정: `createClubNotice`, `updateClubNotice`
 - 삭제: `deleteClubNotice`
 - 첨부:
+  - 상단 고정 여부
   - 책장 연결
-  - 투표(옵션, 익명/실명, 중복 허용, 시작/종료 시간)
-  - 사진(최대 10개)
+  - 투표(옵션 2~6개, 익명/실명, 중복 허용, 시작/종료 시간)
+  - 사진(최대 5개, `issueImageUploadUrl('NOTICE')` + presigned `PUT`)
+- 입력 제한: 제목 40자, 내용 1000자
+- 투표가 이미 있는 공지를 수정할 때는 투표 입력 영역을 잠금 처리
 
 ### 4.8 책장 조회 (`MTG-08`)
 
@@ -217,6 +304,8 @@
   - 회원 제외: `KICK`
 - 모임 수정:
   - `updateClub` (+ 필요 시 `fetchClubDetail` 재조회)
+  - 모임명을 변경하는 경우 `checkClubNameDuplicate` 중복 확인 필수
+  - 문의 링크 최대 4개
 - 책장 생성/수정/삭제:
   - `createClubBookshelf`, `updateClubBookshelf`, `deleteClubBookshelf`
 - 모임 삭제:
@@ -246,6 +335,7 @@
   - 기존 글 불러와 편집
   - 수정 `updateBookStory`
 - 삭제: `deleteBookStory`
+- 입력 제한: 제목 100자, 본문 5000자
 
 ### 5.3 상세/상호작용 (`STORY-03`)
 
@@ -261,6 +351,7 @@
 - 댓글 수정: `updateBookStoryComment`
 - 댓글 삭제: `deleteBookStoryComment`
 - 대댓글: 부모 댓글 ID 지정해서 작성
+- 입력 제한: 댓글/대댓글 300자
 - 실패 시 낙관적 렌더 롤백
 
 ### 5.5 라우트 연동 (`STORY-05`)
@@ -300,7 +391,8 @@
   - 내 서재 `fetchAllMyLikedBooks`
   - 내 모임 `fetchMyClubs`
 - 비로그인:
-  - 폴백 프로필/목록 데이터 표시
+  - 하단 `My` 탭 진입은 `requireAuth`로 차단
+  - 화면 내부 폴백 프로필/목록 데이터는 남아 있으나 일반 탭 경로에서는 노출되지 않음
 
 ### 7.2 탭 기능 (`MY-02`)
 
@@ -308,8 +400,8 @@
 - 내 서재: 좋아요 토글 `toggleBookLikeByIsbn`
 - 내 모임: 그룹 진입 `Meeting openClubId`, 탈퇴 `leaveClub`
 - 내 알림:
-  - 목록 `fetchNotifications`
-  - 읽음 처리 `markNotificationAsRead`
+  - 목록 `fetchNotifications`를 cursor 기반으로 최대 100페이지까지 병합 로드(중복 notificationId 제거)
+  - 알림 클릭 시 낙관적 읽음 처리 후 `markNotificationAsRead`, 실패 시 unread 롤백
   - 대상 화면 이동 `resolveNotificationTarget`
 
 ### 7.3 팔로우 페이지 (`MY-03`)
@@ -325,8 +417,9 @@
   - `updateMyProfile`
   - 이미지 업로드 `issueProfileImageUploadUrl` + presigned `PUT`
 - 이메일 변경: `updateMyEmail`
-- 비밀번호 변경: `updateMyPassword`
-- 탈퇴: `withdrawMember`
+- 이메일 변경 인증: `requestEmailVerification(type='UPDATE_EMAIL')`, `confirmEmailVerification`
+- 비밀번호 변경: `updateMyPassword` 성공 후 푸시 디바이스 해제 + 로컬 세션 초기화 + 재로그인 유도
+- 탈퇴: `withdrawMember` 성공 후 푸시 디바이스 해제/캐시 삭제 + 로컬 세션 초기화
 - 로그아웃: `logoutSession` + 로컬 게이트 로그아웃
 
 ### 7.5 설정 > 서비스/기타 (`MY-05`)
@@ -335,10 +428,14 @@
 - 신고 관리: `fetchMyReports`
 - 차단 관리: `fetchBlockedMembers` 목록 + `unblockMember(nickname)` 해제 (최신순, 무한스크롤). 상세는 `block-feature-spec.md` 참고
 - 알림 관리:
-  - 조회 `fetchNotificationSettings`
-  - 토글 `toggleNotificationSetting`
+  - 기기 푸시 수신 토글: `setPushNotificationsEnabledAsync`
+  - 알림 종류별 설정 조회: `fetchNotificationSettings`
+  - 종류별 토글: `toggleNotificationSetting`
+  - 종류: 책 이야기 좋아요, 책 이야기 댓글, 구독자, 독서 모임 가입, 모임 일정, 공지사항
+  - 권한 거부/실기기 아님/projectId 없음/지원 플랫폼 아님은 토스트로 안내하고 토글 롤백
 - 고객센터/문의하기: `SUPPORT_FORM_URL`
 - 이용약관/버전정보: 앱 내 정적 표시
+- 버전 정보 텍스트: `settings.versionUpdatedAt` 번역 문자열에 하드코딩(`2026.06.14`)
 
 ## 8) UserProfile (다른사람 프로필)
 
@@ -365,9 +462,11 @@
 ### 9.1 알림 프리뷰 (`HDR-01`)
 
 - 조회: `fetchNotificationPreview(5)`
+- 로그인 사용자만 조회, 실패 시 프리뷰 비움
 - 클릭:
   - 읽음 처리 `markNotificationAsRead`
   - 라우팅 `resolveNotificationTarget` (`Story`/`Meeting`/`My`)
+- "알림 전체보기"는 `My openMyTab='ALARM'`로 이동
 
 ### 9.2 책 검색 (`HDR-02`)
 
@@ -382,6 +481,8 @@
 - `My` 탭은 비로그인 사용자가 직접 진입할 수 없음(탭 클릭 시 로그인 유도).
 - 신고 API는 대상별 `targetType`/`targetId`를 사용하며, 조별 채팅은 메시지 ID 기준 `CHAT` 신고를 연결함.
 - 조별 채팅은 텍스트 송수신·히스토리·메시지 신고만 지원함. 첨부/수정/삭제/읽음/푸시 알림/채팅 내 직접 차단은 미지원.
-- 소셜 로그인: **BE는 OAuth2(Google/Kakao/Naver) 구현됨** — Spring Security `oauth2Login` 웹 리다이렉트 방식(`/login/oauth2/code/{provider}`, 성공 시 `/api/v1/auth/redirect/oauth2`로 리다이렉트). **RN 앱에는 소셜 로그인 UI 미연결**(이메일/닉네임 로그인만). Apple은 BE provider에 없고 기획 문서(`docs/documents/apple-login-*`, `docs/documents/social-login-reintegration-plan.md`)만 존재.
-- 마이페이지 버전 정보 텍스트는 하드코딩(`2026.06.14`).
-- 일부 비로그인 상태 화면은 실제 API 대신 폴백 데이터 표시(마이페이지).
+- 소셜 로그인은 RN UI에 연결됨. Kakao/Google/Naver는 BE OAuth2 웹 플로우 + 앱 딥링크 일회용 코드 교환 방식, Apple은 iOS native Sign in with Apple + BE app login 방식.
+- `checkmo://oauth-callback`은 소셜 로그인용 콜백 URL이며, 일반 딥링크 라우터(`parseCheckmoDeepLink`)의 콘텐츠 이동 대상은 아님.
+- Apple 로그인은 iOS에서만 노출되며 `AppleAuthentication.isAvailableAsync()`가 false이면 버튼 미노출.
+- 앱 버전 정책 조회와 푸시 디바이스 등록은 실패해도 핵심 앱 진입을 막지 않음. 강제 업데이트는 정책 조회 성공 후 버전 비교가 force일 때만 차단.
+- 마이페이지 화면 내부에는 비로그인 폴백 데이터가 남아 있으나 하단 탭 진입 정책상 일반 사용자는 로그인 전 직접 볼 수 없음.
