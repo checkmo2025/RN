@@ -1,12 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
 import {
   ApiError,
   PROFILE_INCOMPLETE_MESSAGE,
+  ensureFreshAppSessionIfNeeded,
+  isStoredRefreshTokenRefreshDue,
   isProfileIncompleteApiError,
   subscribeProfileIncompleteSession,
   subscribeUnauthorizedSession,
 } from '../services/api/http';
+import { getStoredRefreshToken } from '../services/api/authTokenStore';
 import {
   clearStoredAuthSession,
   fetchLoginStatusSilently,
@@ -177,6 +181,62 @@ export function AuthGateProvider({ children }: Props) {
 
     return () => {
       cancelled = true;
+    };
+  }, [applyLoginStatus, clearSessionState, markSessionLoggedOut, openProfileCompletion]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshForegroundSession = async () => {
+      try {
+        const refreshToken = await getStoredRefreshToken();
+        if (!refreshToken) return;
+
+        const shouldRefresh =
+          authSessionStateRef.current === 'loggedOut' || (await isStoredRefreshTokenRefreshDue());
+        if (!shouldRefresh) return;
+
+        const refreshed = await ensureFreshAppSessionIfNeeded();
+        if (cancelled) return;
+
+        if (!refreshed) {
+          const stillHasRefreshToken = Boolean(await getStoredRefreshToken());
+          if (!cancelled && !stillHasRefreshToken) {
+            markSessionLoggedOut();
+          }
+          return;
+        }
+
+        const status = await fetchLoginStatusSilently(true);
+        if (!cancelled) {
+          applyLoginStatus(status);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        if (isProfileIncompleteApiError(error)) {
+          openProfileCompletion({ notify: true });
+          return;
+        }
+        if (isSessionResetError(error)) {
+          await clearSessionState();
+          return;
+        }
+        const stillHasRefreshToken = Boolean(await getStoredRefreshToken());
+        if (!stillHasRefreshToken) {
+          markSessionLoggedOut();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        void refreshForegroundSession();
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.remove();
     };
   }, [applyLoginStatus, clearSessionState, markSessionLoggedOut, openProfileCompletion]);
 

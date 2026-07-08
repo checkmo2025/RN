@@ -3,12 +3,14 @@ import { showToast } from '../../utils/toast';
 import {
   deleteStoredRefreshToken,
   getStoredRefreshToken,
+  getStoredRefreshTokenUpdatedAt,
   saveStoredRefreshToken,
 } from './authTokenStore';
 
 const DEFAULT_API_BASE_URL = 'https://api.checkmo.co.kr/api/v1';
 const API_VERSION_PATH = '/api/v1';
 const DEFAULT_TIMEOUT_MS = 15_000;
+const PROACTIVE_SESSION_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 
 type QueryValue = string | number | boolean | null | undefined;
 
@@ -214,6 +216,20 @@ function notifyProfileIncompleteSessionIfNeeded(status: number, parsed: unknown)
   }
 }
 
+function toNetworkErrorBody(url: string, error: unknown): { url: string; cause: unknown } {
+  if (error instanceof Error) {
+    return {
+      url,
+      cause: {
+        name: error.name,
+        message: error.message,
+      },
+    };
+  }
+
+  return { url, cause: error };
+}
+
 function isUnauthorizedSessionCode(code: string | undefined): boolean {
   return code === 'AUTH_405' || code === 'AUTH_412';
 }
@@ -233,6 +249,31 @@ async function parseResponseBody(response: Response): Promise<unknown> {
   }
 }
 
+function isSessionRefreshExcludedPath(path: string): boolean {
+  const normalizedPath = normalizeApiPath(path).replace(/\/+$/, '').toLowerCase();
+  if (normalizedPath === 'auth' || normalizedPath.startsWith('auth/')) return true;
+  if (normalizedPath === 'members/check-nickname') return true;
+  if (normalizedPath === 'members/find-email') return true;
+
+  return false;
+}
+
+function shouldUseSessionRefresh(
+  path: string,
+  options: {
+    credentials?: RequestCredentials;
+    retryOnUnauthorized?: boolean;
+    didRetry?: boolean;
+  },
+): boolean {
+  if (options.didRetry) return false;
+  if (options.retryOnUnauthorized === false) return false;
+  if (options.credentials === 'omit') return false;
+  if (isSessionRefreshExcludedPath(path)) return false;
+
+  return true;
+}
+
 function shouldAttemptSessionRefresh(
   path: string,
   status: number,
@@ -243,16 +284,7 @@ function shouldAttemptSessionRefresh(
   },
 ): boolean {
   if (status !== 401) return false;
-  if (options.didRetry) return false;
-  if (options.retryOnUnauthorized === false) return false;
-  if (options.credentials === 'omit') return false;
-
-  const normalizedPath = normalizeApiPath(path).replace(/\/+$/, '').toLowerCase();
-  if (normalizedPath.startsWith('auth/')) return false;
-  if (normalizedPath === 'members/check-nickname') return false;
-  if (normalizedPath === 'members/find-email') return false;
-
-  return true;
+  return shouldUseSessionRefresh(path, options);
 }
 
 let refreshSessionPromise: Promise<boolean> | null = null;
@@ -320,6 +352,41 @@ export async function silentRefreshSession(): Promise<boolean> {
   return refreshSessionPromise;
 }
 
+export async function isStoredRefreshTokenRefreshDue(nowMillis = Date.now()): Promise<boolean> {
+  const refreshToken = await getStoredRefreshToken();
+  if (!refreshToken) return false;
+
+  const updatedAtMillis = await getStoredRefreshTokenUpdatedAt();
+  if (!updatedAtMillis) return true;
+
+  return nowMillis - updatedAtMillis >= PROACTIVE_SESSION_REFRESH_INTERVAL_MS;
+}
+
+export async function ensureFreshAppSessionIfNeeded(nowMillis = Date.now()): Promise<boolean> {
+  if (!(await isStoredRefreshTokenRefreshDue(nowMillis))) {
+    return true;
+  }
+
+  return silentRefreshSession();
+}
+
+async function refreshStoredSessionIfNeededBeforeRequest(
+  path: string,
+  options: {
+    credentials?: RequestCredentials;
+    retryOnUnauthorized?: boolean;
+    didRetry?: boolean;
+  },
+): Promise<void> {
+  if (!shouldUseSessionRefresh(path, options)) return;
+
+  try {
+    await ensureFreshAppSessionIfNeeded();
+  } catch {
+    // 선제 갱신 실패만으로는 요청을 막지 않는다. 기존 요청/401 retry 흐름이 최종 판단한다.
+  }
+}
+
 async function fetchWithTimeout(
   path: string,
   options: RequestOptions,
@@ -328,6 +395,7 @@ async function fetchWithTimeout(
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const url = buildApiUrl(path, options.query, options.apiVersion);
 
   // 외부 signal(호출자 취소)을 내부 timeout 컨트롤러와 연결
   const externalSignal = options.signal;
@@ -341,7 +409,7 @@ async function fetchWithTimeout(
   }
 
   try {
-    return await fetch(buildApiUrl(path, options.query, options.apiVersion), {
+    return await fetch(url, {
       method: options.method ?? 'GET',
       headers,
       body: typeof options.body !== 'undefined' ? JSON.stringify(options.body) : undefined,
@@ -375,7 +443,14 @@ async function requestJsonInternal<T>(
     requestHeaders['Content-Type'] = 'application/json';
   }
 
+  await refreshStoredSessionIfNeededBeforeRequest(path, {
+    credentials,
+    retryOnUnauthorized: options.retryOnUnauthorized,
+    didRetry,
+  });
+
   let response: Response;
+  const requestUrl = buildApiUrl(path, options.query, options.apiVersion);
   try {
     response = await fetchWithTimeout(
       path,
@@ -391,7 +466,7 @@ async function requestJsonInternal<T>(
     if (!suppressErrorToast) {
       showToast(message);
     }
-    throw new ApiError(message, 0, 'NETWORK_ERROR', error);
+    throw new ApiError(message, 0, 'NETWORK_ERROR', toNetworkErrorBody(requestUrl, error));
   }
 
   const shouldRefreshSession = shouldAttemptSessionRefresh(path, response.status, {
@@ -463,14 +538,25 @@ export async function fetchApi(path: string, options: FetchApiOptions = {}): Pro
     ...fetchOptions
   } = options;
 
+  await refreshStoredSessionIfNeededBeforeRequest(path, {
+    credentials,
+    retryOnUnauthorized,
+  });
+
   let response: Response;
+  const requestUrl = buildApiUrl(path, query, apiVersion);
   try {
-    response = await fetch(buildApiUrl(path, query, apiVersion), {
+    response = await fetch(requestUrl, {
       ...fetchOptions,
       credentials,
     });
   } catch (error) {
-    throw new ApiError('네트워크 연결을 확인해 주십시오.', 0, 'NETWORK_ERROR', error);
+    throw new ApiError(
+      '네트워크 연결을 확인해 주십시오.',
+      0,
+      'NETWORK_ERROR',
+      toNetworkErrorBody(requestUrl, error),
+    );
   }
 
   const shouldRefreshSession = shouldAttemptSessionRefresh(path, response.status, {
@@ -480,7 +566,7 @@ export async function fetchApi(path: string, options: FetchApiOptions = {}): Pro
   });
   if (shouldRefreshSession && (await silentRefreshSession())) {
     try {
-      const retryResponse = await fetch(buildApiUrl(path, query, apiVersion), {
+      const retryResponse = await fetch(requestUrl, {
         ...fetchOptions,
         credentials,
       });
@@ -497,7 +583,12 @@ export async function fetchApi(path: string, options: FetchApiOptions = {}): Pro
       }
       return retryResponse;
     } catch (error) {
-      throw new ApiError('네트워크 연결을 확인해 주십시오.', 0, 'NETWORK_ERROR', error);
+      throw new ApiError(
+        '네트워크 연결을 확인해 주십시오.',
+        0,
+        'NETWORK_ERROR',
+        toNetworkErrorBody(requestUrl, error),
+      );
     }
   }
 

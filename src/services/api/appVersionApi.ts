@@ -22,9 +22,12 @@ export async function fetchAppVersionPolicy(platform: AppPlatform): Promise<AppV
   const response = await requestJson<ApiEnvelope<AppVersionPolicy>>('/app/version', {
     query: { platform },
     credentials: 'omit',
+    headers: {
+      Accept: 'application/json',
+    },
     retryOnUnauthorized: false,
     suppressErrorToast: true,
-    timeoutMs: 5_000,
+    timeoutMs: 15_000,
   });
   const result = unwrapResult(response);
 

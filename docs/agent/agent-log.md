@@ -3598,3 +3598,10 @@ export const interactionOpacity = {
 - `docs/pm/functional-spec.md`를 현재 RN 코드 기준으로 갱신
 - 소셜 로그인, 프로필 완성, 세션 선제 갱신, 푸시/딥링크/버전 게이트 내용을 반영
 - 공지 사진 수, 비밀번호/입력 길이, 마이페이지 알림 설정 등 오래된 수치와 제한사항 정정
+
+# 2026-07-08 19:20:33 KST 앱 세션 유지 및 버전 정책 조회 안정화
+
+- refresh token 저장 시 갱신 시각을 함께 저장하고 60분 기준 선제 app refresh 흐름 추가
+- 앱 foreground 복귀 시 세션 refresh/login-status 재확인으로 장시간 로그인 유지 보강
+- 앱 버전 정책 조회에 재시도, 타임아웃 확장, 실패 로그 상세화를 추가
+- `npm run check`로 typography/spacing/typecheck/expo-doctor 검증
