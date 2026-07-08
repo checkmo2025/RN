@@ -47,58 +47,6 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.WRITE_EXTERNAL_STORAGE"
-      ],
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "https",
-              "host": "checkmo.co.kr",
-              "pathPrefix": "/stories"
-            },
-            {
-              "scheme": "https",
-              "host": "www.checkmo.co.kr",
-              "pathPrefix": "/stories"
-            },
-            {
-              "scheme": "https",
-              "host": "checkmo.co.kr",
-              "pathPrefix": "/groups"
-            },
-            {
-              "scheme": "https",
-              "host": "www.checkmo.co.kr",
-              "pathPrefix": "/groups"
-            },
-            {
-              "scheme": "https",
-              "host": "checkmo.co.kr",
-              "pathPrefix": "/news"
-            },
-            {
-              "scheme": "https",
-              "host": "www.checkmo.co.kr",
-              "pathPrefix": "/news"
-            },
-            {
-              "scheme": "https",
-              "host": "checkmo.co.kr",
-              "pathPrefix": "/profile"
-            },
-            {
-              "scheme": "https",
-              "host": "www.checkmo.co.kr",
-              "pathPrefix": "/profile"
-            }
-          ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
-        }
       ]
     },
     "web": {

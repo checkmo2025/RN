@@ -3,6 +3,7 @@
 > 작성일: 2026-07-08 KST  
 > 목적: 모바일에서 책모 웹 공유 URL을 눌렀을 때 설치된 앱으로 이동시키기 위한 웹/인프라 후속 작업 정리  
 > RN 반영 커밋: `cf81a1f feat: add web link deep linking`
+> Android 정책: Play 배포 전까지 Android HTTPS App Links와 앱 유도 CTA는 보류한다.
 
 ## 1. 현재 RN 반영 상태
 
@@ -11,7 +12,7 @@
 - iOS `associatedDomains`와 `ios/app/app.entitlements`에 아래 도메인을 추가했다.
   - `applinks:checkmo.co.kr`
   - `applinks:www.checkmo.co.kr`
-- Android `app.json`에 App Links intent filter를 추가했다.
+- Android는 아직 Play 배포 전이므로 `app.json`의 HTTPS App Links intent filter를 제거해 둔다.
 - `checkmo://stories/{storyId}` 같은 커스텀 스킴 fallback도 처리한다.
 
 ## 2. 웹 FE에서 추가할 파일
@@ -71,7 +72,19 @@ Apple Developer에서 추가 확인:
 - `kr.co.checkmo.app` App ID에 `Associated Domains` capability가 켜져 있어야 한다.
 - 현재 EAS production에는 `EXPO_NO_CAPABILITY_SYNC=1`이 있으므로 capability 자동 동기화에 기대지 않는다.
 
-## 4. Android assetlinks.json 예시
+## 4. Android 보류 항목
+
+Android는 Play 배포 전까지 앱 열기 유도를 하지 않는다.
+
+현재 보류할 항목:
+
+- `app.json`의 `android.intentFilters`
+- `/.well-known/assetlinks.json` 배포
+- Android 모바일 웹의 `앱에서 보기` CTA
+
+Play 내부 테스트 또는 공개 배포 준비가 끝나면 아래 설정을 다시 진행한다.
+
+### Android assetlinks.json 예시
 
 파일:
 
@@ -128,6 +141,7 @@ Google Play Console
 - 문구 예시: `책모 앱에서 보기`
 - 앱 설치 상태에서는 Universal/App Link가 앱으로 열린다.
 - 앱 미설치 상태에서는 현재 웹 페이지를 계속 보여주거나 스토어 버튼을 제공한다.
+- 단, Android는 Play 배포 전까지 CTA를 숨긴다. iOS만 먼저 노출한다.
 
 iOS Safari용 Smart App Banner도 추가 가능하다.
 
@@ -147,8 +161,13 @@ App Store Connect App ID:
 
 ```text
 https://checkmo.co.kr/.well-known/apple-app-site-association
-https://checkmo.co.kr/.well-known/assetlinks.json
 https://www.checkmo.co.kr/.well-known/apple-app-site-association
+```
+
+Android 배포 준비 이후에는 아래 URL도 추가로 확인한다.
+
+```text
+https://checkmo.co.kr/.well-known/assetlinks.json
 https://www.checkmo.co.kr/.well-known/assetlinks.json
 ```
 
@@ -166,9 +185,11 @@ https://www.checkmo.co.kr/.well-known/assetlinks.json
 2. 웹을 배포한다.
 3. 위 네 URL이 공개 접근되는지 확인한다.
 4. Apple Developer에서 Associated Domains capability를 확인한다.
-5. RN `main` 최신 커밋 기준으로 iOS/Android 새 빌드를 만든다.
-6. TestFlight/internal track 설치본에서 실기기 테스트한다.
+5. RN `main` 최신 커밋 기준으로 iOS 새 빌드를 만든다.
+6. TestFlight 설치본에서 실기기 테스트한다.
 7. 문제가 없으면 스토어 심사/제출한다.
+
+Android는 Play 배포 준비가 끝난 뒤 별도 순서로 진행한다.
 
 ## 8. 실기기 테스트 체크리스트
 
@@ -180,6 +201,12 @@ iOS:
 - Safari 주소창 직접 입력은 Universal Link 검증 기준으로 보지 않는다.
 
 Android:
+
+- Play 배포 전까지는 테스트하지 않는다.
+- 웹에서 Android 앱 유도 CTA가 보이지 않는지 확인한다.
+- `https://checkmo.co.kr/stories/{id}` 클릭 시 웹 페이지에 머무르는지 확인한다.
+
+Android 배포 준비 이후:
 
 - Play internal track 앱 설치
 - 카카오톡/문자/Chrome 등에서 `https://checkmo.co.kr/stories/{id}` 클릭

@@ -3582,3 +3582,8 @@ export const interactionOpacity = {
 - 책이야기 작성 본문 입력이 길어질 때 외부 ScrollView를 움직여 커서 라인을 화면 상단 40% 지점 근처에 유지
 - 본문 입력창 내부 스크롤을 끄고 작성 화면 전체 스크롤로 줄 증가를 처리
 - 웹 URL 앱 열기 후속 작업 메모를 `docs/documents/web-to-app-deep-link-followup.md`에 저장
+
+# 2026-07-08 15:45:06 KST Android App Links 배포 전 보류
+
+- Play 배포 전 Android에서 웹 링크 앱 열기 유도가 뜨지 않도록 `app.json`의 Android HTTPS intent filter 제거
+- 웹→앱 후속 문서에 Android App Links, assetlinks, Android CTA 보류 기준 추가
