@@ -3564,3 +3564,9 @@ export const interactionOpacity = {
 
 - EAS Android 빌드 메타데이터가 `versionName 1.1.2`로 잡히는 원인을 native Gradle 설정에서 확인
 - 잘못 시작된 Android production 빌드를 취소하고 `android/app/build.gradle`의 `versionName`을 1.1.6으로 정정
+
+# 2026-07-08 14:25:02 KST BE API 계약 문서 재정리
+
+- `ref_code/BE`를 `develop` 최신 커밋 `9e31ae69`로 fast-forward pull
+- 백엔드 API 계약 후속 문서를 응답 형식 통일/유지보수성 개선 중심으로 재정리
+- REST error shape, 401 entrypoint, 예외 핸들러 중복, Swagger 권한/nullable/date 정책 후속 항목 정리
