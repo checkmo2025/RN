@@ -8,5 +8,10 @@
     <array>
       <string>Default</string>
     </array>
+    <key>com.apple.developer.associated-domains</key>
+    <array>
+      <string>applinks:checkmo.co.kr</string>
+      <string>applinks:www.checkmo.co.kr</string>
+    </array>
   </dict>
 </plist>

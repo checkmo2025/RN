@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
@@ -13,6 +14,7 @@ import { AppUpdateGateModal } from './src/components/common/AppUpdateGateModal';
 import { useAppVersionGate } from './src/hooks/useAppVersionGate';
 import { LanguageProvider, useLanguage } from './src/contexts/LanguageContext';
 import { PushNotificationCoordinator } from './src/components/common/PushNotificationCoordinator';
+import { DeepLinkCoordinator } from './src/components/common/DeepLinkCoordinator';
 
 const rootNavigationRef = createNavigationContainerRef<RootStackParamList>();
 
@@ -74,11 +76,14 @@ function AppRoutes() {
 }
 
 export default function App() {
+  const [navigationReady, setNavigationReady] = useState(false);
+
   return (
     <SafeAreaProvider>
       <LanguageProvider>
-        <NavigationContainer ref={rootNavigationRef}>
+        <NavigationContainer ref={rootNavigationRef} onReady={() => setNavigationReady(true)}>
           <AuthGateProvider>
+            <DeepLinkCoordinator navigationReady={navigationReady} navigationRef={rootNavigationRef} />
             <PushNotificationCoordinator navigationRef={rootNavigationRef} />
             <AppRoutes />
             <StatusBar style="dark" backgroundColor="transparent" translucent />

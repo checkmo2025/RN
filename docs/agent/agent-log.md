@@ -3570,3 +3570,9 @@ export const interactionOpacity = {
 - `ref_code/BE`를 `develop` 최신 커밋 `9e31ae69`로 fast-forward pull
 - 백엔드 API 계약 후속 문서를 응답 형식 통일/유지보수성 개선 중심으로 재정리
 - REST error shape, 401 entrypoint, 예외 핸들러 중복, Swagger 권한/nullable/date 정책 후속 항목 정리
+
+# 2026-07-08 14:50:19 KST RN Universal/App Links 딥링크 연결
+
+- iOS Associated Domains와 Android App Links intent filter 설정 추가
+- 공유 웹 URL을 앱 내 Story/Meeting/News/Profile 화면으로 라우팅하는 DeepLinkCoordinator 추가
+- `checkmo://` 커스텀 스킴 fallback도 동일 parser로 처리
