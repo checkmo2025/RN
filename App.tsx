@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
@@ -15,12 +15,16 @@ import { useAppVersionGate } from './src/hooks/useAppVersionGate';
 import { LanguageProvider, useLanguage } from './src/contexts/LanguageContext';
 import { PushNotificationCoordinator } from './src/components/common/PushNotificationCoordinator';
 import { DeepLinkCoordinator } from './src/components/common/DeepLinkCoordinator';
+import { OnboardingScreen } from './src/screens/onboarding/OnboardingScreen';
+import { getOnboardingSeen, setOnboardingSeen } from './src/services/onboardingStore';
 
 const rootNavigationRef = createNavigationContainerRef<RootStackParamList>();
 
 function AppRoutes() {
   const appVersionGate = useAppVersionGate();
   const { t } = useLanguage();
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [onboardingVisible, setOnboardingVisible] = useState(false);
   const {
     isReady,
     authPageVisible,
@@ -30,6 +34,46 @@ function AppRoutes() {
     closeAuthPage,
     completeLogin,
   } = useAuthGate();
+
+  useEffect(() => {
+    if (!isReady) return;
+
+    let mounted = true;
+
+    const loadOnboardingState = async () => {
+      try {
+        const seen = await getOnboardingSeen();
+        if (mounted) {
+          setOnboardingVisible(!seen);
+        }
+      } catch {
+        // 온보딩 상태를 읽지 못해도 앱 진입은 막지 않는다.
+      } finally {
+        if (mounted) {
+          setOnboardingChecked(true);
+        }
+      }
+    };
+
+    void loadOnboardingState();
+
+    return () => {
+      mounted = false;
+    };
+  }, [isReady]);
+
+  const handleOnboardingDone = useCallback(() => {
+    setOnboardingVisible(false);
+    void setOnboardingSeen().catch(() => {
+      // 저장 실패 시 다음 실행 때 다시 노출될 수 있지만 현재 진입은 유지한다.
+    });
+  }, []);
+
+  const shouldShowOnboarding =
+    isReady &&
+    onboardingChecked &&
+    onboardingVisible &&
+    appVersionGate.state.status === 'none';
 
   return (
     <View style={styles.appRoutes}>
@@ -68,6 +112,11 @@ function AppRoutes() {
         state={appVersionGate.state}
         onOpenStore={appVersionGate.openStore}
         onDismissRecommendation={appVersionGate.dismissRecommendation}
+      />
+
+      <OnboardingScreen
+        visible={shouldShowOnboarding}
+        onDone={handleOnboardingDone}
       />
 
       <ToastHost />

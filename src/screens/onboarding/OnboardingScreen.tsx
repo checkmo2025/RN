@@ -1,121 +1,115 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   FlatList,
+  Image,
   Modal,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
   type ListRenderItem,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, radius, spacing, typography, buttonSize } from '../../theme';
 import { FeedbackPressable } from '../../components/common/FeedbackPressable';
-import { triggerSelectionHaptic } from '../../utils/haptics';
 import { ONBOARDING_SLIDES, type OnboardingSlide } from '../../constants/onboardingSlides';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { buttonSize, colors, radius, spacing, typography } from '../../theme';
+import { triggerSelectionHaptic } from '../../utils/haptics';
 
-interface OnboardingScreenProps {
+type OnboardingScreenProps = {
   visible: boolean;
-  /** 건너뛰기 또는 마지막 "시작하기" 시 호출 */
-  onClose: () => void;
-}
+  onDone: () => void;
+};
 
-export function OnboardingScreen({ visible, onClose }: OnboardingScreenProps) {
+export function OnboardingScreen({ visible, onDone }: OnboardingScreenProps) {
   const insets = useSafeAreaInsets();
-  const { l } = useLanguage();
-  const { width } = useWindowDimensions();
-  const listRef = useRef<FlatList<OnboardingSlide>>(null);
+  const { width, height } = useWindowDimensions();
   const [index, setIndex] = useState(0);
 
   const lastIndex = ONBOARDING_SLIDES.length - 1;
   const isLast = index >= lastIndex;
+  const buttonLabel = isLast ? '책모 시작하기' : '건너뛰고 시작하기';
 
   const handleMomentumEnd = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const next = Math.round(event.nativeEvent.contentOffset.x / width);
-      setIndex((prev) => {
-        if (prev !== next) {
+      const nextIndex = Math.max(
+        0,
+        Math.min(lastIndex, Math.round(event.nativeEvent.contentOffset.x / width)),
+      );
+
+      setIndex((prevIndex) => {
+        if (prevIndex !== nextIndex) {
           triggerSelectionHaptic();
         }
-        return next;
+        return nextIndex;
       });
     },
-    [width],
+    [lastIndex, width],
   );
 
-  const handleNext = useCallback(() => {
-    if (isLast) {
-      onClose();
-      return;
-    }
-    const next = index + 1;
-    listRef.current?.scrollToIndex({ index: next, animated: true });
-    setIndex(next);
+  const handleDone = useCallback(() => {
     triggerSelectionHaptic();
-  }, [index, isLast, onClose]);
+    onDone();
+  }, [onDone]);
 
   const renderItem = useCallback<ListRenderItem<OnboardingSlide>>(
     ({ item }) => (
-      <View style={[styles.slide, { width }]}>
-        <View style={[styles.phoneFrame, { borderColor: item.accent }]}>
-          <MaterialIcons name={item.icon} size={72} color={item.accent} />
-          <Text style={styles.placeholderLabel}>{l(item.imagePlaceholderLabel)}</Text>
-        </View>
-        <Text style={styles.title}>{l(item.title)}</Text>
-        <Text style={styles.body}>{l(item.body)}</Text>
+      <View style={[styles.slide, { width, height }]}>
+        <Image
+          source={item.source}
+          style={[styles.image, { width, height }]}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+          accessibilityLabel={item.accessibilityLabel}
+        />
       </View>
     ),
-    [l, width],
+    [height, width],
   );
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.topBar}>
-          <FeedbackPressable
-            onPress={onClose}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={l('온보딩 건너뛰기')}
-          >
-            <Text style={styles.skipText}>{l('건너뛰기')}</Text>
-          </FeedbackPressable>
-        </View>
-
+    <Modal
+      visible={visible}
+      animationType="fade"
+      presentationStyle="fullScreen"
+      onRequestClose={handleDone}
+    >
+      <View style={styles.container}>
         <FlatList
-          ref={listRef}
+          style={styles.carousel}
           data={ONBOARDING_SLIDES}
           keyExtractor={(item) => item.key}
           renderItem={renderItem}
           horizontal
           pagingEnabled
+          bounces={false}
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={handleMomentumEnd}
-          getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
+          getItemLayout={(_, itemIndex) => ({
+            length: width,
+            offset: width * itemIndex,
+            index: itemIndex,
+          })}
         />
 
-        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
-          <View style={styles.dotsRow}>
-            {ONBOARDING_SLIDES.map((slide, i) => (
-              <View
-                key={slide.key}
-                style={[styles.dot, i === index ? styles.dotActive : styles.dotInactive]}
-              />
-            ))}
-          </View>
-
+        <View
+          style={[
+            styles.footer,
+            {
+              paddingBottom: Math.max(insets.bottom, spacing.md),
+            },
+          ]}
+          pointerEvents="box-none"
+        >
           <FeedbackPressable
-            style={styles.ctaButton}
-            onPress={handleNext}
+            style={styles.skipButton}
+            onPress={handleDone}
             accessibilityRole="button"
-            accessibilityLabel={isLast ? l('시작하기') : l('다음')}
+            accessibilityLabel={buttonLabel}
           >
-            <Text style={styles.ctaLabel}>{isLast ? l('시작하기') : l('다음')}</Text>
+            <Text style={styles.skipButtonText}>{buttonLabel}</Text>
           </FeedbackPressable>
         </View>
       </View>
@@ -128,80 +122,34 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
   },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  skipText: {
-    ...typography.body1_2,
-    color: colors.gray4,
+  carousel: {
+    flex: 1,
   },
   slide: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
+    backgroundColor: colors.white,
   },
-  phoneFrame: {
-    width: '70%',
-    aspectRatio: 9 / 16,
-    maxHeight: '56%',
-    borderWidth: 2,
-    borderRadius: radius.lg,
-    backgroundColor: colors.gray1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  placeholderLabel: {
-    ...typography.body2_3,
-    color: colors.gray4,
-    textAlign: 'center',
-  },
-  title: {
-    ...typography.subhead2,
-    color: colors.gray7,
-    textAlign: 'center',
-    marginTop: spacing.xl,
-  },
-  body: {
-    ...typography.body1_3_relaxed,
-    color: colors.gray5,
-    textAlign: 'center',
-    marginTop: spacing.sm,
+  image: {
+    backgroundColor: colors.white,
   },
   footer: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    left: 0,
     paddingHorizontal: spacing.xl,
-    gap: spacing.lg,
+    paddingTop: spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.92)',
   },
-  dotsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.xs,
-  },
-  dot: {
-    height: 8,
-    borderRadius: radius.pill,
-  },
-  dotActive: {
-    width: 20,
-    backgroundColor: colors.primary1,
-  },
-  dotInactive: {
-    width: 8,
-    backgroundColor: colors.gray2,
-  },
-  ctaButton: {
+  skipButton: {
     height: buttonSize.cta,
     borderRadius: radius.md,
-    backgroundColor: colors.primary1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.primary1,
   },
-  ctaLabel: {
+  skipButtonText: {
     ...typography.subhead5,
     color: colors.white,
   },

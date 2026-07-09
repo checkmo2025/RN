@@ -494,7 +494,6 @@ const enLiteralMessages: Record<string, string> = {
   '입력 가능한 길이를 초과했습니다.': 'The input is too long.',
   '전체보기': 'View All',
   '접기': 'Collapse',
-  '온보딩 건너뛰기': 'Skip onboarding',
   '건너뛰기': 'Skip',
   '시작하기': 'Get Started',
   '소설/시/희곡': 'Fiction / Poetry / Drama',
