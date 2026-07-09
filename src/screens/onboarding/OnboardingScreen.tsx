@@ -103,6 +103,23 @@ export function OnboardingScreen({ visible, onDone }: OnboardingScreenProps) {
           ]}
           pointerEvents="box-none"
         >
+          <View
+            style={styles.dotsRow}
+            pointerEvents="none"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            {ONBOARDING_SLIDES.map((slide, slideIndex) => (
+              <View
+                key={slide.key}
+                style={[
+                  styles.dot,
+                  slideIndex === index ? styles.dotActive : styles.dotInactive,
+                ]}
+              />
+            ))}
+          </View>
+
           <FeedbackPressable
             style={styles.skipButton}
             onPress={handleDone}
@@ -140,7 +157,27 @@ const styles = StyleSheet.create({
     left: 0,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
+    gap: spacing.sm,
     backgroundColor: 'rgba(255,255,255,0.92)',
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  dot: {
+    width: spacing.xs,
+    height: spacing.xs,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+  },
+  dotActive: {
+    borderColor: colors.primary1,
+    backgroundColor: colors.primary1,
+  },
+  dotInactive: {
+    borderColor: colors.gray3,
+    backgroundColor: colors.white,
   },
   skipButton: {
     height: buttonSize.cta,
