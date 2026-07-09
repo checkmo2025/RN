@@ -3632,3 +3632,9 @@ export const interactionOpacity = {
 
 - 온보딩 슬라이드 PNG 5장을 1125×2436 고해상도 이미지로 교체
 - 온보딩 하단에 현재 페이지를 나타내는 채움/빈 원 인디케이터 추가
+
+# 2026-07-09 15:17:39 KST Android Play 업데이트 버전 1.1.8 준비
+
+- 앱 표시 버전, runtimeVersion, package 버전, iOS marketing version을 1.1.8로 갱신
+- EAS Android production 설정이 AAB와 remote auto-increment 정책을 유지하는지 확인
+- `npm run check`로 typography/spacing/typecheck/expo-doctor 검증
