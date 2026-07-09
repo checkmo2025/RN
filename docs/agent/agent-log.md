@@ -3638,3 +3638,8 @@ export const interactionOpacity = {
 - 앱 표시 버전, runtimeVersion, package 버전, iOS marketing version을 1.1.8로 갱신
 - EAS Android production 설정이 AAB와 remote auto-increment 정책을 유지하는지 확인
 - `npm run check`로 typography/spacing/typecheck/expo-doctor 검증
+
+# 2026-07-09 15:27:06 KST 온보딩 최종 에셋 교체
+
+- 온보딩 슬라이드 PNG 5장을 `forreal` 최종 이미지로 교체
+- 기존 슬라이드 순서(홈, 모임, 책이야기, 소식, 검색)는 유지
