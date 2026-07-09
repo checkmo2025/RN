@@ -33,7 +33,6 @@ import {
   MYPAGE_SETTING_SERVICE_URI,
   MYPAGE_SETTING_URI,
 } from '../constants/iconMap';
-import { termsDocumentOrder, termsDocuments } from '../constants/termsDocuments';
 import { buttonSize, colors, interactionOpacity, motion, radius, spacing, typography, scaleSize } from '../theme';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
@@ -95,6 +94,7 @@ import { SkeletonBox } from '../components/common/SkeletonBox';
 import { languageOptions, type LanguageCode } from '../i18n/translations';
 
 const tabs = ['내 책 이야기', '내 서재', '내 모임', '내 알림'] as const;
+const TERMS_URL = 'https://www.checkmo.co.kr/support/v1/terms';
 const reportContentBreakInterval = 28;
 const softBreak = String.fromCharCode(8203);
 
@@ -1937,6 +1937,12 @@ export function MyPageScreen() {
     Linking.openURL(PUBLIC_ENV.SUPPORT_FORM_URL).catch(() => null);
   }, []);
 
+  const handleTerms = useCallback(() => {
+    Linking.openURL(TERMS_URL).catch(() => {
+      showToast('약관을 열 수 없습니다.');
+    });
+  }, []);
+
   const settingsSections = useMemo<SettingsSection[]>(() => {
     const accountItems: SettingsItem[] = [
       { key: 'profileEdit', label: getSettingLabel('profileEdit') },
@@ -2467,29 +2473,6 @@ export function MyPageScreen() {
       );
     }
 
-    if (selectedSetting === 'terms') {
-      return (
-        <ScrollView
-          style={styles.container}
-          contentContainerStyle={styles.settingsDetailWrap}
-          showsVerticalScrollIndicator={false}
-        >
-          {back}
-          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
-          <Text style={styles.detailDivider} />
-          {termsDocumentOrder.map((key) => {
-            const termsDoc = termsDocuments[key];
-            return (
-              <View key={key} style={styles.termsDocumentSection}>
-                <Text style={styles.detailLabel}>{termsDoc.title}</Text>
-                <Text style={styles.detailBody}>{termsDoc.content}</Text>
-              </View>
-            );
-          })}
-        </ScrollView>
-      );
-    }
-
     if (selectedSetting === 'notifications') {
       return (
         <View style={styles.settingsDetailWrap}>
@@ -2761,6 +2744,10 @@ export function MyPageScreen() {
                             }
                             if (item.key === 'language') {
                               showToast('다른 언어 버전은 준비중입니다!');
+                              return;
+                            }
+                            if (item.key === 'terms') {
+                              handleTerms();
                               return;
                             }
                             setSelectedSetting(item.key);
@@ -3040,9 +3027,6 @@ const styles = StyleSheet.create({
   },
   languageItemTextSelected: {
     color: colors.primary1,
-  },
-  termsDocumentSection: {
-    gap: spacing.xs,
   },
   formBlock: {
     gap: spacing.xs,

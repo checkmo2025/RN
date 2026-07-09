@@ -3616,3 +3616,8 @@ export const interactionOpacity = {
 - 앱 버전, runtimeVersion, iOS marketing version을 1.1.7로 갱신
 - 빌드 번호는 EAS remote auto-increment 정책을 유지
 - 푸시 알림 entitlement와 EAS production capability sync 설정을 확인
+
+# 2026-07-09 14:49:25 KST 마이페이지 약관 웹 이동
+
+- 마이페이지 이용약관 메뉴가 앱 내 하드코딩 문서 대신 웹 약관 페이지를 열도록 변경
+- 이용약관 상세 화면의 하드코딩 문서 렌더링 경로와 미사용 스타일 제거
