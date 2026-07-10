@@ -1987,7 +1987,7 @@ export function MyPageScreen() {
           { key: 'usageGuide', label: getSettingLabel('usageGuide') },
           { key: 'contact', label: getSettingLabel('contact') },
           { key: 'terms', label: getSettingLabel('terms') },
-          { key: 'language', label: getSettingLabel('language') },
+          // { key: 'language', label: getSettingLabel('language') },
           { key: 'version', label: getSettingLabel('version') },
           { key: 'logout', label: getSettingLabel('logout') },
         ],

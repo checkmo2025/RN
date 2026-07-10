@@ -3696,3 +3696,8 @@ export const interactionOpacity = {
 - 기기당 최초 모임 상세 진입 또는 모임 생성 성공 시 1회 노출하도록 `SecureStore` 상태 분리
 - 마이페이지 기타에 `책모 사용법`을 추가하고 책모·모임 온보딩 수동 다시보기 연결
 - `npm run check`·변경 파일 ESLint·iOS Metro 번들·diff 검사 통과
+
+# 2026-07-10 15:00:55 KST 언어 설정 메뉴 임시 비노출
+
+- 마이페이지 설정 기타의 `언어` 항목을 주석 처리해 숨기고 기존 상세 로직은 유지
+- `npm run typecheck`와 diff 검사 통과
