@@ -3707,3 +3707,9 @@ export const interactionOpacity = {
 - 마이페이지 버전 정보에 `1.1.8`과 업데이트 날짜 `2026.07.10` 표시
 - 이후 버전 이력을 순서대로 추가할 수 있도록 별도 상수 목록과 누적형 UI 구성
 - 다국어 버전·날짜 문구를 동적 값으로 변경하고 타입 검사 및 대상 ESLint 통과
+
+# 2026-07-10 15:06:59 KST TODO 완료 항목 아카이브 정리
+
+- `docs/agent/todo.md`의 완료/통과 항목 193개를 `docs/agent/archive_todo.md`로 분리
+- 미완료 항목 17개만 현재 TODO에 남기고 `archive_todo.md` 사전 확인 제외 규칙 추가
+- 기존 `output/` PDF 산출물을 `docs/output/` 아래로 이동

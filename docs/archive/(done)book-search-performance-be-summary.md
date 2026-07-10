@@ -2,7 +2,7 @@
 
 > 작성일: 2026-06-22 KST
 > 대상: 백엔드팀
-> 관련: RN 구현 계획/내역은 `docs/documents/book-search-latency-plan.md`
+> 관련: RN 구현 계획/내역은 `docs/archive/(done)book-search-latency-plan.md`
 
 ## 1. 결론
 서버(알라딘 API) 성능은 손댈 수 없으므로 **RN(앱) 쪽에서 체감 지연을 줄였습니다.**

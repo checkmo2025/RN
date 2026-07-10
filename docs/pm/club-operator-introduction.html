@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="독서동아리 운영진을 위한 책모 서비스 소개서" />
+  <title>모임은 책에 집중하고, 운영은 책모가 정리합니다</title>
+  <style>
+    @font-face {
+      font-family: "Checkmo Store Brands";
+      src: url("../../node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Brands.ttf") format("truetype");
+      font-style: normal;
+      font-weight: 400;
+      font-display: block;
+    }
+
+    :root {
+      --ink: #2c2927;
+      --ink-soft: #5f5a56;
+      --muted: #8d8884;
+      --line: #dedad7;
+      --paper: #ffffff;
+      --warm: #f7f4f2;
+      --warm-strong: #ece5e1;
+      --brand: #755c50;
+      --brand-deep: #4a3931;
+      --brand-soft: #d8c9c1;
+      --coral: #a45445;
+      --coral-soft: #f8ece9;
+      --blue: #4f7180;
+      --blue-soft: #eef4f6;
+      --green: #5f7354;
+      --green-soft: #f0f4ed;
+      --purple: #78657e;
+      --purple-soft: #f4eff5;
+      --yellow: #86662f;
+      --yellow-soft: #f7f1e5;
+      --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
+      --pretendard: "Pretendard Variable", "Pretendard", "Noto Sans KR", sans-serif;
+      --deck-scale: 1;
+    }
+
+    @page {
+      size: 13.333333in 7.5in;
+      margin: 0;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      background: #cfccca;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--sans);
+      color: var(--ink);
+      background: #cfccca;
+      letter-spacing: 0;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    img {
+      display: block;
+      max-width: 100%;
+    }
+
+    .slide {
+      position: relative;
+      width: 1280px;
+      height: 720px;
+      margin: 24px auto;
+      padding: 48px 64px 46px;
+      overflow: hidden;
+      background: var(--paper);
+      box-shadow: 0 16px 48px rgba(44, 41, 39, 0.18);
+    }
+
+    .slide.warm {
+      background: var(--warm);
+    }
+
+    .slide:not(.cover):not(.closing) {
+      background: var(--warm);
+      font-family: var(--pretendard);
+    }
+
+    .slide.dark {
+      color: #ffffff;
+      background: var(--brand-deep);
+    }
+
+    .slide::after {
+      content: none;
+    }
+
+    .cover::after,
+    .closing::after {
+      display: none;
+    }
+
+    .slide-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .brand-mark img {
+      width: 40px;
+      height: 40px;
+      padding: 2px;
+      border: 1px solid var(--brand-soft);
+      border-radius: 10px;
+      background: #ffffff;
+      box-shadow: 0 2px 7px rgba(74, 57, 49, 0.08);
+    }
+
+    .section-code {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--brand);
+      text-transform: none;
+    }
+
+    h1,
+    h2,
+    h3,
+    p,
+    li,
+    span {
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+
+    .slide-title {
+      max-width: 900px;
+      font-size: 39px;
+      line-height: 1.24;
+      font-weight: 850;
+      color: var(--ink);
+    }
+
+    .slide-desc {
+      max-width: 770px;
+      margin-top: 13px;
+      font-size: 17px;
+      line-height: 1.65;
+      color: var(--ink-soft);
+    }
+
+    .accent-text {
+      color: var(--accent, var(--brand));
+    }
+
+    .slide-footer {
+      position: absolute;
+      right: 64px;
+      bottom: 18px;
+      left: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 8px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 650;
+    }
+
+    .slide.dark .slide-footer {
+      border-top-color: rgba(255, 255, 255, 0.18);
+      color: rgba(255, 255, 255, 0.58);
+    }
+
+    .icon-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background: var(--icon-bg, var(--warm-strong));
+      flex: 0 0 auto;
+    }
+
+    .icon-box img {
+      width: 23px;
+      height: 23px;
+      object-fit: contain;
+    }
+
+    /* 01. Cover */
+    .cover {
+      padding: 0;
+      color: #ffffff;
+      background: url('../promo-hero.jpg') center center / cover no-repeat;
+    }
+
+    .cover-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(38, 27, 22, 0.64);
+    }
+
+    .cover-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      width: 100%;
+      height: 100%;
+      padding: 48px 64px 46px;
+    }
+
+    .cover-brand {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .cover-logo {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .cover-logo img {
+      width: 52px;
+      height: 52px;
+      padding: 0;
+      border: 0;
+      border-radius: 11px;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+    }
+
+    .cover-copy {
+      max-width: 750px;
+      padding-bottom: 18px;
+    }
+
+    .cover-kicker {
+      display: inline-block;
+      margin-bottom: 18px;
+      color: var(--brand-soft);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .cover h1 {
+      max-width: 760px;
+      font-size: 56px;
+      line-height: 1.18;
+      font-weight: 900;
+      color: #ffffff;
+    }
+
+    .cover h1 strong {
+      color: var(--brand-soft);
+    }
+
+    .cover-subtitle {
+      max-width: 700px;
+      margin-top: 22px;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 18px;
+      line-height: 1.65;
+    }
+
+    .cover-bottom {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.24);
+    }
+
+    .cover-points {
+      display: flex;
+      gap: 24px;
+      font-size: 12px;
+      font-weight: 750;
+      color: rgba(255, 255, 255, 0.83);
+    }
+
+    .cover-points span::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      margin-right: 8px;
+      border-radius: 50%;
+      background: var(--brand-soft);
+      vertical-align: 1px;
+    }
+
+    .cover-audience {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      text-align: right;
+    }
+
+    .cover-platforms {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.4;
+    }
+
+    .cover-platform {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .store-logo {
+      font-family: "Checkmo Store Brands";
+      font-size: 14px;
+      font-style: normal;
+      font-weight: 400;
+      line-height: 1;
+    }
+
+    .cover-audience a {
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 12px;
+      font-weight: 750;
+      line-height: 1.4;
+      text-decoration: none;
+    }
+
+    /* 02. Contents */
+    .contents-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      margin-top: 24px;
+    }
+
+    .contents-group {
+      min-height: 330px;
+      padding: 20px 0 0;
+      border-top: 5px solid var(--group-color);
+    }
+
+    .contents-group-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 13px;
+      margin-bottom: 22px;
+    }
+
+    .contents-phase {
+      font-size: 36px;
+      line-height: 1;
+      font-weight: 900;
+      color: var(--group-color);
+    }
+
+    .contents-group h3 {
+      margin-top: 2px;
+      font-size: 19px;
+      line-height: 1.35;
+    }
+
+    .contents-group p {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .contents-list {
+      list-style: none;
+      border-top: 1px solid var(--line);
+    }
+
+    .contents-list li {
+      display: grid;
+      grid-template-columns: 30px 1fr 28px;
+      gap: 10px;
+      align-items: center;
+      min-height: 55px;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .contents-list .item-no {
+      color: var(--group-color);
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .contents-list .page-no {
+      color: var(--muted);
+      font-size: 11px;
+      text-align: right;
+    }
+
+    /* 03. Pain */
+    .pain-layout {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 38px;
+      margin-top: 22px;
+    }
+
+    .pain-quotes {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .pain-quote {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      min-height: 62px;
+      padding: 11px 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      font-size: 16px;
+      font-weight: 750;
+    }
+
+    .pain-quote span {
+      color: var(--coral);
+      font-size: 21px;
+      font-weight: 900;
+    }
+
+    .operator-day {
+      padding: 19px 22px;
+      border-radius: 8px;
+      background: var(--brand-deep);
+      color: #ffffff;
+    }
+
+    .operator-day h3 {
+      font-size: 19px;
+      font-weight: 800;
+    }
+
+    .operator-day > p {
+      margin-top: 5px;
+      color: rgba(255, 255, 255, 0.62);
+      font-size: 12px;
+    }
+
+    .day-phases {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 11px;
+      margin-top: 17px;
+    }
+
+    .day-phase {
+      min-height: 202px;
+      padding: 14px 13px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .day-phase strong {
+      display: block;
+      color: var(--brand-soft);
+      font-size: 14px;
+      margin-bottom: 14px;
+    }
+
+    .day-phase ul {
+      list-style: none;
+    }
+
+    .day-phase li {
+      position: relative;
+      padding: 0 0 9px 13px;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .day-phase li::before {
+      content: "";
+      position: absolute;
+      top: 7px;
+      left: 0;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--coral);
+    }
+
+    .pain-message {
+      margin-top: 14px;
+      padding: 13px 18px;
+      background: var(--coral-soft);
+      color: var(--brand-deep);
+      font-size: 15px;
+      font-weight: 750;
+    }
+
+    /* 04. Fragmentation */
+    .fragment-map {
+      display: grid;
+      grid-template-columns: 1fr 120px 220px 120px 1fr;
+      align-items: center;
+      gap: 14px;
+      margin-top: 27px;
+    }
+
+    .tool-stack,
+    .result-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+
+    .tool-item,
+    .result-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 52px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .tool-item small,
+    .result-item small {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .map-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 2px;
+      background: var(--line);
+      position: relative;
+    }
+
+    .map-arrow::after {
+      content: "";
+      position: absolute;
+      right: -1px;
+      width: 9px;
+      height: 9px;
+      border-top: 2px solid var(--line);
+      border-right: 2px solid var(--line);
+      transform: rotate(45deg);
+    }
+
+    .operator-hub {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 190px;
+      height: 190px;
+      margin: 0 auto;
+      border: 12px solid var(--brand-soft);
+      border-radius: 50%;
+      background: var(--brand);
+      color: #ffffff;
+      text-align: center;
+    }
+
+    .operator-hub img {
+      width: 42px;
+      height: 42px;
+      margin-bottom: 9px;
+      filter: brightness(0) invert(1);
+    }
+
+    .operator-hub strong {
+      font-size: 22px;
+    }
+
+    .operator-hub span {
+      margin-top: 5px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .fragment-message {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 20px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .fragment-message strong {
+      font-size: 18px;
+    }
+
+    .fragment-message span {
+      max-width: 560px;
+      color: var(--ink-soft);
+      font-size: 13px;
+      text-align: right;
+    }
+
+    /* 05. Solution */
+    .solution-layout {
+      display: grid;
+      grid-template-columns: 1fr 470px;
+      gap: 34px;
+      margin-top: 24px;
+    }
+
+    .solution-list {
+      border-top: 1px solid var(--line);
+    }
+
+    .solution-item {
+      display: grid;
+      grid-template-columns: 46px 145px 1fr;
+      gap: 14px;
+      align-items: center;
+      min-height: 79px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .solution-item h3 {
+      font-size: 16px;
+    }
+
+    .solution-item p {
+      color: var(--ink-soft);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .phones {
+      position: relative;
+      min-height: 400px;
+    }
+
+    .phone {
+      position: absolute;
+      width: 172px;
+      height: 373px;
+      padding: 7px;
+      border: 2px solid #2f2b29;
+      border-radius: 24px;
+      background: #2f2b29;
+      box-shadow: 0 18px 38px rgba(44, 41, 39, 0.2);
+    }
+
+    .phone.club-phone {
+      top: 7px;
+      left: 20px;
+      transform: rotate(-2deg);
+    }
+
+    .phone.story-phone {
+      top: 20px;
+      right: 20px;
+      transform: rotate(2deg);
+    }
+
+    .phone img {
+      width: 100%;
+      height: 100%;
+      border-radius: 18px;
+      object-fit: cover;
+    }
+
+    .phone::after,
+    .member-phone::after {
+      content: "";
+      position: absolute;
+      inset: 7px;
+      border-radius: 18px;
+      background: var(--brand);
+      mix-blend-mode: color;
+      pointer-events: none;
+    }
+
+    .phone-label {
+      position: absolute;
+      z-index: 2;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: var(--brand-deep);
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 800;
+      box-shadow: 0 8px 18px rgba(44, 41, 39, 0.16);
+    }
+
+    .phone-label.one {
+      top: 9px;
+      left: 4px;
+    }
+
+    .phone-label.two {
+      right: 0;
+      bottom: 20px;
+      background: var(--coral);
+    }
+
+    /* 06. Journey */
+    .journey-phases {
+      display: grid;
+      grid-template-columns: 3fr 2fr 1fr;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .journey-phase-label {
+      padding: 9px 12px;
+      border-top: 4px solid var(--phase);
+      color: var(--phase);
+      font-size: 12px;
+      font-weight: 850;
+      text-align: center;
+    }
+
+    .journey-line {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .journey-line::before {
+      content: "";
+      position: absolute;
+      top: 34px;
+      right: 7%;
+      left: 7%;
+      height: 2px;
+      background: var(--line);
+    }
+
+    .journey-step {
+      position: relative;
+      z-index: 1;
+      min-height: 265px;
+      padding: 0 10px 15px;
+      text-align: center;
+    }
+
+    .step-node {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 14px;
+      border: 7px solid var(--warm);
+      border-radius: 50%;
+      background: var(--step-color);
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .journey-step h3 {
+      font-size: 15px;
+      margin-bottom: 9px;
+    }
+
+    .journey-step p {
+      color: var(--ink-soft);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .journey-step .feature-chip {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: var(--chip-bg);
+      color: var(--step-color);
+      font-size: 9px;
+      font-weight: 850;
+    }
+
+    .journey-result {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 50px;
+      margin-top: 8px;
+      background: var(--brand-deep);
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    /* 07. Before / After */
+    .compare-table {
+      margin-top: 28px;
+      border-top: 1px solid var(--line);
+    }
+
+    .compare-row {
+      display: grid;
+      grid-template-columns: 145px 1fr 50px 1fr;
+      align-items: center;
+      min-height: 59px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .compare-row.header {
+      min-height: 40px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .compare-label {
+      font-size: 13px;
+      font-weight: 850;
+      color: var(--brand);
+    }
+
+    .compare-before,
+    .compare-after {
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .compare-before {
+      color: var(--ink-soft);
+    }
+
+    .compare-after {
+      font-weight: 750;
+      color: var(--ink);
+    }
+
+    .compare-arrow {
+      color: var(--coral);
+      font-size: 21px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .compare-message {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 58px;
+      margin-top: 14px;
+      padding: 0 18px;
+      background: var(--brand);
+      color: #ffffff;
+    }
+
+    .compare-message strong {
+      font-size: 17px;
+    }
+
+    .compare-message span {
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+    }
+
+    /* 08. Member experience */
+    .member-layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 48px;
+      margin-top: 16px;
+    }
+
+    .member-visual {
+      position: relative;
+      height: 390px;
+    }
+
+    .member-phone {
+      position: relative;
+      width: 175px;
+      height: 380px;
+      margin: 0 auto;
+      padding: 7px;
+      border: 2px solid #2f2b29;
+      border-radius: 24px;
+      background: #2f2b29;
+      box-shadow: 0 18px 38px rgba(44, 41, 39, 0.18);
+    }
+
+    .member-phone img {
+      width: 100%;
+      height: 100%;
+      border-radius: 18px;
+      object-fit: cover;
+    }
+
+    .member-callout {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      background: #ffffff;
+      box-shadow: 0 10px 24px rgba(44, 41, 39, 0.14);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .member-callout::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--callout-color);
+    }
+
+    .member-callout.top {
+      top: 30px;
+      right: -4px;
+    }
+
+    .member-callout.bottom {
+      bottom: 48px;
+      left: -5px;
+    }
+
+    .member-moments {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      align-content: start;
+    }
+
+    .member-moment {
+      min-height: 130px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+    }
+
+    .member-moment h3 {
+      margin-top: 10px;
+      font-size: 15px;
+    }
+
+    .member-moment p {
+      margin-top: 7px;
+      color: var(--ink-soft);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .member-message {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 62px;
+      padding: 0 20px;
+      background: var(--green-soft);
+      color: var(--brand-deep);
+    }
+
+    .member-message strong {
+      font-size: 16px;
+    }
+
+    .member-message span {
+      max-width: 310px;
+      font-size: 11px;
+      line-height: 1.5;
+      text-align: right;
+    }
+
+    /* 09. Monthly scenario */
+    .month-flow {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .month-flow::before {
+      content: "";
+      position: absolute;
+      top: 39px;
+      right: 7%;
+      left: 7%;
+      height: 3px;
+      background: var(--line);
+    }
+
+    .week {
+      position: relative;
+      z-index: 1;
+      min-height: 282px;
+      padding: 0 15px 18px;
+      border-bottom: 5px solid var(--week-color);
+      background: #ffffff;
+    }
+
+    .week-node {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 13px;
+      border: 8px solid var(--warm);
+      border-radius: 50%;
+      background: var(--week-color);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .week h3 {
+      font-size: 18px;
+      text-align: center;
+    }
+
+    .week-subtitle {
+      margin-top: 4px;
+      color: var(--week-color);
+      font-size: 11px;
+      font-weight: 850;
+      text-align: center;
+    }
+
+    .week ul {
+      margin-top: 14px;
+      list-style: none;
+    }
+
+    .week li {
+      position: relative;
+      padding: 0 0 8px 14px;
+      color: var(--ink-soft);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .week li::before {
+      content: "";
+      position: absolute;
+      top: 7px;
+      left: 0;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--week-color);
+    }
+
+    .week-feature {
+      display: inline-block;
+      margin-top: 5px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: var(--week-soft);
+      color: var(--week-color);
+      font-size: 9px;
+      font-weight: 850;
+    }
+
+    .month-result {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 50px;
+      margin-top: 12px;
+      border: 1px solid var(--brand-soft);
+      background: var(--warm-strong);
+      color: var(--brand-deep);
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    /* 10. Adoption */
+    .adoption-layout {
+      display: grid;
+      grid-template-columns: 0.86fr 1.14fr;
+      gap: 36px;
+      margin-top: 28px;
+    }
+
+    .start-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .start-step {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 14px;
+      align-items: center;
+      min-height: 98px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+    }
+
+    .start-no {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--accent, var(--brand));
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .start-step h3 {
+      font-size: 16px;
+    }
+
+    .start-step p {
+      margin-top: 5px;
+      color: var(--ink-soft);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .faq-list {
+      border-top: 1px solid var(--line);
+    }
+
+    .faq-item {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 13px;
+      min-height: 103px;
+      padding: 17px 5px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .faq-q {
+      color: var(--coral);
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .faq-item h3 {
+      font-size: 15px;
+    }
+
+    .faq-item p {
+      margin-top: 6px;
+      color: var(--ink-soft);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .adoption-note {
+      margin-top: 16px;
+      padding: 14px 17px;
+      background: var(--blue-soft);
+      color: var(--brand-deep);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    /* 11. Closing */
+    .closing {
+      padding: 0;
+      color: #ffffff;
+      background: url('../promo-hero.jpg') center center / cover no-repeat;
+    }
+
+    .closing-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(51, 38, 32, 0.84);
+    }
+
+    .closing-content {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 330px;
+      gap: 60px;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      padding: 48px 70px;
+    }
+
+    .closing-brand {
+      display: inline-flex;
+      align-items: center;
+      margin-bottom: 34px;
+    }
+
+    .closing-brand img {
+      width: 52px;
+      height: 52px;
+      padding: 0;
+      border: 0;
+      border-radius: 11px;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+    }
+
+    .closing h2 {
+      max-width: 720px;
+      font-size: 49px;
+      line-height: 1.2;
+      font-weight: 900;
+    }
+
+    .closing h2 strong {
+      color: var(--brand-soft);
+    }
+
+    .closing-desc {
+      max-width: 660px;
+      margin-top: 20px;
+      color: rgba(255, 255, 255, 0.76);
+      font-size: 17px;
+      line-height: 1.65;
+    }
+
+    .closing-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .closing-action {
+      display: inline-flex;
+      align-items: center;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 999px;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .closing-action.primary {
+      border-color: var(--coral);
+      background: var(--coral);
+    }
+
+    .closing-steps {
+      padding: 24px 25px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .closing-steps > span {
+      color: var(--brand-soft);
+      font-size: 10px;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .closing-step {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 12px;
+      align-items: center;
+      min-height: 75px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .closing-step:last-of-type {
+      border-bottom: 0;
+    }
+
+    .closing-step strong {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #ffffff;
+      color: var(--brand-deep);
+      font-size: 11px;
+    }
+
+    .closing-step span {
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .closing-qr {
+      display: grid;
+      grid-template-columns: 76px 1fr;
+      gap: 14px;
+      align-items: center;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      text-decoration: none;
+    }
+
+    .closing-qr img {
+      display: block;
+      width: 76px;
+      height: 76px;
+      border-radius: 5px;
+      background: #ffffff;
+    }
+
+    .closing-qr strong,
+    .closing-qr small {
+      display: block;
+    }
+
+    .closing-qr strong {
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .closing-qr small {
+      margin-top: 5px;
+      color: rgba(255, 255, 255, 0.68);
+      font-size: 10px;
+      line-height: 1.5;
+    }
+
+    .contact-line {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.18);
+      color: rgba(255, 255, 255, 0.68);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    .contact-line a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    @media screen {
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--brand-deep);
+      }
+
+      body.deck-ready {
+        overscroll-behavior: none;
+      }
+
+      .deck {
+        display: flex;
+        width: 100vw;
+        height: 100vh;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-behavior: smooth;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+        overscroll-behavior-x: contain;
+      }
+
+      .deck::-webkit-scrollbar {
+        display: none;
+      }
+
+      .slide-viewport {
+        position: relative;
+        display: grid;
+        place-items: center;
+        flex: 0 0 100vw;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
+      }
+
+      .slide-viewport .slide {
+        flex: none;
+        margin: 0;
+        transform: scale(var(--deck-scale));
+        transform-origin: center center;
+        box-shadow: 0 18px 54px rgba(0, 0, 0, 0.34);
+      }
+
+      .deck-controls {
+        position: fixed;
+        z-index: 20;
+        bottom: 14px;
+        left: 50%;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 42px;
+        padding: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 8px;
+        background: rgba(74, 57, 49, 0.82);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+        transform: translateX(-50%);
+        backdrop-filter: blur(10px);
+      }
+
+      .deck-controls button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+        font: inherit;
+        font-size: 25px;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      .deck-controls button:hover,
+      .deck-controls button:focus-visible {
+        background: var(--coral);
+        outline: none;
+      }
+
+      .deck-controls button:disabled {
+        cursor: default;
+        opacity: 0.32;
+      }
+
+      .deck-counter {
+        min-width: 28px;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 11px;
+        font-weight: 800;
+        text-align: center;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .deck {
+          scroll-behavior: auto;
+        }
+      }
+    }
+
+    @media print {
+      html,
+      body {
+        width: 1280px;
+        margin: 0;
+        background: #ffffff;
+      }
+
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .slide {
+        width: 1280px;
+        height: 720px;
+        margin: 0;
+        box-shadow: none;
+        break-after: page;
+        page-break-after: always;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .slide:last-child {
+        break-after: auto;
+        page-break-after: auto;
+      }
+
+      .deck-controls {
+        display: none !important;
+      }
+
+      body.deck-ready .deck {
+        display: block;
+        width: 1280px;
+        height: auto;
+        overflow: visible;
+      }
+
+      body.deck-ready .slide-viewport {
+        display: block;
+        width: 1280px;
+        height: 720px;
+        overflow: hidden;
+        break-after: page;
+        page-break-after: always;
+      }
+
+      body.deck-ready .slide-viewport:last-child {
+        break-after: auto;
+        page-break-after: auto;
+      }
+
+      body.deck-ready .slide {
+        margin: 0;
+        transform: none !important;
+        box-shadow: none;
+        break-after: auto;
+        page-break-after: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 01. Cover -->
+  <section class="slide cover" id="cover">
+    <div class="cover-overlay"></div>
+    <div class="cover-content">
+      <div class="cover-brand">
+        <div class="cover-logo">
+          <img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" />
+        </div>
+      </div>
+
+      <div class="cover-copy">
+        <span class="cover-kicker">독서동아리 운영진을 위한 서비스 소개서</span>
+        <h1>독서모임의 처음부터 끝까지,<br /><strong>책모</strong></h1>
+        <p class="cover-subtitle">
+          공지부터 도서 선정, 정기모임, 발제와 기록까지.<br />
+          운영의 반복을 줄이고 좋은 독서 경험을 오래 남기는 방법을 소개합니다.
+        </p>
+      </div>
+
+      <div class="cover-bottom">
+        <div class="cover-points">
+          <span>공지와 투표</span>
+          <span>책장과 발제</span>
+          <span>정기모임과 기록</span>
+        </div>
+        <div class="cover-audience">
+          <div class="cover-platforms">
+            <span>WEB</span>
+            <span class="cover-platform"><i class="store-logo" aria-hidden="true">&#xf179;</i>iOS</span>
+            <span class="cover-platform"><i class="store-logo" aria-hidden="true">&#xf3ab;</i>PLAY STORE</span>
+          </div>
+          <a href="mailto:checkmo2025@gmail.com">checkmo2025@gmail.com</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02. Contents -->
+  <section class="slide" id="contents" style="--accent: var(--brand); --accent-soft: var(--warm-strong);">
+    <div class="slide-header">
+      <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
+      <span class="section-code">목차</span>
+    </div>
+    <div class="contents-grid">
+      <section class="contents-group" style="--group-color: var(--coral);">
+        <div class="contents-group-head">
+          <span class="contents-phase">01</span>
+          <div>
+            <h3>독서 모임 운영의 불편함</h3>
+            <p>운영진의 반복 업무와 정보 분산</p>
+          </div>
+        </div>
+        <ol class="contents-list">
+          <li><span class="item-no">01</span><span>운영이 복잡해지는 순간</span><span class="page-no">3</span></li>
+          <li><span class="item-no">02</span><span>흩어진 도구와 정보</span><span class="page-no">4</span></li>
+        </ol>
+      </section>
+
+      <section class="contents-group" style="--group-color: var(--blue);">
+        <div class="contents-group-head">
+          <span class="contents-phase">02</span>
+          <div>
+            <h3>책모가 해결하는 방식</h3>
+            <p>운영진과 회원 모두의 변화</p>
+          </div>
+        </div>
+        <ol class="contents-list">
+          <li><span class="item-no">03</span><span>하나로 연결되는 운영</span><span class="page-no">5</span></li>
+          <li><span class="item-no">04</span><span>모임 전·중·후의 흐름</span><span class="page-no">6</span></li>
+          <li><span class="item-no">05</span><span>운영진에게 달라지는 것</span><span class="page-no">7</span></li>
+          <li><span class="item-no">06</span><span>회원이 경험하는 변화</span><span class="page-no">8</span></li>
+        </ol>
+      </section>
+
+      <section class="contents-group" style="--group-color: var(--green);">
+        <div class="contents-group-head">
+          <span class="contents-phase">03</span>
+          <div>
+            <h3>우리 모임에 적용하는 방법</h3>
+            <p>한 달 운영 예시와 시작 방법</p>
+          </div>
+        </div>
+        <ol class="contents-list">
+          <li><span class="item-no">07</span><span>한 달 운영 시나리오</span><span class="page-no">9</span></li>
+          <li><span class="item-no">08</span><span>다음 모임부터 시작하기</span><span class="page-no">10</span></li>
+          <li><span class="item-no">09</span><span>책모 도입 제안</span><span class="page-no">11</span></li>
+        </ol>
+      </section>
+    </div>
+
+    <div class="slide-footer"><span>독서동아리 운영진을 위한 책모 소개서</span><span>2</span></div>
+  </section>
+
+  <!-- 03. Operator pain -->
+  <section class="slide warm" id="pain" style="--accent: var(--coral); --accent-soft: var(--coral-soft);">
+    <div class="slide-header">
+      <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
+      <span class="section-code">운영진의 현실</span>
+    </div>
+    <h2 class="slide-title">운영진의 일은 모임 당일보다<br /><span class="accent-text">그 전후에 더 많습니다</span></h2>
+
+    <div class="pain-layout">
+      <div class="pain-quotes">
+        <div class="pain-quote"><span>“</span>공지 다시 올려주세요</div>
+        <div class="pain-quote"><span>“</span>이번에 읽을 책이 뭐였죠?</div>
+        <div class="pain-quote"><span>“</span>투표 마감은 언제예요?</div>
+        <div class="pain-quote"><span>“</span>지난 발제는 어디에서 보죠?</div>
+      </div>
+
+      <div class="operator-day">
+        <h3>운영진이 직접 이어 붙이는 모임의 하루</h3>
+        <p>좋은 대화를 준비하는 시간보다 전달과 정리에 더 많은 손이 갑니다.</p>
+        <div class="day-phases">
+          <section class="day-phase">
+            <strong>모임 전</strong>
+            <ul>
+              <li>후보 도서 정리</li>
+              <li>투표 링크 전달</li>
+              <li>일정 반복 공지</li>
+              <li>발제 수집</li>
+            </ul>
+          </section>
+          <section class="day-phase">
+            <strong>모임 중</strong>
+            <ul>
+              <li>참석자 확인</li>
+              <li>조 편성 안내</li>
+              <li>발제 순서 공유</li>
+              <li>자료 재전달</li>
+            </ul>
+          </section>
+          <section class="day-phase">
+            <strong>모임 후</strong>
+            <ul>
+              <li>후기 요청</li>
+              <li>기록 취합</li>
+              <li>다음 일정 안내</li>
+              <li>신규 회원 설명</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div class="pain-message">운영진은 책을 고르고 대화를 설계해야 하지만, 실제 시간은 반복 안내와 정보 정리에 쓰이기 쉽습니다.</div>
+    <div class="slide-footer"><span>독서동아리 운영진을 위한 책모 소개서</span><span>3</span></div>
+  </section>
+
+  <!-- 04. Fragmented tools -->
+  <section class="slide" id="fragmentation" style="--accent: var(--coral); --accent-soft: var(--coral-soft);">
+    <div class="slide-header">
+      <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
+      <span class="section-code">정보 분산</span>
+    </div>
+    <h2 class="slide-title">도구는 많지만,<br /><span class="accent-text">운영 흐름은 연결되지 않습니다</span></h2>
+    <p class="slide-desc">각 도구의 정보를 다시 모으고 설명하는 일이 결국 운영진에게 돌아옵니다.</p>
+
+    <div class="fragment-map">
+      <div class="tool-stack">
+        <div class="tool-item"><div class="icon-box" style="--icon-bg: var(--coral-soft);"><img src="../../assets/icons/Chat.svg" alt="" /></div><div>단체 채팅<small>공지와 대화</small></div></div>
+        <div class="tool-item"><div class="icon-box" style="--icon-bg: var(--yellow-soft);"><img src="../../assets/icons/vote.svg" alt="" /></div><div>설문 링크<small>도서·일정 투표</small></div></div>
+        <div class="tool-item"><div class="icon-box" style="--icon-bg: var(--blue-soft);"><img src="../../assets/icons/Document.svg" alt="" /></div><div>문서와 노트<small>발제와 후기</small></div></div>
+        <div class="tool-item"><div class="icon-box" style="--icon-bg: var(--green-soft);"><img src="../../assets/icons/Calendar.svg" alt="" /></div><div>표와 캘린더<small>일정과 참석</small></div></div>
+      </div>
+
+      <div class="map-arrow" aria-hidden="true"></div>
+
+      <div class="operator-hub">
+        <img src="../../assets/icons/leader.svg" alt="" />
+        <strong>운영진</strong>
+        <span>수집 · 정리 · 전달<br />다시 확인</span>
+      </div>
+
+      <div class="map-arrow" aria-hidden="true"></div>
+
+      <div class="result-stack">
+        <div class="result-item"><div class="icon-box" style="--icon-bg: var(--coral-soft);"><img src="../../assets/icons/notification.svg" alt="" /></div><div>공지 누락<small>대화 속에서 정보가 묻힘</small></div></div>
+        <div class="result-item"><div class="icon-box" style="--icon-bg: var(--yellow-soft);"><img src="../../assets/icons/thick_search.svg" alt="" /></div><div>기록 검색 어려움<small>지난 자료를 다시 탐색</small></div></div>
+        <div class="result-item"><div class="icon-box" style="--icon-bg: var(--blue-soft);"><img src="../../assets/icons/comment.svg" alt="" /></div><div>반복 질문<small>같은 내용을 여러 번 안내</small></div></div>
+        <div class="result-item"><div class="icon-box" style="--icon-bg: var(--green-soft);"><img src="../../assets/icons/member.svg" alt="" /></div><div>인수인계 부담<small>운영 방식이 사람에게 남음</small></div></div>
+      </div>
+    </div>
+
+    <div class="fragment-message">
+      <strong>문제는 도구의 수가 아닙니다.</strong>
+      <span>모임의 결정과 기록이 한 흐름으로 남지 않아, 운영진이 매번 그 사이를 연결해야 한다는 점입니다.</span>
+    </div>
+    <div class="slide-footer"><span>독서동아리 운영진을 위한 책모 소개서</span><span>4</span></div>
+  </section>
+
+  <!-- 05. Solution overview -->
+  <section class="slide warm" id="solution" style="--accent: var(--blue); --accent-soft: var(--blue-soft);">
+    <div class="slide-header">
+      <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
+      <span class="section-code">책모의 해결 방식</span>
+    </div>
+    <h2 class="slide-title">책모 하나로<br /><span class="accent-text">모임 운영의 맥락을 이어갑니다</span></h2>
+
+    <div class="solution-layout">
+      <div class="solution-list">
+        <div class="solution-item">
+          <div class="icon-box" style="--icon-bg: var(--coral-soft);"><img src="../../assets/icons/quill_pin.svg" alt="" /></div>
+          <h3>공지와 투표</h3>
+          <p>일정과 안건을 알리고, 공지 안에서 회원 의견과 투표 결과를 함께 확인합니다.</p>
+        </div>
+        <div class="solution-item">
+          <div class="icon-box" style="--icon-bg: var(--yellow-soft);"><img src="../../assets/icons/bookshelf.svg" alt="" /></div>
+          <h3>책장과 발제</h3>
+          <p>선정도서를 중심으로 발제와 한줄평을 쌓아 모임의 독서 기록을 남깁니다.</p>
+        </div>
+        <div class="solution-item">
+          <div class="icon-box" style="--icon-bg: var(--blue-soft);"><img src="../../assets/icons/groups_3User.svg" alt="" /></div>
+          <h3>정기모임과 조</h3>
+          <p>정기모임 정보, 조 편성, 조별 발제와 채팅을 하나의 모임 안에서 운영합니다.</p>
+        </div>
+        <div class="solution-item">
+          <div class="icon-box" style="--icon-bg: var(--green-soft);"><img src="../../assets/icons/admin.svg" alt="" /></div>
+          <h3>회원과 운영진 관리</h3>
+          <p>가입 신청과 회원 상태를 관리하고 개설자와 운영진의 역할을 나눌 수 있습니다.</p>
+        </div>
+      </div>
+
+      <div class="phones" aria-label="책모 앱 화면 예시">
+        <span class="phone-label one">모임 찾기와 생성</span>
+        <div class="phone club-phone"><img src="../../assets/onboarding/onboarding-club.png" alt="책모 모임 온보딩 화면" /></div>
+        <div class="phone story-phone"><img src="../../assets/onboarding/onboarding-bookstory.png" alt="책모 책 이야기 온보딩 화면" /></div>
+        <span class="phone-label two">읽고 나누는 경험</span>
+      </div>
+    </div>
+
+    <div class="slide-footer"><span>독서동아리 운영진을 위한 책모 소개서</span><span>5</span></div>
+  </section>
+
+  <!-- 06. Journey -->
+  <section class="slide" id="journey" style="--accent: var(--blue); --accent-soft: var(--blue-soft);">
+    <div class="slide-header">
+      <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
+      <span class="section-code">운영 흐름</span>
+    </div>
+    <h2 class="slide-title">모임 준비부터 회고까지,<br /><span class="accent-text">한 흐름으로 이어집니다</span></h2>
+    <p class="slide-desc">각 단계의 결과가 다음 운영에 다시 쓰이는 모임 기록이 됩니다.</p>
+
+    <div class="journey-phases">
+      <div class="journey-phase-label" style="--phase: var(--coral);">모임 전 · 준비와 결정</div>
+      <div class="journey-phase-label" style="--phase: var(--blue);">모임 중 · 대화와 참여</div>
+      <div class="journey-phase-label" style="--phase: var(--green);">모임 후 · 회고와 축적</div>
+    </div>
+
+    <div class="journey-line">
+      <section class="journey-step" style="--step-color: var(--coral); --chip-bg: var(--coral-soft);">
+        <div class="step-node">01</div><h3>모임 개설</h3><p>소개와 운영 정보를 등록하고 가입 신청을 받습니다.</p><span class="feature-chip">모임 · 회원</span>
+      </section>
+      <section class="journey-step" style="--step-color: var(--coral); --chip-bg: var(--coral-soft);">
+        <div class="step-node">02</div><h3>도서 선정</h3><p>책장을 만들고 후보 도서와 읽을 책을 정리합니다.</p><span class="feature-chip">책장</span>
+      </section>
+      <section class="journey-step" style="--step-color: var(--coral); --chip-bg: var(--coral-soft);">
+        <div class="step-node">03</div><h3>공지와 투표</h3><p>일정과 안건을 알리고 회원의 선택을 모읍니다.</p><span class="feature-chip">공지 · 투표</span>
+      </section>
+      <section class="journey-step" style="--step-color: var(--blue); --chip-bg: var(--blue-soft);">
+        <div class="step-node">04</div><h3>정기모임</h3><p>조를 편성하고 발제 진행 상태와 순서를 확인합니다.</p><span class="feature-chip">정기모임 · 조</span>
+      </section>
+      <section class="journey-step" style="--step-color: var(--blue); --chip-bg: var(--blue-soft);">
+        <div class="step-node">05</div><h3>대화와 참여</h3><p>댓글과 소속 조 채팅으로 모임의 대화를 이어갑니다.</p><span class="feature-chip">댓글 · 조 채팅</span>
+      </section>
+      <section class="journey-step" style="--step-color: var(--green); --chip-bg: var(--green-soft);">
+        <div class="step-node">06</div><h3>기록과 회고</h3><p>발제와 별점이 포함된 한줄평을 책장에 남깁니다.</p><span class="feature-chip">발제 · 한줄평</span>
+      </section>
+    </div>
+
+    <div class="journey-result">한 번의 모임이 끝나도, 다음 모임을 더 쉽게 만드는 기록은 계속 남습니다.</div>
+    <div class="slide-footer"><span>독서동아리 운영진을 위한 책모 소개서</span><span>6</span></div>
+  </section>
+
+  <!-- 07. Before / After -->
+  <section class="slide warm" id="before-after" style="--accent: var(--brand); --accent-soft: var(--warm-strong);">
+    <div class="slide-header">
+      <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
+      <span class="section-code">운영진의 변화</span>
+    </div>
+    <h2 class="slide-title">운영의 반복은 줄이고,<br /><span class="accent-text">모임을 설계하는 시간은 늘립니다</span></h2>
+
+    <div class="compare-table" role="table" aria-label="기존 운영 방식과 책모 사용 비교">
+      <div class="compare-row header" role="row"><span>운영 업무</span><span>흩어진 방식</span><span></span><span>책모에서</span></div>
+      <div class="compare-row" role="row"><span class="compare-label">공지 전달</span><span class="compare-before">채팅방에 같은 내용을 반복 공지</span><span class="compare-arrow">&rarr;</span><span class="compare-after">모임별 공지에서 최신 내용과 댓글 확인</span></div>
+      <div class="compare-row" role="row"><span class="compare-label">의견 수렴</span><span class="compare-before">외부 설문 링크와 결과를 따로 정리</span><span class="compare-arrow">&rarr;</span><span class="compare-after">공지 안에서 투표 참여와 결과 확인</span></div>
+      <div class="compare-row" role="row"><span class="compare-label">도서와 발제</span><span class="compare-before">문서와 링크를 다시 찾아 전달</span><span class="compare-arrow">&rarr;</span><span class="compare-after">책장별 발제와 한줄평으로 기록</span></div>
+      <div class="compare-row" role="row"><span class="compare-label">구성원 관리</span><span class="compare-before">가입과 역할을 별도 명단에서 관리</span><span class="compare-arrow">&rarr;</span><span class="compare-after">가입 신청, 회원, 운영진을 한곳에서 관리</span></div>
+      <div class="compare-row" role="row"><span class="compare-label">운영 인수인계</span><span class="compare-before">운영진의 기억과 개인 파일에 의존</span><span class="compare-arrow">&rarr;</span><span class="compare-after">모임 안에 공지와 독서 활동 이력 축적</span></div>
+    </div>
+
+    <div class="compare-message"><strong>반복 안내자에서, 좋은 모임을 설계하는 운영진으로.</strong><span>책모는 운영 판단을 대신하지 않고 운영의 맥락을 정리합니다.</span></div>
+    <div class="slide-footer"><span>독서동아리 운영진을 위한 책모 소개서</span><span>7</span></div>
+  </section>
+
+  <!-- 08. Member experience -->
+  <section class="slide" id="member-experience" style="--accent: var(--green); --accent-soft: var(--green-soft);">
+    <div class="slide-header">
+      <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
+      <span class="section-code">회원의 참여 경험</span>
+    </div>
+    <h2 class="slide-title">회원이 스스로 확인할수록<br /><span class="accent-text">운영은 더 가벼워집니다</span></h2>
+
+    <div class="member-layout">
+      <div class="member-visual">
+        <div class="member-phone"><img src="../../assets/onboarding/onboarding-home.png" alt="책모 홈 온보딩 화면" /></div>
+        <div class="member-callout top" style="--callout-color: var(--coral);">최신 소식 확인</div>
+        <div class="member-callout bottom" style="--callout-color: var(--green);">모임 활동 참여</div>
+      </div>
+
+      <div class="member-moments">
+        <section class="member-moment">
+          <div class="icon-box" style="--icon-bg: var(--coral-soft);"><img src="../../assets/icons/notification.svg" alt="" /></div>
+          <h3>최신 공지를 직접 확인</h3>
+          <p>모임 홈과 공지 탭에서 운영진이 남긴 최신 안내를 찾아봅니다.</p>
+        </section>
+        <section class="member-moment">
+          <div class="icon-box" style="--icon-bg: var(--yellow-soft);"><img src="../../assets/icons/vote.svg" alt="" /></div>
+          <h3>공지 안에서 투표 참여</h3>
+          <p>도서와 일정에 대한 의견을 남기고 투표 결과를 함께 확인합니다.</p>
+        </section>
+        <section class="member-moment">
+          <div class="icon-box" style="--icon-bg: var(--blue-soft);"><img src="../../assets/icons/bookshelf.svg" alt="" /></div>
+          <h3>책장에 발제와 한줄평 작성</h3>
+          <p>읽은 책을 중심으로 발제와 별점, 짧은 감상을 기록합니다.</p>
+        </section>
+        <section class="member-moment">
+          <div class="icon-box" style="--icon-bg: var(--purple-soft);"><img src="../../assets/icons/Chat.svg" alt="" /></div>
+          <h3>소속 조에서 대화 지속</h3>
+          <p>정기모임 전후에도 소속 조 채팅으로 필요한 대화를 이어갑니다.</p>
+        </section>
+        <div class="member-message"><strong>회원이 쉽게 참여할 때<br />운영 도구가 완성됩니다.</strong><span>회원의 직접 확인과 기록이 늘수록 운영진의 반복 전달은 자연스럽게 줄어듭니다.</span></div>
+      </div>
+    </div>
+
+    <div class="slide-footer"><span>독서동아리 운영진을 위한 책모 소개서</span><span>8</span></div>
+  </section>
+
+  <!-- 09. One month scenario -->
+  <section class="slide warm" id="monthly-scenario" style="--accent: var(--purple); --accent-soft: var(--purple-soft);">
+    <div class="slide-header">
+      <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
+      <span class="section-code">우리 동아리 적용 예시</span>
+    </div>
+    <h2 class="slide-title">한 달 운영 예시:<br /><span class="accent-text">다음 책 한 권을 함께 읽는 과정</span></h2>
+    <p class="slide-desc">새로운 운영 체계를 한 번에 도입하지 않아도, 한 권의 책과 한 번의 정기모임부터 시작할 수 있습니다.</p>
+
+    <div class="month-flow">
+      <section class="week" style="--week-color: var(--coral); --week-soft: var(--coral-soft);">
+        <div class="week-node">WEEK 1</div><h3>준비</h3><div class="week-subtitle">무엇을 읽을지 정합니다</div>
+        <ul><li>후보 도서와 소개 정리</li><li>선정도서 투표 공지</li><li>다음 모임 일정 안내</li></ul><span class="week-feature">책장 · 공지 · 투표</span>
+      </section>
+      <section class="week" style="--week-color: var(--yellow); --week-soft: var(--yellow-soft);">
+        <div class="week-node">WEEK 2</div><h3>읽기</h3><div class="week-subtitle">대화의 재료를 모읍니다</div>
+        <ul><li>선정도서 최종 안내</li><li>회원별 발제 작성</li><li>조 편성 준비</li></ul><span class="week-feature">책장 · 발제</span>
+      </section>
+      <section class="week" style="--week-color: var(--blue); --week-soft: var(--blue-soft);">
+        <div class="week-node">WEEK 3</div><h3>모임</h3><div class="week-subtitle">함께 읽고 대화합니다</div>
+        <ul><li>정기모임 정보 확인</li><li>조별 발제와 대화</li><li>필요한 내용 채팅 공유</li></ul><span class="week-feature">정기모임 · 조 · 채팅</span>
+      </section>
+      <section class="week" style="--week-color: var(--green); --week-soft: var(--green-soft);">
+        <div class="week-node">WEEK 4</div><h3>회고</h3><div class="week-subtitle">경험을 다음 달로 남깁니다</div>
+        <ul><li>한줄평과 별점 작성</li><li>발제와 대화 기록 확인</li><li>다음 책 준비 시작</li></ul><span class="week-feature">한줄평 · 기록</span>
+      </section>
+    </div>
+
+    <div class="month-result">이번 달의 공지, 선택, 발제와 감상이 다음 달 운영의 출발점으로 남습니다.</div>
+    <div class="slide-footer"><span>독서동아리 운영진을 위한 책모 소개서</span><span>9</span></div>
+  </section>
+
+  <!-- 10. Adoption -->
+  <section class="slide" id="adoption" style="--accent: var(--blue); --accent-soft: var(--blue-soft);">
+    <div class="slide-header">
+      <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
+      <span class="section-code">가볍게 시작하기</span>
+    </div>
+    <h2 class="slide-title">전부 바꾸지 않아도 됩니다.<br /><span class="accent-text">다음 모임 하나부터 시작하세요</span></h2>
+
+    <div class="adoption-layout">
+      <div class="start-steps">
+        <section class="start-step"><span class="start-no">01</span><div><h3>모임을 개설합니다</h3><p>동아리 소개와 기본 운영 정보를 등록해 모임 공간을 만듭니다.</p></div></section>
+        <section class="start-step"><span class="start-no">02</span><div><h3>회원과 역할을 정리합니다</h3><p>가입 신청을 승인하고 개설자와 운영진의 역할을 나눕니다.</p></div></section>
+        <section class="start-step"><span class="start-no">03</span><div><h3>첫 책장과 공지를 엽니다</h3><p>다음 선정도서와 일정 공지, 필요한 투표부터 책모에서 시작합니다.</p></div></section>
+        <div class="adoption-note">처음부터 모든 기록을 옮기기보다, 다음 정기모임에 필요한 정보부터 모으는 방식이 좋습니다.</div>
+      </div>
+
+      <div class="faq-list">
+        <section class="faq-item"><span class="faq-q">Q</span><div><h3>단체 채팅을 바로 없애야 하나요?</h3><p>아니요. 공지와 책장, 기록부터 책모에 모으고 기존 대화 채널은 동아리 상황에 맞춰 단계적으로 정리할 수 있습니다.</p></div></section>
+        <section class="faq-item"><span class="faq-q">Q</span><div><h3>기존 자료를 모두 옮겨야 하나요?</h3><p>다음 모임부터 새 기록을 쌓아도 됩니다. 다시 활용할 중요한 발제와 도서 정보만 선택적으로 정리하면 됩니다.</p></div></section>
+        <section class="faq-item"><span class="faq-q">Q</span><div><h3>운영 역할을 나눌 수 있나요?</h3><p>개설자와 운영진 권한을 구분해 가입 신청, 회원, 공지, 책장과 조 편성 등의 운영 업무를 함께 관리할 수 있습니다.</p></div></section>
+      </div>
+    </div>
+
+    <div class="slide-footer"><span>독서동아리 운영진을 위한 책모 소개서</span><span>10</span></div>
+  </section>
+
+  <!-- 11. Closing -->
+  <section class="slide closing" id="closing">
+    <div class="closing-overlay"></div>
+    <div class="closing-content">
+      <div>
+        <div class="closing-brand"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
+        <h2>다음 정기모임을<br /><strong>책모에서 열어보세요</strong></h2>
+        <p class="closing-desc">한 번의 모임을 운영해보면, 우리 동아리에 필요한 흐름과 남겨야 할 기록이 보입니다.</p>
+        <div class="closing-actions">
+          <a class="closing-action primary" href="https://apps.apple.com/app/id6777671102">iOS 앱 다운로드</a>
+          <a class="closing-action" href="mailto:checkmo2025@gmail.com">checkmo2025@gmail.com</a>
+        </div>
+      </div>
+
+      <aside class="closing-steps">
+        <span>Start with one meeting</span>
+        <div class="closing-step"><strong>1</strong><span>모임 만들기</span></div>
+        <div class="closing-step"><strong>2</strong><span>운영진과 회원 정리</span></div>
+        <div class="closing-step"><strong>3</strong><span>첫 책장과 공지 등록</span></div>
+        <a class="closing-qr" href="https://apps.apple.com/app/id6777671102" aria-label="책모 iOS App Store 열기">
+          <img src="assets/ios-app-store-qr.png" alt="책모 iOS App Store QR 코드" />
+          <span><strong>iOS App Store</strong><small>QR 코드를 스캔해<br />책모를 다운로드하세요</small></span>
+        </a>
+        <p class="contact-line">독서동아리 운영 도입 문의<br /><a href="mailto:checkmo2025@gmail.com">checkmo2025@gmail.com</a></p>
+      </aside>
+    </div>
+  </section>
+  <script>
+    (() => {
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      if (!slides.length || document.querySelector('.deck')) return;
+
+      const deck = document.createElement('main');
+      deck.className = 'deck';
+      slides[0].before(deck);
+
+      const frames = slides.map((slide, index) => {
+        const frame = document.createElement('section');
+        frame.className = 'slide-viewport';
+        frame.setAttribute('aria-label', `${index + 1} / ${slides.length}`);
+        frame.appendChild(slide);
+        deck.appendChild(frame);
+        return frame;
+      });
+
+      const controls = document.createElement('nav');
+      controls.className = 'deck-controls';
+      controls.setAttribute('aria-label', '슬라이드 이동');
+      controls.innerHTML = `
+        <button type="button" class="deck-prev" aria-label="이전 슬라이드" title="이전 슬라이드">‹</button>
+        <span class="deck-counter" aria-live="polite">1</span>
+        <button type="button" class="deck-next" aria-label="다음 슬라이드" title="다음 슬라이드">›</button>
+      `;
+      document.body.appendChild(controls);
+      document.body.classList.add('deck-ready');
+
+      const previousButton = controls.querySelector('.deck-prev');
+      const nextButton = controls.querySelector('.deck-next');
+      const counter = controls.querySelector('.deck-counter');
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let currentIndex = 0;
+      let scrollFrame = 0;
+      let wheelLocked = false;
+
+      const fitSlides = () => {
+        const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+        document.documentElement.style.setProperty('--deck-scale', String(scale));
+        deck.scrollTo({ left: currentIndex * deck.clientWidth, behavior: 'auto' });
+      };
+
+      const updateControls = () => {
+        counter.textContent = String(currentIndex + 1);
+        previousButton.disabled = currentIndex === 0;
+        nextButton.disabled = currentIndex === slides.length - 1;
+      };
+
+      const goToSlide = (index, behavior = reducedMotion ? 'auto' : 'smooth') => {
+        currentIndex = Math.max(0, Math.min(slides.length - 1, index));
+        deck.scrollTo({ left: currentIndex * deck.clientWidth, behavior });
+        updateControls();
+      };
+
+      previousButton.addEventListener('click', () => goToSlide(currentIndex - 1));
+      nextButton.addEventListener('click', () => goToSlide(currentIndex + 1));
+
+      deck.addEventListener('scroll', () => {
+        if (scrollFrame) return;
+        scrollFrame = window.requestAnimationFrame(() => {
+          currentIndex = Math.max(0, Math.min(slides.length - 1, Math.round(deck.scrollLeft / deck.clientWidth)));
+          updateControls();
+          scrollFrame = 0;
+        });
+      });
+
+      deck.addEventListener('wheel', (event) => {
+        const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+        if (Math.abs(delta) < 12) return;
+        event.preventDefault();
+        if (wheelLocked) return;
+        wheelLocked = true;
+        goToSlide(currentIndex + (delta > 0 ? 1 : -1));
+        window.setTimeout(() => { wheelLocked = false; }, 420);
+      }, { passive: false });
+
+      document.addEventListener('keydown', (event) => {
+        const tagName = event.target instanceof HTMLElement ? event.target.tagName : '';
+        if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(tagName)) return;
+
+        const nextKeys = ['ArrowRight', 'ArrowDown', 'PageDown', ' '];
+        const previousKeys = ['ArrowLeft', 'ArrowUp', 'PageUp'];
+
+        if (nextKeys.includes(event.key)) {
+          event.preventDefault();
+          goToSlide(currentIndex + 1);
+        } else if (previousKeys.includes(event.key)) {
+          event.preventDefault();
+          goToSlide(currentIndex - 1);
+        } else if (event.key === 'Home') {
+          event.preventDefault();
+          goToSlide(0);
+        } else if (event.key === 'End') {
+          event.preventDefault();
+          goToSlide(slides.length - 1);
+        }
+      });
+
+      window.addEventListener('resize', fitSlides);
+      fitSlides();
+      updateControls();
+    })();
+  </script>
+</body>
+</html>

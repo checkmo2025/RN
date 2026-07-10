@@ -25,12 +25,12 @@
 
 | 영역 | 파일 | 현재 상태 |
 |------|------|-----------|
-| 로그인 화면 | [src/screens/AuthFlowScreen.tsx](src/screens/AuthFlowScreen.tsx) | 이메일/닉네임 + 비밀번호만. 소셜 버튼/WebView 모달 **삭제됨** |
-| 인증 API | [src/services/api/authApi.ts](src/services/api/authApi.ts) | `OAuthProvider` 타입, `getOAuthLoginUrl()`, `getApiOrigin()` **삭제됨** |
-| 인증 상태 | [src/contexts/AuthGateContext.tsx](src/contexts/AuthGateContext.tsx) | `loggedOut / profileIncomplete / loggedIn` 상태 존재 (소셜 신규가입 후 프로필 완성 흐름에 재사용 가능) |
-| 토큰 저장 | [src/services/api/authTokenStore.ts](src/services/api/authTokenStore.ts) | refreshToken을 `expo-secure-store`에 저장 |
-| 앱 설정 | [app.json](app.json) | 소셜 관련 plugin/scheme/entitlement 없음. bundleId `kr.co.checkmo.app` |
-| 의존성 | [package.json](package.json) | 소셜 SDK 없음. `expo-dev-client`도 제거됨(Play 심사 정리) |
+| 로그인 화면 | [src/screens/AuthFlowScreen.tsx](../../src/screens/AuthFlowScreen.tsx) | 이메일/닉네임 + 비밀번호만. 소셜 버튼/WebView 모달 **삭제됨** |
+| 인증 API | [src/services/api/authApi.ts](../../src/services/api/authApi.ts) | `OAuthProvider` 타입, `getOAuthLoginUrl()`, `getApiOrigin()` **삭제됨** |
+| 인증 상태 | [src/contexts/AuthGateContext.tsx](../../src/contexts/AuthGateContext.tsx) | `loggedOut / profileIncomplete / loggedIn` 상태 존재 (소셜 신규가입 후 프로필 완성 흐름에 재사용 가능) |
+| 토큰 저장 | [src/services/api/authTokenStore.ts](../../src/services/api/authTokenStore.ts) | refreshToken을 `expo-secure-store`에 저장 |
+| 앱 설정 | [app.json](../../app.json) | 소셜 관련 plugin/scheme/entitlement 없음. bundleId `kr.co.checkmo.app` |
+| 의존성 | [package.json](../../package.json) | 소셜 SDK 없음. `expo-dev-client`도 제거됨(Play 심사 정리) |
 | 에셋 | `assets/icons/` | `googleLogo.svg`, `kakaoImage.svg`, `naverLogo.svg` **삭제됨** |
 
 **과거 구현 방식(복원/참고용, 커밋 `37ed737^`):**

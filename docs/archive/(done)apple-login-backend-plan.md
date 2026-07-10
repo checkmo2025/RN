@@ -32,7 +32,7 @@ Checkmo의 기존 이메일 로그인, Google/Kakao/Naver 웹 OAuth, JWT 쿠키 
 | Domains | `checkmo.co.kr`, `api.checkmo.co.kr` |
 | Web Return URL | `https://api.checkmo.co.kr/login/oauth2/code/apple` |
 
-![Sign in with Apple 키 생성 및 다운로드 화면](./assets/apple-login/apple-key-download.png)
+![Sign in with Apple 키 생성 및 다운로드 화면](../documents/assets/apple-login/apple-key-download.png)
 
 화면의 Team ID와 Key ID는 식별자이며 서버 설정에 사용할 수 있다. 다운로드한 `.p8` 파일 본문은 Git, 문서, Docker image, 로그, Sentry context에 넣지 않는다. 비밀 관리 서비스 또는 배포 환경 secret으로만 주입한다.
 
@@ -60,9 +60,9 @@ Checkmo의 기존 이메일 로그인, Google/Kakao/Naver 웹 OAuth, JWT 쿠키 
 - `AuthErrorStatus.MEMBER_PROFILE_NOT_COMPLETED`는 `AUTH_403`이다.
 - 신규 소셜 회원의 약관 체크는 현재 클라이언트 메모리에만 있고 DB에 저장되지 않는다.
 - 약관 저장과 재동의 게이트는 아래 문서가 소유한다.
-  - [약관 동의 매핑 백엔드 계획](./terms-agreement-backend-plan.md)
-  - [약관 동의 매핑 웹 계획](./terms-agreement-fe-plan.md)
-  - [약관 동의 매핑 RN 계획](./terms-agreement-rn-plan.md)
+  - [약관 동의 매핑 백엔드 계획](./(done)terms-agreement-backend-plan.md)
+  - [약관 동의 매핑 웹 계획](./(done)terms-agreement-fe-plan.md)
+  - [약관 동의 매핑 RN 계획](./(done)terms-agreement-rn-plan.md)
 
 ## 4. 목표 아키텍처
 
@@ -354,7 +354,7 @@ Apple 인증
 - 약관 미동의가 프로필 미완성보다 우선한다.
 - `GET/POST /api/v1/members/me/terms`, logout, OAuth callback, 앱 Apple 로그인은 onboarding allowlist에 포함한다.
 - `additional-info`는 현재 필수 약관 동의까지 확인한 뒤 프로필 완료 처리한다.
-- 구체적 schema/API/단계적 enforcement는 [약관 백엔드 계획](./terms-agreement-backend-plan.md)을 따른다.
+- 구체적 schema/API/단계적 enforcement는 [약관 백엔드 계획](./(done)terms-agreement-backend-plan.md)을 따른다.
 
 ## 12. 로그아웃·탈퇴·해지
 

@@ -2,8 +2,8 @@
 
 > 작성 기준일: 2026-06-22 KST
 > 기준 코드: `ref_code/BE` (`develop`)
-> 연계 문서: [RN 계획](./push-notification-rn-plan.md)
-> 이전 조사: [초기 푸시 알림 구현 방식](../archive/(done)push-notification-implementation.md)
+> 연계 문서: [RN 계획](./(done)push-notification-rn-plan.md)
+> 이전 조사: [초기 푸시 알림 구현 방식](./(done)push-notification-implementation.md)
 
 ## 1. 목표와 확정 정책
 

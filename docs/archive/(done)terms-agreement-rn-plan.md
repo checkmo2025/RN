@@ -3,7 +3,7 @@
 > 작성 기준일: 2026-06-21 KST
 > 기준 코드: 현재 RN workspace
 > 상태: 구현 대기
-> BE 계약 원본: `docs/documents/terms-agreement-backend-plan.md`
+> BE 계약 원본: `docs/archive/(done)terms-agreement-backend-plan.md`
 
 ## 1. 목적과 범위
 

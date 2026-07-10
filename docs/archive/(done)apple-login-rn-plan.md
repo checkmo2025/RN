@@ -31,7 +31,7 @@
 - 상태는 `loggedOut`, `profileIncomplete`, `loggedIn` 세 가지다.
 - 앱 시작 시 login-status를 조회하고 401이면 SecureStore refresh를 시도한다.
 - `AUTH_403`이면 `profileCompletion` mode로 `AuthFlowScreen`을 연다.
-- 약관 재동의 상태는 아직 없으며 [약관 RN 계획](./terms-agreement-rn-plan.md)에서 `termsAgreement` mode를 추가하도록 정의돼 있다.
+- 약관 재동의 상태는 아직 없으며 [약관 RN 계획](./(done)terms-agreement-rn-plan.md)에서 `termsAgreement` mode를 추가하도록 정의돼 있다.
 
 ### 로그인·가입 화면
 
@@ -351,7 +351,7 @@ Apple 로그인 성공 및 Checkmo session 저장
 
 ## 12. AuthGate와 약관 우선순위
 
-[약관 RN 계획](./terms-agreement-rn-plan.md)의 상태 확장을 선행 적용한다.
+[약관 RN 계획](./(done)terms-agreement-rn-plan.md)의 상태 확장을 선행 적용한다.
 
 ```ts
 type AuthPageMode = "login" | "termsAgreement" | "profileCompletion";

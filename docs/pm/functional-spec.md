@@ -426,7 +426,7 @@
 
 - 내 소식 관리: `fetchMyNewsList`
 - 신고 관리: `fetchMyReports`
-- 차단 관리: `fetchBlockedMembers` 목록 + `unblockMember(nickname)` 해제 (최신순, 무한스크롤). 상세는 `block-feature-spec.md` 참고
+- 차단 관리: `fetchBlockedMembers` 목록 + `unblockMember(nickname)` 해제 (최신순, 무한스크롤). 상세는 `../archive/(done)block-feature-spec.md` 참고
 - 알림 관리:
   - 기기 푸시 수신 토글: `setPushNotificationsEnabledAsync`
   - 알림 종류별 설정 조회: `fetchNotificationSettings`
@@ -450,7 +450,7 @@
 
 - 구독 토글: `setFollowingMember`
 - 신고: `createReport`(작성자 MEMBER 기준, 1.4 참고)
-- 차단: `blockMember(nickname)` — 확인 모달 후 처리, 성공 시 이전 화면 복귀. 상세 정책은 `block-feature-spec.md` 참고
+- 차단: `blockMember(nickname)` — 확인 모달 후 처리, 성공 시 이전 화면 복귀. 상세 정책은 `../archive/(done)block-feature-spec.md` 참고
 
 ### 8.3 팔로우 페이지 (`UP-03`)
 

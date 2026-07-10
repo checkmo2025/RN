@@ -80,4 +80,4 @@
 5. **🟡 B-2~B-5 공용 컴포넌트화** — 버튼/입력/카드/태그. (바텀시트 통일 작업과 함께 진행)
 6. **🟡 C 검증** — 실제 iOS/Android 기기에서 모달 SafeArea·하드웨어 백·키보드 재현 후 대응.
 
-> 관련 문서: [bottomsheet-unification-plan.md](bottomsheet-unification-plan.md), [edit-discard-warning-audit.md](../archive/(done)edit-discard-warning-audit.md)
+> 관련 문서: [bottomsheet-unification-plan.md](./(done)bottomsheet-unification-plan.md), [edit-discard-warning-audit.md](./(done)edit-discard-warning-audit.md)
