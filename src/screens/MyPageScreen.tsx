@@ -86,6 +86,7 @@ import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import { nicknameRegex } from '../constants/validation';
 import { BOOK_DEFAULT_IMAGE } from '../constants/defaultAssets';
+import { APP_VERSION_HISTORY } from '../constants/appVersionHistory';
 import { CLUB_ONBOARDING_SLIDES, ONBOARDING_SLIDES } from '../constants/onboardingSlides';
 import {
   useNotificationState,
@@ -2014,7 +2015,18 @@ export function MyPageScreen() {
           {back}
           <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
-          <Text style={styles.detailBody}>{t('settings.versionUpdatedAt')}</Text>
+          <View style={styles.versionHistory}>
+            {APP_VERSION_HISTORY.map((item) => (
+              <View key={item.version} style={styles.versionHistoryItem}>
+                <Text style={styles.versionHistoryVersion}>
+                  {t('settings.versionNumber', { version: item.version })}
+                </Text>
+                <Text style={styles.versionHistoryDate}>
+                  {t('settings.versionUpdatedAt', { date: item.updatedAt })}
+                </Text>
+              </View>
+            ))}
+          </View>
         </View>
       );
     }
@@ -3053,6 +3065,23 @@ const styles = StyleSheet.create({
   detailBody: {
     ...typography.body1_3_relaxed,
     color: colors.gray6,
+  },
+  versionHistory: {
+    gap: spacing.sm,
+  },
+  versionHistoryItem: {
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.gray2,
+  },
+  versionHistoryVersion: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
+  versionHistoryDate: {
+    ...typography.body2_3,
+    color: colors.gray4,
   },
   languageCurrentText: {
     ...typography.body2_3,

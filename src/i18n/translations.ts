@@ -71,7 +71,8 @@ const koMessages = {
   'settings.logoutProgressDescription': '홈화면으로 이동합니다',
   'settings.languageDescription': '앱에서 사용할 언어를 선택해주세요.',
   'settings.currentLanguage': '현재 언어',
-  'settings.versionUpdatedAt': '버전 업데이트 날짜 : 2026.06.14',
+  'settings.versionNumber': '버전 {version}',
+  'settings.versionUpdatedAt': '업데이트 날짜 : {date}',
 } as const;
 
 export type TranslationKey = keyof typeof koMessages;
@@ -132,7 +133,8 @@ const enMessages: Record<TranslationKey, string> = {
   'settings.logoutProgressDescription': 'Taking you to Home',
   'settings.languageDescription': 'Choose the language to use in the app.',
   'settings.currentLanguage': 'Current language',
-  'settings.versionUpdatedAt': 'Version updated on: 2026.06.14',
+  'settings.versionNumber': 'Version {version}',
+  'settings.versionUpdatedAt': 'Updated on: {date}',
 };
 
 export type TranslationParams = Record<string, string | number>;
