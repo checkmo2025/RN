@@ -43,7 +43,7 @@ TODO 수정 시 아래 규칙만 지킨다.
 
 ## 🐛 issue-fetch 미완료 항목
 
-> 출처: [issue-fetch.md](./issue-fetch.md) — 완료 항목 제외, 미처리 항목만 정리
+> 출처: [(done)issue-fetch.md](../archive/(done)issue-fetch.md) — 완료 항목 제외, 미처리 항목만 정리
 
 ### BE 문서 수정 필요
 

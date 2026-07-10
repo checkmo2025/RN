@@ -3713,3 +3713,9 @@ export const interactionOpacity = {
 - `docs/agent/todo.md`의 완료/통과 항목 193개를 `docs/agent/archive_todo.md`로 분리
 - 미완료 항목 17개만 현재 TODO에 남기고 `archive_todo.md` 사전 확인 제외 규칙 추가
 - 기존 `output/` PDF 산출물을 `docs/output/` 아래로 이동
+
+# 2026-07-10 15:11:40 KST docs 잔여 문서 아카이브 정리
+
+- `issue-fetch.md`, `docs/access/*`, auth/API version 문서를 `(done)` archive로 이동
+- Apple 로그인 archive 문서의 삭제된 스크린샷 참조 제거
+- `todo.md`, `archive_todo.md`, 챗봇 프롬프트의 참조 경로를 archive 기준으로 정리

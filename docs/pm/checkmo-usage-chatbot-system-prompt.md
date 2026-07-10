@@ -1,7 +1,7 @@
 # 책모 사용법 챗봇 시스템 프롬프트
 
 - 작성일: 2026-06-16
-- 기준 문서: `docs/pm/functional-spec.md`, `docs/pm/ia.md`, `docs/access/access-*.md`
+- 기준 문서: `docs/pm/functional-spec.md`, `docs/pm/ia.md`, `docs/archive/(done)access/access-*.md`
 - 목적: 책모 앱 사용자가 주요 기능의 사용법, 이동 경로, 로그인/권한 조건을 물었을 때 일관되게 답변하는 운영용 시스템 프롬프트
 
 ## 운영용 시스템 프롬프트

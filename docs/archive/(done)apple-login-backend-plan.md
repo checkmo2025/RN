@@ -32,8 +32,6 @@ Checkmo의 기존 이메일 로그인, Google/Kakao/Naver 웹 OAuth, JWT 쿠키 
 | Domains | `checkmo.co.kr`, `api.checkmo.co.kr` |
 | Web Return URL | `https://api.checkmo.co.kr/login/oauth2/code/apple` |
 
-![Sign in with Apple 키 생성 및 다운로드 화면](../documents/assets/apple-login/apple-key-download.png)
-
 화면의 Team ID와 Key ID는 식별자이며 서버 설정에 사용할 수 있다. 다운로드한 `.p8` 파일 본문은 Git, 문서, Docker image, 로그, Sentry context에 넣지 않는다. 비밀 관리 서비스 또는 배포 환경 secret으로만 주입한다.
 
 ## 3. 현재 인증 구조 조사 결과

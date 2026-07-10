@@ -26,8 +26,6 @@ Checkmo 웹 로그인 모달의 기존 Google/Naver/Kakao OAuth redirect 흐름�
 | Domains | `checkmo.co.kr`, `api.checkmo.co.kr` |
 | Return URL | `https://api.checkmo.co.kr/login/oauth2/code/apple` |
 
-![Apple 웹 인증 도메인과 Return URL 확인 화면](../documents/assets/apple-login/apple-web-auth-configuration.png)
-
 Return URL은 현재 Spring Security callback 패턴과 일치한다. 구현 전에는 실제 endpoint가 없어도 등록할 수 있으며, 백엔드 `apple` ClientRegistration이 배포되면 callback이 활성화된다.
 
 ## 3. 현재 웹 인증 구조 조사 결과
