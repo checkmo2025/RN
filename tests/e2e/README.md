@@ -7,7 +7,7 @@ This directory is for local-only Checkmo E2E flows. These tests are intended to 
 - Tool: Maestro
 - iOS app id: `kr.co.checkmo.app`
 - Default first pass: iOS simulator guest smoke
-- Reports: `docs/e2e-reports/YYYY-MM-DD-e2e-report.md` and `.csv`
+- Reports: `tests/e2e/reports/YYYY-MM-DD-e2e-report.md` and `.csv`
 
 ## Current Flow Files
 
@@ -38,7 +38,7 @@ For a full feature matrix, use:
 node scripts/e2e-report.js --full-matrix --suite "iOS Local E2E Full" --platform ios --preset local-full-smoke
 ```
 
-The full matrix writes `docs/e2e-reports/YYYY-MM-DD-e2e-full-matrix.md` and `.csv`.
+The full matrix writes `tests/e2e/reports/YYYY-MM-DD-e2e-full-matrix.md` and `.csv`.
 Only actually executed checks should be marked `PASS` or `FAIL`; unexecuted checks stay `NOT RUN` or `BLOCKED`.
 
 ## Scope Rules

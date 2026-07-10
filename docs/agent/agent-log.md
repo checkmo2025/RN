@@ -3730,3 +3730,10 @@ export const interactionOpacity = {
 
 - EAS Build 업로드 아카이브에서 `docs/`가 제외되도록 `.easignore`에 `docs/` 추가
 - 앱 설정과 빌드 스크립트에서 `docs/`가 런타임 빌드 입력으로 쓰이지 않음을 확인
+
+# 2026-07-10 15:22:12 KST PM 산출물 및 E2E 리포트 위치 정리
+
+- iOS 런칭 스토리 SVG를 `docs/pm/output`으로 이동
+- E2E 리포트와 카탈로그를 `tests/e2e/reports` 아래로 이동하고 리포트 생성 기본 경로 갱신
+- EAS Build 업로드에서 E2E 테스트/리포트가 제외되도록 `.easignore`에 `tests/` 추가
+- README의 archive 문서 링크와 `useBookSearch` 계획 문서 주석 경로 정리

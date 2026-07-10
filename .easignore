@@ -5,6 +5,7 @@ dist/
 web-build/
 ref_code/
 docs/
+tests/
 
 android/.gradle/
 android/build/

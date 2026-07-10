@@ -5,7 +5,7 @@ import { ApiError } from '../services/api/http';
 import { showToast } from '../utils/toast';
 
 // 검색 체감 속도 단축: 타이핑 중 prefetch + 클라 TTL 캐시 + 이전 요청 abort
-// 계획 문서: docs/documents/book-search-latency-plan.md
+// 계획 문서: docs/archive/(done)book-search-latency-plan.md
 const PREFETCH_DELAY_MS = 400;
 const MIN_QUERY_LENGTH = 2;
 const CACHE_TTL_MS = 3 * 60 * 1000;

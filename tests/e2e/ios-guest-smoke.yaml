@@ -9,6 +9,9 @@ appId: kr.co.checkmo.app
 - tapOn:
     text: "열기"
     optional: true
+- tapOn:
+    text: "건너뛰고 시작하기"
+    optional: true
 - extendedWaitUntil:
     visible: "책모 홈"
     timeout: 20000

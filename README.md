@@ -141,6 +141,6 @@ npm install
 - [IA](./docs/pm/ia.md)
 - [접근 정책 맵](./docs/pm/access-gate-map.md)
 - [홈 접근 정책](./docs/pm/home-access-policy.md)
-- [즉시 반영 매트릭스](./docs/pm/immediate-reflection-matrix.md)
+- [즉시 반영 매트릭스](./docs/archive/(done)immediate-reflection-matrix.md)
 - [푸시 알림 구현 가이드](./docs/push-notification-implementation.md)
-- [Fetch 점검 이슈 정리](./docs/agent/issue-fetch.md)
+- [Fetch 점검 이슈 정리](./docs/archive/(done)issue-fetch.md)

@@ -1,0 +1,190 @@
+<svg width="1080" height="1920" viewBox="0 0 1080 1920" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>책모 iOS 정식 출시 인스타그램 스토리</title>
+  <desc>따뜻한 브라운 배경 위에 책모 로고, iOS 정식 출시 문구, 앱 화면이 담긴 아이폰 목업과 다운로드 안내가 배치된 홍보 이미지</desc>
+
+  <defs>
+    <linearGradient id="background" x1="90" y1="30" x2="1000" y2="1880" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#35251F"/>
+      <stop offset="0.5" stop-color="#594136"/>
+      <stop offset="1" stop-color="#2D211D"/>
+    </linearGradient>
+    <linearGradient id="topBand" x1="120" y1="-40" x2="930" y2="740" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#866757"/>
+      <stop offset="1" stop-color="#62473B"/>
+    </linearGradient>
+    <linearGradient id="iconTile" x1="462" y1="138" x2="618" y2="306" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A28271"/>
+      <stop offset="1" stop-color="#705247"/>
+    </linearGradient>
+    <linearGradient id="launchAccent" x1="170" y1="0" x2="880" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFB37D"/>
+      <stop offset="1" stop-color="#FF756C"/>
+    </linearGradient>
+    <filter id="softShadow" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#160D09" flood-opacity="0.42"/>
+    </filter>
+    <filter id="ctaShadow" x="-20%" y="-60%" width="140%" height="220%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#180D09" flood-opacity="0.28"/>
+    </filter>
+    <clipPath id="phoneScreen" clipPathUnits="userSpaceOnUse">
+      <rect x="307" y="845" width="466" height="914" rx="52"/>
+    </clipPath>
+
+    <symbol id="checkmoLogo" viewBox="0 0 56 34">
+      <path d="M15.5455 21.9141C20.7337 21.9141 26.0102 25.1051 28.1799 29.6089C28.2726 29.8013 28.5613 29.8013 28.6539 29.6089C30.8236 25.1051 36.1001 21.9141 41.2884 21.9141H55.5782C55.7651 21.9141 55.8809 22.1151 55.7868 22.2748L53.484 26.1635C53.4406 26.2367 53.3614 26.2817 53.276 26.2817H42.3571C38.1235 26.2817 33.1498 29.6086 32.964 33.7606C32.9581 33.8927 32.8506 34.0004 32.7173 34.0004H24.1166C23.9833 34.0004 23.8758 33.8927 23.8699 33.7606C23.6841 29.6086 18.7103 26.2817 14.4768 26.2817H3.55798C3.47238 26.2817 3.39319 26.2367 3.34984 26.1635L1.04728 22.2748C0.952772 22.1151 1.0688 21.9141 1.25542 21.9141H15.5455Z"/>
+      <path d="M15.9592 20.513C15.8259 20.513 15.7178 20.4057 15.7178 20.2735V0.239436C15.7178 0.107199 15.8259 0 15.9592 0H20.0894C20.2227 0 20.3308 0.1072 20.3308 0.239437V7.73993C20.3308 7.87215 20.4389 7.97937 20.5722 7.97937H22.0228C22.1561 7.97937 22.2642 7.87215 22.2642 7.73993V0.239437C22.2642 0.107199 22.3723 0 22.5056 0H22.673C25.0136 0 26.9111 2.10612 26.9111 4.70415V20.3488C26.9111 20.481 26.803 20.5882 26.6697 20.5882H22.5056C22.3723 20.5882 22.2642 20.481 22.2642 20.3488V12.5472C22.2642 12.415 22.1561 12.3078 22.0228 12.3078H20.5722C20.4389 12.3078 20.3308 12.415 20.3308 12.5472V20.2735C20.3308 20.4057 20.2227 20.513 20.0894 20.513H15.9592Z"/>
+      <path d="M14.6431 15.5285C14.7083 15.4006 14.6456 15.2449 14.5115 15.1916C10.974 13.7834 9.54978 10.6196 9.56547 7.45586C9.56547 7.4143 9.59945 7.38059 9.64136 7.38059H13.5933C13.7266 7.38059 13.8346 7.27337 13.8346 7.14115V3.40254C13.8346 3.2703 13.7266 3.1631 13.5933 3.1631H9.80685C9.67351 3.1631 9.56547 3.0559 9.56547 2.92366V0.239437C9.56547 0.1072 9.45738 0 9.32409 0H5.44136C5.30802 0 5.19998 0.1072 5.19998 0.239437V2.92366C5.19998 3.0559 5.09189 3.1631 4.9586 3.1631H1.14005C1.00674 3.1631 0.898671 3.2703 0.898671 3.40254V7.14115C0.898671 7.27337 1.00674 7.38059 1.14005 7.38059H5.12404C5.16599 7.38059 5.19998 7.4143 5.19998 7.45586C5.16855 10.8641 3.76955 14.1462 0.236136 15.7851C0.109537 15.8438 0.0544858 15.9953 0.118817 16.1183L1.98315 19.6849C2.04134 19.7962 2.17653 19.8442 2.2916 19.7926C4.61519 18.7452 6.22082 16.9682 7.23901 14.7818C7.32783 14.591 7.60947 14.586 7.70598 14.7731C8.71972 16.7384 10.2854 18.3168 12.5075 19.2359C12.6224 19.2834 12.7541 19.2334 12.8102 19.1232L14.6431 15.5285Z"/>
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M55.0683 17.5693C55.0683 17.7015 54.9602 17.8087 54.8269 17.8087H45.7151C45.5818 17.8087 45.4737 17.9159 45.4737 18.0482V23.6429C45.4737 23.7751 45.3657 23.8824 45.2323 23.8824H40.4752C40.3419 23.8824 40.2339 23.7751 40.2339 23.6429V18.0482C40.2339 17.9159 40.1258 17.8087 39.9925 17.8087H30.8439C30.7106 17.8087 30.6025 17.7015 30.6025 17.5693V4.70588C30.6025 2.10691 32.735 0 35.3656 0H54.8269C54.9602 0 55.0683 0.1072 55.0683 0.239437V17.5693ZM35.8425 13.1857C35.8425 13.3179 35.9506 13.4251 36.0839 13.4251H49.5499C49.6831 13.4251 49.7913 13.3179 49.7913 13.1857V4.74059C49.7913 4.60835 49.6831 4.50115 49.5499 4.50115H36.0839C35.9506 4.50115 35.8425 4.60835 35.8425 4.74059V13.1857Z"/>
+    </symbol>
+  </defs>
+
+  <style>
+    .type {
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+  </style>
+
+  <rect width="1080" height="1920" fill="url(#background)"/>
+  <path d="M0 0H1080V590C862 696 645 734 432 705C258 681 119 703 0 772V0Z" fill="url(#topBand)"/>
+  <path d="M0 735C248 598 452 702 657 693C805 686 946 637 1080 564" stroke="#C79679" stroke-opacity="0.28" stroke-width="3"/>
+  <path d="M0 785C239 654 451 752 650 743C823 735 959 672 1080 613" stroke="#FFF2E9" stroke-opacity="0.08" stroke-width="2"/>
+
+  <g fill="#FFC18F">
+    <path d="M155 279L164 303L188 312L164 321L155 345L146 321L122 312L146 303L155 279Z"/>
+    <path d="M926 353L932 370L949 376L932 382L926 399L920 382L903 376L920 370L926 353Z"/>
+  </g>
+  <g fill="#FFF7F2" fill-opacity="0.64">
+    <circle cx="191" cy="500" r="5"/>
+    <circle cx="886" cy="531" r="4"/>
+    <circle cx="143" cy="832" r="3"/>
+    <circle cx="934" cy="786" r="3"/>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <rect x="458" y="136" width="164" height="164" rx="42" fill="url(#iconTile)"/>
+    <rect x="459.5" y="137.5" width="161" height="161" rx="40.5" stroke="#FFF8F4" stroke-opacity="0.2" stroke-width="3"/>
+  </g>
+  <use href="#checkmoLogo" x="490" y="183" width="100" height="61" fill="#FFFDFC"/>
+
+  <text class="type" x="540" y="352" text-anchor="middle" fill="#FFFDFC" font-size="34" font-weight="800">책모 · CheckMo</text>
+  <g>
+    <rect x="439" y="381" width="202" height="48" rx="24" fill="#FFFDFC" fill-opacity="0.13" stroke="#FFFDFC" stroke-opacity="0.28"/>
+    <circle cx="470" cy="405" r="8" fill="#FFB37D"/>
+    <text class="type" x="548" y="413" text-anchor="middle" fill="#FFFDFC" font-size="20" font-weight="700">iOS APP</text>
+  </g>
+
+  <text class="type" x="540" y="530" text-anchor="middle" fill="#FF8C73" font-size="80" font-weight="900">책모 iOS</text>
+  <text class="type" x="540" y="650" text-anchor="middle" fill="#FFFDFC" font-size="116" font-weight="900">정식 출시</text>
+  <text class="type" x="540" y="709" text-anchor="middle" fill="#FFC8A0" font-size="27" font-weight="800">NOW AVAILABLE</text>
+  <text class="type" x="540" y="770" text-anchor="middle" fill="#F8EDE7" font-size="29" font-weight="500">독서의 시작부터 토론의 끝까지,</text>
+  <text class="type" x="540" y="811" text-anchor="middle" fill="#F8EDE7" font-size="29" font-weight="700">이제 iPhone에서도 책모와 함께하세요.</text>
+
+  <path d="M909 996C947 1027 977 1063 1002 1110" stroke="#FFB37D" stroke-width="4" stroke-linecap="round" stroke-dasharray="3 18"/>
+  <rect x="808" y="929" width="218" height="56" rx="28" fill="#FF756C"/>
+  <text class="type" x="917" y="966" text-anchor="middle" fill="#2D211D" font-size="22" font-weight="900">JUST LAUNCHED</text>
+
+  <g transform="rotate(-5.5 540 1300)" filter="url(#softShadow)">
+    <rect x="285" y="823" width="510" height="958" rx="76" fill="#11100F"/>
+    <rect x="293" y="831" width="494" height="942" rx="68" fill="#28231F" stroke="#5D5650" stroke-width="3"/>
+    <rect x="307" y="845" width="466" height="914" rx="52" fill="#F7F4F1"/>
+
+    <g clip-path="url(#phoneScreen)">
+      <rect x="307" y="845" width="466" height="914" fill="#F7F4F1"/>
+      <rect x="307" y="845" width="466" height="68" fill="#FCFAF8"/>
+      <text class="type" x="340" y="886" fill="#171310" font-size="15" font-weight="800">9:41</text>
+      <g fill="#171310">
+        <rect x="681" y="875" width="5" height="7" rx="2"/>
+        <rect x="689" y="872" width="5" height="10" rx="2"/>
+        <rect x="697" y="869" width="5" height="13" rx="2"/>
+        <path d="M711 874C719 867 729 867 737 874L734 878C728 873 720 873 714 878L711 874Z"/>
+        <rect x="744" y="870" width="18" height="11" rx="3"/>
+      </g>
+
+      <rect x="307" y="913" width="466" height="91" fill="#7B6154"/>
+      <use href="#checkmoLogo" x="330" y="943" width="48" height="29" fill="#FFFDFC"/>
+      <text class="type" x="540" y="968" text-anchor="middle" fill="#FFFDFC" font-size="22" font-weight="700">책모 홈</text>
+      <circle cx="704" cy="958" r="14" stroke="#FFFDFC" stroke-width="3"/>
+      <path d="M714 969L725 980" stroke="#FFFDFC" stroke-width="3" stroke-linecap="round"/>
+
+      <text class="type" x="337" y="1033" fill="#73665E" font-size="17" font-weight="700">소식</text>
+      <rect x="330" y="1051" width="420" height="230" rx="25" fill="#3F2F29"/>
+      <use href="#checkmoLogo" x="356" y="1080" width="64" height="39" fill="#FFFDFC"/>
+      <text class="type" x="356" y="1155" fill="#FFFDFC" font-size="28" font-weight="800">독서의 처음부터,</text>
+      <text class="type" x="356" y="1192" fill="#FFC18F" font-size="28" font-weight="800">토론의 끝까지.</text>
+      <text class="type" x="356" y="1230" fill="#E7DAD3" font-size="15" font-weight="500">책모임 찾기 · 책 이야기 · 새로운 소식</text>
+      <circle cx="349" cy="1301" r="5" fill="#7B6154"/>
+      <circle cx="368" cy="1301" r="5" fill="#D8CDC7"/>
+      <circle cx="387" cy="1301" r="5" fill="#D8CDC7"/>
+      <circle cx="406" cy="1301" r="5" fill="#D8CDC7"/>
+
+      <rect x="330" y="1328" width="420" height="276" rx="25" fill="#FFFDFC"/>
+      <text class="type" x="355" y="1372" fill="#332A25" font-size="19" font-weight="800">사용자 추천</text>
+
+      <g>
+        <rect x="350" y="1392" width="380" height="58" rx="17" fill="#F8F4F1" stroke="#E4DCD7"/>
+        <circle cx="382" cy="1421" r="18" fill="#D8E0DE"/>
+        <circle cx="382" cy="1416" r="7" fill="#A6B2B0"/>
+        <path d="M369 1434C373 1423 391 1423 395 1434" fill="#A6B2B0"/>
+        <text class="type" x="415" y="1428" fill="#3A312C" font-size="16" font-weight="700">halcyon45</text>
+        <rect x="650" y="1403" width="60" height="36" rx="12" fill="#7B6154"/>
+        <text class="type" x="680" y="1427" text-anchor="middle" fill="#FFFDFC" font-size="14" font-weight="700">구독</text>
+      </g>
+      <g>
+        <rect x="350" y="1461" width="380" height="58" rx="17" fill="#F8F4F1" stroke="#E4DCD7"/>
+        <circle cx="382" cy="1490" r="18" fill="#C9BEB8"/>
+        <path d="M369 1499C374 1484 390 1481 396 1499" fill="#71655F"/>
+        <circle cx="382" cy="1483" r="7" fill="#71655F"/>
+        <text class="type" x="415" y="1497" fill="#3A312C" font-size="16" font-weight="700">soliloquy67</text>
+        <rect x="650" y="1472" width="60" height="36" rx="12" fill="#7B6154"/>
+        <text class="type" x="680" y="1496" text-anchor="middle" fill="#FFFDFC" font-size="14" font-weight="700">구독</text>
+      </g>
+      <g>
+        <rect x="350" y="1530" width="380" height="58" rx="17" fill="#F8F4F1" stroke="#E4DCD7"/>
+        <circle cx="382" cy="1559" r="18" fill="#E9C7B9"/>
+        <path d="M370 1569L393 1546M372 1547L395 1568" stroke="#B58472" stroke-width="3"/>
+        <text class="type" x="415" y="1566" fill="#3A312C" font-size="16" font-weight="700">ephemeral11</text>
+        <rect x="650" y="1541" width="60" height="36" rx="12" fill="#7B6154"/>
+        <text class="type" x="680" y="1565" text-anchor="middle" fill="#FFFDFC" font-size="14" font-weight="700">구독</text>
+      </g>
+
+      <text class="type" x="337" y="1645" fill="#73665E" font-size="17" font-weight="700">책 이야기</text>
+      <rect x="330" y="1662" width="420" height="135" rx="25" fill="#FFFDFC"/>
+      <rect x="350" y="1682" width="92" height="92" rx="16" fill="#D8C7BA"/>
+      <path d="M366 1698H425V1758H366V1698Z" fill="#6D5043"/>
+      <path d="M376 1711H415M376 1725H410M376 1739H400" stroke="#F8EDE7" stroke-width="4" stroke-linecap="round"/>
+      <text class="type" x="460" y="1710" fill="#3A312C" font-size="18" font-weight="800">오늘의 책 이야기</text>
+      <text class="type" x="460" y="1742" fill="#85766D" font-size="15">좋은 문장을 함께 나눠요</text>
+
+      <rect x="307" y="1668" width="466" height="91" fill="#FFFDFC" fill-opacity="0.97"/>
+      <path d="M350 1704L369 1688L388 1704V1732H350V1704Z" stroke="#7B6154" stroke-width="3" stroke-linejoin="round"/>
+      <circle cx="456" cy="1705" r="8" stroke="#A79C96" stroke-width="3"/>
+      <circle cx="477" cy="1705" r="8" stroke="#A79C96" stroke-width="3"/>
+      <path d="M443 1730C446 1715 466 1714 469 1730M465 1730C468 1714 488 1715 491 1730" stroke="#A79C96" stroke-width="3" stroke-linecap="round"/>
+      <rect x="548" y="1689" width="34" height="42" rx="8" stroke="#A79C96" stroke-width="3"/>
+      <path d="M557 1702H573M557 1712H573" stroke="#A79C96" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="672" cy="1704" r="16" stroke="#A79C96" stroke-width="3"/>
+      <path d="M653 1732C657 1717 687 1717 691 1732" stroke="#A79C96" stroke-width="3" stroke-linecap="round"/>
+      <text class="type" x="369" y="1750" text-anchor="middle" fill="#7B6154" font-size="12" font-weight="800">책모 홈</text>
+      <text class="type" x="467" y="1750" text-anchor="middle" fill="#A79C96" font-size="12">모임</text>
+      <text class="type" x="565" y="1750" text-anchor="middle" fill="#A79C96" font-size="12">책 이야기</text>
+      <text class="type" x="672" y="1750" text-anchor="middle" fill="#A79C96" font-size="12">마이페이지</text>
+    </g>
+
+    <rect x="307" y="845" width="466" height="914" rx="52" stroke="#68615C" stroke-width="2"/>
+    <rect x="454" y="852" width="172" height="43" rx="22" fill="#11100F"/>
+    <circle cx="602" cy="873.5" r="6" fill="#21282B"/>
+  </g>
+
+  <g filter="url(#ctaShadow)">
+    <rect x="196" y="1593" width="688" height="132" rx="66" fill="#FFFDFC"/>
+    <rect x="218" y="1612" width="94" height="94" rx="28" fill="#2E231E"/>
+    <text class="type" x="265" y="1672" text-anchor="middle" fill="#FFFDFC" font-size="27" font-weight="900">iOS</text>
+    <text class="type" x="343" y="1648" fill="#7B6154" font-size="21" font-weight="700">App Store에서 지금 만나보세요</text>
+    <text class="type" x="343" y="1692" fill="#2E231E" font-size="31" font-weight="900">checkmo.co.kr</text>
+    <path d="M820 1642L842 1659L820 1676" stroke="#7B6154" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text class="type" x="540" y="1830" text-anchor="middle" fill="#F5D8C6" font-size="22" font-weight="700">책과 사람을 잇는 독서모임 커뮤니티</text>
+  <rect x="430" y="1861" width="220" height="4" rx="2" fill="#FFB37D" fill-opacity="0.55"/>
+</svg>

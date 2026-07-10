@@ -6,6 +6,9 @@ appId: kr.co.checkmo.app
 - tapOn:
     text: "열기"
     optional: true
+- tapOn:
+    text: "지금 안 함"
+    optional: true
 - extendedWaitUntil:
     visible: "마이페이지"
     timeout: 20000

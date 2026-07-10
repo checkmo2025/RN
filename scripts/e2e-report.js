@@ -62,7 +62,7 @@ function escapeCsv(value) {
 }
 
 const { date, time } = kstParts();
-const outputDir = values.outputDir || 'docs/e2e-reports';
+const outputDir = values.outputDir || 'tests/e2e/reports';
 
 function parseMarkdownTableRow(line) {
   if (!line.startsWith('|')) return null;
@@ -126,7 +126,7 @@ function resultForItem(item, passSet, failSet) {
 }
 
 function writeFullMatrixReport() {
-  const catalogPath = values.catalog || 'docs/e2e-reports/e2e-test-catalog.md';
+  const catalogPath = values.catalog || 'tests/e2e/reports/e2e-test-catalog.md';
   const suite = values.suite || values.test || 'E2E Full Matrix';
   const platform = values.platform || '-';
   const preset = values.preset || '';

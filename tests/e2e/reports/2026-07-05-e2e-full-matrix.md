@@ -1,7 +1,7 @@
 # 2026-07-05 20:03:29 KST E2E 전체 기능 결과표 - iOS Local E2E Full
 
 - Platform: ios
-- Source catalog: `docs/e2e-reports/e2e-test-catalog.md`
+- Source catalog: `tests/e2e/reports/e2e-test-catalog.md`
 - Result counts: PASS 7, FAIL 0, NOT RUN 32, BLOCKED 53
 - Rule: 실행한 기능만 PASS/FAIL로 표시하고, 실행하지 않은 기능은 NOT RUN 또는 BLOCKED로 둔다.
 
