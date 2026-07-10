@@ -28,6 +28,7 @@ import { showToast } from '../../utils/toast';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import type {
+  AsyncLoadStatus,
   BookshelfItem,
   CursorPageState,
   Group,
@@ -184,6 +185,12 @@ export function useNoticeState({
   const [submittingNoticeComment, setSubmittingNoticeComment] = useState(false);
   const [noticeItems, setNoticeItems] = useState<NoticeItem[]>([]);
   const [noticeCommentsById, setNoticeCommentsById] = useState<Record<string, NoticeComment[]>>({});
+  const [noticeDetailLoadStateById, setNoticeDetailLoadStateById] = useState<
+    Record<string, AsyncLoadStatus>
+  >({});
+  const [noticeCommentLoadStateById, setNoticeCommentLoadStateById] = useState<
+    Record<string, AsyncLoadStatus>
+  >({});
   const [noticeCommentPageStateByNoticeId, setNoticeCommentPageStateByNoticeId] = useState<
     Record<string, CursorPageState>
   >({});
@@ -216,6 +223,9 @@ export function useNoticeState({
   const [uploadingNoticePhoto, setUploadingNoticePhoto] = useState(false);
   const enrichingNoticeDetailKeysRef = useRef<Set<string>>(new Set());
   const enrichedNoticeDetailKeysRef = useRef<Set<string>>(new Set());
+  const noticeLoadGenerationRef = useRef(0);
+  const noticeDetailRequestIdByNoticeRef = useRef<Record<string, number>>({});
+  const noticeCommentRequestIdByNoticeRef = useRef<Record<string, number>>({});
   const noticePageSize = NOTICE_PAGE_SIZE;
 
   const mapNoticeCommentItemToUi = useCallback(
@@ -296,19 +306,35 @@ export function useNoticeState({
 
   const refreshNoticeComments = useCallback(
     async (clubId: number, noticeId: number, noticeKey: string) => {
-      const comments = await fetchClubNoticeComments(clubId, noticeId);
-      setNoticeCommentsById((prev) => ({
-        ...prev,
-        [noticeKey]: comments.items.map(mapNoticeCommentItemToUi),
-      }));
-      setNoticeCommentPageStateByNoticeId((prev) => ({
-        ...prev,
-        [noticeKey]: {
-          hasNext: Boolean(comments.hasNext),
-          nextCursor: comments.nextCursor,
-          loadingMore: false,
-        },
-      }));
+      const generation = noticeLoadGenerationRef.current;
+      const requestId = (noticeCommentRequestIdByNoticeRef.current[noticeKey] ?? 0) + 1;
+      noticeCommentRequestIdByNoticeRef.current[noticeKey] = requestId;
+      const isStale = () =>
+        generation !== noticeLoadGenerationRef.current ||
+        noticeCommentRequestIdByNoticeRef.current[noticeKey] !== requestId;
+
+      setNoticeCommentLoadStateById((prev) => ({ ...prev, [noticeKey]: 'loading' }));
+      try {
+        const comments = await fetchClubNoticeComments(clubId, noticeId);
+        if (isStale()) return;
+        setNoticeCommentsById((prev) => ({
+          ...prev,
+          [noticeKey]: comments.items.map(mapNoticeCommentItemToUi),
+        }));
+        setNoticeCommentPageStateByNoticeId((prev) => ({
+          ...prev,
+          [noticeKey]: {
+            hasNext: Boolean(comments.hasNext),
+            nextCursor: comments.nextCursor,
+            loadingMore: false,
+          },
+        }));
+        setNoticeCommentLoadStateById((prev) => ({ ...prev, [noticeKey]: 'success' }));
+      } catch (error) {
+        if (isStale()) return;
+        setNoticeCommentLoadStateById((prev) => ({ ...prev, [noticeKey]: 'error' }));
+        throw error;
+      }
     },
     [mapNoticeCommentItemToUi],
   );
@@ -392,37 +418,34 @@ export function useNoticeState({
     };
   }, [group.clubId, visibleNotices]);
 
-  useEffect(() => {
-    if (typeof group.clubId !== 'number' || !selectedNoticeId) return;
-    const notice = noticeItems.find((item) => item.id === selectedNoticeId);
-    if (!notice?.remoteId) return;
-    if (notice.content.trim().length > 0 && noticeCommentsById[notice.id]) return;
-    let cancelled = false;
+  const loadNoticeDetail = useCallback(
+    async (notice: NoticeItem) => {
+      const clubId = group.clubId;
+      const noticeId = notice.remoteId;
+      if (typeof clubId !== 'number' || typeof noticeId !== 'number') {
+        setNoticeDetailLoadStateById((prev) => ({ ...prev, [notice.id]: 'error' }));
+        return;
+      }
 
-    const loadNoticeDetail = async () => {
+      const generation = noticeLoadGenerationRef.current;
+      const requestId = (noticeDetailRequestIdByNoticeRef.current[notice.id] ?? 0) + 1;
+      noticeDetailRequestIdByNoticeRef.current[notice.id] = requestId;
+      const isStale = () =>
+        generation !== noticeLoadGenerationRef.current ||
+        noticeDetailRequestIdByNoticeRef.current[notice.id] !== requestId;
+
+      setNoticeDetailLoadStateById((prev) => ({ ...prev, [notice.id]: 'loading' }));
       try {
-        const [detail, comments] = await Promise.all([
-          fetchClubNoticeDetail(group.clubId as number, notice.remoteId as number),
-          fetchClubNoticeComments(group.clubId as number, notice.remoteId as number),
-        ]);
-        if (cancelled || !detail) return;
+        const detail = await fetchClubNoticeDetail(clubId, noticeId);
+        if (isStale()) return;
+        if (!detail) throw new Error('Empty notice detail response');
 
         const merged = mergeNoticeDetail(notice, detail);
         setNoticeItems((prev) =>
           sortNoticeItems(prev.map((item) => (item.id === notice.id ? merged : item))),
         );
-        setNoticeCommentsById((prev) => ({
-          ...prev,
-          [merged.id]: comments.items.map(mapNoticeCommentItemToUi),
-        }));
-        setNoticeCommentPageStateByNoticeId((prev) => ({
-          ...prev,
-          [merged.id]: {
-            hasNext: Boolean(comments.hasNext),
-            nextCursor: comments.nextCursor,
-            loadingMore: false,
-          },
-        }));
+        enrichedNoticeDetailKeysRef.current.add(`${clubId}:${noticeId}`);
+
         if (merged.poll) {
           setNoticePollOptionsById((prev) => ({
             ...prev,
@@ -446,28 +469,106 @@ export function useNoticeState({
             [merged.id]: false,
           }));
         }
+
+        setNoticeDetailLoadStateById((prev) => ({ ...prev, [notice.id]: 'success' }));
       } catch (error) {
-        if (cancelled) return;
+        if (isStale()) return;
+        setNoticeDetailLoadStateById((prev) => ({ ...prev, [notice.id]: 'error' }));
         if (error instanceof ApiError) {
           if (isProfileIncompleteApiError(error)) {
             showToast(l(PROFILE_INCOMPLETE_MESSAGE));
           } else if (error.status === 403) {
             showToast(l('공지 열람 권한이 없습니다.'));
-          } else if (error.status !== 401) {
-            showToast(l(error.message || '공지 상세를 불러오지 못했습니다.'));
           }
-          return;
         }
-        showToast(l('공지 상세를 불러오지 못했습니다.'));
+        logMeetingAction('notice_detail_load_failure', {
+          clubId,
+          noticeId,
+          message: error instanceof Error ? error.message : String(error),
+        });
       }
-    };
+    },
+    [group.clubId, l],
+  );
 
-    void loadNoticeDetail();
+  const loadNoticeComments = useCallback(
+    async (notice: NoticeItem) => {
+      const clubId = group.clubId;
+      const noticeId = notice.remoteId;
+      if (typeof clubId !== 'number' || typeof noticeId !== 'number') {
+        setNoticeCommentLoadStateById((prev) => ({ ...prev, [notice.id]: 'error' }));
+        return;
+      }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [group.clubId, l, mapNoticeCommentItemToUi, noticeCommentsById, noticeItems, selectedNoticeId]);
+      const generation = noticeLoadGenerationRef.current;
+      const requestId = (noticeCommentRequestIdByNoticeRef.current[notice.id] ?? 0) + 1;
+      noticeCommentRequestIdByNoticeRef.current[notice.id] = requestId;
+      const isStale = () =>
+        generation !== noticeLoadGenerationRef.current ||
+        noticeCommentRequestIdByNoticeRef.current[notice.id] !== requestId;
+
+      setNoticeCommentLoadStateById((prev) => ({ ...prev, [notice.id]: 'loading' }));
+      try {
+        const comments = await fetchClubNoticeComments(clubId, noticeId);
+        if (isStale()) return;
+
+        setNoticeCommentsById((prev) => ({
+          ...prev,
+          [notice.id]: comments.items.map(mapNoticeCommentItemToUi),
+        }));
+        setNoticeCommentPageStateByNoticeId((prev) => ({
+          ...prev,
+          [notice.id]: {
+            hasNext: Boolean(comments.hasNext),
+            nextCursor: comments.nextCursor,
+            loadingMore: false,
+          },
+        }));
+        setNoticeCommentLoadStateById((prev) => ({ ...prev, [notice.id]: 'success' }));
+      } catch (error) {
+        if (isStale()) return;
+        setNoticeCommentLoadStateById((prev) => ({ ...prev, [notice.id]: 'error' }));
+        logMeetingAction('notice_comment_load_failure', {
+          clubId,
+          noticeId,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    },
+    [group.clubId, mapNoticeCommentItemToUi],
+  );
+
+  useEffect(() => {
+    if (!selectedNoticeId) return;
+    const notice = noticeItems.find((item) => item.id === selectedNoticeId);
+    if (!notice?.remoteId) return;
+
+    const detailStatus =
+      noticeDetailLoadStateById[notice.id] ??
+      (notice.content.trim().length > 0 ? 'success' : 'idle');
+    const commentStatus =
+      noticeCommentLoadStateById[notice.id] ??
+      (Object.prototype.hasOwnProperty.call(noticeCommentsById, notice.id) ? 'success' : 'idle');
+
+    if (detailStatus === 'idle') void loadNoticeDetail(notice);
+    if (commentStatus === 'idle') void loadNoticeComments(notice);
+  }, [
+    loadNoticeComments,
+    loadNoticeDetail,
+    noticeCommentLoadStateById,
+    noticeCommentsById,
+    noticeDetailLoadStateById,
+    noticeItems,
+    selectedNoticeId,
+  ]);
+
+  const retryNoticeDetail = useCallback(() => {
+    if (selectedNotice) void loadNoticeDetail(selectedNotice);
+  }, [loadNoticeDetail, selectedNotice]);
+
+  const retryNoticeComments = useCallback(() => {
+    if (selectedNotice) void loadNoticeComments(selectedNotice);
+  }, [loadNoticeComments, selectedNotice]);
 
   const loadMoreNoticeComments = useCallback(
     async (notice: NoticeItem) => {
@@ -1386,12 +1487,22 @@ export function useNoticeState({
     void open();
   }, [l, openBookshelfTopicByMeetingId, selectedNotice]);
 
+  const resetNoticeLoadState = useCallback(() => {
+    noticeLoadGenerationRef.current += 1;
+    noticeDetailRequestIdByNoticeRef.current = {};
+    noticeCommentRequestIdByNoticeRef.current = {};
+    setNoticeDetailLoadStateById({});
+    setNoticeCommentLoadStateById({});
+    setNoticeCommentPageStateByNoticeId({});
+  }, []);
+
   const resetNoticeOnGroupChange = useCallback(() => {
+    resetNoticeLoadState();
     setNoticePage(1);
     setSelectedNoticeId(null);
     setNoticeCommentInput('');
     setVoteVotersModal(null);
-  }, []);
+  }, [resetNoticeLoadState]);
 
   return {
     noticePage,
@@ -1408,6 +1519,8 @@ export function useNoticeState({
     setNoticeItems,
     noticeCommentsById,
     setNoticeCommentsById,
+    noticeDetailLoadStateById,
+    noticeCommentLoadStateById,
     noticeCommentPageStateByNoticeId,
     setNoticeCommentPageStateByNoticeId,
     shouldOpenTopNotice,
@@ -1447,6 +1560,8 @@ export function useNoticeState({
     visiblePageNumbers,
     refreshNoticeComments,
     loadMoreNoticeComments,
+    retryNoticeDetail,
+    retryNoticeComments,
     handleOpenNoticeDetailByRemoteId,
     handleSubmitNoticeComment,
     handlePressCommentMenu,
@@ -1466,6 +1581,7 @@ export function useNoticeState({
     handleSubmitNotice,
     handleDeleteNotice,
     handleOpenNoticeBookshelf,
+    resetNoticeLoadState,
     resetNoticeOnGroupChange,
   };
 }

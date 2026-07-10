@@ -15,6 +15,8 @@ import { styles } from './meetingStyles';
 import { formatAverageRating, getStarIconName } from './helpers';
 import { useLanguage } from '../../contexts/LanguageContext';
 import type {
+  BookshelfDetailLoadState,
+  BookshelfDetailSection,
   BookshelfDetailTab,
   BookshelfItem,
   BookshelfPostItem,
@@ -61,7 +63,7 @@ export type GroupBookshelfViewProps = {
   bookshelfTopicItems: BookshelfPostItem[];
   bookshelfReviewItems: BookshelfPostItem[];
   currentBookshelfTopicPageState: CursorPageState | null;
-  loadingBookshelfDetail: boolean;
+  bookshelfDetailLoadState: BookshelfDetailLoadState;
   regularMeetingInfo: RegularMeetingInfo | null;
   selectedRegularGroupId: string | null;
   selectedRegularGroup: RegularMeetingGroupItem | null;
@@ -83,6 +85,7 @@ export type GroupBookshelfViewProps = {
   handleOpenBookshelfEdit: () => void;
   handleDeleteSelectedBookshelf: () => void;
   handlePressManageRegularGroups: () => void;
+  retryBookshelfDetailSection: (section: BookshelfDetailSection) => void;
 };
 
 export function GroupBookshelfView({
@@ -105,7 +108,7 @@ export function GroupBookshelfView({
   bookshelfTopicItems,
   bookshelfReviewItems,
   currentBookshelfTopicPageState,
-  loadingBookshelfDetail,
+  bookshelfDetailLoadState,
   regularMeetingInfo,
   selectedRegularGroupId,
   selectedRegularGroup,
@@ -125,6 +128,7 @@ export function GroupBookshelfView({
   handleOpenBookshelfEdit,
   handleDeleteSelectedBookshelf,
   handlePressManageRegularGroups,
+  retryBookshelfDetailSection,
 }: GroupBookshelfViewProps) {
   const { l } = useLanguage();
   const bookshelfSectionYRef = useRef(0);
@@ -133,10 +137,35 @@ export function GroupBookshelfView({
   const scrollToBookshelfDetail = useCallback(() => {
     onScrollToBookshelfDetail(bookshelfSectionYRef.current + detailSectionYRef.current);
   }, [onScrollToBookshelfDetail]);
-  const showBookshelfTopicLoading = loadingBookshelfDetail && bookshelfTopicItems.length === 0;
-  const showBookshelfReviewLoading = loadingBookshelfDetail && bookshelfReviewItems.length === 0;
+  const showBookshelfTopicLoading =
+    (bookshelfDetailLoadState.topic === 'idle' ||
+      bookshelfDetailLoadState.topic === 'loading') &&
+    bookshelfTopicItems.length === 0;
+  const showBookshelfReviewLoading =
+    (bookshelfDetailLoadState.review === 'idle' ||
+      bookshelfDetailLoadState.review === 'loading') &&
+    bookshelfReviewItems.length === 0;
   const showRegularMeetingLoading =
-    loadingBookshelfDetail && (!regularMeetingInfo || regularMeetingInfo.groups.length === 0);
+    bookshelfDetailLoadState.regular === 'idle' ||
+    bookshelfDetailLoadState.regular === 'loading';
+
+  const renderDetailLoadError = (
+    section: BookshelfDetailSection,
+    message: string,
+  ) => (
+    <View style={styles.detailLoadStateCard}>
+      <Text style={styles.detailLoadStateText}>{l(message)}</Text>
+      <Pressable
+        style={({ pressed }) => [styles.detailLoadRetryButton, pressed && styles.pressed]}
+        onPress={() => retryBookshelfDetailSection(section)}
+        accessibilityRole="button"
+        accessibilityLabel={l('다시 시도')}
+      >
+        <MaterialIcons name="refresh" size={18} color={colors.primary1} />
+        <Text style={styles.detailLoadRetryText}>{l('다시 시도')}</Text>
+      </Pressable>
+    </View>
+  );
 
   useEffect(() => {
     if (bookshelfViewMode !== 'REGULAR_GROUP') return;
@@ -408,6 +437,15 @@ export function GroupBookshelfView({
         </View>
       </View>
 
+      {bookshelfDetailLoadState.base === 'idle' ||
+      bookshelfDetailLoadState.base === 'loading' ? (
+        <View style={styles.detailLoadInlineState} accessibilityRole="progressbar">
+          <Text style={styles.detailLoadStateText}>{l('책장 기본 정보를 불러오는 중...')}</Text>
+        </View>
+      ) : bookshelfDetailLoadState.base === 'error' ? (
+        renderDetailLoadError('base', '책장 기본 정보를 불러오지 못했습니다.')
+      ) : null}
+
       <View style={styles.bookshelfDetailTabRow}>
         {[
           { label: '발제', tab: 'TOPIC' as const },
@@ -489,7 +527,11 @@ export function GroupBookshelfView({
                 <Text style={styles.managementEmptyText}>{l('발제를 불러오는 중...')}</Text>
               </View>
             ) : null}
-            {!showBookshelfTopicLoading && bookshelfTopicItems.length === 0 ? (
+            {bookshelfDetailLoadState.topic === 'error'
+              ? renderDetailLoadError('topic', '발제를 불러오지 못했습니다.')
+              : null}
+            {bookshelfDetailLoadState.topic === 'success' &&
+            bookshelfTopicItems.length === 0 ? (
               <View style={styles.managementEmptyCard}>
                 <Text style={styles.managementEmptyText}>{l('등록된 발제가 없습니다.')}</Text>
               </View>
@@ -566,7 +608,11 @@ export function GroupBookshelfView({
                 <Text style={styles.managementEmptyText}>{l('한줄평을 불러오는 중...')}</Text>
               </View>
             ) : null}
-            {!showBookshelfReviewLoading && bookshelfReviewItems.length === 0 ? (
+            {bookshelfDetailLoadState.review === 'error'
+              ? renderDetailLoadError('review', '한줄평을 불러오지 못했습니다.')
+              : null}
+            {bookshelfDetailLoadState.review === 'success' &&
+            bookshelfReviewItems.length === 0 ? (
               <View style={styles.managementEmptyCard}>
                 <Text style={styles.managementEmptyText}>{l('등록된 한줄평이 없습니다.')}</Text>
               </View>
@@ -577,6 +623,9 @@ export function GroupBookshelfView({
 
       {bookshelfDetailTab === 'REGULAR' ? (
         <View style={styles.bookshelfPanel}>
+          {bookshelfDetailLoadState.regular === 'error'
+            ? renderDetailLoadError('regular', '정기모임 정보를 불러오지 못했습니다.')
+            : null}
           {showRegularMeetingLoading ? (
             <View style={styles.managementEmptyCard}>
               <Text style={styles.managementEmptyText}>{l('정기모임 정보를 불러오는 중...')}</Text>
@@ -642,11 +691,11 @@ export function GroupBookshelfView({
                     );
                   })}
                 </ScrollView>
-              ) : (
+              ) : bookshelfDetailLoadState.regular === 'success' ? (
                 <View style={styles.managementEmptyCard}>
                   <Text style={styles.managementEmptyText}>{l('등록된 조 정보가 없습니다.')}</Text>
                 </View>
-              )}
+              ) : null}
 
               {bookshelfViewMode !== 'REGULAR_GROUP' && selectedRegularGroup ? (
                 <Pressable
@@ -825,11 +874,11 @@ export function GroupBookshelfView({
                 </View>
               ) : null}
             </>
-          ) : (
+          ) : bookshelfDetailLoadState.regular === 'success' ? (
             <View style={styles.managementEmptyCard}>
               <Text style={styles.managementEmptyText}>{l('정기모임 정보가 없습니다.')}</Text>
             </View>
-          )}
+          ) : null}
         </View>
       ) : null}
 

@@ -15,6 +15,7 @@ import {
   getStarIconName,
 } from './helpers';
 import type {
+  AsyncLoadStatus,
   CursorPageState,
   NoticeComment,
   NoticeItem,
@@ -80,6 +81,8 @@ export type GroupNoticeViewProps = {
   submittingNoticeComment: boolean;
   editingNoticeCommentId: string | null;
   noticeCommentsById: Record<string, NoticeComment[]>;
+  noticeDetailLoadStateById: Record<string, AsyncLoadStatus>;
+  noticeCommentLoadStateById: Record<string, AsyncLoadStatus>;
   noticeCommentPageStateByNoticeId: Record<string, CursorPageState>;
   noticePollOptionsById: Record<string, NoticePollOption[]>;
   selectedVoteOptionIdsByNotice: Record<string, string[]>;
@@ -99,6 +102,8 @@ export type GroupNoticeViewProps = {
   handleSubmitVote: () => void;
   handleSubmitNoticeComment: () => void;
   handlePressCommentMenu: (comment: NoticeComment, event: GestureResponderEvent) => void;
+  retryNoticeDetail: () => void;
+  retryNoticeComments: () => void;
   onCommentInputMeasured?: (inputY: number, inputHeight: number) => void;
 };
 
@@ -113,6 +118,8 @@ export function GroupNoticeView({
   submittingNoticeComment,
   editingNoticeCommentId,
   noticeCommentsById,
+  noticeDetailLoadStateById,
+  noticeCommentLoadStateById,
   noticeCommentPageStateByNoticeId,
   noticePollOptionsById,
   selectedVoteOptionIdsByNotice,
@@ -130,6 +137,8 @@ export function GroupNoticeView({
   handleSubmitVote,
   handleSubmitNoticeComment,
   handlePressCommentMenu,
+  retryNoticeDetail,
+  retryNoticeComments,
   onCommentInputMeasured,
 }: GroupNoticeViewProps) {
   const { l } = useLanguage();
@@ -148,6 +157,24 @@ export function GroupNoticeView({
     if (!selectedNotice) return null;
     return noticeCommentPageStateByNoticeId[selectedNotice.id] ?? null;
   }, [noticeCommentPageStateByNoticeId, selectedNotice]);
+
+  const currentNoticeDetailLoadStatus = useMemo<AsyncLoadStatus>(() => {
+    if (!selectedNotice) return 'idle';
+    return (
+      noticeDetailLoadStateById[selectedNotice.id] ??
+      (selectedNotice.content.trim().length > 0 ? 'success' : 'idle')
+    );
+  }, [noticeDetailLoadStateById, selectedNotice]);
+
+  const currentNoticeCommentLoadStatus = useMemo<AsyncLoadStatus>(() => {
+    if (!selectedNotice) return 'idle';
+    return (
+      noticeCommentLoadStateById[selectedNotice.id] ??
+      (Object.prototype.hasOwnProperty.call(noticeCommentsById, selectedNotice.id)
+        ? 'success'
+        : 'idle')
+    );
+  }, [noticeCommentLoadStateById, noticeCommentsById, selectedNotice]);
 
   const currentNoticePollOptions = useMemo(() => {
     if (!selectedNotice?.poll) return [];
@@ -245,7 +272,31 @@ export function GroupNoticeView({
           </Pressable>
         </View>
         <Text style={styles.noticeDetailTitle}>{selectedNotice.title}</Text>
-        <Text style={styles.noticeDetailBody}>{selectedNotice.content}</Text>
+        {selectedNotice.content.trim().length > 0 || currentNoticeDetailLoadStatus === 'success' ? (
+          <Text style={styles.noticeDetailBody}>{selectedNotice.content}</Text>
+        ) : currentNoticeDetailLoadStatus === 'error' ? (
+          <View style={styles.detailLoadStateCard}>
+            <Text style={styles.detailLoadStateText}>{l('공지 내용을 불러오지 못했습니다.')}</Text>
+            <Pressable
+              style={({ pressed }) => [styles.detailLoadRetryButton, pressed && styles.pressed]}
+              onPress={retryNoticeDetail}
+              accessibilityRole="button"
+              accessibilityLabel={l('다시 시도')}
+            >
+              <MaterialIcons name="refresh" size={18} color={colors.primary1} />
+              <Text style={styles.detailLoadRetryText}>{l('다시 시도')}</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.noticeDetailBodySkeleton} accessibilityRole="progressbar">
+            {[0, 1, 2, 3].map((item) => (
+              <SkeletonBox
+                key={`notice-detail-body-${item}`}
+                style={{ width: item === 3 ? '72%' : '100%', height: 14, borderRadius: 4 }}
+              />
+            ))}
+          </View>
+        )}
         {selectedNotice.bookshelf ? (
           <Pressable
             style={({ pressed }) => [styles.noticeAttachmentCard, pressed && styles.pressed]}
@@ -526,7 +577,28 @@ export function GroupNoticeView({
                 </View>
               </View>
             ))}
-            {currentNoticeComments.length === 0 ? (
+            {(currentNoticeCommentLoadStatus === 'idle' ||
+              currentNoticeCommentLoadStatus === 'loading') &&
+            currentNoticeComments.length === 0 ? (
+              <View style={styles.detailLoadStateCard} accessibilityRole="progressbar">
+                <Text style={styles.detailLoadStateText}>{l('댓글을 불러오는 중...')}</Text>
+              </View>
+            ) : null}
+            {currentNoticeCommentLoadStatus === 'error' ? (
+              <View style={styles.detailLoadStateCard}>
+                <Text style={styles.detailLoadStateText}>{l('댓글을 불러오지 못했습니다.')}</Text>
+                <Pressable
+                  style={({ pressed }) => [styles.detailLoadRetryButton, pressed && styles.pressed]}
+                  onPress={retryNoticeComments}
+                  accessibilityRole="button"
+                  accessibilityLabel={l('다시 시도')}
+                >
+                  <MaterialIcons name="refresh" size={18} color={colors.primary1} />
+                  <Text style={styles.detailLoadRetryText}>{l('다시 시도')}</Text>
+                </Pressable>
+              </View>
+            ) : null}
+            {currentNoticeCommentLoadStatus === 'success' && currentNoticeComments.length === 0 ? (
               <View style={styles.managementEmptyCard}>
                 <Text style={styles.managementEmptyText}>{l('등록된 댓글이 없습니다.')}</Text>
               </View>

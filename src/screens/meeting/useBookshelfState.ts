@@ -30,6 +30,7 @@ import {
   updateClubBookshelfTopic,
 } from '../../services/api/clubApi';
 import type {
+  ClubBookshelfDetail,
   ClubBookshelfReview,
   ClubMeetingTeamTopics,
 } from '../../services/api/clubApi';
@@ -41,6 +42,8 @@ import { showToast } from '../../utils/toast';
 import { triggerSelectionHaptic } from '../../utils/haptics';
 import type {
   BookshelfCreateDraft,
+  BookshelfDetailLoadState,
+  BookshelfDetailSection,
   BookshelfDetailTab,
   BookshelfItem,
   BookshelfPostItem,
@@ -92,6 +95,13 @@ const TEAM_MANAGE_AUTO_SCROLL_ZONE = 112;
 const TEAM_MANAGE_AUTO_SCROLL_MIN_SPEED = 180;
 const TEAM_MANAGE_AUTO_SCROLL_MAX_SPEED = 900;
 const TEAM_MANAGE_AUTO_SCROLL_MAX_DELTA_SECONDS = 0.05;
+
+const createBookshelfDetailLoadState = (): BookshelfDetailLoadState => ({
+  base: 'idle',
+  topic: 'idle',
+  review: 'idle',
+  regular: 'idle',
+});
 
 type TeamManageDropLayout = {
   x: number;
@@ -212,6 +222,9 @@ export function useBookshelfState({
   const openingBookshelfEditRef = useRef(false);
   const [openingNextMeeting, setOpeningNextMeeting] = useState(false);
   const [loadingBookshelfDetail, setLoadingBookshelfDetail] = useState(false);
+  const [bookshelfDetailLoadStateByMeetingId, setBookshelfDetailLoadStateByMeetingId] = useState<
+    Record<number, BookshelfDetailLoadState>
+  >({});
   const [photoViewer, setPhotoViewer] = useState<{ photos: string[]; index: number } | null>(null);
   const [bookshelfComposerType, setBookshelfComposerType] = useState<'TOPIC' | 'REVIEW' | null>(null);
   const [editingBookshelfPost, setEditingBookshelfPost] = useState<BookshelfPostItem | null>(null);
@@ -265,8 +278,13 @@ export function useBookshelfState({
   });
 
   const shouldScrollToBookshelfDetailRef = useRef(false);
-  const bookshelfMeetingDetailRequestIdRef = useRef<Record<number, number>>({});
-  const bookshelfDetailLoadingCountByMeetingIdRef = useRef<Record<number, number>>({});
+  const bookshelfMeetingDetailRequestIdRef = useRef<Record<string, number>>({});
+  const bookshelfDetailLoadGenerationRef = useRef(0);
+  const bookshelfDetailLoadStateByMeetingIdRef = useRef<
+    Record<number, BookshelfDetailLoadState>
+  >({});
+  const bookshelfBaseDetailByMeetingIdRef = useRef<Record<number, ClubBookshelfDetail>>({});
+  const bookshelfDetailLoadPromiseByKeyRef = useRef<Record<string, Promise<unknown>>>({});
   const teamManageQuickDropRefs = useRef<Record<string, View | null>>({});
   const teamManageQuickDropLayoutsRef = useRef<Record<string, TeamManageDropLayout>>({});
   const teamManageContentDropLayoutsRef = useRef<Record<string, TeamManageDropLayout>>({});
@@ -355,6 +373,12 @@ export function useBookshelfState({
     () => resolveRegularMeetingId(selectedBookshelfBook),
     [selectedBookshelfBook],
   );
+
+  const currentBookshelfDetailLoadState = useMemo<BookshelfDetailLoadState>(() => {
+    const meetingId = selectedBookshelfBook?.remoteMeetingId;
+    if (typeof meetingId !== 'number') return createBookshelfDetailLoadState();
+    return bookshelfDetailLoadStateByMeetingId[meetingId] ?? createBookshelfDetailLoadState();
+  }, [bookshelfDetailLoadStateByMeetingId, selectedBookshelfBook?.remoteMeetingId]);
 
   const bookshelfTopicItems = useMemo<BookshelfPostItem[]>(() => {
     const remoteMeetingId = selectedBookshelfBook?.remoteMeetingId;
@@ -613,264 +637,561 @@ export function useBookshelfState({
     [],
   );
 
-  const setBookshelfDetailLoadingForMeeting = useCallback((meetingId: number, loading: boolean) => {
-    const next = { ...bookshelfDetailLoadingCountByMeetingIdRef.current };
+  const setBookshelfDetailSectionStatus = useCallback(
+    (meetingId: number, section: BookshelfDetailSection, status: BookshelfDetailLoadState[BookshelfDetailSection]) => {
+      const current =
+        bookshelfDetailLoadStateByMeetingIdRef.current[meetingId] ??
+        createBookshelfDetailLoadState();
+      if (current[section] === status) return;
 
-    if (loading) {
-      next[meetingId] = (next[meetingId] ?? 0) + 1;
-    } else {
-      const current = next[meetingId] ?? 0;
-      if (current <= 1) {
-        delete next[meetingId];
-      } else {
-        next[meetingId] = current - 1;
-      }
-    }
+      const nextByMeetingId = {
+        ...bookshelfDetailLoadStateByMeetingIdRef.current,
+        [meetingId]: { ...current, [section]: status },
+      };
+      bookshelfDetailLoadStateByMeetingIdRef.current = nextByMeetingId;
+      setBookshelfDetailLoadStateByMeetingId(nextByMeetingId);
+      setLoadingBookshelfDetail(
+        Object.values(nextByMeetingId).some((state) =>
+          Object.values(state).some((value) => value === 'loading'),
+        ),
+      );
+    },
+    [],
+  );
 
-    bookshelfDetailLoadingCountByMeetingIdRef.current = next;
-    setLoadingBookshelfDetail(Object.keys(next).length > 0);
-  }, []);
-
-  const reloadBookshelfMeetingDetail = useCallback(
-    async (book: BookshelfItem, options?: { suppressErrorToast?: boolean }) => {
+  const loadBookshelfBaseDetail = useCallback(
+    (
+      book: BookshelfItem,
+      options?: { force?: boolean; suppressErrorToast?: boolean },
+    ): Promise<ClubBookshelfDetail | null> => {
       const clubId = group.clubId;
       const meetingId = book.remoteMeetingId;
-      if (typeof clubId !== 'number' || typeof meetingId !== 'number') return;
-      const requestId = (bookshelfMeetingDetailRequestIdRef.current[meetingId] ?? 0) + 1;
-      bookshelfMeetingDetailRequestIdRef.current[meetingId] = requestId;
-      const isStale = () => bookshelfMeetingDetailRequestIdRef.current[meetingId] !== requestId;
-
-      setBookshelfDetailLoadingForMeeting(meetingId, true);
-      try {
-        const [topicPage, reviews, detail, editDetail] = await Promise.all([
-          fetchClubBookshelfTopics(clubId, meetingId, undefined, {
-            suppressErrorToast: options?.suppressErrorToast,
-          }),
-          fetchAllBookshelfReviewsForMeeting(clubId, meetingId, {
-            suppressErrorToast: options?.suppressErrorToast,
-          }),
-          fetchClubBookshelfDetail(clubId, meetingId, {
-            suppressErrorToast: options?.suppressErrorToast,
-          }),
-          canManageClub
-            ? fetchClubBookshelfEditInfo(clubId, meetingId, { suppressErrorToast: true }).catch(
-                () => null,
-              )
-            : Promise.resolve(null),
-        ]);
-
-        const richDetail = editDetail ?? detail;
-        const regularMeetingId = detail?.meetingId ?? book.regularMeetingId ?? meetingId;
-
-        if (isStale()) return;
-        setBookshelfTopicsByMeetingId((prev) => ({
-          ...prev,
-          [meetingId]: topicPage.items.map(mapBookshelfTopicToPostItem),
-        }));
-        setBookshelfTopicPageStateByMeetingId((prev) => ({
-          ...prev,
-          [meetingId]: {
-            hasNext: Boolean(topicPage.hasNext),
-            nextCursor: topicPage.nextCursor,
-            loadingMore: false,
-          },
-        }));
-        setBookshelfReviewsByMeetingId((prev) => ({
-          ...prev,
-          [meetingId]: reviews.map(mapBookshelfReviewToPostItem),
-        }));
-
-        if (detail) {
-          setBookshelfItems((prev) =>
-            prev.map((item) => {
-              if (item.remoteMeetingId !== meetingId) return item;
-              const nextGeneration = detail.generation ?? item.generation;
-              const nextSession = formatGenerationLabel(nextGeneration);
-              const nextCategory = detail.tag?.trim() || item.category;
-              const nextRegularMeetingName = richDetail?.title ?? item.regularMeetingName;
-              const nextMeetingLocation = richDetail?.location ?? item.meetingLocation;
-              const nextMeetingDate =
-                typeof richDetail?.meetingTime === 'string'
-                  ? formatDotDate(richDetail.meetingTime)
-                  : item.meetingDate;
-
-              if (
-                item.generation === nextGeneration &&
-                item.session === nextSession &&
-                item.category === nextCategory &&
-                item.regularMeetingId === regularMeetingId &&
-                item.regularMeetingName === nextRegularMeetingName &&
-                item.meetingLocation === nextMeetingLocation &&
-                item.meetingDate === nextMeetingDate
-              ) {
-                return item;
-              }
-              return {
-                ...item,
-                generation: nextGeneration,
-                session: nextSession,
-                category: nextCategory,
-                regularMeetingId,
-                regularMeetingName: nextRegularMeetingName,
-                meetingLocation: nextMeetingLocation,
-                meetingDate: nextMeetingDate,
-              };
-            }),
-          );
-        }
-
-        if (richDetail) {
-          const summaryInfo = ensureRegularMeetingInfo(
-            {
-              id: `${book.id}-regular`,
-              name: richDetail.title?.trim() || `${book.title} 정기모임`,
-              date: formatDotDate(richDetail.meetingTime),
-              meetingTime: richDetail.meetingTime,
-              location: richDetail.location?.trim() || '장소 미정',
-              groups: [],
-            },
-            book,
-            richDetail,
-          );
-          setRegularMeetingInfoByMeetingId((prev) => ({ ...prev, [meetingId]: summaryInfo }));
-        }
-
-        if (isStale()) return;
-
-        let meeting: import('../../services/api/clubApi').ClubMeetingInfo | null = null;
-
-        try {
-          meeting = await fetchClubMeeting(clubId, regularMeetingId, {
-            suppressErrorToast: options?.suppressErrorToast,
-          });
-        } catch (error) {
-          if (error instanceof ApiError && error.status === 401) throw error;
-          if (!(error instanceof ApiError) && !options?.suppressErrorToast) {
-            showToast(l('정기모임 정보를 불러오지 못했습니다.'));
-          }
-        }
-
-        let regularInfo: RegularMeetingInfo | null = null;
-        let meetingMembersFallback: import('../../services/api/clubApi').ClubMeetingMemberList | null = null;
-
-        if (meeting) {
-          if (meeting.teams.length === 0 || meeting.members.length === 0) {
-            try {
-              meetingMembersFallback = await fetchClubMeetingMembers(clubId, regularMeetingId, { suppressErrorToast: true });
-            } catch (fallbackError) {
-              if (fallbackError instanceof ApiError && fallbackError.status === 401) throw fallbackError;
-            }
-          }
-
-          const effectiveMeeting =
-            meetingMembersFallback && (meeting.teams.length === 0 || meeting.members.length === 0)
-              ? {
-                  ...meeting,
-                  teams: meeting.teams.length > 0 ? meeting.teams : meetingMembersFallback.teams,
-                  members: meeting.members.length > 0 ? meeting.members : meetingMembersFallback.members,
-                }
-              : meeting;
-
-          const topicSettled = await Promise.allSettled(
-            effectiveMeeting.teams.map(async (team) => [
-              team.teamId,
-              await fetchAllMeetingTeamTopics(clubId, regularMeetingId, team.teamId, {
-                suppressErrorToast: options?.suppressErrorToast,
-              }),
-            ] as const),
-          );
-
-          if (isStale()) return;
-
-          const topicEntries = effectiveMeeting.teams.map((team, index) => {
-            const settled = topicSettled[index];
-            if (settled?.status === 'fulfilled') return settled.value as [number, ClubMeetingTeamTopics];
-            return [team.teamId, { existingTeams: effectiveMeeting.teams, requestedTeam: team, topics: [], hasNext: false, nextCursor: null }] as [number, ClubMeetingTeamTopics];
-          });
-
-          const topicsByTeamId = Object.fromEntries(topicEntries);
-          regularInfo = mapMeetingToRegularMeetingInfo(
-            book, effectiveMeeting, topicsByTeamId, currentMemberNicknameRef.current,
-          );
-        }
-
-        if (!regularInfo || regularInfo.groups.length === 0) {
-          try {
-            const meetingMembersResponse =
-              meetingMembersFallback ??
-              (await fetchClubMeetingMembers(clubId, regularMeetingId, { suppressErrorToast: true }));
-            const fallbackMeeting = {
-              meetingId: regularMeetingId,
-              title: meeting?.title ?? richDetail?.title ?? book.regularMeetingName ?? `${book.title} 정기모임`,
-              meetingTime: meeting?.meetingTime ?? richDetail?.meetingTime,
-              location: meeting?.location ?? richDetail?.location,
-              teams: meetingMembersResponse.teams.length > 0 ? meetingMembersResponse.teams : meeting?.teams ?? [],
-              members: meetingMembersResponse.members.length > 0 ? meetingMembersResponse.members : meeting?.members ?? [],
-              isStaff: meeting?.isStaff ?? canManageClub,
-            };
-            const fallbackInfo = mapMeetingToRegularMeetingInfo(book, fallbackMeeting, {}, currentMemberNicknameRef.current);
-            if (fallbackInfo && fallbackInfo.groups.length > 0) {
-              regularInfo = fallbackInfo;
-            }
-          } catch (fallbackError) {
-            if (fallbackError instanceof ApiError && fallbackError.status === 401) throw fallbackError;
-          }
-        }
-
-        if (isStale()) return;
-
-        const finalInfo = ensureRegularMeetingInfo(regularInfo, book, richDetail);
-        setRegularMeetingInfoByMeetingId((prev) => ({ ...prev, [meetingId]: finalInfo }));
-      } catch (error) {
-        if (isStale()) return;
-        if (error instanceof ApiError && error.status === 401) {
-          if (!options?.suppressErrorToast) showToast(l('로그인이 만료되었습니다.'));
-          return;
-        }
-        if (!options?.suppressErrorToast) {
-          showToast(l(resolveBookshelfActionErrorMessage(error, '책장 상세를 불러오지 못했습니다.')));
-        }
-      } finally {
-        setBookshelfDetailLoadingForMeeting(meetingId, false);
+      if (typeof clubId !== 'number' || typeof meetingId !== 'number') {
+        return Promise.resolve(null);
       }
+
+      const key = `${meetingId}:base`;
+      const activePromise = bookshelfDetailLoadPromiseByKeyRef.current[key] as
+        | Promise<ClubBookshelfDetail | null>
+        | undefined;
+      if (activePromise) return activePromise;
+
+      const currentStatus =
+        bookshelfDetailLoadStateByMeetingIdRef.current[meetingId]?.base ?? 'idle';
+      if (!options?.force && currentStatus !== 'idle') {
+        return Promise.resolve(bookshelfBaseDetailByMeetingIdRef.current[meetingId] ?? null);
+      }
+
+      const generation = bookshelfDetailLoadGenerationRef.current;
+      const requestId = (bookshelfMeetingDetailRequestIdRef.current[key] ?? 0) + 1;
+      bookshelfMeetingDetailRequestIdRef.current[key] = requestId;
+      const isStale = () =>
+        generation !== bookshelfDetailLoadGenerationRef.current ||
+        bookshelfMeetingDetailRequestIdRef.current[key] !== requestId;
+
+      setBookshelfDetailSectionStatus(meetingId, 'base', 'loading');
+      const promise = (async () => {
+        try {
+          const detail = await fetchClubBookshelfDetail(clubId, meetingId, {
+            suppressErrorToast: options?.suppressErrorToast ?? true,
+          });
+          if (isStale()) return null;
+          if (!detail) throw new Error('Empty bookshelf detail response');
+
+          bookshelfBaseDetailByMeetingIdRef.current[meetingId] = detail;
+          const regularMeetingId = detail.meetingId ?? book.regularMeetingId ?? meetingId;
+          const nextGeneration = detail.generation ?? book.generation;
+          const nextBook: BookshelfItem = {
+            ...book,
+            generation: nextGeneration,
+            session: formatGenerationLabel(nextGeneration),
+            category: detail.tag?.trim() || book.category,
+            regularMeetingId,
+            regularMeetingName: detail.title ?? book.regularMeetingName,
+            meetingLocation: detail.location ?? book.meetingLocation,
+            meetingDate:
+              typeof detail.meetingTime === 'string'
+                ? formatDotDate(detail.meetingTime)
+                : book.meetingDate,
+          };
+
+          setBookshelfItems((prev) =>
+            prev.map((item) =>
+              item.remoteMeetingId === meetingId
+                ? {
+                    ...item,
+                    generation: nextBook.generation,
+                    session: nextBook.session,
+                    category: nextBook.category,
+                    regularMeetingId: nextBook.regularMeetingId,
+                    regularMeetingName: nextBook.regularMeetingName,
+                    meetingLocation: nextBook.meetingLocation,
+                    meetingDate: nextBook.meetingDate,
+                  }
+                : item,
+            ),
+          );
+          setRegularMeetingInfoByMeetingId((prev) => ({
+            ...prev,
+            [meetingId]: ensureRegularMeetingInfo(prev[meetingId] ?? null, nextBook, detail),
+          }));
+          setBookshelfDetailSectionStatus(meetingId, 'base', 'success');
+          return detail;
+        } catch (error) {
+          if (isStale()) return null;
+          setBookshelfDetailSectionStatus(meetingId, 'base', 'error');
+          logMeetingAction('bookshelf_base_detail_load_failure', {
+            clubId,
+            meetingId,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          return null;
+        } finally {
+          if (
+            generation === bookshelfDetailLoadGenerationRef.current &&
+            bookshelfMeetingDetailRequestIdRef.current[key] === requestId
+          ) {
+            delete bookshelfDetailLoadPromiseByKeyRef.current[key];
+          }
+        }
+      })();
+
+      bookshelfDetailLoadPromiseByKeyRef.current[key] = promise;
+      return promise;
+    },
+    [group.clubId, setBookshelfDetailSectionStatus],
+  );
+
+  const loadBookshelfTopicsForMeeting = useCallback(
+    (
+      meetingId: number,
+      options?: { force?: boolean; suppressErrorToast?: boolean },
+    ): Promise<boolean> => {
+      const clubId = group.clubId;
+      if (typeof clubId !== 'number') return Promise.resolve(false);
+
+      const key = `${meetingId}:topic`;
+      const activePromise = bookshelfDetailLoadPromiseByKeyRef.current[key] as
+        | Promise<boolean>
+        | undefined;
+      if (activePromise) return activePromise;
+      const currentStatus =
+        bookshelfDetailLoadStateByMeetingIdRef.current[meetingId]?.topic ?? 'idle';
+      if (!options?.force && currentStatus !== 'idle') {
+        return Promise.resolve(currentStatus === 'success');
+      }
+
+      const generation = bookshelfDetailLoadGenerationRef.current;
+      const requestId = (bookshelfMeetingDetailRequestIdRef.current[key] ?? 0) + 1;
+      bookshelfMeetingDetailRequestIdRef.current[key] = requestId;
+      const isStale = () =>
+        generation !== bookshelfDetailLoadGenerationRef.current ||
+        bookshelfMeetingDetailRequestIdRef.current[key] !== requestId;
+
+      setBookshelfDetailSectionStatus(meetingId, 'topic', 'loading');
+      const promise = (async () => {
+        try {
+          const topicPage = await fetchClubBookshelfTopics(clubId, meetingId, undefined, {
+            suppressErrorToast: options?.suppressErrorToast ?? true,
+          });
+          if (isStale()) return false;
+
+          setBookshelfTopicsByMeetingId((prev) => ({
+            ...prev,
+            [meetingId]: topicPage.items.map(mapBookshelfTopicToPostItem),
+          }));
+          setBookshelfTopicPageStateByMeetingId((prev) => ({
+            ...prev,
+            [meetingId]: {
+              hasNext: Boolean(topicPage.hasNext),
+              nextCursor: topicPage.nextCursor,
+              loadingMore: false,
+            },
+          }));
+          setBookshelfDetailSectionStatus(meetingId, 'topic', 'success');
+          return true;
+        } catch (error) {
+          if (isStale()) return false;
+          setBookshelfDetailSectionStatus(meetingId, 'topic', 'error');
+          logMeetingAction('bookshelf_topic_load_failure', {
+            clubId,
+            meetingId,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          return false;
+        } finally {
+          if (
+            generation === bookshelfDetailLoadGenerationRef.current &&
+            bookshelfMeetingDetailRequestIdRef.current[key] === requestId
+          ) {
+            delete bookshelfDetailLoadPromiseByKeyRef.current[key];
+          }
+        }
+      })();
+
+      bookshelfDetailLoadPromiseByKeyRef.current[key] = promise;
+      return promise;
+    },
+    [group.clubId, setBookshelfDetailSectionStatus],
+  );
+
+  const loadBookshelfReviewsForMeeting = useCallback(
+    (
+      meetingId: number,
+      options?: { force?: boolean; suppressErrorToast?: boolean },
+    ): Promise<boolean> => {
+      const clubId = group.clubId;
+      if (typeof clubId !== 'number') return Promise.resolve(false);
+
+      const key = `${meetingId}:review`;
+      const activePromise = bookshelfDetailLoadPromiseByKeyRef.current[key] as
+        | Promise<boolean>
+        | undefined;
+      if (activePromise) return activePromise;
+      const currentStatus =
+        bookshelfDetailLoadStateByMeetingIdRef.current[meetingId]?.review ?? 'idle';
+      if (!options?.force && currentStatus !== 'idle') {
+        return Promise.resolve(currentStatus === 'success');
+      }
+
+      const generation = bookshelfDetailLoadGenerationRef.current;
+      const requestId = (bookshelfMeetingDetailRequestIdRef.current[key] ?? 0) + 1;
+      bookshelfMeetingDetailRequestIdRef.current[key] = requestId;
+      const isStale = () =>
+        generation !== bookshelfDetailLoadGenerationRef.current ||
+        bookshelfMeetingDetailRequestIdRef.current[key] !== requestId;
+
+      setBookshelfDetailSectionStatus(meetingId, 'review', 'loading');
+      const promise = (async () => {
+        try {
+          const reviews = await fetchAllBookshelfReviewsForMeeting(clubId, meetingId, {
+            suppressErrorToast: options?.suppressErrorToast ?? true,
+          });
+          if (isStale()) return false;
+
+          setBookshelfReviewsByMeetingId((prev) => ({
+            ...prev,
+            [meetingId]: reviews.map(mapBookshelfReviewToPostItem),
+          }));
+          setBookshelfDetailSectionStatus(meetingId, 'review', 'success');
+          return true;
+        } catch (error) {
+          if (isStale()) return false;
+          setBookshelfDetailSectionStatus(meetingId, 'review', 'error');
+          logMeetingAction('bookshelf_review_load_failure', {
+            clubId,
+            meetingId,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          return false;
+        } finally {
+          if (
+            generation === bookshelfDetailLoadGenerationRef.current &&
+            bookshelfMeetingDetailRequestIdRef.current[key] === requestId
+          ) {
+            delete bookshelfDetailLoadPromiseByKeyRef.current[key];
+          }
+        }
+      })();
+
+      bookshelfDetailLoadPromiseByKeyRef.current[key] = promise;
+      return promise;
+    },
+    [fetchAllBookshelfReviewsForMeeting, group.clubId, setBookshelfDetailSectionStatus],
+  );
+
+  const loadBookshelfRegularMeeting = useCallback(
+    (
+      book: BookshelfItem,
+      options?: { force?: boolean; suppressErrorToast?: boolean },
+    ): Promise<boolean> => {
+      const clubId = group.clubId;
+      const meetingId = book.remoteMeetingId;
+      if (typeof clubId !== 'number' || typeof meetingId !== 'number') {
+        return Promise.resolve(false);
+      }
+
+      const key = `${meetingId}:regular`;
+      const activePromise = bookshelfDetailLoadPromiseByKeyRef.current[key] as
+        | Promise<boolean>
+        | undefined;
+      if (activePromise) return activePromise;
+      const currentStatus =
+        bookshelfDetailLoadStateByMeetingIdRef.current[meetingId]?.regular ?? 'idle';
+      if (!options?.force && currentStatus !== 'idle') {
+        return Promise.resolve(currentStatus === 'success');
+      }
+
+      const generation = bookshelfDetailLoadGenerationRef.current;
+      const requestId = (bookshelfMeetingDetailRequestIdRef.current[key] ?? 0) + 1;
+      bookshelfMeetingDetailRequestIdRef.current[key] = requestId;
+      const isStale = () =>
+        generation !== bookshelfDetailLoadGenerationRef.current ||
+        bookshelfMeetingDetailRequestIdRef.current[key] !== requestId;
+
+      setBookshelfDetailSectionStatus(meetingId, 'regular', 'loading');
+      const promise = (async () => {
+        try {
+          const detail = await loadBookshelfBaseDetail(book, {
+            suppressErrorToast: options?.suppressErrorToast,
+          });
+          if (isStale()) return false;
+
+          const regularMeetingId = detail?.meetingId ?? book.regularMeetingId ?? meetingId;
+          let hadPartialFailure = false;
+          let meeting: import('../../services/api/clubApi').ClubMeetingInfo | null = null;
+          let regularInfo: RegularMeetingInfo | null = null;
+          let meetingMembersFallback:
+            | import('../../services/api/clubApi').ClubMeetingMemberList
+            | null = null;
+
+          try {
+            meeting = await fetchClubMeeting(clubId, regularMeetingId, {
+              suppressErrorToast: options?.suppressErrorToast ?? true,
+            });
+            if (!meeting) hadPartialFailure = true;
+          } catch {
+            hadPartialFailure = true;
+          }
+
+          if (isStale()) return false;
+
+          if (meeting) {
+            if (meeting.teams.length === 0 || meeting.members.length === 0) {
+              try {
+                meetingMembersFallback = await fetchClubMeetingMembers(clubId, regularMeetingId, {
+                  suppressErrorToast: true,
+                });
+              } catch {
+                hadPartialFailure = true;
+              }
+            }
+
+            const effectiveMeeting =
+              meetingMembersFallback &&
+              (meeting.teams.length === 0 || meeting.members.length === 0)
+                ? {
+                    ...meeting,
+                    teams:
+                      meeting.teams.length > 0
+                        ? meeting.teams
+                        : meetingMembersFallback.teams,
+                    members:
+                      meeting.members.length > 0
+                        ? meeting.members
+                        : meetingMembersFallback.members,
+                  }
+                : meeting;
+
+            const topicSettled = await Promise.allSettled(
+              effectiveMeeting.teams.map(async (team) => [
+                team.teamId,
+                await fetchAllMeetingTeamTopics(clubId, regularMeetingId, team.teamId, {
+                  suppressErrorToast: options?.suppressErrorToast ?? true,
+                }),
+              ] as const),
+            );
+            if (topicSettled.some((result) => result.status === 'rejected')) {
+              hadPartialFailure = true;
+            }
+            if (isStale()) return false;
+
+            const topicEntries = effectiveMeeting.teams.map((team, index) => {
+              const settled = topicSettled[index];
+              if (settled?.status === 'fulfilled') {
+                return settled.value as [number, ClubMeetingTeamTopics];
+              }
+              return [
+                team.teamId,
+                {
+                  existingTeams: effectiveMeeting.teams,
+                  requestedTeam: team,
+                  topics: [],
+                  hasNext: false,
+                  nextCursor: null,
+                },
+              ] as [number, ClubMeetingTeamTopics];
+            });
+            regularInfo = mapMeetingToRegularMeetingInfo(
+              book,
+              effectiveMeeting,
+              Object.fromEntries(topicEntries),
+              currentMemberNicknameRef.current,
+            );
+          }
+
+          if (!regularInfo || regularInfo.groups.length === 0) {
+            try {
+              const meetingMembersResponse =
+                meetingMembersFallback ??
+                (await fetchClubMeetingMembers(clubId, regularMeetingId, {
+                  suppressErrorToast: true,
+                }));
+              const fallbackMeeting = {
+                meetingId: regularMeetingId,
+                title:
+                  meeting?.title ??
+                  detail?.title ??
+                  book.regularMeetingName ??
+                  `${book.title} 정기모임`,
+                meetingTime: meeting?.meetingTime ?? detail?.meetingTime,
+                location: meeting?.location ?? detail?.location,
+                teams:
+                  meetingMembersResponse.teams.length > 0
+                    ? meetingMembersResponse.teams
+                    : meeting?.teams ?? [],
+                members:
+                  meetingMembersResponse.members.length > 0
+                    ? meetingMembersResponse.members
+                    : meeting?.members ?? [],
+                isStaff: meeting?.isStaff ?? canManageClub,
+              };
+              const fallbackInfo = mapMeetingToRegularMeetingInfo(
+                book,
+                fallbackMeeting,
+                {},
+                currentMemberNicknameRef.current,
+              );
+              if (fallbackInfo && fallbackInfo.groups.length > 0) regularInfo = fallbackInfo;
+            } catch {
+              hadPartialFailure = true;
+            }
+          }
+
+          if (isStale()) return false;
+          setRegularMeetingInfoByMeetingId((prev) => ({
+            ...prev,
+            [meetingId]: ensureRegularMeetingInfo(regularInfo, book, detail),
+          }));
+          setBookshelfDetailSectionStatus(
+            meetingId,
+            'regular',
+            hadPartialFailure ? 'error' : 'success',
+          );
+          return !hadPartialFailure;
+        } catch (error) {
+          if (isStale()) return false;
+          setBookshelfDetailSectionStatus(meetingId, 'regular', 'error');
+          logMeetingAction('bookshelf_regular_meeting_load_failure', {
+            clubId,
+            meetingId,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          return false;
+        } finally {
+          if (
+            generation === bookshelfDetailLoadGenerationRef.current &&
+            bookshelfMeetingDetailRequestIdRef.current[key] === requestId
+          ) {
+            delete bookshelfDetailLoadPromiseByKeyRef.current[key];
+          }
+        }
+      })();
+
+      bookshelfDetailLoadPromiseByKeyRef.current[key] = promise;
+      return promise;
     },
     [
       canManageClub,
-      fetchAllBookshelfReviewsForMeeting,
       fetchAllMeetingTeamTopics,
       group.clubId,
-      l,
-      setBookshelfDetailLoadingForMeeting,
+      loadBookshelfBaseDetail,
+      setBookshelfDetailSectionStatus,
     ],
   );
 
-  const hasBookshelfMeetingDetailCache = useCallback(
-    (book: BookshelfItem) => {
+  const reloadBookshelfMeetingDetail = useCallback(
+    async (
+      book: BookshelfItem,
+      options?: {
+        suppressErrorToast?: boolean;
+        sections?: BookshelfDetailSection[];
+      },
+    ) => {
       const meetingId = book.remoteMeetingId;
-      if (typeof meetingId !== 'number') return true;
-      return (
-        Object.prototype.hasOwnProperty.call(bookshelfTopicPageStateByMeetingId, meetingId) &&
-        Object.prototype.hasOwnProperty.call(bookshelfReviewsByMeetingId, meetingId) &&
-        Object.prototype.hasOwnProperty.call(regularMeetingInfoByMeetingId, meetingId)
+      if (typeof meetingId !== 'number') return;
+      const sections = options?.sections ?? ['base', 'topic', 'review', 'regular'];
+
+      await Promise.allSettled(
+        sections.map((section) => {
+          if (section === 'base') {
+            return loadBookshelfBaseDetail(book, {
+              force: true,
+              suppressErrorToast: options?.suppressErrorToast,
+            });
+          }
+          if (section === 'topic') {
+            return loadBookshelfTopicsForMeeting(meetingId, {
+              force: true,
+              suppressErrorToast: options?.suppressErrorToast,
+            });
+          }
+          if (section === 'review') {
+            return loadBookshelfReviewsForMeeting(meetingId, {
+              force: true,
+              suppressErrorToast: options?.suppressErrorToast,
+            });
+          }
+          return loadBookshelfRegularMeeting(book, {
+            force: true,
+            suppressErrorToast: options?.suppressErrorToast,
+          });
+        }),
       );
     },
     [
-      bookshelfReviewsByMeetingId,
-      bookshelfTopicPageStateByMeetingId,
-      regularMeetingInfoByMeetingId,
+      loadBookshelfBaseDetail,
+      loadBookshelfRegularMeeting,
+      loadBookshelfReviewsForMeeting,
+      loadBookshelfTopicsForMeeting,
     ],
   );
 
   const ensureBookshelfMeetingDetailLoaded = useCallback(
-    (book: BookshelfItem) => {
+    (book: BookshelfItem, tab: BookshelfDetailTab) => {
       const meetingId = book.remoteMeetingId;
       if (typeof meetingId !== 'number') return;
-      if (hasBookshelfMeetingDetailCache(book)) return;
-      if ((bookshelfDetailLoadingCountByMeetingIdRef.current[meetingId] ?? 0) > 0) return;
 
-      void reloadBookshelfMeetingDetail(book);
+      void loadBookshelfBaseDetail(book);
+      if (tab === 'TOPIC') {
+        void loadBookshelfTopicsForMeeting(meetingId);
+      } else if (tab === 'REVIEW') {
+        void loadBookshelfReviewsForMeeting(meetingId);
+      } else {
+        void loadBookshelfRegularMeeting(book);
+      }
     },
-    [hasBookshelfMeetingDetailCache, reloadBookshelfMeetingDetail],
+    [
+      loadBookshelfBaseDetail,
+      loadBookshelfRegularMeeting,
+      loadBookshelfReviewsForMeeting,
+      loadBookshelfTopicsForMeeting,
+    ],
+  );
+
+  const retryBookshelfDetailSection = useCallback(
+    (section: BookshelfDetailSection) => {
+      const book = selectedBookshelfBook;
+      const meetingId = book?.remoteMeetingId;
+      if (!book || typeof meetingId !== 'number') return;
+
+      if (section === 'base') {
+        void loadBookshelfBaseDetail(book, { force: true });
+      } else if (section === 'topic') {
+        void loadBookshelfTopicsForMeeting(meetingId, { force: true });
+      } else if (section === 'review') {
+        void loadBookshelfReviewsForMeeting(meetingId, { force: true });
+      } else {
+        void loadBookshelfRegularMeeting(book, { force: true });
+      }
+    },
+    [
+      loadBookshelfBaseDetail,
+      loadBookshelfRegularMeeting,
+      loadBookshelfReviewsForMeeting,
+      loadBookshelfTopicsForMeeting,
+      selectedBookshelfBook,
+    ],
   );
 
   const closeBookshelfBookSelector = useCallback(() => {
@@ -957,7 +1278,7 @@ export function useBookshelfState({
         setBookshelfDetailTab(tab);
         setSelectedRegularGroupId(null);
         setBookshelfViewMode('DETAIL');
-        ensureBookshelfMeetingDetailLoaded(book);
+        ensureBookshelfMeetingDetailLoaded(book, tab);
       };
 
       if (tab === 'REGULAR' && !isLoggedIn) {
@@ -994,6 +1315,19 @@ export function useBookshelfState({
         }
         if (detail) {
           targetBook = mapBookshelfDetailToItem(detail, meetingId);
+          const targetMeetingId = targetBook.remoteMeetingId;
+          if (typeof targetMeetingId === 'number') {
+            bookshelfBaseDetailByMeetingIdRef.current[targetMeetingId] = detail;
+            setBookshelfDetailSectionStatus(targetMeetingId, 'base', 'success');
+            setRegularMeetingInfoByMeetingId((prev) => ({
+              ...prev,
+              [targetMeetingId]: ensureRegularMeetingInfo(
+                prev[targetMeetingId] ?? null,
+                targetBook!,
+                detail,
+              ),
+            }));
+          }
           setBookshelfItems((prev) =>
             prev.some(
               (item) =>
@@ -1014,7 +1348,13 @@ export function useBookshelfState({
       openBookshelfDetail(targetBook, tab);
       return true;
     },
-    [bookshelfItems, group.clubId, openBookshelfDetail, setActiveTab],
+    [
+      bookshelfItems,
+      group.clubId,
+      openBookshelfDetail,
+      setActiveTab,
+      setBookshelfDetailSectionStatus,
+    ],
   );
 
   const openBookshelfTopicByMeetingId = useCallback(
@@ -1024,29 +1364,18 @@ export function useBookshelfState({
 
   const refreshBookshelfPostsByType = useCallback(
     async (clubId: number, meetingId: number, type: 'TOPIC' | 'REVIEW') => {
-      if (type === 'TOPIC') {
-        const topics = await fetchClubBookshelfTopics(clubId, meetingId);
-        setBookshelfTopicsByMeetingId((prev) => ({
-          ...prev,
-          [meetingId]: topics.items.map(mapBookshelfTopicToPostItem),
-        }));
-        setBookshelfTopicPageStateByMeetingId((prev) => ({
-          ...prev,
-          [meetingId]: {
-            hasNext: Boolean(topics.hasNext),
-            nextCursor: topics.nextCursor,
-            loadingMore: false,
-          },
-        }));
-        return;
+      if (clubId !== group.clubId) throw new Error('Bookshelf club changed while refreshing');
+      const succeeded =
+        type === 'TOPIC'
+          ? await loadBookshelfTopicsForMeeting(meetingId, { force: true })
+          : await loadBookshelfReviewsForMeeting(meetingId, { force: true });
+      if (!succeeded) {
+        throw new Error(
+          type === 'TOPIC' ? 'Could not refresh bookshelf topics' : 'Could not refresh reviews',
+        );
       }
-      const reviews = await fetchAllBookshelfReviewsForMeeting(clubId, meetingId);
-      setBookshelfReviewsByMeetingId((prev) => ({
-        ...prev,
-        [meetingId]: reviews.map(mapBookshelfReviewToPostItem),
-      }));
     },
-    [fetchAllBookshelfReviewsForMeeting],
+    [group.clubId, loadBookshelfReviewsForMeeting, loadBookshelfTopicsForMeeting],
   );
 
   const closeBookshelfComposer = useCallback(() => {
@@ -1111,7 +1440,10 @@ export function useBookshelfState({
           }
           await refreshBookshelfPostsByType(clubId, meetingId, 'TOPIC');
           if (selectedBookshelfBook) {
-            await reloadBookshelfMeetingDetail(selectedBookshelfBook, { suppressErrorToast: true });
+            await reloadBookshelfMeetingDetail(selectedBookshelfBook, {
+              suppressErrorToast: true,
+              sections: ['regular'],
+            });
           }
           showToast(isEditing ? l('발제가 수정되었습니다.') : l('발제가 등록되었습니다.'));
         } else {
@@ -1285,7 +1617,7 @@ export function useBookshelfState({
       const change = () => {
         setBookshelfDetailTab(tab);
         if (selectedBookshelfBook) {
-          ensureBookshelfMeetingDetailLoaded(selectedBookshelfBook);
+          ensureBookshelfMeetingDetailLoaded(selectedBookshelfBook, tab);
         }
         if (tab !== 'REGULAR') {
           setSelectedRegularGroupId(null);
@@ -1856,7 +2188,10 @@ export function useBookshelfState({
             clubMemberIds: team.memberIds,
           })),
         });
-        await reloadBookshelfMeetingDetail(selectedBook, { suppressErrorToast: true });
+        await reloadBookshelfMeetingDetail(selectedBook, {
+          suppressErrorToast: true,
+          sections: ['regular'],
+        });
         logMeetingAction('team_manage_save_success', {
           clubId,
           meetingId,
@@ -2161,7 +2496,10 @@ export function useBookshelfState({
             nextItemsWithMeetingDraft.find((item) => item.remoteMeetingId === editingMeetingId) ?? null;
           if (updatedItem) {
             setSelectedBookshelfBookId(updatedItem.id);
-            await reloadBookshelfMeetingDetail(updatedItem, { suppressErrorToast: true });
+            await reloadBookshelfMeetingDetail(updatedItem, {
+              suppressErrorToast: true,
+              sections: ['base', 'regular'],
+            });
             setBookshelfViewMode('DETAIL');
             setBookshelfDetailTab('REGULAR');
           } else {
@@ -2306,11 +2644,22 @@ export function useBookshelfState({
   ]);
 
   const resetBookshelfOnGroupChange = useCallback(() => {
+    bookshelfDetailLoadGenerationRef.current += 1;
+    bookshelfMeetingDetailRequestIdRef.current = {};
+    bookshelfDetailLoadPromiseByKeyRef.current = {};
+    bookshelfBaseDetailByMeetingIdRef.current = {};
+    bookshelfDetailLoadStateByMeetingIdRef.current = {};
     setSelectedBookshelfSession('');
     setBookshelfViewMode('GRID');
     setBookshelfDetailTab('TOPIC');
     setSelectedBookshelfBookId(null);
     setSelectedRegularGroupId(null);
+    setBookshelfTopicsByMeetingId({});
+    setBookshelfTopicPageStateByMeetingId({});
+    setBookshelfReviewsByMeetingId({});
+    setRegularMeetingInfoByMeetingId({});
+    setBookshelfDetailLoadStateByMeetingId({});
+    setLoadingBookshelfDetail(false);
   }, []);
 
   return {
@@ -2368,6 +2717,7 @@ export function useBookshelfState({
     bookshelfTopicItems,
     bookshelfReviewItems,
     currentBookshelfTopicPageState,
+    currentBookshelfDetailLoadState,
     canSubmitBookshelfComposer,
     regularMeetingInfo,
     selectedRegularGroup,
@@ -2380,6 +2730,7 @@ export function useBookshelfState({
     teamManageScrollRef,
     teamManageScrollViewRef,
     reloadBookshelfMeetingDetail,
+    retryBookshelfDetailSection,
     loadMoreBookshelfTopics,
     closeBookshelfBookSelector,
     closeBookshelfCalendar,

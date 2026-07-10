@@ -1535,6 +1535,41 @@ export const styles = StyleSheet.create({
     ...typography.body1_3,
     color: colors.gray4,
   },
+  detailLoadStateCard: {
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    padding: spacing.md,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  detailLoadInlineState: {
+    minHeight: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailLoadStateText: {
+    ...typography.body1_3,
+    color: colors.gray4,
+    textAlign: 'center',
+  },
+  detailLoadRetryButton: {
+    minHeight: 36,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.subbrown3,
+    backgroundColor: colors.subbrown4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  detailLoadRetryText: {
+    ...typography.body2_2,
+    color: colors.primary1,
+  },
   managementRoleBadge: {
     borderRadius: radius.lg,
     paddingHorizontal: spacing.sm,
@@ -1952,6 +1987,9 @@ export const styles = StyleSheet.create({
   noticeDetailBody: {
     ...typography.body1_3_relaxed,
     color: colors.gray6,
+  },
+  noticeDetailBodySkeleton: {
+    gap: spacing.sm,
   },
   noticePollSection: {
     gap: spacing.sm,

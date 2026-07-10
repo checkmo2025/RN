@@ -155,19 +155,6 @@ function applyDetail(item: NewsItem, detail: RemoteNewsDetail): NewsItem {
   };
 }
 
-function toStandaloneNewsItem(detail: RemoteNewsDetail, fallbackExcerpt: string): NewsItem {
-  return {
-    id: `news-${detail.id}`,
-    newsId: detail.id,
-    title: detail.title,
-    excerpt: detail.excerpt?.trim() || fallbackExcerpt,
-    date: toDateLabel(detail.date),
-    cover: detail.thumbnailUrl ?? NEWS_DEFAULT_IMAGE,
-    body: detail.content,
-    originalLink: detail.originalLink,
-  };
-}
-
 export function NewsScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ News: NewsRouteParams }, 'News'>>();
@@ -178,6 +165,7 @@ export function NewsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingNews, setLoadingNews] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailLoadError, setDetailLoadError] = useState(false);
   const [loadingBooks, setLoadingBooks] = useState(false);
   const [promotions, setPromotions] = useState<NewsItem[]>([]);
   const [items, setItems] = useState<NewsItem[]>([]);
@@ -186,6 +174,7 @@ export function NewsScreen() {
   useScrollToTop(newsListRef);
   const detailScrollRef = useRef<ScrollView>(null);
   const detailTranslateX = useRef(new Animated.Value(0)).current;
+  const newsDetailRequestIdRef = useRef(0);
 
   const animateTransition = useCallback(() => {
     // New Architecture(Fabric)에서 LayoutAnimation은 상세↔목록 전환 중 unregister된
@@ -195,9 +184,12 @@ export function NewsScreen() {
 
   const closeSelectedDetail = useCallback(() => {
     animateTransition();
+    newsDetailRequestIdRef.current += 1;
     detailTranslateX.stopAnimation(() => {
       detailTranslateX.setValue(0);
     });
+    setLoadingDetail(false);
+    setDetailLoadError(false);
     setSelected(null);
   }, [animateTransition, detailTranslateX]);
 
@@ -277,42 +269,69 @@ export function NewsScreen() {
     }, [loadRecommendedBookCards]),
   );
 
+  const loadNewsDetail = useCallback(
+    async (item: NewsItem) => {
+      if (!Number.isInteger(item.newsId) || item.newsId <= 0) {
+        newsDetailRequestIdRef.current += 1;
+        setLoadingDetail(false);
+        setDetailLoadError(true);
+        return;
+      }
+
+      const requestId = ++newsDetailRequestIdRef.current;
+      setLoadingDetail(true);
+      setDetailLoadError(false);
+
+      try {
+        const detail = await fetchNewsDetail(item.newsId);
+        if (requestId !== newsDetailRequestIdRef.current) return;
+        if (!detail || detail.content.trim().length === 0) {
+          throw new Error('Empty news detail response');
+        }
+
+        setSelected((prev) => {
+          if (!prev || prev.newsId !== item.newsId) return prev;
+          return applyDetail(prev, detail);
+        });
+      } catch (error) {
+        if (requestId !== newsDetailRequestIdRef.current) return;
+        setDetailLoadError(true);
+        showToast(
+          resolveApiError(
+            error,
+            {
+              401: l('로그인 상태를 확인해 주십시오.'),
+              403: l('접근 권한이 없습니다.'),
+              404: l('요청한 소식을 찾을 수 없습니다.'),
+            },
+            l('소식 상세를 불러오지 못했습니다.'),
+          ),
+        );
+      } finally {
+        if (requestId === newsDetailRequestIdRef.current) {
+          setLoadingDetail(false);
+        }
+      }
+    },
+    [l],
+  );
+
   const onSelect = useCallback(
     (item: NewsItem) => {
       animateTransition();
       detailTranslateX.setValue(0);
       setSelected(item);
+      setDetailLoadError(false);
 
-      if (item.newsId <= 0 || item.body.trim().length > 0) return;
+      if (item.body.trim().length > 0) {
+        newsDetailRequestIdRef.current += 1;
+        setLoadingDetail(false);
+        return;
+      }
 
-      const loadDetail = async () => {
-        setLoadingDetail(true);
-        try {
-          const detail = await fetchNewsDetail(item.newsId);
-          if (!detail) return;
-          setSelected((prev) => {
-            if (!prev || prev.newsId !== item.newsId) return prev;
-            return applyDetail(prev, detail);
-          });
-        } catch (error) {
-          showToast(
-            resolveApiError(
-              error,
-              {
-                401: l('로그인 상태를 확인해 주십시오.'),
-                403: l('접근 권한이 없습니다.'),
-                404: l('요청한 소식을 찾을 수 없습니다.'),
-              },
-              l('소식 상세를 불러오지 못했습니다.'),
-            ),
-          );
-        } finally {
-          setLoadingDetail(false);
-        }
-      };
-      void loadDetail();
+      void loadNewsDetail(item);
     },
-    [animateTransition, detailTranslateX, l],
+    [animateTransition, detailTranslateX, loadNewsDetail],
   );
 
   const openNewsDetailById = useCallback(
@@ -323,46 +342,19 @@ export function NewsScreen() {
       detailTranslateX.stopAnimation(() => {
         detailTranslateX.setValue(0);
       });
-      setSelected({
+      const placeholder: NewsItem = {
         id: `news-route-${newsId}`,
         newsId,
         title: l('소식'),
         excerpt: l('소식 내용을 불러오는 중입니다.'),
         date: '',
         body: '',
-      });
-
-      const loadDetailById = async () => {
-        setLoadingDetail(true);
-        try {
-          const detail = await fetchNewsDetail(newsId);
-          if (!detail) {
-            setSelected(null);
-            showToast(l('소식 상세를 불러오지 못했습니다.'));
-            return;
-          }
-          setSelected(toStandaloneNewsItem(detail, l('소식 내용을 확인해보세요.')));
-        } catch (error) {
-          setSelected(null);
-          showToast(
-            resolveApiError(
-              error,
-              {
-                401: l('로그인 상태를 확인해 주십시오.'),
-                403: l('접근 권한이 없습니다.'),
-                404: l('요청한 소식을 찾을 수 없습니다.'),
-              },
-              l('소식 상세를 불러오지 못했습니다.'),
-            ),
-          );
-        } finally {
-          setLoadingDetail(false);
-        }
       };
-
-      void loadDetailById();
+      setSelected(placeholder);
+      setDetailLoadError(false);
+      void loadNewsDetail(placeholder);
     },
-    [animateTransition, detailTranslateX, l],
+    [animateTransition, detailTranslateX, l, loadNewsDetail],
   );
 
   const openBookSearchDetail = useCallback(
@@ -437,9 +429,12 @@ export function NewsScreen() {
   const handleRefresh = () => {
     setRefreshing(true);
     const refresh = async () => {
+      newsDetailRequestIdRef.current += 1;
       detailTranslateX.stopAnimation(() => {
         detailTranslateX.setValue(0);
       });
+      setLoadingDetail(false);
+      setDetailLoadError(false);
       setSelected(null);
       await Promise.all([loadNews(), loadRecommendedBookCards()]);
       setRefreshing(false);
@@ -454,9 +449,12 @@ export function NewsScreen() {
   useFocusEffect(
     useCallback(() => {
       return () => {
+        newsDetailRequestIdRef.current += 1;
         detailTranslateX.stopAnimation(() => {
           detailTranslateX.setValue(0);
         });
+        setLoadingDetail(false);
+        setDetailLoadError(false);
         setSelected(null);
       };
     }, [detailTranslateX]),
@@ -485,65 +483,93 @@ export function NewsScreen() {
     triggerMaxDy: DETAIL_BACK_TRIGGER_MAX_DY,
   });
 
-  const renderDetail = (item: NewsItem) => (
-    <Animated.View
-      style={[
-        styles.detailSwipeContainer,
-        { transform: [{ translateX: detailTranslateX }] },
-      ]}
-      {...detailBackSwipeResponder.panHandlers}
-    >
-      <ScrollView
-        ref={detailScrollRef}
-        style={styles.container}
-        contentContainerStyle={styles.detailContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-          />
-        }
+  const handleRetryNewsDetail = useCallback(() => {
+    if (!selected) return;
+    void loadNewsDetail(selected);
+  }, [loadNewsDetail, selected]);
+
+  const renderDetail = (item: NewsItem) => {
+    const hasDetailBody = item.body.trim().length > 0;
+
+    return (
+      <Animated.View
+        style={[
+          styles.detailSwipeContainer,
+          { transform: [{ translateX: detailTranslateX }] },
+        ]}
+        {...detailBackSwipeResponder.panHandlers}
       >
-        <Pressable style={styles.breadcrumb} onPress={closeSelectedDetail}>
-          <Text style={styles.breadcrumbText}>{l('소식')}</Text>
-          <Text style={styles.breadcrumbSep}>›</Text>
-          <Text style={[styles.breadcrumbText, styles.breadcrumbActive]}>{l('상세보기')}</Text>
-        </Pressable>
-
-        <View style={styles.hero}>
-          {item.cover ? (
-            <LeftFocalCoverImage uri={item.cover} style={styles.heroImage} />
-          ) : (
-            <View style={styles.heroImage} />
-          )}
-        </View>
-
-        <View style={styles.detailHeaderRow}>
-          <Text style={styles.detailTitle}>{item.title}</Text>
-          <Text style={styles.detailDate}>{l('작성일 {date}', { date: item.date })}</Text>
-        </View>
-        {loadingDetail ? (
-          <View style={styles.detailBodySkeleton}>
-            {['100%', '95%', '100%', '85%', '90%', '100%', '80%', '70%'].map((w, i) => (
-              <SkeletonBox key={i} style={{ width: w as `${number}%`, height: 14 }} />
-            ))}
-          </View>
-        ) : (
-          <Text style={styles.detailBody}>{item.body || item.excerpt}</Text>
-        )}
-        {item.originalLink ? (
-          <Pressable
-            style={styles.detailLinkButton}
-            onPress={() => {
-              Linking.openURL(item.originalLink ?? '').catch(() => null);
-            }}
-          >
-            <Text style={styles.detailLinkText}>{l('원문 보기')}</Text>
+        <ScrollView
+          ref={detailScrollRef}
+          style={styles.container}
+          contentContainerStyle={styles.detailContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+            />
+          }
+        >
+          <Pressable style={styles.breadcrumb} onPress={closeSelectedDetail}>
+            <Text style={styles.breadcrumbText}>{l('소식')}</Text>
+            <Text style={styles.breadcrumbSep}>›</Text>
+            <Text style={[styles.breadcrumbText, styles.breadcrumbActive]}>{l('상세보기')}</Text>
           </Pressable>
-        ) : null}
-      </ScrollView>
-    </Animated.View>
-  );
+
+          <View style={styles.hero}>
+            {item.cover ? (
+              <LeftFocalCoverImage uri={item.cover} style={styles.heroImage} />
+            ) : (
+              <View style={styles.heroImage} />
+            )}
+          </View>
+
+          <View style={styles.detailHeaderRow}>
+            <Text style={styles.detailTitle}>{item.title}</Text>
+            <Text style={styles.detailDate}>{l('작성일 {date}', { date: item.date })}</Text>
+          </View>
+          {loadingDetail ? (
+            <View
+              style={styles.detailBodySkeleton}
+              accessibilityRole="progressbar"
+              accessibilityLabel={l('소식 내용을 불러오는 중입니다.')}
+            >
+              {['100%', '95%', '100%', '85%', '90%', '100%', '80%', '70%'].map((w, i) => (
+                <SkeletonBox key={i} style={{ width: w as `${number}%`, height: 14 }} />
+              ))}
+            </View>
+          ) : detailLoadError || !hasDetailBody ? (
+            <View style={styles.detailBodyError}>
+              <Text style={styles.detailBodyErrorText}>
+                {l('상세 내용을 불러오지 못했습니다.')}
+              </Text>
+              <Pressable
+                style={styles.detailBodyRetryButton}
+                onPress={handleRetryNewsDetail}
+                accessibilityRole="button"
+                accessibilityLabel={l('다시 시도')}
+              >
+                <MaterialIcons name="refresh" size={18} color={colors.white} />
+                <Text style={styles.detailBodyRetryText}>{l('다시 시도')}</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Text style={styles.detailBody}>{item.body}</Text>
+          )}
+          {item.originalLink ? (
+            <Pressable
+              style={styles.detailLinkButton}
+              onPress={() => {
+                Linking.openURL(item.originalLink ?? '').catch(() => null);
+              }}
+            >
+              <Text style={styles.detailLinkText}>{l('원문 보기')}</Text>
+            </Pressable>
+          ) : null}
+        </ScrollView>
+      </Animated.View>
+    );
+  };
 
   if (selected) {
     return <ScreenLayout title="소식">{renderDetail(selected)}</ScreenLayout>;
@@ -775,6 +801,30 @@ const styles = StyleSheet.create({
   },
   detailBodySkeleton: {
     gap: spacing.sm,
+  },
+  detailBodyError: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  detailBodyErrorText: {
+    ...typography.body1_3,
+    color: colors.gray4,
+    textAlign: 'center',
+  },
+  detailBodyRetryButton: {
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primary1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  detailBodyRetryText: {
+    ...typography.body2_2,
+    color: colors.white,
   },
   dot: {
     width: 8,

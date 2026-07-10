@@ -66,6 +66,8 @@ export type CursorPageState = {
   loadingMore: boolean;
 };
 
+export type AsyncLoadStatus = 'idle' | 'loading' | 'success' | 'error';
+
 export type BookshelfItem = {
   id: string;
   remoteMeetingId?: number;
@@ -85,6 +87,10 @@ export type BookshelfItem = {
 
 export type BookshelfDetailTab = 'TOPIC' | 'REVIEW' | 'REGULAR';
 export type BookshelfViewMode = 'GRID' | 'DETAIL' | 'REGULAR_GROUP';
+
+export type BookshelfDetailSection = 'base' | 'topic' | 'review' | 'regular';
+
+export type BookshelfDetailLoadState = Record<BookshelfDetailSection, AsyncLoadStatus>;
 
 export type BookshelfPostItem = {
   id: string;

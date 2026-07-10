@@ -1573,7 +1573,6 @@ function GroupHomeView({
     deletingBookshelf,
     editingBookshelfMeetingId, setEditingBookshelfMeetingId,
     openingNextMeeting,
-    loadingBookshelfDetail, setLoadingBookshelfDetail,
     photoViewer, setPhotoViewer,
     bookshelfComposerType,
     editingBookshelfPost,
@@ -1613,6 +1612,7 @@ function GroupHomeView({
     bookshelfTopicItems,
     bookshelfReviewItems,
     currentBookshelfTopicPageState,
+    currentBookshelfDetailLoadState,
     canSubmitBookshelfComposer,
     regularMeetingInfo,
     selectedRegularGroup,
@@ -1625,6 +1625,7 @@ function GroupHomeView({
     teamManageScrollRef,
     teamManageScrollViewRef,
     reloadBookshelfMeetingDetail,
+    retryBookshelfDetailSection,
     loadMoreBookshelfTopics,
     closeBookshelfBookSelector,
     closeBookshelfCalendar,
@@ -1706,6 +1707,8 @@ function GroupHomeView({
     submittingNoticeComment,
     noticeItems, setNoticeItems,
     noticeCommentsById, setNoticeCommentsById,
+    noticeDetailLoadStateById,
+    noticeCommentLoadStateById,
     noticeCommentPageStateByNoticeId, setNoticeCommentPageStateByNoticeId,
     shouldOpenTopNotice, setShouldOpenTopNotice,
     noticeComposerVisible, setNoticeComposerVisible,
@@ -1732,6 +1735,8 @@ function GroupHomeView({
     visiblePageNumbers,
     refreshNoticeComments,
     loadMoreNoticeComments,
+    retryNoticeDetail,
+    retryNoticeComments,
     handleOpenNoticeDetailByRemoteId,
     handleSubmitNoticeComment,
     handlePressCommentMenu,
@@ -1751,6 +1756,7 @@ function GroupHomeView({
     handleSubmitNotice,
     handleDeleteNotice,
     handleOpenNoticeBookshelf,
+    resetNoticeLoadState,
     resetNoticeOnGroupChange,
   } = noticeState;
   const pollEditingLocked = editingNoticeId !== null && noticeDraft.pollEnabled;
@@ -2091,6 +2097,7 @@ function GroupHomeView({
       setJoinRequests([]);
       setMembers([]);
       setNoticeItems([]);
+      resetNoticeOnGroupChange();
       setSelectedNoticeId(null);
       setNoticeCommentsById({});
       setNoticePollOptionsById({});
@@ -2098,6 +2105,7 @@ function GroupHomeView({
       setSubmittedVoteOptionIdsByNotice({});
       setVoteEditEnabledByNotice({});
       setBookshelfItems([]);
+      resetBookshelfOnGroupChange();
       setBookshelfTopicsByMeetingId({});
       setBookshelfTopicPageStateByMeetingId({});
       setBookshelfReviewsByMeetingId({});
@@ -2113,7 +2121,7 @@ function GroupHomeView({
       logout();
       requireAuth();
     },
-    [logout, requireAuth],
+    [logout, requireAuth, resetBookshelfOnGroupChange, resetNoticeOnGroupChange],
   );
   useEffect(() => {
     clubWorkspaceRequestIdRef.current += 1;
@@ -2294,6 +2302,7 @@ function GroupHomeView({
         setSelectedNoticeId((prev) =>
           prev && snapshot.noticeItems.some((n) => n.id === prev) ? prev : null,
         );
+        resetNoticeLoadState();
         setNoticeCommentsById({});
         setNoticePollOptionsById({});
         setSelectedVoteOptionIdsByNotice({});
@@ -2325,7 +2334,15 @@ function GroupHomeView({
         }
       }
     },
-    [group, group.clubId, handleAuthExpired, isManagedClub, isLoggedIn, setWorkspaceLoaded],
+    [
+      group,
+      group.clubId,
+      handleAuthExpired,
+      isManagedClub,
+      isLoggedIn,
+      resetNoticeLoadState,
+      setWorkspaceLoaded,
+    ],
   );
 
   useEffect(() => {
@@ -2763,6 +2780,14 @@ function GroupHomeView({
         ) {
           await reloadBookshelfMeetingDetail(selectedBookshelfBook, {
             suppressErrorToast: true,
+            sections: [
+              'base',
+              bookshelfDetailTab === 'TOPIC'
+                ? 'topic'
+                : bookshelfDetailTab === 'REVIEW'
+                  ? 'review'
+                  : 'regular',
+            ],
           });
         }
       } finally {
@@ -2773,6 +2798,7 @@ function GroupHomeView({
     void refresh();
   }, [
     activeTab,
+    bookshelfDetailTab,
     bookshelfViewMode,
     groupHomeRefreshing,
     loadClubParticipants,
@@ -3131,6 +3157,8 @@ function GroupHomeView({
           submittingNoticeComment={submittingNoticeComment}
           editingNoticeCommentId={editingNoticeCommentId}
           noticeCommentsById={noticeCommentsById}
+          noticeDetailLoadStateById={noticeDetailLoadStateById}
+          noticeCommentLoadStateById={noticeCommentLoadStateById}
           noticeCommentPageStateByNoticeId={noticeCommentPageStateByNoticeId}
           noticePollOptionsById={noticePollOptionsById}
           selectedVoteOptionIdsByNotice={selectedVoteOptionIdsByNotice}
@@ -3148,6 +3176,8 @@ function GroupHomeView({
           handleSubmitVote={handleSubmitVote}
           handleSubmitNoticeComment={handleSubmitNoticeComment}
           handlePressCommentMenu={handlePressCommentMenu}
+          retryNoticeDetail={retryNoticeDetail}
+          retryNoticeComments={retryNoticeComments}
           onCommentInputMeasured={scrollNoticeCommentInputToFocusTarget}
         />
       ) : null}
@@ -3173,7 +3203,7 @@ function GroupHomeView({
           bookshelfTopicItems={bookshelfTopicItems}
           bookshelfReviewItems={bookshelfReviewItems}
           currentBookshelfTopicPageState={currentBookshelfTopicPageState}
-          loadingBookshelfDetail={loadingBookshelfDetail}
+          bookshelfDetailLoadState={currentBookshelfDetailLoadState}
           regularMeetingInfo={regularMeetingInfo}
           selectedRegularGroupId={selectedRegularGroupId}
           selectedRegularGroup={selectedRegularGroup}
@@ -3193,6 +3223,7 @@ function GroupHomeView({
           handleOpenBookshelfEdit={handleOpenBookshelfEdit}
           handleDeleteSelectedBookshelf={handleDeleteSelectedBookshelf}
           handlePressManageRegularGroups={handlePressManageRegularGroups}
+          retryBookshelfDetailSection={retryBookshelfDetailSection}
         />
       ) : null}
       </ScrollView>
