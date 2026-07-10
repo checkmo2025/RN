@@ -33,3 +33,41 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     accessibilityLabel: '검색 온보딩',
   },
 ];
+
+export const CLUB_ONBOARDING_SLIDES: OnboardingSlide[] = [
+  {
+    key: 'club-home',
+    source: require('../../assets/onboarding/club/onboarding-club-home.png'),
+    accessibilityLabel: '모임 홈 안내',
+  },
+  {
+    key: 'club-notice',
+    source: require('../../assets/onboarding/club/onboarding-club-notice.png'),
+    accessibilityLabel: '모임 공지사항 안내',
+  },
+  {
+    key: 'club-book',
+    source: require('../../assets/onboarding/club/onboarding-club-book.png'),
+    accessibilityLabel: '모임 책장 안내',
+  },
+  {
+    key: 'club-topic',
+    source: require('../../assets/onboarding/club/onboarding-club-topic.png'),
+    accessibilityLabel: '모임 책장 발제 안내',
+  },
+  {
+    key: 'club-comment',
+    source: require('../../assets/onboarding/club/onboarding-club-comment.png'),
+    accessibilityLabel: '모임 책장 한줄평 안내',
+  },
+  {
+    key: 'club-meeting',
+    source: require('../../assets/onboarding/club/onboarding-club-meeting.png'),
+    accessibilityLabel: '모임 책장 정기모임 안내',
+  },
+  {
+    key: 'club-admin',
+    source: require('../../assets/onboarding/club/onboarding-club-admin.png'),
+    accessibilityLabel: '모임 관리 안내',
+  },
+];

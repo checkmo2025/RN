@@ -41,6 +41,7 @@ import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu
 import { DialogOverlay } from '../components/common/DialogOverlay';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
 import { FormTextInput } from '../components/common/FormTextInput';
+import { OnboardingScreen } from './onboarding/OnboardingScreen';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { checkNicknameDuplicate, issueProfileImageUploadUrl } from '../services/api/authApi';
@@ -85,6 +86,7 @@ import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { INPUT_LIMITS } from '../constants/inputLimits';
 import { nicknameRegex } from '../constants/validation';
 import { BOOK_DEFAULT_IMAGE } from '../constants/defaultAssets';
+import { CLUB_ONBOARDING_SLIDES, ONBOARDING_SLIDES } from '../constants/onboardingSlides';
 import {
   useNotificationState,
   notificationSettingRows,
@@ -126,6 +128,7 @@ type SettingItemKey =
   | 'report'
   | 'blocked'
   | 'notifications'
+  | 'usageGuide'
   | 'contact'
   | 'terms'
   | 'version'
@@ -142,6 +145,8 @@ type SettingsSection = {
   iconUri: typeof MYPAGE_SETTING_PROFILE_URI;
   items: SettingsItem[];
 };
+
+type OnboardingPreview = 'app' | 'club';
 
 type StoryCard = {
   id: string;
@@ -353,6 +358,7 @@ export function MyPageScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedSetting, setSelectedSetting] = useState<SettingItemKey | null>(null);
+  const [onboardingPreview, setOnboardingPreview] = useState<OnboardingPreview | null>(null);
   const [stories, setStories] = useState<StoryCard[]>([]);
   const [deletingDraftStoryId, setDeletingDraftStoryId] = useState<number | null>(null);
   const [blockedMembers, setBlockedMembers] = useState<BlockedMember[]>([]);
@@ -456,6 +462,7 @@ export function MyPageScreen() {
     logout,
     navigation,
     onCloseSettings: () => {
+      setOnboardingPreview(null);
       setShowSettings(false);
       setSelectedSetting(null);
     },
@@ -486,6 +493,8 @@ export function MyPageScreen() {
           return t('settings.blocked');
         case 'notifications':
           return t('settings.notifications');
+        case 'usageGuide':
+          return t('settings.usageGuide');
         case 'contact':
           return t('settings.contact');
         case 'terms':
@@ -1012,6 +1021,7 @@ export function MyPageScreen() {
   ]);
 
   const handleCloseSelectedSetting = useCallback(() => {
+    setOnboardingPreview(null);
     setSelectedSetting(null);
   }, []);
 
@@ -1757,6 +1767,7 @@ export function MyPageScreen() {
         setActiveTab('내 책 이야기');
         setShowSettings(false);
         setSelectedSetting(null);
+        setOnboardingPreview(null);
         setShowFollowPage(false);
         setActiveFollowTab('FOLLOWER');
         setGroupMenu(null);
@@ -1973,6 +1984,7 @@ export function MyPageScreen() {
         title: t('settings.sections.other'),
         iconUri: settingOtherIcon,
         items: [
+          { key: 'usageGuide', label: getSettingLabel('usageGuide') },
           { key: 'contact', label: getSettingLabel('contact') },
           { key: 'terms', label: getSettingLabel('terms') },
           { key: 'language', label: getSettingLabel('language') },
@@ -2003,6 +2015,38 @@ export function MyPageScreen() {
           <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
           <Text style={styles.detailDivider} />
           <Text style={styles.detailBody}>{t('settings.versionUpdatedAt')}</Text>
+        </View>
+      );
+    }
+
+    if (selectedSetting === 'usageGuide') {
+      const guideItems: Array<{ key: OnboardingPreview; label: string }> = [
+        { key: 'app', label: t('settings.appOnboarding') },
+        { key: 'club', label: t('settings.clubOnboarding') },
+      ];
+
+      return (
+        <View style={styles.settingsDetailWrap}>
+          {back}
+          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
+          <Text style={styles.detailDivider} />
+          <View style={styles.usageGuideList}>
+            {guideItems.map((item) => (
+              <Pressable
+                key={item.key}
+                style={({ pressed }) => [styles.usageGuideItem, pressed && styles.pressed]}
+                onPress={() => setOnboardingPreview(item.key)}
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
+              >
+                <Text style={styles.usageGuideItemText}>{item.label}</Text>
+                <View style={styles.usageGuideAction}>
+                  <Text style={styles.usageGuideActionText}>{t('settings.openGuide')}</Text>
+                  <MaterialIcons name="chevron-right" size={20} color={colors.primary1} />
+                </View>
+              </Pressable>
+            ))}
+          </View>
         </View>
       );
     }
@@ -2689,6 +2733,8 @@ export function MyPageScreen() {
   }
 
   if (showSettings) {
+    const previewIsClub = onboardingPreview === 'club';
+
     return (
       <ScreenLayout title={t('profile.screenTitle')}>
         <ScrollView
@@ -2767,6 +2813,16 @@ export function MyPageScreen() {
             </>
           )}
         </ScrollView>
+        {onboardingPreview ? (
+          <OnboardingScreen
+            key={onboardingPreview}
+            visible
+            onDone={() => setOnboardingPreview(null)}
+            slides={previewIsClub ? CLUB_ONBOARDING_SLIDES : ONBOARDING_SLIDES}
+            skipButtonLabel={previewIsClub ? '건너뛰고 모임 보기' : '건너뛰고 시작하기'}
+            doneButtonLabel={previewIsClub ? '모임 시작하기' : '책모 시작하기'}
+          />
+        ) : null}
       </ScreenLayout>
     );
   }
@@ -3026,6 +3082,36 @@ const styles = StyleSheet.create({
     color: colors.gray6,
   },
   languageItemTextSelected: {
+    color: colors.primary1,
+  },
+  usageGuideList: {
+    gap: spacing.sm,
+  },
+  usageGuideItem: {
+    minHeight: 56,
+    borderWidth: 1,
+    borderColor: colors.subbrown4,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  usageGuideItemText: {
+    ...typography.body1_2,
+    flex: 1,
+    color: colors.gray6,
+  },
+  usageGuideAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  usageGuideActionText: {
+    ...typography.body2_3,
     color: colors.primary1,
   },
   formBlock: {

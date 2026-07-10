@@ -45,6 +45,7 @@ import { navigateToHome, parsePositiveIntParam } from '../navigation/navigateToH
 import { useConsumeRouteParam } from '../hooks/useConsumeRouteParam';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { BookFlipLoadingScreen } from '../components/common/BookFlipLoadingScreen';
+import { OnboardingScreen } from './onboarding/OnboardingScreen';
 import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { FloatingActionButton } from '../components/common/FloatingActionButton';
@@ -88,7 +89,12 @@ import {
 } from '../services/api/clubApi';
 import { CATEGORY_LABEL_TO_CODE } from '../constants/domain/category';
 import { PARTICIPANT_LABEL_TO_CODE } from '../constants/domain/participant';
+import { CLUB_ONBOARDING_SLIDES } from '../constants/onboardingSlides';
 import { fetchMyProfile, setFollowingMember } from '../services/api/memberApi';
+import {
+  getClubOnboardingSeen,
+  setClubOnboardingSeen,
+} from '../services/onboardingStore';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { showAlertAfterKeyboardDismiss } from '../utils/alertAfterKeyboardDismiss';
@@ -467,6 +473,9 @@ export function MeetingScreen() {
   const [pendingOpenMeetingId, setPendingOpenMeetingId] = useState<number | null>(null);
   const [pendingOpenNoticeId, setPendingOpenNoticeId] = useState<number | null>(null);
   const [openingClubLoading, setOpeningClubLoading] = useState(false);
+  const [clubOnboardingVisible, setClubOnboardingVisible] = useState(false);
+  const clubOnboardingCheckInFlightRef = useRef(false);
+  const clubOnboardingHandledRef = useRef(false);
 
   const [search, setSearch] = useState('');
   const [activeInputFilter, setActiveInputFilter] = useState<MeetingInputFilter | null>(null);
@@ -555,6 +564,33 @@ export function MeetingScreen() {
     ]);
   }, [loadDiscoverGroups, loadMyGroups]);
 
+  const showClubOnboardingIfNeeded = useCallback(async () => {
+    if (clubOnboardingHandledRef.current || clubOnboardingCheckInFlightRef.current) return;
+
+    clubOnboardingCheckInFlightRef.current = true;
+    try {
+      const seen = await getClubOnboardingSeen();
+      if (seen || clubOnboardingHandledRef.current) {
+        clubOnboardingHandledRef.current = true;
+        return;
+      }
+
+      clubOnboardingHandledRef.current = true;
+      setClubOnboardingVisible(true);
+    } catch {
+      // 온보딩 상태를 읽지 못해도 모임 진입은 막지 않는다.
+    } finally {
+      clubOnboardingCheckInFlightRef.current = false;
+    }
+  }, []);
+
+  const handleClubOnboardingDone = useCallback(() => {
+    setClubOnboardingVisible(false);
+    void setClubOnboardingSeen().catch(() => {
+      // 저장 실패 시 다음 실행에서 다시 노출될 수 있지만 현재 진입은 유지한다.
+    });
+  }, []);
+
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       if (showCreate || activeGroup) return;
@@ -634,8 +670,12 @@ export function MeetingScreen() {
   );
 
   const handleClubCreated = useCallback(async () => {
-    await refreshMeetingLists();
-  }, [refreshMeetingLists]);
+    try {
+      await refreshMeetingLists();
+    } finally {
+      await showClubOnboardingIfNeeded();
+    }
+  }, [refreshMeetingLists, showClubOnboardingIfNeeded]);
 
   const scrollMeetingSearchToTop = useCallback((animated = false) => {
     requestAnimationFrame(() => {
@@ -957,7 +997,8 @@ export function MeetingScreen() {
     setActiveGroup(group);
     await waitForMinimumLoading(loadingStartedAt);
     setOpeningClubLoading(false);
-  }, []);
+    await showClubOnboardingIfNeeded();
+  }, [showClubOnboardingIfNeeded]);
 
   const openGroupHome = useCallback(
     (group: Group) => {
@@ -1087,6 +1128,16 @@ export function MeetingScreen() {
     void refresh();
   };
 
+  const clubOnboarding = (
+    <OnboardingScreen
+      visible={clubOnboardingVisible}
+      onDone={handleClubOnboardingDone}
+      slides={CLUB_ONBOARDING_SLIDES}
+      skipButtonLabel="건너뛰고 모임 보기"
+      doneButtonLabel="모임 시작하기"
+    />
+  );
+
   if (showCreate) {
     return (
       <ScreenLayout title={l('모임')} onPressLogo={handlePressHeaderLogo}>
@@ -1095,6 +1146,7 @@ export function MeetingScreen() {
           onCreated={handleClubCreated}
           onDirtyChange={setCreateDraftDirty}
         />
+        {clubOnboarding}
       </ScreenLayout>
     );
   }
@@ -1120,6 +1172,7 @@ export function MeetingScreen() {
             </View>
           ) : null}
         </View>
+        {clubOnboarding}
       </ScreenLayout>
     );
   }
@@ -1389,6 +1442,7 @@ export function MeetingScreen() {
           </KeyboardAvoidingView>
         </Pressable>
       </Modal>
+      {clubOnboarding}
     </ScreenLayout>
   );
 }

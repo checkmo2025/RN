@@ -21,16 +21,25 @@ import { triggerSelectionHaptic } from '../../utils/haptics';
 type OnboardingScreenProps = {
   visible: boolean;
   onDone: () => void;
+  slides?: OnboardingSlide[];
+  skipButtonLabel?: string;
+  doneButtonLabel?: string;
 };
 
-export function OnboardingScreen({ visible, onDone }: OnboardingScreenProps) {
+export function OnboardingScreen({
+  visible,
+  onDone,
+  slides = ONBOARDING_SLIDES,
+  skipButtonLabel = '건너뛰고 시작하기',
+  doneButtonLabel = '책모 시작하기',
+}: OnboardingScreenProps) {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const [index, setIndex] = useState(0);
 
-  const lastIndex = ONBOARDING_SLIDES.length - 1;
+  const lastIndex = slides.length - 1;
   const isLast = index >= lastIndex;
-  const buttonLabel = isLast ? '책모 시작하기' : '건너뛰고 시작하기';
+  const buttonLabel = isLast ? doneButtonLabel : skipButtonLabel;
 
   const handleMomentumEnd = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -79,7 +88,7 @@ export function OnboardingScreen({ visible, onDone }: OnboardingScreenProps) {
       <View style={styles.container}>
         <FlatList
           style={styles.carousel}
-          data={ONBOARDING_SLIDES}
+          data={slides}
           keyExtractor={(item) => item.key}
           renderItem={renderItem}
           horizontal
@@ -109,7 +118,7 @@ export function OnboardingScreen({ visible, onDone }: OnboardingScreenProps) {
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
           >
-            {ONBOARDING_SLIDES.map((slide, slideIndex) => (
+            {slides.map((slide, slideIndex) => (
               <View
                 key={slide.key}
                 style={[
