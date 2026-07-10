@@ -334,6 +334,7 @@ export function StoryScreen() {
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [detailLoadError, setDetailLoadError] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [editingStoryId, setEditingStoryId] = useState<number | null>(null);
   const [draftStoryId, setDraftStoryId] = useState<number | null>(null);
@@ -363,6 +364,7 @@ export function StoryScreen() {
   const hasNextStoriesRef = useRef(false);
   const nextStoryCursorRef = useRef<number | null>(null);
   const storyFeedRequestIdRef = useRef(0);
+  const storyDetailRequestIdRef = useRef(0);
   const lastEndReachedAtRef = useRef(0);
   const detailScrollRef = useRef<ScrollView>(null);
   const detailScrollYRef = useRef(0);
@@ -480,11 +482,14 @@ export function StoryScreen() {
     detailTranslateX.stopAnimation(() => {
       detailTranslateX.setValue(0);
     });
+    storyDetailRequestIdRef.current += 1;
     selectedStoryValueRef.current = null;
     editingCommentIdRef.current = null;
     editingCommentOriginalTextRef.current = '';
     commentDraftTextRef.current = '';
     setSelectedStory(null);
+    setIsDetailLoading(false);
+    setDetailLoadError(false);
     setEditingCommentId(null);
     setReplyTarget(null);
     setCommentMenu(null);
@@ -1113,20 +1118,47 @@ export function StoryScreen() {
   const loadStoryDetail = useCallback(
     async (story: Story) => {
       if (typeof story.remoteId !== 'number') return;
+      const requestId = ++storyDetailRequestIdRef.current;
       setIsDetailLoading(true);
+      setDetailLoadError(false);
       try {
         const detail = await fetchBookStoryDetail(story.remoteId, {
           viewerAuthenticated: isLoggedIn,
         });
-        if (!detail) return;
+        if (requestId !== storyDetailRequestIdRef.current) return;
+        if (!detail) {
+          throw new Error('Empty book story detail response');
+        }
         const mapped = mapRemoteDetailToStory(detail, l, story);
+        storyLog.debug('detail_loaded', {
+          remoteId: story.remoteId,
+          feedBodyLength: story.fullText.length,
+          detailBodyLength: detail.description.length,
+        });
+        selectedStoryValueRef.current = mapped;
         applyStoryUpdate(mapped);
       } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast(l('책이야기 상세를 불러오지 못했습니다.'));
-        }
+        if (requestId !== storyDetailRequestIdRef.current) return;
+        storyLog.warn('detail_load_failed', {
+          remoteId: story.remoteId,
+          error,
+        });
+        setDetailLoadError(true);
+        showToast(
+          resolveApiError(
+            error,
+            {
+              401: l('책이야기 상세를 보려면 로그인이 필요합니다.'),
+              403: l('이 책이야기를 볼 권한이 없습니다.'),
+              404: l('해당 책이야기를 찾을 수 없습니다.'),
+            },
+            l('책이야기 상세를 불러오지 못했습니다.'),
+          ),
+        );
       } finally {
-        setIsDetailLoading(false);
+        if (requestId === storyDetailRequestIdRef.current) {
+          setIsDetailLoading(false);
+        }
       }
     },
     [applyStoryUpdate, isLoggedIn, l],
@@ -1157,15 +1189,23 @@ export function StoryScreen() {
       setCommentMenu(null);
       setStoryMenu(false);
 
+      const requestId = ++storyDetailRequestIdRef.current;
+      setIsDetailLoading(true);
+      setDetailLoadError(false);
       try {
         const detail = await fetchBookStoryDetail(remoteId, {
           viewerAuthenticated: isLoggedIn,
         });
+        if (requestId !== storyDetailRequestIdRef.current) return false;
         if (!detail) {
           showToast(l('해당 책이야기를 찾을 수 없습니다.'));
           return false;
         }
         const mapped = mapRemoteDetailToStory(detail, l);
+        storyLog.debug('detail_loaded_by_route', {
+          remoteId,
+          detailBodyLength: detail.description.length,
+        });
         setStories((prev) => {
           const exists = prev.some((story) => story.id === mapped.id);
           if (!exists) return [mapped, ...prev];
@@ -1173,12 +1213,27 @@ export function StoryScreen() {
         });
         selectedStoryValueRef.current = mapped;
         setSelectedStory(mapped);
+        setDetailLoadError(false);
         return true;
       } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast(l('책이야기 상세를 불러오지 못했습니다.'));
-        }
+        if (requestId !== storyDetailRequestIdRef.current) return false;
+        storyLog.warn('detail_load_by_route_failed', { remoteId, error });
+        showToast(
+          resolveApiError(
+            error,
+            {
+              401: l('책이야기 상세를 보려면 로그인이 필요합니다.'),
+              403: l('이 책이야기를 볼 권한이 없습니다.'),
+              404: l('해당 책이야기를 찾을 수 없습니다.'),
+            },
+            l('책이야기 상세를 불러오지 못했습니다.'),
+          ),
+        );
         return false;
+      } finally {
+        if (requestId === storyDetailRequestIdRef.current) {
+          setIsDetailLoading(false);
+        }
       }
     },
     [animateTransition, detailTranslateX, isLoggedIn, l],
@@ -2011,6 +2066,7 @@ export function StoryScreen() {
       setIsComposing(false);
       setComposeInitialDraft(EMPTY_COMPOSE_INITIAL_DRAFT);
       setSelectedStory(story);
+      setDetailLoadError(false);
       setEditingCommentId(null);
       setEditingCommentOriginalText('');
       setReplyTarget(null);
@@ -2022,6 +2078,12 @@ export function StoryScreen() {
     [animateTransition, detailTranslateX, loadStoryDetail],
   );
 
+  const handleRetryStoryDetail = useCallback(() => {
+    const story = selectedStoryValueRef.current;
+    if (!story) return;
+    void loadStoryDetail(story);
+  }, [loadStoryDetail]);
+
   const handleRefreshSelectedStory = useCallback(() => {
     if (!selectedStory || typeof selectedStory.remoteId !== 'number') {
       return;
@@ -2031,24 +2093,36 @@ export function StoryScreen() {
 
     const refresh = async () => {
       try {
-        const detail = await fetchBookStoryDetail(selectedStory.remoteId as number);
+        const detail = await fetchBookStoryDetail(selectedStory.remoteId as number, {
+          viewerAuthenticated: isLoggedIn,
+        });
         if (!detail) {
           showToast(l('해당 책이야기를 찾을 수 없습니다.'));
           return;
         }
         const mapped = mapRemoteDetailToStory(detail, l, selectedStory);
+        selectedStoryValueRef.current = mapped;
+        setDetailLoadError(false);
         applyStoryUpdate(mapped);
       } catch (error) {
-        if (!(error instanceof ApiError)) {
-          showToast(l('책이야기 상세를 새로고침하지 못했습니다.'));
-        }
+        showToast(
+          resolveApiError(
+            error,
+            {
+              401: l('로그인 상태를 확인해 주십시오.'),
+              403: l('이 책이야기를 볼 권한이 없습니다.'),
+              404: l('해당 책이야기를 찾을 수 없습니다.'),
+            },
+            l('책이야기 상세를 새로고침하지 못했습니다.'),
+          ),
+        );
       } finally {
         setDetailRefreshing(false);
       }
     };
 
     void refresh();
-  }, [applyStoryUpdate, l, selectedStory]);
+  }, [applyStoryUpdate, isLoggedIn, l, selectedStory]);
 
   const handleToggleLike = (id: string) => {
     requireAuth(() => {
@@ -2203,6 +2277,7 @@ export function StoryScreen() {
   useFocusEffect(
     useCallback(() => {
       return () => {
+        storyDetailRequestIdRef.current += 1;
         selectedStoryValueRef.current = null;
         isComposingRef.current = false;
         composeInitialDraftRef.current = EMPTY_COMPOSE_INITIAL_DRAFT;
@@ -2210,6 +2285,8 @@ export function StoryScreen() {
         editingCommentIdRef.current = null;
         editingCommentOriginalTextRef.current = '';
         setSelectedStory(null);
+        setIsDetailLoading(false);
+        setDetailLoadError(false);
         setIsComposing(false);
         setEditingStoryId(null);
         setComposeInitialDraft(EMPTY_COMPOSE_INITIAL_DRAFT);
@@ -2551,7 +2628,34 @@ export function StoryScreen() {
           )}
 
           <Text style={styles.detailTitle}>{selectedStory.title}</Text>
-          <Text style={styles.detailBody}>{selectedStory.fullText}</Text>
+          {isDetailLoading ? (
+            <View
+              style={styles.detailBodyLoading}
+              accessibilityRole="progressbar"
+              accessibilityLabel={l('책이야기 본문을 불러오는 중입니다.')}
+            >
+              <SkeletonBox style={styles.detailBodySkeletonLine} />
+              <SkeletonBox style={styles.detailBodySkeletonLine} />
+              <SkeletonBox style={styles.detailBodySkeletonShortLine} />
+            </View>
+          ) : detailLoadError ? (
+            <View style={styles.detailBodyError}>
+              <Text style={styles.detailBodyErrorText}>
+                {l('전체 본문을 불러오지 못했습니다.')}
+              </Text>
+              <Pressable
+                style={styles.detailBodyRetryButton}
+                onPress={handleRetryStoryDetail}
+                accessibilityRole="button"
+                accessibilityLabel={l('책이야기 본문 다시 불러오기')}
+              >
+                <MaterialIcons name="refresh" size={18} color={colors.white} />
+                <Text style={styles.detailBodyRetryText}>{l('다시 시도')}</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Text style={styles.detailBody}>{selectedStory.fullText}</Text>
+          )}
 
           <View style={styles.commentSection} onLayout={handleCommentSectionLayout}>
             <Text style={styles.commentHeader}>{l('댓글')}</Text>
@@ -3799,6 +3903,43 @@ const styles = StyleSheet.create({
     ...typography.body1_3_relaxed,
     color: colors.gray6,
     marginTop: spacing.xs,
+  },
+  detailBodyLoading: {
+    marginTop: spacing.xs,
+    gap: spacing.xs,
+  },
+  detailBodySkeletonLine: {
+    width: '100%',
+    height: 18,
+  },
+  detailBodySkeletonShortLine: {
+    width: '64%',
+    height: 18,
+  },
+  detailBodyError: {
+    marginTop: spacing.xs,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  detailBodyErrorText: {
+    ...typography.body1_3,
+    color: colors.gray4,
+    textAlign: 'center',
+  },
+  detailBodyRetryButton: {
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primary1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  detailBodyRetryText: {
+    ...typography.body2_2,
+    color: colors.white,
   },
   commentSection: {
     marginTop: spacing.lg,
