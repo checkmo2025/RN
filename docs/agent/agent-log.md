@@ -3737,3 +3737,10 @@ export const interactionOpacity = {
 - E2E 리포트와 카탈로그를 `tests/e2e/reports` 아래로 이동하고 리포트 생성 기본 경로 갱신
 - EAS Build 업로드에서 E2E 테스트/리포트가 제외되도록 `.easignore`에 `tests/` 추가
 - README의 archive 문서 링크와 `useBookSearch` 계획 문서 주석 경로 정리
+
+# 2026-07-10 15:34:09 KST 독서동아리 운영진 소개서 보강
+
+- 목차 구분선 제거, 본문 대분류 번호 추가, 페이지별 하단 핵심 문구 스타일 통일
+- RN 고해상도 공지·발제·정기모임·한줄평 화면을 활용한 실제 운영 예시 페이지 추가
+- 목차와 이후 페이지 번호를 12페이지 체계로 갱신
+- 16:9 PDF 렌더링과 마지막 장 App Store·이메일 링크 유지 확인
