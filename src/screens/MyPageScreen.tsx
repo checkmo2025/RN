@@ -2839,7 +2839,7 @@ export function MyPageScreen() {
                     <Text style={styles.profileSub}>{t('profile.subscribing')} {followingCount}</Text>
                   </Pressable>
                 </View>
-                <Text style={styles.profileDesc} numberOfLines={2}>
+                <Text style={styles.profileDesc}>
                   {displayProfileDesc}
                 </Text>
                 {profileCategories.length > 0 ? (

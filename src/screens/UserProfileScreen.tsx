@@ -932,7 +932,7 @@ export function UserProfileScreen() {
                       </Text>
                     </Pressable>
                   </View>
-                  <Text style={styles.profileDesc} numberOfLines={3}>
+                  <Text style={styles.profileDesc}>
                     {profileDesc}
                   </Text>
                   {profileCategories.length > 0 ? (
