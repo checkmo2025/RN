@@ -7,8 +7,10 @@ import * as Notifications from 'expo-notifications';
 import {
   registerPushDevice,
   unregisterPushDevice,
+  type PushDeviceRegistrationResult,
   type PushPlatform,
 } from '../api/pushDeviceApi';
+import { ApiError } from '../api/http';
 import { createLogger } from '../../utils/logger';
 import {
   clearStoredPushRegistrationCache,
@@ -35,15 +37,25 @@ type PushRegistrationResult =
         | 'not-physical-device'
         | 'permission-denied'
         | 'permission-undetermined'
+        | 'channel-disabled'
         | 'missing-project-id'
         | 'user-disabled';
     };
+
+type RegisteredPushResult = Extract<PushRegistrationResult, { status: 'registered' }>;
 
 export type PushPreferenceUpdateResult =
   | PushRegistrationResult
   | {
       status: 'disabled';
     };
+
+export type PushNotificationsState = {
+  preferenceEnabled: boolean;
+  permissionStatus: 'granted' | 'denied' | 'undetermined';
+  channelEnabled: boolean;
+  enabled: boolean;
+};
 
 type ExpoConfigLike = {
   version?: string;
@@ -63,6 +75,7 @@ type ExpoConfigLike = {
 const logger = createLogger('PushNotifications');
 
 let notificationHandlerConfigured = false;
+let pushDeviceRegistrationInFlight: Promise<RegisteredPushResult> | null = null;
 
 export function configurePushNotificationHandler(): void {
   if (notificationHandlerConfigured) return;
@@ -92,6 +105,17 @@ async function ensureAndroidPushChannelAsync(): Promise<void> {
     enableLights: true,
     showBadge: true,
   });
+}
+
+async function isAndroidPushChannelEnabledAsync(): Promise<boolean> {
+  if (Platform.OS !== 'android') return true;
+
+  try {
+    const channel = await Notifications.getNotificationChannelAsync(CHECKMO_PUSH_CHANNEL_ID);
+    return !channel || channel.importance !== Notifications.AndroidImportance.NONE;
+  } catch {
+    return true;
+  }
 }
 
 function resolvePushPlatform(): PushPlatform | null {
@@ -156,6 +180,83 @@ async function ensureNotificationPermissionAsync(
   return String(requestedPermission.status) === 'denied' ? 'denied' : 'undetermined';
 }
 
+export async function getPushNotificationsStateAsync(): Promise<PushNotificationsState> {
+  const preferenceEnabled = await getStoredPushNotificationsEnabled();
+  const platform = resolvePushPlatform();
+  if (!platform || !Device.isDevice) {
+    return {
+      preferenceEnabled,
+      permissionStatus: 'undetermined',
+      channelEnabled: platform !== 'ANDROID',
+      enabled: false,
+    };
+  }
+
+  const [permissionStatus, channelEnabled] = await Promise.all([
+    ensureNotificationPermissionAsync(false),
+    isAndroidPushChannelEnabledAsync(),
+  ]);
+
+  return {
+    preferenceEnabled,
+    permissionStatus,
+    channelEnabled,
+    enabled: preferenceEnabled && permissionStatus === 'granted' && channelEnabled,
+  };
+}
+
+function assertActivePushRegistration(
+  registration: PushDeviceRegistrationResult,
+): PushDeviceRegistrationResult {
+  if (registration.active) return registration;
+  throw new ApiError(
+    '푸시 디바이스가 활성화되지 않았습니다.',
+    409,
+    'PUSH_DEVICE_INACTIVE',
+    registration,
+  );
+}
+
+async function registerPushDeviceSingleFlight(
+  platform: PushPlatform,
+  projectId: string,
+): Promise<RegisteredPushResult> {
+  if (pushDeviceRegistrationInFlight) return pushDeviceRegistrationInFlight;
+
+  const registrationPromise = (async (): Promise<RegisteredPushResult> => {
+    const expoPushToken = (await Notifications.getExpoPushTokenAsync({ projectId })).data.trim();
+    const installationId = await getStoredPushInstallationId();
+    const previousExpoPushToken = await getStoredLastExpoPushToken();
+    const registration = assertActivePushRegistration(
+      await registerPushDevice({
+        installationId,
+        expoPushToken,
+        platform,
+        appVersion: resolveAppVersion(),
+        buildNumber: resolveBuildNumber(),
+      }),
+    );
+
+    await saveStoredPushInstallationId(registration.installationId);
+    await saveStoredLastExpoPushToken(expoPushToken);
+
+    return {
+      status: 'registered',
+      installationId: registration.installationId,
+      tokenChanged: previousExpoPushToken !== expoPushToken,
+    };
+  })();
+
+  pushDeviceRegistrationInFlight = registrationPromise;
+  try {
+    return await registrationPromise;
+  } finally {
+    if (pushDeviceRegistrationInFlight === registrationPromise) {
+      pushDeviceRegistrationInFlight = null;
+    }
+  }
+}
+
 export async function registerCurrentPushDeviceAsync(
   options: { requestPermission?: boolean; ignoreStoredPreference?: boolean } = {},
 ): Promise<PushRegistrationResult> {
@@ -180,36 +281,32 @@ export async function registerCurrentPushDeviceAsync(
       reason: permissionStatus === 'denied' ? 'permission-denied' : 'permission-undetermined',
     };
   }
+  if (!(await isAndroidPushChannelEnabledAsync())) {
+    return { status: 'skipped', reason: 'channel-disabled' };
+  }
 
   const projectId = resolveEasProjectId();
   if (!projectId) {
     return { status: 'skipped', reason: 'missing-project-id' };
   }
+  if (!options.ignoreStoredPreference && !(await getStoredPushNotificationsEnabled())) {
+    return { status: 'skipped', reason: 'user-disabled' };
+  }
 
-  const expoPushToken = (await Notifications.getExpoPushTokenAsync({ projectId })).data.trim();
-  const installationId = await getStoredPushInstallationId();
-  const previousExpoPushToken = await getStoredLastExpoPushToken();
-  const registration = await registerPushDevice({
-    installationId,
-    expoPushToken,
-    platform,
-    appVersion: resolveAppVersion(),
-    buildNumber: resolveBuildNumber(),
-  });
-
-  await saveStoredPushInstallationId(registration.installationId);
-  await saveStoredLastExpoPushToken(expoPushToken);
-
-  return {
-    status: 'registered',
-    installationId: registration.installationId,
-    tokenChanged: previousExpoPushToken !== expoPushToken,
-  };
+  return registerPushDeviceSingleFlight(platform, projectId);
 }
 
 export async function unregisterCurrentPushDeviceAsync(
   options: { deleteInstallationId?: boolean } = {},
 ): Promise<void> {
+  if (pushDeviceRegistrationInFlight) {
+    try {
+      await pushDeviceRegistrationInFlight;
+    } catch {
+      // Continue with any installation ID that remains after a failed registration.
+    }
+  }
+
   const installationId = await getStoredPushInstallationId();
   try {
     if (installationId) {
@@ -239,7 +336,13 @@ export async function setPushNotificationsEnabledAsync(
       requestPermission: true,
       ignoreStoredPreference: true,
     });
-    await saveStoredPushNotificationsEnabled(result.status === 'registered');
+    const keepEnabledIntent =
+      result.status === 'registered' ||
+      (result.status === 'skipped' &&
+        (result.reason === 'permission-denied' ||
+          result.reason === 'permission-undetermined' ||
+          result.reason === 'channel-disabled'));
+    await saveStoredPushNotificationsEnabled(keepEnabledIntent);
     return result;
   } catch (error) {
     await saveStoredPushNotificationsEnabled(false);

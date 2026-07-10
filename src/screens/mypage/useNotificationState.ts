@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, Linking } from 'react-native';
 import { type NavigationProp, type ParamListBase } from '@react-navigation/native';
 import { ApiError } from '../../services/api/http';
 import {
@@ -11,9 +12,7 @@ import {
   type NotificationSettingType,
 } from '../../services/api/notificationApi';
 import {
-  getStoredPushNotificationsEnabled,
-} from '../../services/push/pushDeviceStorage';
-import {
+  getPushNotificationsStateAsync,
   logPushRegistrationError,
   setPushNotificationsEnabledAsync,
   type PushPreferenceUpdateResult,
@@ -74,11 +73,12 @@ export function useNotificationState({ isLoggedIn, navigation }: Params) {
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettingInfo>(
     defaultNotificationSettings,
   );
-  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(true);
+  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(false);
   const [loadingNotificationSettings, setLoadingNotificationSettings] = useState(false);
   const [togglingNotificationSetting, setTogglingNotificationSetting] =
     useState<NotificationSettingType | null>(null);
   const [togglingPushNotifications, setTogglingPushNotifications] = useState(false);
+  const retryPushEnableAfterSettingsRef = useRef(false);
 
   const mapNotificationToAlarm = useCallback((item: NotificationItem): AlarmItem => {
     return {
@@ -145,29 +145,34 @@ export function useNotificationState({ isLoggedIn, navigation }: Params) {
   const loadNotificationSettingInfo = useCallback(async () => {
     if (!isLoggedIn) {
       setNotificationSettings(defaultNotificationSettings);
-      setPushNotificationsEnabled(true);
+      setPushNotificationsEnabled(false);
       return;
     }
 
     setLoadingNotificationSettings(true);
-    try {
-      const [settingInfo, storedPushNotificationsEnabled] = await Promise.all([
-        fetchNotificationSettings(),
-        getStoredPushNotificationsEnabled(),
-      ]);
-      setNotificationSettings(settingInfo);
-      setPushNotificationsEnabled(storedPushNotificationsEnabled);
-    } catch (error) {
+    const [settingResult, pushStateResult] = await Promise.allSettled([
+      fetchNotificationSettings(),
+      getPushNotificationsStateAsync(),
+    ]);
+
+    if (settingResult.status === 'fulfilled') {
+      setNotificationSettings(settingResult.value);
+    } else {
+      const error = settingResult.reason;
       if (error instanceof ApiError && error.status === 401) {
         setNotificationSettings(defaultNotificationSettings);
-        return;
-      }
-      if (!(error instanceof ApiError)) {
+      } else if (!(error instanceof ApiError)) {
         showToast('알림 설정을 불러오지 못했습니다.');
       }
-    } finally {
-      setLoadingNotificationSettings(false);
     }
+
+    if (pushStateResult.status === 'fulfilled') {
+      setPushNotificationsEnabled(pushStateResult.value.enabled);
+    } else {
+      logPushRegistrationError(pushStateResult.reason);
+      setPushNotificationsEnabled(false);
+    }
+    setLoadingNotificationSettings(false);
   }, [isLoggedIn]);
 
   const resolvePushPreferenceMessage = useCallback(
@@ -179,6 +184,8 @@ export function useNotificationState({ isLoggedIn, navigation }: Params) {
           return '기기 설정에서 책모 알림 권한을 허용해 주세요.';
         case 'permission-undetermined':
           return '알림 권한을 허용해야 푸시 알림을 받을 수 있습니다.';
+        case 'channel-disabled':
+          return '기기 설정에서 책모 알림 채널을 허용해 주세요.';
         case 'not-physical-device':
           return '푸시 알림은 실제 기기에서만 사용할 수 있습니다.';
         case 'missing-project-id':
@@ -194,6 +201,7 @@ export function useNotificationState({ isLoggedIn, navigation }: Params) {
   );
 
   const handleTogglePushNotifications = useCallback(() => {
+    if (togglingPushNotifications) return;
     const previous = pushNotificationsEnabled;
     const next = !previous;
 
@@ -207,8 +215,23 @@ export function useNotificationState({ isLoggedIn, navigation }: Params) {
           setPushNotificationsEnabled(false);
           const message = resolvePushPreferenceMessage(result);
           if (message) showToast(message);
+          if (
+            result.status === 'skipped' &&
+            (result.reason === 'permission-denied' ||
+              result.reason === 'permission-undetermined' ||
+              result.reason === 'channel-disabled')
+          ) {
+            retryPushEnableAfterSettingsRef.current = true;
+            try {
+              await Linking.openSettings();
+            } catch {
+              retryPushEnableAfterSettingsRef.current = false;
+              showToast('기기 알림 설정을 열지 못했습니다.');
+            }
+          }
           return;
         }
+        retryPushEnableAfterSettingsRef.current = false;
         setPushNotificationsEnabled(next);
       } catch (error) {
         logPushRegistrationError(error);
@@ -219,7 +242,51 @@ export function useNotificationState({ isLoggedIn, navigation }: Params) {
       }
     };
     void submit();
-  }, [pushNotificationsEnabled, resolvePushPreferenceMessage]);
+  }, [pushNotificationsEnabled, resolvePushPreferenceMessage, togglingPushNotifications]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState !== 'active' || !isLoggedIn) return;
+
+      const syncPushState = async () => {
+        if (!retryPushEnableAfterSettingsRef.current) {
+          try {
+            const state = await getPushNotificationsStateAsync();
+            setPushNotificationsEnabled(state.enabled);
+          } catch (error) {
+            logPushRegistrationError(error);
+          }
+          return;
+        }
+
+        retryPushEnableAfterSettingsRef.current = false;
+        setTogglingPushNotifications(true);
+        try {
+          const result = await setPushNotificationsEnabledAsync(true);
+          const registered = result.status === 'registered';
+          setPushNotificationsEnabled(registered);
+          if (registered) {
+            showToast('푸시 알림을 켰습니다.');
+          } else {
+            const message = resolvePushPreferenceMessage(result);
+            if (message) showToast(message);
+          }
+        } catch (error) {
+          logPushRegistrationError(error);
+          setPushNotificationsEnabled(false);
+          showToast('푸시 알림 설정을 변경하지 못했습니다.');
+        } finally {
+          setTogglingPushNotifications(false);
+        }
+      };
+
+      void syncPushState();
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isLoggedIn, resolvePushPreferenceMessage]);
 
   const handlePressAlarm = useCallback(
     (alarm: AlarmItem) => {
