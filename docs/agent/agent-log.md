@@ -3719,3 +3719,9 @@ export const interactionOpacity = {
 - `issue-fetch.md`, `docs/access/*`, auth/API version 문서를 `(done)` archive로 이동
 - Apple 로그인 archive 문서의 삭제된 스크린샷 참조 제거
 - `todo.md`, `archive_todo.md`, 챗봇 프롬프트의 참조 경로를 archive 기준으로 정리
+
+# 2026-07-10 15:14:18 KST 문서 산출물 위치 정리
+
+- RN i18n 스토어 현지화 계획 문서를 삭제하고 입력 길이 감사 문서를 `(done)` archive로 이동
+- `docs/output` 산출물과 `promo-hero.jpg`를 `docs/pm/output` 아래로 이동
+- PM HTML 문서의 promo hero 이미지 경로를 새 output 위치로 갱신
