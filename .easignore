@@ -4,6 +4,7 @@ node_modules/
 dist/
 web-build/
 ref_code/
+docs/
 
 android/.gradle/
 android/build/

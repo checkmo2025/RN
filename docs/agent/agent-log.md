@@ -3725,3 +3725,8 @@ export const interactionOpacity = {
 - RN i18n 스토어 현지화 계획 문서를 삭제하고 입력 길이 감사 문서를 `(done)` archive로 이동
 - `docs/output` 산출물과 `promo-hero.jpg`를 `docs/pm/output` 아래로 이동
 - PM HTML 문서의 promo hero 이미지 경로를 새 output 위치로 갱신
+
+# 2026-07-10 15:17:04 KST docs 빌드 업로드 제외
+
+- EAS Build 업로드 아카이브에서 `docs/`가 제외되도록 `.easignore`에 `docs/` 추가
+- 앱 설정과 빌드 스크립트에서 `docs/`가 런타임 빌드 입력으로 쓰이지 않음을 확인
