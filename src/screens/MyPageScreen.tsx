@@ -1254,7 +1254,7 @@ export function MyPageScreen() {
         try {
           await toggleBookLikeByIsbn(book.isbn);
           publishBookLikeState(bookLikePayload, nextLiked);
-          showToast(nextLiked ? '내 서재에 담았습니다.' : '좋아요가 취소되었습니다.');
+          showToast(nextLiked ? '내 서재에 담았습니다.' : '내 서재에서 제거했습니다.');
         } catch (error) {
           setBooks(previousBooks);
           if (!(error instanceof ApiError)) {

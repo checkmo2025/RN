@@ -2905,15 +2905,10 @@ export const styles = StyleSheet.create({
   },
   contactModalLinkTextWrap: {
     flex: 1,
-    gap: spacing.xxs,
   },
   contactModalLinkLabel: {
     ...typography.subhead4_1,
     color: colors.gray6,
-  },
-  contactModalLinkUrl: {
-    ...typography.body2_3,
-    color: colors.gray4,
   },
   contactModalEmptyWrap: {
     flex: 1,

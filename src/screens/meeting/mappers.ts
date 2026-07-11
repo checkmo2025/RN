@@ -65,14 +65,7 @@ export function normalizeClubContacts(value: unknown): ClubContact[] {
 export function formatContactLabel(contact: ClubContact): string {
   const label = contact.label?.trim();
   if (label) return label;
-
-  return (
-    contact.link
-      .trim()
-      .replace(/^[a-z][a-z0-9+.-]*:\/\//i, '')
-      .replace(/^www\./i, '')
-      .replace(/\/$/, '') || '문의 링크'
-  );
+  return '문의 링크';
 }
 
 export function mapClubStatusToApplication(status?: string): string | undefined {

@@ -4447,7 +4447,7 @@ function GroupHomeView({
         cardStyle={styles.contactModalCard}
       >
             <View style={styles.contactModalHeader}>
-              <Text style={styles.contactModalTitle}>Contact Us</Text>
+              <Text style={styles.contactModalTitle}>{l('문의하기')}</Text>
               <Pressable onPress={closeContactModal} hitSlop={8}>
                 <MaterialIcons name="close" size={30} color={colors.gray6} />
               </Pressable>
@@ -4464,14 +4464,13 @@ function GroupHomeView({
                     onPress={() => {
                       void handleOpenContactLink(contact.link);
                     }}
+                    accessibilityRole="link"
+                    accessibilityLabel={formatContactLabel(contact)}
                   >
                     <MaterialIcons name="link" size={30} color={colors.gray5} />
                     <View style={styles.contactModalLinkTextWrap}>
                       <Text style={styles.contactModalLinkLabel}>
                         {formatContactLabel(contact)}
-                      </Text>
-                      <Text style={styles.contactModalLinkUrl} numberOfLines={1}>
-                        {contact.link}
                       </Text>
                     </View>
                   </Pressable>
