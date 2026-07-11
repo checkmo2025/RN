@@ -297,7 +297,10 @@ export async function registerCurrentPushDeviceAsync(
 }
 
 export async function unregisterCurrentPushDeviceAsync(
-  options: { deleteInstallationId?: boolean } = {},
+  options: {
+    deleteInstallationId?: boolean;
+    suppressUnauthorizedSessionNotification?: boolean;
+  } = {},
 ): Promise<void> {
   if (pushDeviceRegistrationInFlight) {
     try {
@@ -310,7 +313,10 @@ export async function unregisterCurrentPushDeviceAsync(
   const installationId = await getStoredPushInstallationId();
   try {
     if (installationId) {
-      await unregisterPushDevice(installationId);
+      await unregisterPushDevice(installationId, {
+        suppressUnauthorizedSessionNotification:
+          options.suppressUnauthorizedSessionNotification,
+      });
     }
   } finally {
     await clearStoredPushRegistrationCache(options);

@@ -25,6 +25,8 @@ export type ApiEnvelope<T> = {
 };
 
 export const PROFILE_INCOMPLETE_MESSAGE = '프로필을 완성해 주세요.';
+export const SESSION_EXPIRED_MESSAGE =
+  '로그인이 만료되어 로그아웃되었습니다. 다시 로그인해주세요.';
 
 export class ApiError extends Error {
   status: number;
@@ -53,6 +55,7 @@ type RequestOptions = {
   suppressErrorToast?: boolean;
   timeoutMs?: number;
   retryOnUnauthorized?: boolean;
+  suppressUnauthorizedSessionNotification?: boolean;
   apiVersion?: string;
   /** 호출자 측 취소용 외부 AbortSignal. 내부 timeout 컨트롤러와 연결된다. */
   signal?: AbortSignal;
@@ -482,7 +485,7 @@ async function refreshStoredSessionIfNeededBeforeRequest(
 
   // 401/AUTH_412처럼 확정적으로 무효인 RT는 저장소에서 제거된다. 남은 AT로 요청을
   // 계속하면 최대 2시간 뒤 다시 로그아웃되므로 즉시 세션 만료를 알린다.
-  const message = '로그인 정보가 만료되었습니다. 다시 로그인해 주십시오.';
+  const message = SESSION_EXPIRED_MESSAGE;
   notifyUnauthorizedSession(message);
   throw new ApiError(message, 401, 'AUTH_412');
 }
@@ -585,7 +588,7 @@ async function requestJsonInternal<T>(
 
     if (getAuthSessionGeneration() !== requestSessionGeneration) {
       if (refreshOutcome === 'invalid') {
-        const message = '로그인 정보가 만료되었습니다. 다시 로그인해 주십시오.';
+        const message = SESSION_EXPIRED_MESSAGE;
         notifyUnauthorizedSession(message);
         throw new ApiError(message, 401, 'AUTH_412');
       }
@@ -621,11 +624,15 @@ async function requestJsonInternal<T>(
         : getParsedMessage(parsed, toDefaultHttpErrorMessage(response.status));
 
     notifyProfileIncompleteSessionIfNeeded(response.status, parsed);
-    if (shouldNotifyUnrecoverableUnauthorized && shouldNotifyUnauthorizedSession(response.status, code)) {
+    if (
+      !options.suppressUnauthorizedSessionNotification &&
+      shouldNotifyUnrecoverableUnauthorized &&
+      shouldNotifyUnauthorizedSession(response.status, code)
+    ) {
       if (!(await invalidateStoredSessionForGeneration(requestSessionGeneration))) {
         throw createAuthSessionChangedError();
       }
-      notifyUnauthorizedSession(message);
+      notifyUnauthorizedSession(SESSION_EXPIRED_MESSAGE);
     }
 
     if (!suppressErrorToast) {
@@ -644,11 +651,11 @@ async function requestJsonInternal<T>(
     const message =
       code === 'AUTH_403' ? PROFILE_INCOMPLETE_MESSAGE : getParsedMessage(parsed, '요청에 실패했습니다.');
     notifyProfileIncompleteSessionIfNeeded(response.status, parsed);
-    if (isUnauthorizedSessionCode(code)) {
+    if (!options.suppressUnauthorizedSessionNotification && isUnauthorizedSessionCode(code)) {
       if (!(await invalidateStoredSessionForGeneration(requestSessionGeneration))) {
         throw createAuthSessionChangedError();
       }
-      notifyUnauthorizedSession(message);
+      notifyUnauthorizedSession(SESSION_EXPIRED_MESSAGE);
     }
     if (!suppressErrorToast) {
       showToast(message);
@@ -707,7 +714,7 @@ export async function fetchApi(path: string, options: FetchApiOptions = {}): Pro
 
     if (getAuthSessionGeneration() !== requestSessionGeneration) {
       if (refreshOutcome === 'invalid') {
-        notifyUnauthorizedSession(toDefaultHttpErrorMessage(response.status));
+        notifyUnauthorizedSession(SESSION_EXPIRED_MESSAGE);
         return response;
       }
       throw createAuthSessionChangedError();
@@ -724,7 +731,7 @@ export async function fetchApi(path: string, options: FetchApiOptions = {}): Pro
           if (!(await invalidateStoredSessionForGeneration(requestSessionGeneration))) {
             throw createAuthSessionChangedError();
           }
-          notifyUnauthorizedSession(toDefaultHttpErrorMessage(retryResponse.status));
+          notifyUnauthorizedSession(SESSION_EXPIRED_MESSAGE);
         }
         if (retryResponse.status === 403) {
           try {
@@ -764,7 +771,7 @@ export async function fetchApi(path: string, options: FetchApiOptions = {}): Pro
     if (!(await invalidateStoredSessionForGeneration(requestSessionGeneration))) {
       throw createAuthSessionChangedError();
     }
-    notifyUnauthorizedSession(toDefaultHttpErrorMessage(response.status));
+    notifyUnauthorizedSession(SESSION_EXPIRED_MESSAGE);
   }
 
   if (response.status === 403) {

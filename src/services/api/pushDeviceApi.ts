@@ -78,7 +78,10 @@ export async function registerPushDevice(
   return normalizeRegistrationResult(unwrapResult(response));
 }
 
-export async function unregisterPushDevice(installationId: string): Promise<void> {
+export async function unregisterPushDevice(
+  installationId: string,
+  options: { suppressUnauthorizedSessionNotification?: boolean } = {},
+): Promise<void> {
   const normalizedInstallationId = installationId.trim();
   if (!normalizedInstallationId) return;
 
@@ -87,6 +90,9 @@ export async function unregisterPushDevice(installationId: string): Promise<void
     {
       method: 'DELETE',
       suppressErrorToast: true,
+      retryOnUnauthorized: options.suppressUnauthorizedSessionNotification ? false : undefined,
+      suppressUnauthorizedSessionNotification:
+        options.suppressUnauthorizedSessionNotification,
     },
   );
 }

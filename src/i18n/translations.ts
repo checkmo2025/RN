@@ -251,6 +251,8 @@ const enLiteralMessages: Record<string, string> = {
   '링크를 열 수 없습니다.': 'Could not open the link.',
   '로그인이 필요합니다.': 'Login is required.',
   '로그인이 만료되었습니다. 다시 로그인해 주십시오.': 'Your session has expired. Please log in again.',
+  '로그인이 만료되어 로그아웃되었습니다. 다시 로그인해주세요.':
+    'Your session expired, so you were logged out. Please log in again.',
   '로그인 후 조회 가능합니다.': 'Log in to view this.',
   '구독': 'Subscribe',
   '구독중': 'Subscribed',

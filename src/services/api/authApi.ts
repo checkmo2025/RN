@@ -481,7 +481,9 @@ export async function logoutSession(): Promise<void> {
 
   try {
     // 진행 중인 push 등록까지 큐 밖에서 정리해 인증 갱신과의 교착을 피한다.
-    await unregisterCurrentPushDeviceAsync();
+    await unregisterCurrentPushDeviceAsync({
+      suppressUnauthorizedSessionNotification: true,
+    });
   } catch (error) {
     logPushUnregistrationError(error);
   }
@@ -498,6 +500,8 @@ export async function logoutSession(): Promise<void> {
         await requestJson<ApiEnvelope<null>>('/auth/logout', {
           method: 'POST',
           suppressErrorToast: true,
+          retryOnUnauthorized: false,
+          suppressUnauthorizedSessionNotification: true,
         });
       } catch {
         // RT가 없으면 일반 API는 credentials=omit이므로 쿠키 정리 실패도 인증에 쓰이지 않는다.
@@ -514,6 +518,8 @@ export async function logoutSession(): Promise<void> {
               'X-Refresh-Token': refreshToken,
             },
             suppressErrorToast: true,
+            retryOnUnauthorized: false,
+            suppressUnauthorizedSessionNotification: true,
           });
           return;
         } catch {
@@ -524,6 +530,8 @@ export async function logoutSession(): Promise<void> {
       await requestJson<ApiEnvelope<null>>('/auth/logout', {
         method: 'POST',
         suppressErrorToast: true,
+        retryOnUnauthorized: false,
+        suppressUnauthorizedSessionNotification: true,
       });
     } finally {
       await deleteStoredRefreshToken();

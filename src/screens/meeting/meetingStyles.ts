@@ -169,8 +169,8 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   applyModalInput: {
-    height: 148,
-    maxHeight: 180,
+    height: 120,
+    maxHeight: 144,
     borderRadius: radius.md,
     backgroundColor: colors.gray1,
     paddingHorizontal: spacing.md,
