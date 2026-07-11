@@ -101,6 +101,10 @@ const TERMS_URL = 'https://www.checkmo.co.kr/support/v1/terms';
 const reportContentBreakInterval = 28;
 const softBreak = String.fromCharCode(8203);
 
+function normalizeProfileDescription(description: string): string {
+  return description.replace(/[\r\n]+/g, ' ');
+}
+
 function formatReportContent(content: string): string {
   return content
     .split(/(\s+)/)
@@ -659,7 +663,7 @@ export function MyPageScreen() {
           const profile = await fetchMyProfile();
           if (profile) {
             setProfileName(profile.nickname || '_사용자');
-            setProfileDesc(profile.description || '소개글이 없습니다.');
+            setProfileDesc(normalizeProfileDescription(profile.description || '') || '소개글이 없습니다.');
             setProfileImageUrl(normalizeImageUrl(profile.profileImageUrl));
             setProfilePhoneNumber(profile.phoneNumber ?? '');
             setProfileSocial(profile.social === true);
@@ -859,6 +863,10 @@ export function MyPageScreen() {
     setNicknameStatus('idle');
   }, [profileName]);
 
+  const handleProfileEditDescriptionChange = useCallback((text: string) => {
+    setProfileEditDescription(normalizeProfileDescription(text));
+  }, []);
+
   const handleCheckNickname = useCallback(() => {
     Keyboard.dismiss();
     const nickname = profileEditNickname.trim();
@@ -912,7 +920,7 @@ export function MyPageScreen() {
       return;
     }
 
-    const description = profileEditDescription.trim();
+    const description = normalizeProfileDescription(profileEditDescription).trim();
     if (description.length > INPUT_LIMITS.USER_DESCRIPTION) {
       showToast(`소개는 ${INPUT_LIMITS.USER_DESCRIPTION}자 이내여야 합니다.`);
       return;
@@ -944,7 +952,7 @@ export function MyPageScreen() {
         const nextNickname = updated?.nickname ?? nickname;
 
         setProfileName(nextNickname || '_사용자');
-        setProfileDesc(nextDescription || '소개글이 없습니다.');
+        setProfileDesc(normalizeProfileDescription(nextDescription) || '소개글이 없습니다.');
         setProfileImageUrl(nextImageUrl);
         setProfilePhoneNumber(nextPhoneNumber);
         setProfileSocial(updated?.social ?? profileSocial);
@@ -1357,6 +1365,7 @@ export function MyPageScreen() {
                 openDraftTitle: item.title,
                 openDraftBody: item.excerpt,
                 openDraftBook: item.bookInfo,
+                openDraftReturnTarget: 'MY_STORIES',
               });
             } else {
               navigation.navigate('Story', {
@@ -1844,7 +1853,9 @@ export function MyPageScreen() {
     setProfileEditNickname(profileName);
     setNicknameChecked(true);
     setNicknameStatus('idle');
-    setProfileEditDescription(profileDesc === '소개글이 없습니다.' ? '' : profileDesc);
+    setProfileEditDescription(
+      normalizeProfileDescription(profileDesc === '소개글이 없습니다.' ? '' : profileDesc),
+    );
     setProfileEditImageUrl(profileImageUrl ?? '');
     setProfileEditCategoryCodes(profileCategoryCodes);
     setProfileEditUseDefaultAvatar(!profileImageUrl);
@@ -2174,19 +2185,15 @@ export function MyPageScreen() {
             <View style={styles.inputPlaceholder}>
               <FormTextInput
                 value={profileEditDescription}
-                onChangeText={setProfileEditDescription}
+                onChangeText={handleProfileEditDescriptionChange}
                 placeholder={l('소개를 입력해주세요 (최대 {limit}자)', {
                   limit: INPUT_LIMITS.USER_DESCRIPTION,
                 })}
                 placeholderTextColor={colors.gray3}
-                style={[
-                  styles.inputField,
-                  styles.inputFieldDescenderSafe,
-                  styles.inputFieldMultiline,
-                ]}
+                style={[styles.inputField, styles.inputFieldDescenderSafe]}
                 maxLength={INPUT_LIMITS.USER_DESCRIPTION}
-                multiline
-                blurOnSubmit={false}
+                returnKeyType="done"
+                blurOnSubmit
               />
             </View>
             <Text style={styles.inputCounterText}>
@@ -3328,10 +3335,6 @@ const styles = StyleSheet.create({
   },
   emailVerificationTimerExpiredText: {
     color: colors.likeRed,
-  },
-  inputFieldMultiline: {
-    minHeight: 88,
-    textAlignVertical: 'top',
   },
   submitButton: {
     backgroundColor: colors.primary1,

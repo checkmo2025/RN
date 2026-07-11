@@ -20,6 +20,7 @@ export type TabParamList = {
         openDraftTitle?: string;
         openDraftBody?: string;
         openDraftBook?: unknown;
+        openDraftReturnTarget?: 'MY_STORIES';
       }
     | undefined;
   News: { openNewsId?: number | string } | undefined;

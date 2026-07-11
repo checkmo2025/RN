@@ -187,6 +187,7 @@ type StoryRouteParams = {
   openDraftTitle?: string;
   openDraftBody?: string;
   openDraftBook?: unknown;
+  openDraftReturnTarget?: 'MY_STORIES';
 };
 
 type ComposeInitialDraft = {
@@ -389,6 +390,7 @@ export function StoryScreen() {
   const composeInitialDraftRef = useRef<ComposeInitialDraft>(EMPTY_COMPOSE_INITIAL_DRAFT);
   const selectedStoryValueRef = useRef<Story | null>(null);
   const storyReturnTargetRef = useRef<StoryRouteParams['openStoryReturnTarget'] | null>(null);
+  const composeReturnTargetRef = useRef<StoryRouteParams['openDraftReturnTarget'] | null>(null);
   const commentDraftTextRef = useRef('');
   const editingCommentIdRef = useRef<number | null>(null);
   const editingCommentOriginalTextRef = useRef('');
@@ -581,7 +583,11 @@ export function StoryScreen() {
     [scrollToCommentSection],
   );
 
-  const openCompose = useCallback((initialBook?: Book, draft?: { id: number; title: string; body: string }) => {
+  const openCompose = useCallback((
+    initialBook?: Book,
+    draft?: { id: number; title: string; body: string },
+    returnTarget?: StoryRouteParams['openDraftReturnTarget'],
+  ) => {
     requireAuth(() => {
       const nextTitle = draft?.title ?? '';
       const nextBody = draft?.body ?? '';
@@ -593,6 +599,7 @@ export function StoryScreen() {
       bodyValueRef.current = nextBody;
       selectedBookValueRef.current = nextBook;
       composeInitialDraftRef.current = nextInitialDraft;
+      composeReturnTargetRef.current = returnTarget ?? null;
       composeScrollYRef.current = 0;
       composeBodyFocusedRef.current = false;
       composeBodyContentHeightRef.current = 0;
@@ -620,7 +627,9 @@ export function StoryScreen() {
     });
   }, [animateTransition, requireAuth]);
 
-  const closeCompose = useCallback(() => {
+  const closeCompose = useCallback((returnToSource = false) => {
+    const returnTarget = composeReturnTargetRef.current;
+    composeReturnTargetRef.current = null;
     animateTransition();
     isComposingRef.current = false;
     composeInitialDraftRef.current = EMPTY_COMPOSE_INITIAL_DRAFT;
@@ -637,7 +646,10 @@ export function StoryScreen() {
     setReplyTarget(null);
     setCommentMenu(null);
     setStoryMenu(false);
-  }, [animateTransition]);
+    if (returnToSource && returnTarget === 'MY_STORIES') {
+      navigation.navigate('My', { openMyTab: '내 책 이야기' });
+    }
+  }, [animateTransition, navigation]);
 
   const hasUnsavedStoryChanges = useMemo(() => {
     const composingDraft =
@@ -758,7 +770,7 @@ export function StoryScreen() {
   }, []);
 
   const requestCloseCompose = useCallback(() => {
-    showDiscardStoryAlert(closeCompose);
+    showDiscardStoryAlert(() => closeCompose(true));
   }, [closeCompose, showDiscardStoryAlert]);
 
   const requestCloseStoryDetail = useCallback(() => {
@@ -2313,6 +2325,7 @@ export function StoryScreen() {
         selectedStoryValueRef.current = null;
         isComposingRef.current = false;
         composeInitialDraftRef.current = EMPTY_COMPOSE_INITIAL_DRAFT;
+        composeReturnTargetRef.current = null;
         commentDraftTextRef.current = '';
         editingCommentIdRef.current = null;
         editingCommentOriginalTextRef.current = '';
@@ -2343,18 +2356,30 @@ export function StoryScreen() {
     const draftId = route.params?.openDraftId;
     if (!draftId) return;
     const draftBook = toComposeBook(route.params?.openDraftBook);
+    const returnTarget = route.params?.openDraftReturnTarget === 'MY_STORIES'
+      ? route.params.openDraftReturnTarget
+      : undefined;
     openCompose(draftBook ?? undefined, {
       id: draftId,
       title: route.params?.openDraftTitle ?? '',
       body: route.params?.openDraftBody ?? '',
-    });
+    }, returnTarget);
     navigation.setParams({
       openDraftId: undefined,
       openDraftTitle: undefined,
       openDraftBody: undefined,
       openDraftBook: undefined,
+      openDraftReturnTarget: undefined,
     });
-  }, [navigation, openCompose, route.params?.openDraftId, route.params?.openDraftTitle, route.params?.openDraftBody, route.params?.openDraftBook]);
+  }, [
+    navigation,
+    openCompose,
+    route.params?.openDraftBook,
+    route.params?.openDraftBody,
+    route.params?.openDraftId,
+    route.params?.openDraftReturnTarget,
+    route.params?.openDraftTitle,
+  ]);
 
   useEffect(() => {
     const remoteId = parsePositiveIntParam(route.params?.openStoryId);
