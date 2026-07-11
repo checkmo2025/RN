@@ -146,11 +146,12 @@
     }
 
     .slide-title {
-      max-width: 900px;
+      max-width: none;
       font-size: 39px;
       line-height: 1.24;
       font-weight: 850;
       color: var(--ink);
+      white-space: nowrap;
     }
 
     .slide-desc {
@@ -273,7 +274,7 @@
       display: inline-block;
       margin-top: 8px;
       color: #fffdf9;
-      font-size: 1.28em;
+      font-size: 1.85em;
       line-height: 1;
       text-shadow: 0 4px 22px rgba(255, 255, 255, 0.2);
     }
@@ -362,27 +363,31 @@
 
     /* 02. Contents */
     .contents-grid {
+      position: absolute;
+      top: 50%;
+      right: 64px;
+      left: 64px;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 28px;
-      margin-top: 24px;
+      transform: translateY(-50%);
     }
 
     .contents-group {
       min-height: 330px;
-      padding: 20px 0 0;
+      padding: 26px 0 0;
       border-top: 5px solid var(--group-color);
     }
 
     .contents-group-head {
       display: flex;
       align-items: flex-start;
-      gap: 13px;
-      margin-bottom: 22px;
+      gap: 10px;
+      margin-bottom: 16px;
     }
 
     .contents-phase {
-      font-size: 36px;
+      font-size: 48px;
       line-height: 1;
       font-weight: 900;
       color: var(--group-color);
@@ -390,8 +395,9 @@
 
     .contents-group h3 {
       margin-top: 2px;
-      font-size: 19px;
+      font-size: 24px;
       line-height: 1.35;
+      white-space: nowrap;
     }
 
     .contents-list {
@@ -401,16 +407,17 @@
     .contents-list li {
       display: grid;
       grid-template-columns: 30px 1fr;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
-      min-height: 55px;
-      font-size: 14px;
+      min-height: 58px;
+      font-size: 20px;
+      line-height: 1.4;
       font-weight: 700;
     }
 
     .contents-list .item-no {
       color: var(--group-color);
-      font-size: 12px;
+      font-size: 17px;
       font-weight: 850;
     }
 
@@ -1681,7 +1688,7 @@
     <div class="contents-grid">
       <section class="contents-group" style="--group-color: var(--coral);">
         <div class="contents-group-head">
-          <span class="contents-phase">01</span>
+          <span class="contents-phase">1</span>
           <div>
             <h3>독서 모임 운영의 불편함</h3>
           </div>
@@ -1694,7 +1701,7 @@
 
       <section class="contents-group" style="--group-color: var(--blue);">
         <div class="contents-group-head">
-          <span class="contents-phase">02</span>
+          <span class="contents-phase">2</span>
           <div>
             <h3>책모가 해결하는 방식</h3>
           </div>
@@ -1709,7 +1716,7 @@
 
       <section class="contents-group" style="--group-color: var(--green);">
         <div class="contents-group-head">
-          <span class="contents-phase">03</span>
+          <span class="contents-phase">3</span>
           <div>
             <h3>우리 모임에 적용하는 방법</h3>
           </div>
@@ -1787,7 +1794,7 @@
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
       <span class="section-code">01 독서 모임 운영의 불편함</span>
     </div>
-    <h2 class="slide-title">도구는 많지만,<br /><span class="accent-text">운영 흐름은 연결되지 않습니다</span></h2>
+    <h2 class="slide-title">도구는 많지만, <span class="accent-text">운영 흐름은 연결되지 않습니다</span></h2>
     <p class="slide-desc">각 도구의 정보를 다시 모으고 설명하는 일이 결국 운영진에게 돌아옵니다.</p>
 
     <div class="fragment-map">
@@ -1828,7 +1835,7 @@
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
       <span class="section-code">02 책모가 해결하는 방식</span>
     </div>
-    <h2 class="slide-title">책모 하나로<br /><span class="accent-text">모임 운영의 맥락을 이어갑니다</span></h2>
+    <h2 class="slide-title">책모 하나로 <span class="accent-text">모임 운영의 맥락을 이어갑니다</span></h2>
 
     <div class="solution-layout">
       <div class="solution-list">
@@ -1871,7 +1878,7 @@
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
       <span class="section-code">02 책모가 해결하는 방식</span>
     </div>
-    <h2 class="slide-title">모임 준비부터 회고까지,<br /><span class="accent-text">한 흐름으로 이어집니다</span></h2>
+    <h2 class="slide-title">모임 준비부터 회고까지, <span class="accent-text">한 흐름으로 이어집니다</span></h2>
     <p class="slide-desc">각 단계의 결과가 다음 운영에 다시 쓰이는 모임 기록이 됩니다.</p>
 
     <div class="journey-phases">
@@ -1911,7 +1918,7 @@
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
       <span class="section-code">02 책모가 해결하는 방식</span>
     </div>
-    <h2 class="slide-title">운영의 반복은 줄이고,<br /><span class="accent-text">모임을 설계하는 시간은 늘립니다</span></h2>
+    <h2 class="slide-title">운영의 반복은 줄이고, <span class="accent-text">모임을 설계하는 시간은 늘립니다</span></h2>
 
     <div class="compare-table" role="table" aria-label="기존 운영 방식과 책모 사용 비교">
       <div class="compare-row header" role="row"><span>운영 업무</span><span>흩어진 방식</span><span></span><span>책모에서</span></div>
@@ -1932,7 +1939,7 @@
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
       <span class="section-code">02 책모가 해결하는 방식</span>
     </div>
-    <h2 class="slide-title">회원이 스스로 확인할수록<br /><span class="accent-text">운영은 더 가벼워집니다</span></h2>
+    <h2 class="slide-title">회원이 스스로 확인할수록 <span class="accent-text">운영은 더 가벼워집니다</span></h2>
 
     <div class="member-layout">
       <div class="member-visual">
@@ -1975,7 +1982,7 @@
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
       <span class="section-code">03 우리 모임에 적용하는 방법</span>
     </div>
-    <h2 class="slide-title">한 달 운영 예시:<br /><span class="accent-text">다음 책 한 권을 함께 읽는 과정</span></h2>
+    <h2 class="slide-title">한 달 운영 예시: <span class="accent-text">다음 책 한 권을 함께 읽는 과정</span></h2>
     <p class="slide-desc">새로운 운영 체계를 한 번에 도입하지 않아도, 한 권의 책과 한 번의 정기모임부터 시작할 수 있습니다.</p>
 
     <div class="month-flow">
@@ -2038,7 +2045,7 @@
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
       <span class="section-code">03 우리 모임에 적용하는 방법</span>
     </div>
-    <h2 class="slide-title">전부 바꾸지 않아도 됩니다.<br /><span class="accent-text">다음 모임 하나부터 시작하세요</span></h2>
+    <h2 class="slide-title">전부 바꾸지 않아도 됩니다. <span class="accent-text">다음 모임 하나부터 시작하세요</span></h2>
 
     <div class="adoption-layout">
       <div class="start-steps">
