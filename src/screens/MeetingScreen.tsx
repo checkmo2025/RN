@@ -1981,6 +1981,8 @@ function GroupHomeView({
   );
   const handleChangeBookshelfComposerRating = useCallback(
     (rating: number) => {
+      if (bookshelfComposerRatingRef.current === rating) return;
+      triggerSelectionHaptic();
       bookshelfComposerRatingRef.current = rating;
       setBookshelfComposerRating(rating);
     },

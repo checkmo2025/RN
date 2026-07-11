@@ -421,7 +421,7 @@ export function useManagementState({
           setJoinRequests(pendingMembers.items.map(mapClubManagedMemberToJoinRequest));
           setMembers(activeMembers.items.map(mapClubManagedMemberToGroupMember));
           setSelectedJoinRequestActionId(null);
-          showToast(action === 'APPROVE' ? l('가입 신청을 승인했습니다.') : l('가입 신청을 삭제했습니다.'));
+          showToast(action === 'APPROVE' ? l('가입 신청을 승인했습니다.') : l('가입 신청을 거절했습니다.'));
         } catch (error) {
           if (!(error instanceof ApiError)) {
             showToast(l('가입 신청 처리에 실패했습니다.'));
@@ -557,7 +557,7 @@ export function useManagementState({
         return;
       }
 
-      Alert.alert(l('회원 탈퇴'), l('{nickname}님을 모임에서 제외하시겠습니까?', {
+      Alert.alert(l('탈퇴 처리'), l('{nickname}님을 모임에서 제외하시겠습니까?', {
         nickname: targetMember.nickname,
       }), [
         { text: l('취소'), style: 'cancel' },

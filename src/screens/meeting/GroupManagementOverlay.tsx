@@ -492,7 +492,7 @@ export function GroupManagementOverlay({
                 <View style={styles.managementSummaryCard}>
                   <Text style={styles.managementSummaryTitle}>{l('가입 신청 현황')}</Text>
                   <Text style={styles.managementSummaryDescription}>
-                    {l('가입 메시지를 확인한 뒤 승인하거나 삭제할 수 있습니다.')}
+                    {l('가입 메시지를 확인한 뒤 승인하거나 거절할 수 있습니다.')}
                   </Text>
                   <View style={styles.managementCountBadge}>
                     <Text style={styles.managementCountBadgeText}>
@@ -1293,7 +1293,25 @@ export function GroupManagementOverlay({
                 onPress={(event) => event.stopPropagation()}
                 disableFeedback
               >
-                <Text style={styles.managementJoinActionTitle}>{l('가입 처리')}</Text>
+                <View style={styles.managementModalHeader}>
+                  <Text style={styles.managementJoinActionTitle}>{l('가입 처리')}</Text>
+                  <Pressable
+                    onPress={() => {
+                      if (submittingJoinRequestAction) return;
+                      setSelectedJoinRequestActionId(null);
+                    }}
+                    hitSlop={8}
+                    disabled={submittingJoinRequestAction}
+                    accessibilityRole="button"
+                    accessibilityLabel={l('닫기')}
+                  >
+                    <MaterialIcons
+                      name="close"
+                      size={24}
+                      color={submittingJoinRequestAction ? colors.gray3 : colors.gray6}
+                    />
+                  </Pressable>
+                </View>
                 <Pressable
                   style={({ pressed }) => [
                     styles.managementJoinActionItem,
@@ -1314,7 +1332,7 @@ export function GroupManagementOverlay({
                       submittingJoinRequestAction && styles.managementJoinActionItemTextDisabled,
                     ]}
                   >
-                    {l('삭제하기')}
+                    {l('가입 거절')}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -1547,7 +1565,7 @@ export function GroupManagementOverlay({
                         styles.managementRoleMenuItemTextDisabled,
                     ]}
                   >
-                    {l('회원 탈퇴')}
+                    {l('탈퇴 처리')}
                   </Text>
                 </Pressable>
               </Pressable>

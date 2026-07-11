@@ -554,14 +554,15 @@ const enLiteralMessages: Record<string, string> = {
   '{nickname}님을 모임에서 제외하시겠습니까?': 'Remove {nickname} from the club?',
   '{role} 역할로 변경했습니다.': 'Changed role to {role}.',
   '가입 메시지': 'Application Message',
-  '가입 메시지를 확인한 뒤 승인하거나 삭제할 수 있습니다.':
+  '가입 메시지를 확인한 뒤 승인하거나 거절할 수 있습니다.':
     'Review application messages, then approve or reject them.',
   '가입 신청 처리 기능을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주십시오.':
     'Application processing is temporarily unavailable. Please try again later.',
   '가입 신청 처리에 실패했습니다.': 'Could not process the application.',
   '가입 신청 현황': 'Application Status',
-  '가입 신청을 삭제했습니다.': 'Application rejected.',
+  '가입 신청을 거절했습니다.': 'Application rejected.',
   '가입 신청을 승인했습니다.': 'Application approved.',
+  '가입 거절': 'Reject Application',
   '가입 처리': 'Process Application',
   '가입일 {date}': 'Joined {date}',
   '가입처리': 'Process Application',
