@@ -2423,7 +2423,36 @@ export const styles = StyleSheet.create({
   noticeComposerChoiceRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'center',
     gap: spacing.xs,
+  },
+  noticeComposerExclusiveChoiceGroup: {
+    flex: 1,
+    minWidth: 192,
+    minHeight: 44,
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: colors.gray2,
+    borderRadius: radius.lg,
+    backgroundColor: colors.white,
+    overflow: 'hidden',
+  },
+  noticeComposerExclusiveChoice: {
+    flex: 1,
+    minHeight: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xxs,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  noticeComposerExclusiveChoiceDivider: {
+    borderLeftWidth: 1,
+    borderLeftColor: colors.gray2,
+  },
+  noticeComposerExclusiveChoiceActive: {
+    backgroundColor: colors.subbrown4,
   },
   noticeComposerChoiceChip: {
     minWidth: 92,
@@ -2452,8 +2481,18 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xs,
   },
-  noticeComposerDateInput: {
+  noticeComposerDateField: {
     flex: 1,
+    gap: spacing.xxs,
+  },
+  noticeComposerDateLabel: {
+    ...typography.body2_2,
+    color: colors.gray5,
+  },
+  noticeComposerDateInput: {
+    flex: 0,
+    width: '100%',
+    minHeight: 44,
   },
   noticeComposerPhotoGrid: {
     flexDirection: 'row',

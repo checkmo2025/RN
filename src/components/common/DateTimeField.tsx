@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -16,6 +15,7 @@ import DateTimePicker, {
 
 import { colors, radius, spacing, typography } from '../../theme';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { BottomSheet } from './BottomSheet';
 
 type Props = {
   value: Date | null;
@@ -138,53 +138,49 @@ export function DateTimeField({ value, onChange, placeholder, minimumDate, style
       </Pressable>
 
       {Platform.OS === 'ios' ? (
-        <Modal
+        <BottomSheet
           visible={iosVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setIosVisible(false)}
+          onClose={() => setIosVisible(false)}
+          sheetStyle={styles.sheet}
         >
-          <Pressable style={styles.backdrop} onPress={() => setIosVisible(false)} />
-          <View style={styles.sheet}>
-            <View style={styles.sheetHeader}>
-              <Pressable onPress={() => setIosVisible(false)} hitSlop={8}>
-                <Text style={styles.headerCancel}>{l('취소')}</Text>
-              </Pressable>
-              <Pressable
-                onPress={confirmIos}
-                hitSlop={8}
-                disabled={iosSelectionBeforeMinimum}
-                accessibilityState={{ disabled: iosSelectionBeforeMinimum }}
+          <View style={styles.sheetHeader}>
+            <Pressable onPress={() => setIosVisible(false)} hitSlop={8}>
+              <Text style={styles.headerCancel}>{l('취소')}</Text>
+            </Pressable>
+            <Pressable
+              onPress={confirmIos}
+              hitSlop={8}
+              disabled={iosSelectionBeforeMinimum}
+              accessibilityState={{ disabled: iosSelectionBeforeMinimum }}
+            >
+              <Text
+                style={[
+                  styles.headerDone,
+                  iosSelectionBeforeMinimum && styles.headerDoneDisabled,
+                ]}
               >
-                <Text
-                  style={[
-                    styles.headerDone,
-                    iosSelectionBeforeMinimum && styles.headerDoneDisabled,
-                  ]}
-                >
-                  {l('완료')}
-                </Text>
-              </Pressable>
-            </View>
-            <DateTimePicker
-              value={iosSelection}
-              mode="datetime"
-              display="spinner"
-              locale={language === 'en' ? 'en-US' : 'ko-KR'}
-              themeVariant="light"
-              textColor={colors.gray6}
-              onChange={(_event: DateTimePickerEvent, picked?: Date) => {
-                if (picked) setIosTemp(adjustForMinuteWrap(iosSelection, picked));
-              }}
-              style={styles.picker}
-            />
-            {iosSelectionBeforeMinimum ? (
-              <Text style={styles.minimumDateHint}>
-                {l('선택 가능한 시간 이후로 설정해주세요.')}
+                {l('완료')}
               </Text>
-            ) : null}
+            </Pressable>
           </View>
-        </Modal>
+          <DateTimePicker
+            value={iosSelection}
+            mode="datetime"
+            display="spinner"
+            locale={language === 'en' ? 'en-US' : 'ko-KR'}
+            themeVariant="light"
+            textColor={colors.gray6}
+            onChange={(_event: DateTimePickerEvent, picked?: Date) => {
+              if (picked) setIosTemp(adjustForMinuteWrap(iosSelection, picked));
+            }}
+            style={styles.picker}
+          />
+          {iosSelectionBeforeMinimum ? (
+            <Text style={styles.minimumDateHint}>
+              {l('선택 가능한 시간 이후로 설정해주세요.')}
+            </Text>
+          ) : null}
+        </BottomSheet>
       ) : null}
     </>
   );
@@ -215,15 +211,10 @@ const styles = StyleSheet.create({
     ...typography.body1_3,
     color: colors.gray3,
   },
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
-  },
   sheet: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    overflow: 'hidden',
   },
   sheetHeader: {
     flexDirection: 'row',
@@ -235,11 +226,11 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.gray1,
   },
   headerCancel: {
-    ...typography.body1_2,
+    ...typography.subhead5,
     color: colors.gray5,
   },
   headerDone: {
-    ...typography.subhead3,
+    ...typography.subhead5,
     color: colors.primary1,
   },
   headerDoneDisabled: {
@@ -254,7 +245,8 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 216,
-    alignSelf: 'stretch',
+    width: '100%',
+    alignSelf: 'center',
     backgroundColor: colors.white,
   },
 });

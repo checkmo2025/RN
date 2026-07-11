@@ -4213,56 +4213,76 @@ function GroupHomeView({
                     ) : null}
                   </View>
                   <View style={styles.noticeComposerChoiceRow}>
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.noticeComposerChoiceChip,
-                        noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipActive,
+                    <View
+                      style={[
+                        styles.noticeComposerExclusiveChoiceGroup,
                         pollEditingLocked && styles.noticeComposerDisabled,
-                        pressed && !pollEditingLocked && styles.pressed,
                       ]}
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        setNoticeDraft((prev) => ({ ...prev, pollAnonymous: true }));
-                      }}
-                      disabled={pollEditingLocked}
-                      hitSlop={6}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: noticeDraft.pollAnonymous, disabled: pollEditingLocked }}
                     >
-                      <Text
-                        style={[
-                          styles.noticeComposerChoiceChipText,
-                          noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipTextActive,
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.noticeComposerExclusiveChoice,
+                          noticeDraft.pollAnonymous && styles.noticeComposerExclusiveChoiceActive,
+                          pressed && !pollEditingLocked && styles.pressed,
                         ]}
+                        onPress={() => {
+                          Keyboard.dismiss();
+                          setNoticeDraft((prev) => ({ ...prev, pollAnonymous: true }));
+                        }}
+                        disabled={pollEditingLocked}
+                        accessibilityRole="radio"
+                        accessibilityState={{
+                          checked: noticeDraft.pollAnonymous,
+                          disabled: pollEditingLocked,
+                        }}
                       >
-                        {l('익명')}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.noticeComposerChoiceChip,
-                        !noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipActive,
-                        pollEditingLocked && styles.noticeComposerDisabled,
-                        pressed && !pollEditingLocked && styles.pressed,
-                      ]}
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        setNoticeDraft((prev) => ({ ...prev, pollAnonymous: false }));
-                      }}
-                      disabled={pollEditingLocked}
-                      hitSlop={6}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: !noticeDraft.pollAnonymous, disabled: pollEditingLocked }}
-                    >
-                      <Text
-                        style={[
-                          styles.noticeComposerChoiceChipText,
-                          !noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipTextActive,
+                        <MaterialIcons
+                          name={noticeDraft.pollAnonymous ? 'radio-button-checked' : 'radio-button-unchecked'}
+                          size={16}
+                          color={noticeDraft.pollAnonymous ? colors.primary1 : colors.gray4}
+                        />
+                        <Text
+                          style={[
+                            styles.noticeComposerChoiceChipText,
+                            noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipTextActive,
+                          ]}
+                        >
+                          {l('익명')}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.noticeComposerExclusiveChoice,
+                          styles.noticeComposerExclusiveChoiceDivider,
+                          !noticeDraft.pollAnonymous && styles.noticeComposerExclusiveChoiceActive,
+                          pressed && !pollEditingLocked && styles.pressed,
                         ]}
+                        onPress={() => {
+                          Keyboard.dismiss();
+                          setNoticeDraft((prev) => ({ ...prev, pollAnonymous: false }));
+                        }}
+                        disabled={pollEditingLocked}
+                        accessibilityRole="radio"
+                        accessibilityState={{
+                          checked: !noticeDraft.pollAnonymous,
+                          disabled: pollEditingLocked,
+                        }}
                       >
-                        {l('실명')}
-                      </Text>
-                    </Pressable>
+                        <MaterialIcons
+                          name={!noticeDraft.pollAnonymous ? 'radio-button-checked' : 'radio-button-unchecked'}
+                          size={16}
+                          color={!noticeDraft.pollAnonymous ? colors.primary1 : colors.gray4}
+                        />
+                        <Text
+                          style={[
+                            styles.noticeComposerChoiceChipText,
+                            !noticeDraft.pollAnonymous && styles.noticeComposerChoiceChipTextActive,
+                          ]}
+                        >
+                          {l('실명')}
+                        </Text>
+                      </Pressable>
+                    </View>
                     <Pressable
                       style={({ pressed }) => [
                         styles.noticeComposerChoiceChip,
@@ -4279,8 +4299,11 @@ function GroupHomeView({
                       }}
                       disabled={pollEditingLocked}
                       hitSlop={6}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: noticeDraft.pollAllowDuplicate, disabled: pollEditingLocked }}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{
+                        checked: noticeDraft.pollAllowDuplicate,
+                        disabled: pollEditingLocked,
+                      }}
                     >
                       <Text
                         style={[
@@ -4294,32 +4317,38 @@ function GroupHomeView({
                     </Pressable>
                   </View>
                   <View style={styles.noticeComposerDateRow}>
-                    <DateTimeField
-                      value={dotDateTimeToDate(noticeDraft.pollStartsAt)}
-                      onChange={(date) =>
-                        setNoticeDraft((prev) => ({
-                          ...prev,
-                          pollStartsAt: dateToDotDateTime(date),
-                        }))
-                      }
-                      placeholder={l('시작 시간')}
-                      minimumDate={new Date()}
-                      style={styles.noticeComposerDateInput}
-                      disabled={pollEditingLocked}
-                    />
-                    <DateTimeField
-                      value={dotDateTimeToDate(noticeDraft.pollEndsAt)}
-                      onChange={(date) =>
-                        setNoticeDraft((prev) => ({
-                          ...prev,
-                          pollEndsAt: dateToDotDateTime(date),
-                        }))
-                      }
-                      placeholder={l('종료 시간')}
-                      minimumDate={dotDateTimeToDate(noticeDraft.pollStartsAt) ?? new Date()}
-                      style={styles.noticeComposerDateInput}
-                      disabled={pollEditingLocked}
-                    />
+                    <View style={styles.noticeComposerDateField}>
+                      <Text style={styles.noticeComposerDateLabel}>{l('시작 시간')}</Text>
+                      <DateTimeField
+                        value={dotDateTimeToDate(noticeDraft.pollStartsAt)}
+                        onChange={(date) =>
+                          setNoticeDraft((prev) => ({
+                            ...prev,
+                            pollStartsAt: dateToDotDateTime(date),
+                          }))
+                        }
+                        placeholder={l('시작 시간')}
+                        minimumDate={new Date()}
+                        style={styles.noticeComposerDateInput}
+                        disabled={pollEditingLocked}
+                      />
+                    </View>
+                    <View style={styles.noticeComposerDateField}>
+                      <Text style={styles.noticeComposerDateLabel}>{l('종료 시간')}</Text>
+                      <DateTimeField
+                        value={dotDateTimeToDate(noticeDraft.pollEndsAt)}
+                        onChange={(date) =>
+                          setNoticeDraft((prev) => ({
+                            ...prev,
+                            pollEndsAt: dateToDotDateTime(date),
+                          }))
+                        }
+                        placeholder={l('종료 시간')}
+                        minimumDate={dotDateTimeToDate(noticeDraft.pollStartsAt) ?? new Date()}
+                        style={styles.noticeComposerDateInput}
+                        disabled={pollEditingLocked}
+                      />
+                    </View>
                   </View>
                 </View>
               ) : null}
