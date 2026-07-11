@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, spacing, typography } from '../../theme';
 import { AppButton } from './PrimaryButton';
+import { ToastHost } from './ToastHost';
 import type { AppVersionGateState } from '../../hooks/useAppVersionGate';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -78,6 +79,7 @@ export function AppUpdateGateModal({
           </View>
         </View>
       </SafeAreaView>
+      {visible ? <ToastHost /> : null}
     </Modal>
   );
 }

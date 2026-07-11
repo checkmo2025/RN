@@ -75,6 +75,7 @@ import { useRelativeNow } from '../../hooks/useRelativeNow';
 import { useLanguage } from '../../contexts/LanguageContext';
 import BookStoryFeedCard from '../feature/bookstory/BookStoryFeedCard';
 import { SkeletonBox } from './SkeletonBox';
+import { ToastHost } from './ToastHost';
 
 const LogoIcon = MOBILE_HEADER_LOGO_URI;
 const SearchIcon = HEADER_SEARCH_URI;
@@ -1001,6 +1002,7 @@ export function AppHeader(props: Props) {
             </Animated.View>
           </View>
         </Pressable>
+        {notiModalOpen ? <ToastHost /> : null}
       </Modal>
 
       <Modal
@@ -1136,6 +1138,7 @@ export function AppHeader(props: Props) {
             </Animated.View>
           </Pressable>
         </Pressable>
+        {showSearchDropdown ? <ToastHost /> : null}
       </Modal>
 
       {showSearchPage ? (

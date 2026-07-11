@@ -3599,6 +3599,7 @@ function GroupHomeView({
             </View>
           ) : null}
         </View>
+        {teamManageVisible ? <ToastHost /> : null}
       </Modal>
       <DialogOverlay
         visible={Boolean(bookshelfComposerType)}

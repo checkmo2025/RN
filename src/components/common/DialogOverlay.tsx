@@ -8,6 +8,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { FeedbackPressable as Pressable } from './FeedbackPressable';
+import { ToastHost } from './ToastHost';
 
 interface DialogOverlayProps {
   visible: boolean;
@@ -47,6 +48,7 @@ export function DialogOverlay({
       ) : (
         inner
       )}
+      {visible ? <ToastHost /> : null}
     </Modal>
   );
 }

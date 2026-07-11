@@ -55,6 +55,7 @@ import {
 } from '../components/common/BottomSheetActionMenu';
 import { FormTextInput } from '../components/common/FormTextInput';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
+import { ToastHost } from '../components/common/ToastHost';
 import BookStoryFeedCard from '../components/feature/bookstory/BookStoryFeedCard';
 import { BookStoryFeedCardSkeleton } from '../components/feature/bookstory/BookStoryFeedCardSkeleton';
 import { SkeletonBox } from '../components/common/SkeletonBox';
@@ -3216,6 +3217,7 @@ export function StoryScreen() {
                   </ScrollView>
                 </KeyboardAvoidingView>
           </View>
+          {showBookPicker ? <ToastHost /> : null}
         </Modal>
         </KeyboardAvoidingView>
       </ScreenLayout>
