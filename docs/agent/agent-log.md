@@ -3834,3 +3834,9 @@ export const interactionOpacity = {
 - Firebase Android 구성 파일과 Google Services Gradle 플러그인을 연결하고 EAS production FCM V1 자격 증명을 등록
 - Expo·runtime·package·iOS·Android 앱 버전을 `1.2.1`로 동기화하고 iOS 빌드 번호를 `41`로 변경
 - 사용자 요청에 따라 테스트·타입체크를 생략하고 Android production AAB 빌드 준비
+
+# 2026-07-12 01:13:35 KST 독서동아리 운영진 소개서 가독성 개선
+
+- 표지에 웹 아이콘과 HTTPS 도메인을 추가하고 플랫폼·연락처 정보를 보강
+- 목차 페이지 번호·보조 문구와 운영진 아이콘을 제거하고 섹션 번호 표기에서 점을 삭제
+- 앱 화면 색상 오버레이를 제거하고 슬라이드 전반의 작은 보조 글씨 크기를 확대

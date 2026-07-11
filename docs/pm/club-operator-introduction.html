@@ -129,7 +129,7 @@
     }
 
     .section-code {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 800;
       color: var(--brand);
       text-transform: none;
@@ -176,7 +176,7 @@
       padding-top: 8px;
       border-top: 1px solid var(--line);
       color: var(--muted);
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 650;
     }
 
@@ -297,7 +297,7 @@
     .cover-points {
       display: flex;
       gap: 24px;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 750;
       color: rgba(255, 255, 255, 0.83);
     }
@@ -326,7 +326,7 @@
       align-items: center;
       gap: 12px;
       color: rgba(255, 255, 255, 0.78);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 800;
       line-height: 1.4;
     }
@@ -345,9 +345,16 @@
       line-height: 1;
     }
 
+    .web-logo {
+      width: 14px;
+      height: 14px;
+      filter: brightness(0) invert(1);
+      opacity: 0.92;
+    }
+
     .cover-audience a {
       color: rgba(255, 255, 255, 0.92);
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 750;
       line-height: 1.4;
       text-decoration: none;
@@ -387,20 +394,13 @@
       line-height: 1.35;
     }
 
-    .contents-group p {
-      margin-top: 5px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
     .contents-list {
       list-style: none;
     }
 
     .contents-list li {
       display: grid;
-      grid-template-columns: 30px 1fr 28px;
+      grid-template-columns: 30px 1fr;
       gap: 10px;
       align-items: center;
       min-height: 55px;
@@ -410,14 +410,8 @@
 
     .contents-list .item-no {
       color: var(--group-color);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 850;
-    }
-
-    .contents-list .page-no {
-      color: var(--muted);
-      font-size: 11px;
-      text-align: right;
     }
 
     /* 03. Pain */
@@ -468,7 +462,7 @@
     .operator-day > p {
       margin-top: 5px;
       color: rgba(255, 255, 255, 0.62);
-      font-size: 12px;
+      font-size: 13px;
     }
 
     .day-phases {
@@ -501,7 +495,7 @@
       position: relative;
       padding: 0 0 9px 13px;
       color: rgba(255, 255, 255, 0.82);
-      font-size: 12px;
+      font-size: 13px;
       line-height: 1.45;
     }
 
@@ -561,7 +555,7 @@
       display: block;
       margin-top: 2px;
       color: var(--muted);
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 600;
     }
 
@@ -600,13 +594,6 @@
       text-align: center;
     }
 
-    .operator-hub img {
-      width: 42px;
-      height: 42px;
-      margin-bottom: 9px;
-      filter: brightness(0) invert(1);
-    }
-
     .operator-hub strong {
       font-size: 22px;
     }
@@ -614,7 +601,7 @@
     .operator-hub span {
       margin-top: 5px;
       color: rgba(255, 255, 255, 0.72);
-      font-size: 11px;
+      font-size: 13px;
       line-height: 1.45;
     }
 
@@ -666,8 +653,8 @@
 
     .solution-item p {
       color: var(--ink-soft);
-      font-size: 12px;
-      line-height: 1.5;
+      font-size: 14px;
+      line-height: 1.55;
     }
 
     .phones {
@@ -705,7 +692,6 @@
       object-fit: cover;
     }
 
-    .phone::after,
     .member-phone::after {
       content: "";
       position: absolute;
@@ -723,7 +709,7 @@
       border-radius: 999px;
       background: var(--brand-deep);
       color: #ffffff;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 800;
       box-shadow: 0 8px 18px rgba(44, 41, 39, 0.16);
     }
@@ -751,7 +737,7 @@
       padding: 9px 12px;
       border-top: 4px solid var(--phase);
       color: var(--phase);
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 850;
       text-align: center;
     }
@@ -804,7 +790,7 @@
 
     .journey-step p {
       color: var(--ink-soft);
-      font-size: 11px;
+      font-size: 13px;
       line-height: 1.55;
     }
 
@@ -815,7 +801,7 @@
       border-radius: 999px;
       background: var(--chip-bg);
       color: var(--step-color);
-      font-size: 9px;
+      font-size: 11px;
       font-weight: 850;
     }
 
@@ -848,7 +834,7 @@
     .compare-row.header {
       min-height: 40px;
       color: var(--muted);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 800;
     }
 
@@ -897,7 +883,7 @@
 
     .compare-message span {
       color: rgba(255, 255, 255, 0.72);
-      font-size: 12px;
+      font-size: 13px;
     }
 
     /* 08. Member experience */
@@ -941,7 +927,7 @@
       border-radius: 8px;
       background: #ffffff;
       box-shadow: 0 10px 24px rgba(44, 41, 39, 0.14);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 800;
     }
 
@@ -986,7 +972,7 @@
     .member-moment p {
       margin-top: 7px;
       color: var(--ink-soft);
-      font-size: 11px;
+      font-size: 13px;
       line-height: 1.5;
     }
 
@@ -1007,7 +993,7 @@
 
     .member-message span {
       max-width: 310px;
-      font-size: 11px;
+      font-size: 12px;
       line-height: 1.5;
       text-align: right;
     }
@@ -1063,7 +1049,7 @@
     .week-subtitle {
       margin-top: 4px;
       color: var(--week-color);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 850;
       text-align: center;
     }
@@ -1077,7 +1063,7 @@
       position: relative;
       padding: 0 0 8px 14px;
       color: var(--ink-soft);
-      font-size: 12px;
+      font-size: 13px;
       line-height: 1.45;
     }
 
@@ -1099,7 +1085,7 @@
       border-radius: 999px;
       background: var(--week-soft);
       color: var(--week-color);
-      font-size: 9px;
+      font-size: 11px;
       font-weight: 850;
     }
 
@@ -1150,7 +1136,7 @@
       border-radius: 50%;
       background: var(--screen-color);
       color: #ffffff;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 900;
     }
 
@@ -1217,7 +1203,7 @@
     .start-step p {
       margin-top: 5px;
       color: var(--ink-soft);
-      font-size: 11px;
+      font-size: 13px;
       line-height: 1.5;
     }
 
@@ -1248,7 +1234,7 @@
     .faq-item p {
       margin-top: 6px;
       color: var(--ink-soft);
-      font-size: 11px;
+      font-size: 13px;
       line-height: 1.55;
     }
 
@@ -1257,7 +1243,7 @@
       padding: 14px 17px;
       background: var(--blue-soft);
       color: var(--brand-deep);
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 750;
     }
 
@@ -1283,7 +1269,7 @@
     .takeaway-bar > span {
       max-width: 560px;
       color: rgba(255, 255, 255, 0.72);
-      font-size: 12px;
+      font-size: 13px;
       line-height: 1.5;
       text-align: right;
     }
@@ -1369,7 +1355,7 @@
       border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 999px;
       color: #ffffff;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 800;
       text-decoration: none;
     }
@@ -1388,7 +1374,7 @@
 
     .closing-steps > span {
       color: var(--brand-soft);
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 850;
       text-transform: uppercase;
     }
@@ -1415,7 +1401,7 @@
       border-radius: 50%;
       background: #ffffff;
       color: var(--brand-deep);
-      font-size: 11px;
+      font-size: 12px;
     }
 
     .closing-step span {
@@ -1456,7 +1442,7 @@
     .closing-qr small {
       margin-top: 5px;
       color: rgba(255, 255, 255, 0.68);
-      font-size: 10px;
+      font-size: 12px;
       line-height: 1.5;
     }
 
@@ -1465,7 +1451,7 @@
       padding-top: 14px;
       border-top: 1px solid rgba(255, 255, 255, 0.18);
       color: rgba(255, 255, 255, 0.68);
-      font-size: 11px;
+      font-size: 12px;
       line-height: 1.6;
     }
 
@@ -1675,10 +1661,11 @@
         </div>
         <div class="cover-audience">
           <div class="cover-platforms">
-            <span>WEB</span>
+            <span class="cover-platform"><img class="web-logo" src="../../assets/icons/globe.svg" alt="" />WEB</span>
             <span class="cover-platform"><i class="store-logo" aria-hidden="true">&#xf179;</i>iOS</span>
             <span class="cover-platform"><i class="store-logo" aria-hidden="true">&#xf3ab;</i>PLAY STORE</span>
           </div>
+          <a href="https://checkmo.co.kr">https://checkmo.co.kr</a>
           <a href="mailto:checkmo2025@gmail.com">checkmo2025@gmail.com</a>
         </div>
       </div>
@@ -1697,12 +1684,11 @@
           <span class="contents-phase">01</span>
           <div>
             <h3>독서 모임 운영의 불편함</h3>
-            <p>운영진의 반복 업무와 정보 분산</p>
           </div>
         </div>
         <ol class="contents-list">
-          <li><span class="item-no">01</span><span>운영이 복잡해지는 순간</span><span class="page-no">3</span></li>
-          <li><span class="item-no">02</span><span>흩어진 도구와 정보</span><span class="page-no">4</span></li>
+          <li><span class="item-no">01</span><span>운영이 복잡해지는 순간</span></li>
+          <li><span class="item-no">02</span><span>흩어진 도구와 정보</span></li>
         </ol>
       </section>
 
@@ -1711,14 +1697,13 @@
           <span class="contents-phase">02</span>
           <div>
             <h3>책모가 해결하는 방식</h3>
-            <p>운영진과 회원 모두의 변화</p>
           </div>
         </div>
         <ol class="contents-list">
-          <li><span class="item-no">03</span><span>하나로 연결되는 운영</span><span class="page-no">5</span></li>
-          <li><span class="item-no">04</span><span>모임 전·중·후의 흐름</span><span class="page-no">6</span></li>
-          <li><span class="item-no">05</span><span>운영진에게 달라지는 것</span><span class="page-no">7</span></li>
-          <li><span class="item-no">06</span><span>회원이 경험하는 변화</span><span class="page-no">8</span></li>
+          <li><span class="item-no">03</span><span>하나로 연결되는 운영</span></li>
+          <li><span class="item-no">04</span><span>모임 전·중·후의 흐름</span></li>
+          <li><span class="item-no">05</span><span>운영진에게 달라지는 것</span></li>
+          <li><span class="item-no">06</span><span>회원이 경험하는 변화</span></li>
         </ol>
       </section>
 
@@ -1727,14 +1712,13 @@
           <span class="contents-phase">03</span>
           <div>
             <h3>우리 모임에 적용하는 방법</h3>
-            <p>한 달 운영 예시와 시작 방법</p>
           </div>
         </div>
         <ol class="contents-list">
-          <li><span class="item-no">07</span><span>한 달 운영 시나리오</span><span class="page-no">9</span></li>
-          <li><span class="item-no">08</span><span>실제 화면으로 보는 운영</span><span class="page-no">10</span></li>
-          <li><span class="item-no">09</span><span>다음 모임부터 시작하기</span><span class="page-no">11</span></li>
-          <li><span class="item-no">10</span><span>책모 도입 제안</span><span class="page-no">12</span></li>
+          <li><span class="item-no">07</span><span>한 달 운영 시나리오</span></li>
+          <li><span class="item-no">08</span><span>실제 화면으로 보는 운영</span></li>
+          <li><span class="item-no">09</span><span>다음 모임부터 시작하기</span></li>
+          <li><span class="item-no">10</span><span>책모 도입 제안</span></li>
         </ol>
       </section>
     </div>
@@ -1746,7 +1730,7 @@
   <section class="slide warm" id="pain" style="--accent: var(--coral); --accent-soft: var(--coral-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">01. 독서 모임 운영의 불편함</span>
+      <span class="section-code">01 독서 모임 운영의 불편함</span>
     </div>
     <h2 class="slide-title">독서모임 운영, <span class="accent-text">불편하지 않으셨나요?</span></h2>
 
@@ -1801,7 +1785,7 @@
   <section class="slide" id="fragmentation" style="--accent: var(--coral); --accent-soft: var(--coral-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">01. 독서 모임 운영의 불편함</span>
+      <span class="section-code">01 독서 모임 운영의 불편함</span>
     </div>
     <h2 class="slide-title">도구는 많지만,<br /><span class="accent-text">운영 흐름은 연결되지 않습니다</span></h2>
     <p class="slide-desc">각 도구의 정보를 다시 모으고 설명하는 일이 결국 운영진에게 돌아옵니다.</p>
@@ -1817,7 +1801,6 @@
       <div class="map-arrow" aria-hidden="true"></div>
 
       <div class="operator-hub">
-        <img src="../../assets/icons/leader.svg" alt="" />
         <strong>운영진</strong>
         <span>수집 · 정리 · 전달<br />다시 확인</span>
       </div>
@@ -1843,7 +1826,7 @@
   <section class="slide warm" id="solution" style="--accent: var(--blue); --accent-soft: var(--blue-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">02. 책모가 해결하는 방식</span>
+      <span class="section-code">02 책모가 해결하는 방식</span>
     </div>
     <h2 class="slide-title">책모 하나로<br /><span class="accent-text">모임 운영의 맥락을 이어갑니다</span></h2>
 
@@ -1886,7 +1869,7 @@
   <section class="slide" id="journey" style="--accent: var(--blue); --accent-soft: var(--blue-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">02. 책모가 해결하는 방식</span>
+      <span class="section-code">02 책모가 해결하는 방식</span>
     </div>
     <h2 class="slide-title">모임 준비부터 회고까지,<br /><span class="accent-text">한 흐름으로 이어집니다</span></h2>
     <p class="slide-desc">각 단계의 결과가 다음 운영에 다시 쓰이는 모임 기록이 됩니다.</p>
@@ -1926,7 +1909,7 @@
   <section class="slide warm" id="before-after" style="--accent: var(--brand); --accent-soft: var(--warm-strong);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">02. 책모가 해결하는 방식</span>
+      <span class="section-code">02 책모가 해결하는 방식</span>
     </div>
     <h2 class="slide-title">운영의 반복은 줄이고,<br /><span class="accent-text">모임을 설계하는 시간은 늘립니다</span></h2>
 
@@ -1947,7 +1930,7 @@
   <section class="slide" id="member-experience" style="--accent: var(--green); --accent-soft: var(--green-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">02. 책모가 해결하는 방식</span>
+      <span class="section-code">02 책모가 해결하는 방식</span>
     </div>
     <h2 class="slide-title">회원이 스스로 확인할수록<br /><span class="accent-text">운영은 더 가벼워집니다</span></h2>
 
@@ -1990,7 +1973,7 @@
   <section class="slide warm" id="monthly-scenario" style="--accent: var(--purple); --accent-soft: var(--purple-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">03. 우리 모임에 적용하는 방법</span>
+      <span class="section-code">03 우리 모임에 적용하는 방법</span>
     </div>
     <h2 class="slide-title">한 달 운영 예시:<br /><span class="accent-text">다음 책 한 권을 함께 읽는 과정</span></h2>
     <p class="slide-desc">새로운 운영 체계를 한 번에 도입하지 않아도, 한 권의 책과 한 번의 정기모임부터 시작할 수 있습니다.</p>
@@ -2022,7 +2005,7 @@
   <section class="slide" id="app-examples" style="--accent: var(--purple); --accent-soft: var(--purple-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">03. 우리 모임에 적용하는 방법</span>
+      <span class="section-code">03 우리 모임에 적용하는 방법</span>
     </div>
     <h2 class="slide-title">한 달 운영, <span class="accent-text">책모에서는 이렇게 보입니다</span></h2>
     <p class="slide-desc">공지와 발제, 정기모임과 한줄평이 각각 흩어지지 않고 하나의 모임 안에서 이어집니다.</p>
@@ -2053,7 +2036,7 @@
   <section class="slide" id="adoption" style="--accent: var(--blue); --accent-soft: var(--blue-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">03. 우리 모임에 적용하는 방법</span>
+      <span class="section-code">03 우리 모임에 적용하는 방법</span>
     </div>
     <h2 class="slide-title">전부 바꾸지 않아도 됩니다.<br /><span class="accent-text">다음 모임 하나부터 시작하세요</span></h2>
 
