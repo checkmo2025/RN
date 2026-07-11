@@ -450,6 +450,7 @@ function upsertGroupByClubId(groups: Group[], nextGroup: Group): Group[] {
 
 export function MeetingScreen() {
   const meetingScrollRef = useRef<ScrollView>(null);
+  const applyModalScrollRef = useRef<ScrollView>(null);
   const meetingScrollYRef = useRef(0);
   const meetingSearchInputRef = useRef<TextInput>(null);
   useScrollToTop(meetingScrollRef);
@@ -974,6 +975,22 @@ export function MeetingScreen() {
     closeApplyModal();
   }, [closeApplyModal]);
 
+  const scrollApplyModalToBottom = useCallback(() => {
+    requestAnimationFrame(() => {
+      applyModalScrollRef.current?.scrollToEnd({ animated: true });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!applyModalGroup) return undefined;
+
+    const keyboardSubscription = Keyboard.addListener(
+      'keyboardDidShow',
+      scrollApplyModalToBottom,
+    );
+    return () => keyboardSubscription.remove();
+  }, [applyModalGroup, scrollApplyModalToBottom]);
+
   const openGroupHomeDirect = useCallback(async (group: Group) => {
     if (typeof group.clubId === 'number' && group.clubId > 0) {
       lastVisitedClubIdRef.current = group.clubId;
@@ -1368,6 +1385,7 @@ export function MeetingScreen() {
               {applyModalGroup ? (
                 <>
                   <ScrollView
+                    ref={applyModalScrollRef}
                     style={styles.applyModalScroll}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
@@ -1392,6 +1410,7 @@ export function MeetingScreen() {
                         })}
                         placeholderTextColor={colors.gray3}
                         multiline
+                        onFocus={scrollApplyModalToBottom}
                         maxLength={INPUT_LIMITS.APPLY_REASON}
                         overLimitMessage={l('신청 사유는 {limit}자 이하여야 합니다.', {
                           limit: INPUT_LIMITS.APPLY_REASON,

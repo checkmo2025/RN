@@ -152,14 +152,15 @@ export const styles = StyleSheet.create({
   applyModalCard: {
     width: '100%',
     maxWidth: 520,
-    maxHeight: '88%',
+    minHeight: '56%',
+    maxHeight: '92%',
     borderRadius: radius.lg,
     backgroundColor: colors.white,
     padding: spacing.sm,
     gap: spacing.sm,
   },
   applyModalScroll: {
-    flexShrink: 1,
+    flex: 1,
   },
   applyModalContent: {
     gap: spacing.sm,
