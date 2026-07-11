@@ -5,6 +5,10 @@
   - `ref_code/BE`: 백엔드. 별도 레포 `https://github.com/checkmo2025/BE.git` (Spring Boot 3.5 / Java 21 / Gradle).
   - `ref_code/FE`: 웹 프론트엔드. 별도 레포 `https://github.com/checkmo2025/FE.git` (Next.js 16 / React 19).
 
+- iOS 로컬 Archive/App Store 제출 작업을 시작하기 전에 `docs/agent/ios-local-release-runbook.md`를 확인한다.
+  - 정상적인 다음 배포에서는 빌드 번호 동기화 → Xcode Archive → Upload만 반복한다.
+  - 키체인/인증서 복구는 코드 서명 사전 테스트가 실패할 때만 수행하며, 정상 상태에서는 반복하지 않는다.
+
 - If a user request ends with `/md`, append a short update to `docs/agent/agent-log.md`.
 - The appended update must include:
   - Date (`YYYY-MM-DD`)
