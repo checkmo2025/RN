@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Image,
   Keyboard,
@@ -89,6 +90,7 @@ export type GroupManagementOverlayProps = {
   refreshingJoinRequests: boolean;
   selectedMemberAction: GroupMemberItem | null;
   submittingMemberAction: boolean;
+  canTransferOwnership: boolean;
   refreshingMembers: boolean;
   editDraft: GroupEditDraft;
   checkedEditName: {
@@ -131,6 +133,8 @@ export type GroupManagementOverlayProps = {
   bookshelfBookSearchKeyword: string;
   bookshelfBookSearchResults: BookItem[];
   bookshelfBookSearchTotal: number;
+  bookshelfBookSearchHasNext: boolean;
+  bookshelfBookSearchLoadingMore: boolean;
   bookshelfCreateDraft: BookshelfCreateDraft;
   editingBookshelfMeetingId: number | null;
   bookshelfCalendarVisible: boolean;
@@ -151,6 +155,7 @@ export type GroupManagementOverlayProps = {
   setBookshelfBookSearchQuery: (query: string) => void;
   resetBookshelfBookSearch: () => void;
   handleSubmitBookshelfBookSearch: () => void;
+  loadMoreBookshelfBookSearch: () => Promise<void>;
   handleSelectBookshelfSourceBook: (book: BookItem) => void;
   setBookshelfBookSelectorVisible: Dispatch<SetStateAction<boolean>>;
   setBookshelfCreateDraft: Dispatch<SetStateAction<BookshelfCreateDraft>>;
@@ -175,6 +180,7 @@ export function GroupManagementOverlay({
   refreshingJoinRequests,
   selectedMemberAction,
   submittingMemberAction,
+  canTransferOwnership,
   refreshingMembers,
   editDraft,
   checkedEditName,
@@ -209,6 +215,8 @@ export function GroupManagementOverlay({
   bookshelfBookSearchKeyword,
   bookshelfBookSearchResults,
   bookshelfBookSearchTotal,
+  bookshelfBookSearchHasNext,
+  bookshelfBookSearchLoadingMore,
   bookshelfCreateDraft,
   editingBookshelfMeetingId,
   bookshelfCalendarVisible,
@@ -221,6 +229,7 @@ export function GroupManagementOverlay({
   setBookshelfBookSearchQuery,
   resetBookshelfBookSearch,
   handleSubmitBookshelfBookSearch,
+  loadMoreBookshelfBookSearch,
   handleSelectBookshelfSourceBook,
   setBookshelfBookSelectorVisible,
   setBookshelfCreateDraft,
@@ -255,6 +264,32 @@ export function GroupManagementOverlay({
       closeManagementMenu();
     },
     [closeManagementMenu],
+  );
+  const handleBookshelfBookSearchScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (
+        !bookshelfBookSearchSearched ||
+        bookshelfBookSearchLoading ||
+        bookshelfBookSearchLoadingMore ||
+        !bookshelfBookSearchHasNext
+      ) {
+        return;
+      }
+
+      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+      const distanceToBottom =
+        contentSize.height - (layoutMeasurement.height + contentOffset.y);
+      if (distanceToBottom <= 240) {
+        void loadMoreBookshelfBookSearch();
+      }
+    },
+    [
+      bookshelfBookSearchHasNext,
+      bookshelfBookSearchLoading,
+      bookshelfBookSearchLoadingMore,
+      bookshelfBookSearchSearched,
+      loadMoreBookshelfBookSearch,
+    ],
   );
 
   return (
@@ -330,6 +365,8 @@ export function GroupManagementOverlay({
               contentContainerStyle={styles.bookshelfBookSearchList}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
+              scrollEventThrottle={16}
+              onScroll={handleBookshelfBookSearchScroll}
             >
               {bookshelfBookSearchSearched &&
               !bookshelfBookSearchLoading &&
@@ -375,6 +412,20 @@ export function GroupManagementOverlay({
                   </View>
                 </Pressable>
               ))}
+
+              {bookshelfBookSearchSearched &&
+              !bookshelfBookSearchLoading &&
+              bookshelfBookSearchResults.length > 0 ? (
+                bookshelfBookSearchLoadingMore ? (
+                  <View style={styles.bookshelfBookSearchLoadingMore}>
+                    <ActivityIndicator size="small" color={colors.primary1} />
+                  </View>
+                ) : !bookshelfBookSearchHasNext ? (
+                  <Text style={styles.bookshelfBookSearchEndText}>
+                    {l('마지막 검색 결과입니다.')}
+                  </Text>
+                ) : null
+              ) : null}
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -564,9 +615,10 @@ export function GroupManagementOverlay({
                       <Pressable
                         style={({ pressed }) => [
                           styles.managementWideButton,
-                          pressed && styles.pressed,
+                          pressed && !submittingMemberAction && styles.pressed,
                         ]}
                         onPress={() => setSelectedMemberActionId(member.id)}
+                        disabled={submittingMemberAction}
                       >
                         <Text style={styles.managementWideButtonText}>{l('역할 수정')}</Text>
                       </Pressable>
@@ -1408,7 +1460,6 @@ export function GroupManagementOverlay({
                     label: l('운영진 역할'),
                     icon: 'workspace-premium' as const,
                     disabled:
-                      submittingMemberAction ||
                       selectedMemberAction.role === '운영진' ||
                       selectedMemberAction.role === '개설자',
                     onPress: () => handleChangeMemberRole(selectedMemberAction.id, '운영진'),
@@ -1418,7 +1469,6 @@ export function GroupManagementOverlay({
                     label: l('회원 역할'),
                     icon: 'person-outline' as const,
                     disabled:
-                      submittingMemberAction ||
                       selectedMemberAction.role === '회원' ||
                       selectedMemberAction.role === '개설자',
                     onPress: () => handleChangeMemberRole(selectedMemberAction.id, '회원'),
@@ -1427,63 +1477,58 @@ export function GroupManagementOverlay({
                     key: '개설자' as const,
                     label: l('개설자 역할'),
                     icon: 'schedule' as const,
-                    disabled:
-                      submittingMemberAction || selectedMemberAction.role === '개설자',
+                    disabled: !canTransferOwnership || selectedMemberAction.role === '개설자',
                     onPress: () => handleChangeMemberRole(selectedMemberAction.id, '개설자'),
                   },
-                ].map((item) => (
-                  <Pressable
-                    key={`${selectedMemberAction.id}-${item.key}`}
-                    style={({ pressed }) => [
-                      styles.managementRoleMenuItem,
-                      item.disabled && styles.managementRoleMenuItemDisabled,
-                      pressed && !item.disabled && styles.pressed,
-                    ]}
-                    disabled={item.disabled}
-                    onPress={item.onPress}
-                  >
-                    <MaterialIcons
-                      name={item.icon}
-                      size={34}
-                      color={item.disabled ? colors.gray3 : colors.gray5}
-                    />
-                    <Text
+                ].map((item) => {
+                  const interactionDisabled = item.disabled || submittingMemberAction;
+                  return (
+                    <Pressable
+                      key={`${selectedMemberAction.id}-${item.key}`}
                       style={[
-                        styles.managementRoleMenuItemText,
-                        item.disabled && styles.managementRoleMenuItemTextDisabled,
+                        styles.managementRoleMenuItem,
+                        item.disabled && styles.managementRoleMenuItemDisabled,
                       ]}
+                      disabled={interactionDisabled}
+                      onPress={item.onPress}
+                      disableFeedback
                     >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                ))}
+                      <MaterialIcons
+                        name={item.icon}
+                        size={34}
+                        color={item.disabled ? colors.gray3 : colors.gray5}
+                      />
+                      <Text
+                        style={[
+                          styles.managementRoleMenuItemText,
+                          item.disabled && styles.managementRoleMenuItemTextDisabled,
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
                 <Pressable
-                  style={({ pressed }) => [
+                  style={[
                     styles.managementRoleMenuItem,
                     styles.managementRoleMenuItemLast,
-                    (selectedMemberAction.role === '개설자' || submittingMemberAction) &&
+                    selectedMemberAction.role === '개설자' &&
                       styles.managementRoleMenuItemDisabled,
-                    pressed &&
-                      selectedMemberAction.role !== '개설자' &&
-                      !submittingMemberAction &&
-                      styles.pressed,
                   ]}
                   disabled={selectedMemberAction.role === '개설자' || submittingMemberAction}
                   onPress={() => handleRemoveMember(selectedMemberAction.id)}
+                  disableFeedback
                 >
                   <MaterialIcons
                     name="logout"
                     size={34}
-                    color={
-                      selectedMemberAction.role === '개설자' || submittingMemberAction
-                        ? colors.gray3
-                        : colors.gray5
-                    }
+                    color={selectedMemberAction.role === '개설자' ? colors.gray3 : colors.gray5}
                   />
                   <Text
                     style={[
                       styles.managementRoleMenuItemText,
-                      (selectedMemberAction.role === '개설자' || submittingMemberAction) &&
+                      selectedMemberAction.role === '개설자' &&
                         styles.managementRoleMenuItemTextDisabled,
                     ]}
                   >

@@ -267,8 +267,11 @@ export function useBookshelfState({
     results: bookshelfBookSearchResults,
     loading: bookshelfBookSearchLoading,
     searched: bookshelfBookSearchSearched,
+    hasNext: bookshelfBookSearchHasNext,
     totalResults: bookshelfBookSearchTotal,
+    loadingMore: bookshelfBookSearchLoadingMore,
     search: runBookshelfBookSearch,
+    loadMore: loadMoreBookshelfBookSearch,
     reset: resetBookshelfBookSearch,
   } = useBookSearch();
   const [bookshelfCalendarVisible, setBookshelfCalendarVisible] = useState(false);
@@ -2705,7 +2708,10 @@ export function useBookshelfState({
     bookshelfBookSearchResults,
     bookshelfBookSearchLoading,
     bookshelfBookSearchSearched,
+    bookshelfBookSearchHasNext,
     bookshelfBookSearchTotal,
+    bookshelfBookSearchLoadingMore,
+    loadMoreBookshelfBookSearch,
     resetBookshelfBookSearch,
     bookshelfCalendarVisible,
     bookshelfCalendarMonth, setBookshelfCalendarMonth,

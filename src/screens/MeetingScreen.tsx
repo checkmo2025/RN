@@ -1654,7 +1654,10 @@ function GroupHomeView({
     bookshelfBookSearchResults,
     bookshelfBookSearchLoading,
     bookshelfBookSearchSearched,
+    bookshelfBookSearchHasNext,
     bookshelfBookSearchTotal,
+    bookshelfBookSearchLoadingMore,
+    loadMoreBookshelfBookSearch,
     resetBookshelfBookSearch,
     bookshelfCalendarVisible,
     bookshelfCalendarMonth, setBookshelfCalendarMonth,
@@ -3053,9 +3056,9 @@ function GroupHomeView({
                 </Text>
               </View>
               <View style={styles.metaBlock}>
-                <Text style={styles.metaLabel}>{l('모임 취지')}</Text>
+                <Text style={styles.metaLabel}>{l('공개 여부')}</Text>
                 <Text style={styles.metaValue}>
-                  {managedGroup.isPrivate ? l('비공개, 토론') : l('공개, 토론')}
+                  {managedGroup.isPrivate ? l('비공개') : l('공개')}
                 </Text>
               </View>
               {managedGroup.description ? (
@@ -3764,6 +3767,7 @@ function GroupHomeView({
         refreshingJoinRequests={refreshingJoinRequests}
         selectedMemberAction={selectedMemberAction}
         submittingMemberAction={submittingMemberAction}
+        canTransferOwnership={canManageClub && managedGroup.membershipStatus === 'OWNER'}
         refreshingMembers={refreshingMembers}
         editDraft={editDraft}
         checkedEditName={checkedEditName}
@@ -3798,6 +3802,8 @@ function GroupHomeView({
         bookshelfBookSearchKeyword={bookshelfBookSearchKeyword}
         bookshelfBookSearchResults={bookshelfBookSearchResults}
         bookshelfBookSearchTotal={bookshelfBookSearchTotal}
+        bookshelfBookSearchHasNext={bookshelfBookSearchHasNext}
+        bookshelfBookSearchLoadingMore={bookshelfBookSearchLoadingMore}
         bookshelfCreateDraft={bookshelfCreateDraft}
         editingBookshelfMeetingId={editingBookshelfMeetingId}
         bookshelfCalendarVisible={bookshelfCalendarVisible}
@@ -3810,6 +3816,7 @@ function GroupHomeView({
         setBookshelfBookSearchQuery={setBookshelfBookSearchQuery}
         resetBookshelfBookSearch={resetBookshelfBookSearch}
         handleSubmitBookshelfBookSearch={handleSubmitBookshelfBookSearch}
+        loadMoreBookshelfBookSearch={loadMoreBookshelfBookSearch}
         handleSelectBookshelfSourceBook={handleSelectBookshelfSourceBook}
         setBookshelfBookSelectorVisible={setBookshelfBookSelectorVisible}
         setBookshelfCreateDraft={setBookshelfCreateDraft}

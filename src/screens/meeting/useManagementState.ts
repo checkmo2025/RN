@@ -440,12 +440,18 @@ export function useManagementState({
         setSelectedMemberActionId(null);
         return;
       }
+      if (role === '개설자' && managedGroup.membershipStatus !== 'OWNER') {
+        showToast(l('개설자만 개설자 역할을 위임할 수 있습니다.'));
+        return;
+      }
 
       const submit = async () => {
+        setSelectedMemberActionId(null);
         setSubmittingMemberAction(true);
         try {
           if (role === '개설자') {
             await updateClubMemberStatus(clubId, clubMemberId, { command: 'TRANSFER_OWNER' });
+            setManagedGroup((prev) => ({ ...prev, membershipStatus: 'STAFF' }));
           } else {
             await updateClubMemberStatus(clubId, clubMemberId, {
               command: 'CHANGE_ROLE',
@@ -454,7 +460,6 @@ export function useManagementState({
           }
           const activeMembers = await fetchClubMembers(clubId, 'ACTIVE');
           setMembers(activeMembers.items.map(mapClubManagedMemberToGroupMember));
-          setSelectedMemberActionId(null);
           showToast(l('{role} 역할로 변경했습니다.', { role: l(role) }));
         } catch (error) {
           if (!(error instanceof ApiError)) {
@@ -481,7 +486,15 @@ export function useManagementState({
 
       void submit();
     },
-    [canManageClub, group.clubId, l, members, submittingMemberAction],
+    [
+      canManageClub,
+      group.clubId,
+      l,
+      managedGroup.membershipStatus,
+      members,
+      setManagedGroup,
+      submittingMemberAction,
+    ],
   );
 
   const handleRemoveMember = useCallback(

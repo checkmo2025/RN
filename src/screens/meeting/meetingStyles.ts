@@ -2634,6 +2634,17 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: spacing.xl,
   },
+  bookshelfBookSearchLoadingMore: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+  },
+  bookshelfBookSearchEndText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
+  },
   bookshelfCreateSelector: {
     flexDirection: 'row',
     alignItems: 'center',

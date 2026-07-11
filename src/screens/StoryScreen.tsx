@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   FlatList,
@@ -319,8 +320,11 @@ export function StoryScreen() {
     searchedKeyword: bookSearchKeyword,
     results: bookSearchResults,
     loading: bookSearchLoading,
+    hasNext: bookSearchHasNext,
     totalResults: bookSearchTotalResults,
+    loadingMore: bookSearchLoadingMore,
     search: runBookSearch,
+    loadMore: loadMoreBookSearch,
     reset: resetBookSearch,
   } = useBookSearch();
   const [title, setTitle] = useState('');
@@ -1684,6 +1688,34 @@ export function StoryScreen() {
     }
     void runBookSearch(keyword);
   }, [bookSearchQuery, l, runBookSearch]);
+
+  const handleBookSearchScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (
+        !bookSearchSearched ||
+        bookSearchLoading ||
+        bookSearchLoadingMore ||
+        !bookSearchHasNext ||
+        bookSearchResults.length === 0
+      ) {
+        return;
+      }
+
+      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+      const distanceToBottom = contentSize.height - (layoutMeasurement.height + contentOffset.y);
+      if (distanceToBottom <= 240) {
+        void loadMoreBookSearch();
+      }
+    },
+    [
+      bookSearchHasNext,
+      bookSearchLoading,
+      bookSearchLoadingMore,
+      bookSearchResults.length,
+      bookSearchSearched,
+      loadMoreBookSearch,
+    ],
+  );
 
   const handleSelectBookFromSearch = useCallback((bookItem: BookItem) => {
     setSelectedBook(mapBookItemToBook(bookItem, l));
@@ -3113,6 +3145,8 @@ export function StoryScreen() {
                     ]}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
+                    scrollEventThrottle={16}
+                    onScroll={handleBookSearchScroll}
                   >
                     {bookSearchSearched && !bookSearchLoading && bookSearchResults.length === 0 ? (
                       <Text style={styles.bookPickerEmptyText}>{l('검색 결과가 없습니다.')}</Text>
@@ -3140,6 +3174,20 @@ export function StoryScreen() {
                         </View>
                       </Pressable>
                     ))}
+
+                    {bookSearchSearched &&
+                    !bookSearchLoading &&
+                    bookSearchResults.length > 0 ? (
+                      bookSearchLoadingMore ? (
+                        <View style={styles.bookSearchPaginationFooter}>
+                          <ActivityIndicator size="small" color={colors.primary1} />
+                        </View>
+                      ) : !bookSearchHasNext ? (
+                        <Text style={styles.bookSearchEndText}>
+                          {l('마지막 검색 결과입니다.')}
+                        </Text>
+                      ) : null
+                    ) : null}
                   </ScrollView>
                 </KeyboardAvoidingView>
           </View>
@@ -3590,6 +3638,17 @@ const styles = StyleSheet.create({
     color: colors.gray4,
     textAlign: 'center',
     paddingVertical: spacing.md,
+  },
+  bookSearchPaginationFooter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+  },
+  bookSearchEndText: {
+    ...typography.body2_3,
+    color: colors.gray4,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
   },
   secondaryButton: {
     paddingHorizontal: spacing.lg,
