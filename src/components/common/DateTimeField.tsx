@@ -44,6 +44,27 @@ function combine(datePart: Date, timePart: Date): Date {
   );
 }
 
+function adjustForMinuteWrap(previous: Date, picked: Date): Date {
+  const next = new Date(picked);
+  const sameDateAndHour =
+    previous.getFullYear() === picked.getFullYear() &&
+    previous.getMonth() === picked.getMonth() &&
+    previous.getDate() === picked.getDate() &&
+    previous.getHours() === picked.getHours();
+
+  if (!sameDateAndHour) return next;
+
+  const previousMinute = previous.getMinutes();
+  const pickedMinute = picked.getMinutes();
+  if (previousMinute >= 45 && pickedMinute <= 15) {
+    next.setHours(next.getHours() + 1);
+  } else if (previousMinute <= 15 && pickedMinute >= 45) {
+    next.setHours(next.getHours() - 1);
+  }
+
+  return next;
+}
+
 /**
  * 기기 네이티브 날짜/시간 선택기.
  * - iOS: 모달 스피너(datetime) + 취소/완료
@@ -56,6 +77,10 @@ export function DateTimeField({ value, onChange, placeholder, minimumDate, style
   const [iosTemp, setIosTemp] = useState<Date | null>(null);
 
   const base = value ?? minimumDate ?? new Date();
+  const iosSelection = iosTemp ?? base;
+  const iosSelectionBeforeMinimum = Boolean(
+    minimumDate && iosSelection.getTime() < minimumDate.getTime(),
+  );
 
   const openAndroid = () => {
     DateTimePickerAndroid.open({
@@ -88,6 +113,7 @@ export function DateTimeField({ value, onChange, placeholder, minimumDate, style
   };
 
   const confirmIos = () => {
+    if (iosSelectionBeforeMinimum) return;
     onChange(iosTemp ?? base);
     setIosVisible(false);
   };
@@ -124,23 +150,39 @@ export function DateTimeField({ value, onChange, placeholder, minimumDate, style
               <Pressable onPress={() => setIosVisible(false)} hitSlop={8}>
                 <Text style={styles.headerCancel}>{l('취소')}</Text>
               </Pressable>
-              <Pressable onPress={confirmIos} hitSlop={8}>
-                <Text style={styles.headerDone}>{l('완료')}</Text>
+              <Pressable
+                onPress={confirmIos}
+                hitSlop={8}
+                disabled={iosSelectionBeforeMinimum}
+                accessibilityState={{ disabled: iosSelectionBeforeMinimum }}
+              >
+                <Text
+                  style={[
+                    styles.headerDone,
+                    iosSelectionBeforeMinimum && styles.headerDoneDisabled,
+                  ]}
+                >
+                  {l('완료')}
+                </Text>
               </Pressable>
             </View>
             <DateTimePicker
-              value={iosTemp ?? base}
+              value={iosSelection}
               mode="datetime"
               display="spinner"
-              minimumDate={minimumDate}
               locale={language === 'en' ? 'en-US' : 'ko-KR'}
               themeVariant="light"
               textColor={colors.gray6}
               onChange={(_event: DateTimePickerEvent, picked?: Date) => {
-                if (picked) setIosTemp(picked);
+                if (picked) setIosTemp(adjustForMinuteWrap(iosSelection, picked));
               }}
               style={styles.picker}
             />
+            {iosSelectionBeforeMinimum ? (
+              <Text style={styles.minimumDateHint}>
+                {l('선택 가능한 시간 이후로 설정해주세요.')}
+              </Text>
+            ) : null}
           </View>
         </Modal>
       ) : null}
@@ -199,6 +241,16 @@ const styles = StyleSheet.create({
   headerDone: {
     ...typography.subhead3,
     color: colors.primary1,
+  },
+  headerDoneDisabled: {
+    color: colors.gray3,
+  },
+  minimumDateHint: {
+    ...typography.caption1_3,
+    color: colors.likeRed,
+    textAlign: 'center',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
   },
   picker: {
     height: 216,

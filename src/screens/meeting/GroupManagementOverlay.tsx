@@ -108,7 +108,6 @@ export type GroupManagementOverlayProps = {
   handleCloseManagementLayer: () => void;
   handleCloseManagementScreen: () => void;
   closeManagementMenu: () => void;
-  closeManagementMenuImmediately: () => void;
   setSelectedJoinRequestMessage: (item: GroupJoinRequestItem | null) => void;
   setSelectedJoinRequestActionId: (id: string | null) => void;
   handleOpenJoinRequestProfile: (nickname: string) => void;
@@ -193,7 +192,6 @@ export function GroupManagementOverlay({
   handleCloseManagementLayer,
   handleCloseManagementScreen,
   closeManagementMenu,
-  closeManagementMenuImmediately,
   setSelectedJoinRequestMessage,
   setSelectedJoinRequestActionId,
   handleOpenJoinRequestProfile,
@@ -1576,11 +1574,17 @@ export function GroupManagementOverlay({
         <View style={styles.managementOverlay}>
           <Pressable
             style={styles.managementOverlayBackdrop}
-            onPress={closeManagementMenuImmediately}
+            onPress={closeManagementMenu}
             disableFeedback
           />
           <Animated.View
-            style={[styles.managementMenuSheet, { transform: [{ translateY: managementSheetY }] }]}
+            style={[
+              styles.managementMenuSheet,
+              {
+                paddingBottom: Math.max(insets.bottom, spacing.lg),
+                transform: [{ translateY: managementSheetY }],
+              },
+            ]}
             onStartShouldSetResponder={() => true}
           >
             <View style={styles.managementHandleArea} {...managementHandlePanResponder.panHandlers}>

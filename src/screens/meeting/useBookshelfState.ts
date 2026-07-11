@@ -706,6 +706,10 @@ export function useBookshelfState({
           const nextGeneration = detail.generation ?? book.generation;
           const nextBook: BookshelfItem = {
             ...book,
+            rating:
+              typeof detail.averageRate === 'number'
+                ? normalizeAverageRating(detail.averageRate)
+                : book.rating,
             generation: nextGeneration,
             session: formatGenerationLabel(nextGeneration),
             category: detail.tag?.trim() || book.category,
@@ -723,6 +727,7 @@ export function useBookshelfState({
               item.remoteMeetingId === meetingId
                 ? {
                     ...item,
+                    rating: nextBook.rating,
                     generation: nextBook.generation,
                     session: nextBook.session,
                     category: nextBook.category,
@@ -1462,6 +1467,12 @@ export function useBookshelfState({
             });
           }
           await refreshBookshelfPostsByType(clubId, meetingId, 'REVIEW');
+          if (selectedBookshelfBook) {
+            await reloadBookshelfMeetingDetail(selectedBookshelfBook, {
+              suppressErrorToast: true,
+              sections: ['base'],
+            });
+          }
           showToast(isEditing ? l('한줄평이 수정되었습니다.') : l('한줄평이 등록되었습니다.'));
         }
         setEditingBookshelfPost(null);
@@ -1550,6 +1561,12 @@ export function useBookshelfState({
                   await deleteClubBookshelfReview(clubId, meetingId, post.remoteId);
                 }
                 await refreshBookshelfPostsByType(clubId, meetingId, post.type);
+                if (post.type === 'REVIEW' && selectedBookshelfBook) {
+                  await reloadBookshelfMeetingDetail(selectedBookshelfBook, {
+                    suppressErrorToast: true,
+                    sections: ['base'],
+                  });
+                }
                 showToast(l('{label}를 삭제했습니다.', { label: translatedPostLabel }));
               } catch (error) {
                 showToast(l(resolveBookshelfActionErrorMessage(
@@ -1569,8 +1586,9 @@ export function useBookshelfState({
       group.clubId,
       handleOpenBookshelfComposer,
       l,
+      reloadBookshelfMeetingDetail,
       refreshBookshelfPostsByType,
-      selectedBookshelfBook?.remoteMeetingId,
+      selectedBookshelfBook,
       setReportModal,
     ],
   );

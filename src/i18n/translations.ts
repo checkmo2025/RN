@@ -416,6 +416,7 @@ const enLiteralMessages: Record<string, string> = {
   '중복 불가': 'Single Choice',
   '시작 시간': 'Start Time',
   '종료 시간': 'End Time',
+  '선택 가능한 시간 이후로 설정해주세요.': 'Choose a time after the minimum allowed time.',
   '투표종료': 'Poll Closed',
   '다시 투표': 'Vote Again',
   '투표하기': 'Vote',

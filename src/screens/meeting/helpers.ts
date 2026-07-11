@@ -434,19 +434,30 @@ export function mapNoticePreviewToNoticeItem(item: ClubNoticePreview): NoticeIte
 export function mergeNoticeDetail(
   baseNotice: NoticeItem | null,
   detail: ClubNoticeDetail,
+  bookshelfItems: BookshelfItem[] = [],
 ): NoticeItem {
+  const linkedMeetingId = detail.meetingDetail?.meetingId;
+  const linkedBookshelf = bookshelfItems.find(
+    (book) =>
+      book.remoteMeetingId === linkedMeetingId || book.regularMeetingId === linkedMeetingId,
+  );
+  const previousBookshelf = baseNotice?.bookshelf;
+  const previousBookshelfRating =
+    previousBookshelf?.remoteMeetingId === linkedMeetingId
+      ? previousBookshelf?.rating
+      : undefined;
   const bookshelfAttachment =
-    detail.meetingDetail?.meetingId && detail.meetingDetail.bookInfo
+    linkedMeetingId && detail.meetingDetail?.bookInfo
       ? {
-          id: `bookshelf-${detail.meetingDetail.meetingId}`,
-          remoteMeetingId: detail.meetingDetail.meetingId,
+          id: `bookshelf-${linkedMeetingId}`,
+          remoteMeetingId: linkedMeetingId,
           session: formatGenerationLabel(detail.meetingDetail.generation),
           title:
             detail.meetingDetail.bookInfo.title ?? detail.meetingDetail.title ?? '책 제목',
           author: detail.meetingDetail.bookInfo.author ?? '작가 미상',
           category: detail.meetingDetail.tag?.trim() || '기본 태그',
           coverImage: detail.meetingDetail.bookInfo.imgUrl ?? BOOK_DEFAULT_IMAGE,
-          rating: 0,
+          rating: linkedBookshelf?.rating ?? previousBookshelfRating ?? 0,
         }
       : undefined;
   const tags = toNoticeTags({

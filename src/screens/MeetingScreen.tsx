@@ -1927,7 +1927,6 @@ function GroupHomeView({
     selectedJoinRequestAction,
     selectedMemberAction,
     closeManagementMenu,
-    closeManagementMenuImmediately,
     closeContactModal,
     runAfterClosingManagementMenu,
     handleOpenManagementScreen,
@@ -3788,7 +3787,6 @@ function GroupHomeView({
         handleCloseManagementLayer={handleCloseManagementLayerWithGuard}
         handleCloseManagementScreen={requestCloseManagementScreen}
         closeManagementMenu={closeManagementMenu}
-        closeManagementMenuImmediately={closeManagementMenuImmediately}
         setSelectedJoinRequestMessage={setSelectedJoinRequestMessage}
         setSelectedJoinRequestActionId={setSelectedJoinRequestActionId}
         handleOpenJoinRequestProfile={handleOpenJoinRequestProfile}
@@ -3917,8 +3915,8 @@ function GroupHomeView({
               !noticeContentInputFocused ||
               !noticeContentInputScrollEnabled
             }
-            keyboardShouldPersistTaps="always"
-            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           >
             <View style={styles.noticeComposerCard}>
               <View style={styles.noticeComposerFieldHeader}>

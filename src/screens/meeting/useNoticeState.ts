@@ -345,6 +345,36 @@ export function useNoticeState({
   }, [group.clubId]);
 
   useEffect(() => {
+    setNoticeItems((prev) => {
+      let changed = false;
+      const next = prev.map((notice) => {
+        const noticeBookshelf = notice.bookshelf;
+        const meetingId = noticeBookshelf?.remoteMeetingId;
+        if (!noticeBookshelf || typeof meetingId !== 'number') return notice;
+
+        const latestBookshelf = bookshelfItems.find(
+          (book) =>
+            book.remoteMeetingId === meetingId || book.regularMeetingId === meetingId,
+        );
+        if (!latestBookshelf || noticeBookshelf.rating === latestBookshelf.rating) {
+          return notice;
+        }
+
+        changed = true;
+        return {
+          ...notice,
+          bookshelf: {
+            ...noticeBookshelf,
+            rating: latestBookshelf.rating,
+          },
+        };
+      });
+
+      return changed ? next : prev;
+    });
+  }, [bookshelfItems]);
+
+  useEffect(() => {
     const clubId = group.clubId;
     if (typeof clubId !== 'number') return;
 
@@ -405,7 +435,7 @@ export function useNoticeState({
         sortNoticeItems(
           prev.map((item) => {
             const detail = detailByNoticeId.get(item.id);
-            return detail ? mergeNoticeDetail(item, detail) : item;
+            return detail ? mergeNoticeDetail(item, detail, bookshelfItems) : item;
           }),
         ),
       );
@@ -416,7 +446,7 @@ export function useNoticeState({
     return () => {
       cancelled = true;
     };
-  }, [group.clubId, visibleNotices]);
+  }, [bookshelfItems, group.clubId, visibleNotices]);
 
   const loadNoticeDetail = useCallback(
     async (notice: NoticeItem) => {
@@ -440,7 +470,7 @@ export function useNoticeState({
         if (isStale()) return;
         if (!detail) throw new Error('Empty notice detail response');
 
-        const merged = mergeNoticeDetail(notice, detail);
+        const merged = mergeNoticeDetail(notice, detail, bookshelfItems);
         setNoticeItems((prev) =>
           sortNoticeItems(prev.map((item) => (item.id === notice.id ? merged : item))),
         );
@@ -488,7 +518,7 @@ export function useNoticeState({
         });
       }
     },
-    [group.clubId, l],
+    [bookshelfItems, group.clubId, l],
   );
 
   const loadNoticeComments = useCallback(
@@ -659,7 +689,7 @@ export function useNoticeState({
         try {
           const detail = await fetchClubNoticeDetail(group.clubId, remoteNoticeId);
           if (detail) {
-            const merged = mergeNoticeDetail(null, detail);
+            const merged = mergeNoticeDetail(null, detail, bookshelfItems);
             const nextItems = sortNoticeItems([
               merged,
               ...noticeItems.filter((item) => item.id !== merged.id),
@@ -704,7 +734,7 @@ export function useNoticeState({
 
       showToast(l('등록된 공지가 없습니다.'));
     },
-    [group.clubId, l, noticeItems, noticePageSize],
+    [bookshelfItems, group.clubId, l, noticeItems, noticePageSize],
   );
 
   const handleSubmitNoticeComment = useCallback(() => {
@@ -864,7 +894,7 @@ export function useNoticeState({
           try {
             const detail = await fetchClubNoticeDetail(group.clubId, selectedNotice.remoteId);
             if (detail) {
-              const merged = mergeNoticeDetail(selectedNotice, detail);
+              const merged = mergeNoticeDetail(selectedNotice, detail, bookshelfItems);
               setNoticeItems((prev) =>
                 sortNoticeItems(
                   prev.map((item) => (item.id === selectedNotice.id ? merged : item)),
@@ -893,7 +923,7 @@ export function useNoticeState({
 
       void openReportModal();
     });
-  }, [group.clubId, l, requireAuth, selectedNotice, setReportModal]);
+  }, [bookshelfItems, group.clubId, l, requireAuth, selectedNotice, setReportModal]);
 
   const handleToggleVoteOption = useCallback(
     (optionId: string) => {
@@ -988,7 +1018,7 @@ export function useNoticeState({
         });
         const refreshedDetail = await fetchClubNoticeDetail(clubId, noticeId);
         if (!refreshedDetail) return;
-        const merged = mergeNoticeDetail(selectedNotice, refreshedDetail);
+        const merged = mergeNoticeDetail(selectedNotice, refreshedDetail, bookshelfItems);
         setNoticeItems((prev) =>
           sortNoticeItems(prev.map((item) => (item.id === selectedNotice.id ? merged : item))),
         );
@@ -1008,6 +1038,7 @@ export function useNoticeState({
 
     void submit();
   }, [
+    bookshelfItems,
     group.clubId,
     hasSubmittedVoteInNotice,
     isManagedClub,
@@ -1052,7 +1083,7 @@ export function useNoticeState({
           try {
             const detail = await fetchClubNoticeDetail(clubId, noticeId);
             if (detail) {
-              const merged = mergeNoticeDetail(notice, detail);
+              const merged = mergeNoticeDetail(notice, detail, bookshelfItems);
               const detailKey = `${clubId}:${noticeId}`;
               enrichedNoticeDetailKeysRef.current.add(detailKey);
               editableNotice = merged;
@@ -1089,7 +1120,7 @@ export function useNoticeState({
     setNoticeDraft(emptyDraft);
     setNoticeComposerInitialDraft(emptyDraft);
     setNoticeComposerVisible(true);
-  }, [group.clubId, l]);
+  }, [bookshelfItems, group.clubId, l]);
 
   const handleAddNoticePhoto = useCallback(
     (pickAndUploadImage: (type: 'NOTICE') => Promise<string | null>) => {
