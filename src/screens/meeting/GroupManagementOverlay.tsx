@@ -78,6 +78,7 @@ function getManagementScreenContentBottomPadding(bottomInset: number, hasFooter:
 export type GroupManagementOverlayProps = {
   // Visibility
   managementMenuVisible: boolean;
+  managementOverlaySuspended: boolean;
   activeManagementScreen: GroupManagementScreen | null;
   bookshelfBookSelectorVisible: boolean;
 
@@ -170,6 +171,7 @@ export type GroupManagementOverlayProps = {
 
 export function GroupManagementOverlay({
   managementMenuVisible,
+  managementOverlaySuspended,
   activeManagementScreen,
   bookshelfBookSelectorVisible,
   joinRequests,
@@ -294,7 +296,10 @@ export function GroupManagementOverlay({
 
   return (
     <Modal
-      visible={managementMenuVisible || Boolean(activeManagementScreen) || bookshelfBookSelectorVisible}
+      visible={
+        !managementOverlaySuspended &&
+        (managementMenuVisible || Boolean(activeManagementScreen) || bookshelfBookSelectorVisible)
+      }
       transparent
       animationType="fade"
       onRequestClose={handleCloseManagementLayer}
@@ -1251,7 +1256,17 @@ export function GroupManagementOverlay({
                 onPress={(event) => event.stopPropagation()}
                 disableFeedback
               >
-                <Text style={styles.managementMessageTitle}>{l('가입 메시지')}</Text>
+                <View style={styles.managementModalHeader}>
+                  <Text style={styles.managementMessageTitle}>{l('가입 메시지')}</Text>
+                  <Pressable
+                    onPress={() => setSelectedJoinRequestMessage(null)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={l('닫기')}
+                  >
+                    <MaterialIcons name="close" size={24} color={colors.gray6} />
+                  </Pressable>
+                </View>
                 <ScrollView
                   style={styles.managementMessageScroll}
                   showsVerticalScrollIndicator={false}

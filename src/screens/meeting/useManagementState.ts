@@ -189,6 +189,7 @@ export function useManagementState({
   ).current;
 
   const [activeManagementScreen, setActiveManagementScreen] = useState<GroupManagementScreen | null>(null);
+  const [managementOverlaySuspended, setManagementOverlaySuspended] = useState(false);
   const [joinRequests, setJoinRequests] = useState<GroupJoinRequestItem[]>([]);
   const [members, setMembers] = useState<GroupMemberItem[]>([]);
   const [selectedJoinRequestActionId, setSelectedJoinRequestActionId] = useState<string | null>(null);
@@ -215,6 +216,7 @@ export function useManagementState({
     setJoinRequests([]);
     setMembers([]);
     closeManagementMenuImmediately();
+    setManagementOverlaySuspended(false);
     setActiveManagementScreen(null);
     setSelectedJoinRequestActionId(null);
     setSelectedJoinRequestMessage(null);
@@ -223,6 +225,12 @@ export function useManagementState({
     setCheckedEditName(null);
     setCheckingEditName(false);
   }, [closeManagementMenuImmediately, group]);
+
+  useEffect(() => {
+    return navigation.addListener('focus', () => {
+      setManagementOverlaySuspended(false);
+    });
+  }, [navigation]);
 
   const closeContactModal = useCallback(() => {
     setContactModalVisible(false);
@@ -239,6 +247,7 @@ export function useManagementState({
   const handleOpenManagementScreen = useCallback(
     (screen: GroupManagementScreen) => {
       runAfterClosingManagementMenu(() => {
+        setManagementOverlaySuspended(false);
         setActiveManagementScreen(screen);
         setSelectedJoinRequestActionId(null);
         setSelectedJoinRequestMessage(null);
@@ -264,6 +273,7 @@ export function useManagementState({
   );
 
   const handleCloseManagementScreen = useCallback(() => {
+    setManagementOverlaySuspended(false);
     setActiveManagementScreen(null);
     setSelectedJoinRequestActionId(null);
     setSelectedJoinRequestMessage(null);
@@ -727,8 +737,12 @@ export function useManagementState({
       if (!memberNickname) return;
       setSelectedJoinRequestActionId(null);
       setSelectedJoinRequestMessage(null);
-      setActiveManagementScreen(null);
-      navigation.navigate('UserProfile', { memberNickname, fromScreen: 'Meeting' });
+      setManagementOverlaySuspended(true);
+      const rootNavigation = navigation.getParent<NavigationProp<ParamListBase>>();
+      (rootNavigation ?? navigation).navigate('UserProfile', {
+        memberNickname,
+        fromScreen: 'Meeting',
+      });
     },
     [navigation],
   );
@@ -880,6 +894,7 @@ export function useManagementState({
 
   return {
     managementMenuVisible,
+    managementOverlaySuspended,
     openManagementMenu,
     managementSheetY,
     managementHandlePanResponder,

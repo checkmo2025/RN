@@ -1899,6 +1899,7 @@ function GroupHomeView({
 
   const {
     managementMenuVisible, openManagementMenu,
+    managementOverlaySuspended,
     managementSheetY,
     managementHandlePanResponder,
     activeManagementScreen, setActiveManagementScreen,
@@ -3757,6 +3758,7 @@ function GroupHomeView({
       </DialogOverlay>
       <GroupManagementOverlay
         managementMenuVisible={managementMenuVisible}
+        managementOverlaySuspended={managementOverlaySuspended}
         activeManagementScreen={activeManagementScreen}
         bookshelfBookSelectorVisible={bookshelfBookSelectorVisible}
         joinRequests={joinRequests}
