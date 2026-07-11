@@ -467,7 +467,7 @@ export function MeetingScreen() {
   const meetingTabRetapClosingRef = useRef(false);
   const lastVisitedClubIdRef = useRef<number | null>(null);
   const [applyOpenId, setApplyOpenId] = useState<string | null>(null);
-  const [applyReasonById, setApplyReasonById] = useState<Record<string, string>>({});
+  const [applyReason, setApplyReason] = useState('');
   const [appliedById, setAppliedById] = useState<Record<string, string>>({});
   const [pendingOpenClubId, setPendingOpenClubId] = useState<number | null>(null);
   const [pendingOpenMeetingId, setPendingOpenMeetingId] = useState<number | null>(null);
@@ -482,7 +482,6 @@ export function MeetingScreen() {
   const [selectedOutputFilter, setSelectedOutputFilter] =
     useState<ClubSearchOutputFilter>('ALL');
   const [outputFilterOpen, setOutputFilterOpen] = useState(false);
-  const [hasInteractedWithDiscoverFilter, setHasInteractedWithDiscoverFilter] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const {
@@ -498,7 +497,6 @@ export function MeetingScreen() {
 
   const handleChangeMeetingSearch = useCallback((value: string) => {
     setSearch(value);
-    setHasInteractedWithDiscoverFilter(true);
   }, []);
 
   const scrollMeetingInputToFocusTarget = useCallback(
@@ -705,7 +703,6 @@ export function MeetingScreen() {
     outputFilterOptions.find((option) => option.value === selectedOutputFilter)?.label ?? '전체',
   );
   const discoverSectionTitle = l(
-    hasInteractedWithDiscoverFilter ||
     search.trim().length > 0 ||
     activeInputFilter !== null ||
     selectedOutputFilter !== 'ALL'
@@ -967,26 +964,15 @@ export function MeetingScreen() {
     () => visibleDiscoverGroups.find((group) => group.id === applyOpenId) ?? null,
     [applyOpenId, visibleDiscoverGroups],
   );
-  const applyModalReason = applyModalGroup
-    ? (applyReasonById[applyModalGroup.id] ?? '')
-    : '';
-
   const closeApplyModal = useCallback(() => {
     Keyboard.dismiss();
+    setApplyReason('');
     setApplyOpenId(null);
   }, []);
 
   const requestCloseApplyModal = useCallback(() => {
-    if (applyModalReason.trim().length === 0) {
-      closeApplyModal();
-      return;
-    }
-
-    showAlertAfterKeyboardDismiss(l('알림'), l('현재 페이지는 저장되지 않습니다.'), [
-      { text: l('취소'), style: 'cancel' },
-      { text: l('닫기'), style: 'destructive', onPress: closeApplyModal },
-    ]);
-  }, [applyModalReason, closeApplyModal, l]);
+    closeApplyModal();
+  }, [closeApplyModal]);
 
   const openGroupHomeDirect = useCallback(async (group: Group) => {
     if (typeof group.clubId === 'number' && group.clubId > 0) {
@@ -1046,18 +1032,15 @@ export function MeetingScreen() {
 
   const handleOpenApply = (groupId: string) => {
     requireAuth(() => {
+      setApplyReason('');
       setApplyOpenId(groupId);
     });
-  };
-
-  const handleChangeApplyReason = (groupId: string, value: string) => {
-    setApplyReasonById((prev) => ({ ...prev, [groupId]: value }));
   };
 
   const handleSubmitApply = (group: Group) => {
     requireAuth(() => {
       Keyboard.dismiss();
-      const reason = (applyReasonById[group.id] ?? '').trim();
+      const reason = applyReason.trim();
       if (!reason) {
         showToast(l('신청 사유를 입력해야 합니다.'));
         return;
@@ -1094,7 +1077,7 @@ export function MeetingScreen() {
           }
           setAppliedById((prev) => ({ ...prev, [group.id]: nextApplicationStatus }));
           setApplyOpenId(null);
-          setApplyReasonById((prev) => ({ ...prev, [group.id]: '' }));
+          setApplyReason('');
           showToast(
             isJoinedClubStatus(nextStatus)
               ? l('모임에 가입되었습니다.')
@@ -1118,9 +1101,9 @@ export function MeetingScreen() {
       setSearch('');
       setActiveInputFilter(null);
       setSelectedOutputFilter('ALL');
-      setHasInteractedWithDiscoverFilter(false);
       setOutputFilterOpen(false);
       setApplyOpenId(null);
+      setApplyReason('');
       await loadMyGroups();
       setRefreshing(false);
     };
@@ -1255,7 +1238,6 @@ export function MeetingScreen() {
               pressed && styles.pressed,
             ]}
             onPress={() => {
-              setHasInteractedWithDiscoverFilter(true);
               setOutputFilterOpen((prev) => !prev);
             }}
           >
@@ -1279,7 +1261,6 @@ export function MeetingScreen() {
                       pressed && styles.pressed,
                     ]}
                     onPress={() => {
-                      setHasInteractedWithDiscoverFilter(true);
                       setSelectedOutputFilter(option.value);
                       setOutputFilterOpen(false);
                     }}
@@ -1306,7 +1287,6 @@ export function MeetingScreen() {
               key={filter}
               style={styles.filterChip}
               onPress={() => {
-                setHasInteractedWithDiscoverFilter(true);
                 setActiveInputFilter((prev) => (prev === filter ? null : filter));
               }}
               android_ripple={{ color: colors.gray1 }}
@@ -1371,7 +1351,11 @@ export function MeetingScreen() {
         statusBarTranslucent
         onRequestClose={requestCloseApplyModal}
       >
-        <Pressable style={styles.applyModalBackdrop} onPress={requestCloseApplyModal}>
+        <Pressable
+          style={styles.applyModalBackdrop}
+          onPress={requestCloseApplyModal}
+          disableFeedback
+        >
           <KeyboardAvoidingView
             style={styles.applyModalKeyboardWrap}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1379,6 +1363,7 @@ export function MeetingScreen() {
             <Pressable
               style={styles.applyModalCard}
               onPress={(event) => event.stopPropagation()}
+              disableFeedback
             >
               {applyModalGroup ? (
                 <>
@@ -1400,8 +1385,8 @@ export function MeetingScreen() {
                     />
                     <View style={styles.applyModalForm}>
                       <FormTextInput
-                        value={applyModalReason}
-                        onChangeText={(value) => handleChangeApplyReason(applyModalGroup.id, value)}
+                        value={applyReason}
+                        onChangeText={setApplyReason}
                         placeholder={l('신청 사유를 입력해보세요({limit}자 제한)', {
                           limit: INPUT_LIMITS.APPLY_REASON,
                         })}
@@ -1414,7 +1399,7 @@ export function MeetingScreen() {
                         style={styles.applyModalInput}
                       />
                       <Text style={styles.applyModalCounterText}>
-                        {applyModalReason.length}/{INPUT_LIMITS.APPLY_REASON}
+                        {applyReason.length}/{INPUT_LIMITS.APPLY_REASON}
                       </Text>
                     </View>
                   </ScrollView>
@@ -1422,9 +1407,9 @@ export function MeetingScreen() {
                     <Pressable
                       style={[
                         styles.applyModalSubmitButton,
-                        applyModalReason.trim().length === 0 && styles.applyModalSubmitDisabled,
+                        applyReason.trim().length === 0 && styles.applyModalSubmitDisabled,
                       ]}
-                      disabled={applyModalReason.trim().length === 0}
+                      disabled={applyReason.trim().length === 0}
                       onPress={() => handleSubmitApply(applyModalGroup)}
                     >
                       <Text style={styles.applyModalSubmitText}>{l('가입 신청하기')}</Text>
