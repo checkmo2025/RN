@@ -10,7 +10,10 @@ import {
   subscribeProfileIncompleteSession,
   subscribeUnauthorizedSession,
 } from '../services/api/http';
-import { getStoredRefreshToken } from '../services/api/authTokenStore';
+import {
+  getAuthSessionGeneration,
+  getStoredRefreshToken,
+} from '../services/api/authTokenStore';
 import {
   clearStoredAuthSession,
   fetchLoginStatusSilently,
@@ -130,13 +133,46 @@ export function AuthGateProvider({ children }: Props) {
     let cancelled = false;
 
     const syncLoginState = async () => {
+      const startupGeneration = getAuthSessionGeneration();
+
       try {
-        await silentRefreshSession();
-        const status = await fetchLoginStatusSilently(true);
-        if (!cancelled) {
-          applyLoginStatus(status);
+        const storedRefreshToken = await getStoredRefreshToken();
+        if (cancelled) return;
+
+        // 앱 세션은 SecureStore의 RT가 기준이다. AT 쿠키만 남은 상태를 로그인으로 인정하면
+        // AT 만료 시점(최대 2시간)에 뒤늦게 로그아웃되는 현상이 다시 발생한다.
+        if (!storedRefreshToken) {
+          markSessionLoggedOut();
           setIsReady(true);
+          return;
         }
+
+        const refreshed = await silentRefreshSession();
+        if (cancelled) return;
+
+        const currentRefreshToken = await getStoredRefreshToken();
+        if (cancelled) return;
+        if (!refreshed && !currentRefreshToken) {
+          markSessionLoggedOut();
+          setIsReady(true);
+          return;
+        }
+
+        if (getAuthSessionGeneration() !== startupGeneration) {
+          setIsReady(true);
+          return;
+        }
+
+        const statusGeneration = getAuthSessionGeneration();
+        const status = await fetchLoginStatusSilently(true);
+        if (cancelled) return;
+        if (getAuthSessionGeneration() !== statusGeneration) {
+          setIsReady(true);
+          return;
+        }
+
+        applyLoginStatus(status);
+        setIsReady(true);
       } catch (error) {
         if (cancelled) return;
         if (isProfileIncompleteApiError(error)) {
@@ -144,34 +180,22 @@ export function AuthGateProvider({ children }: Props) {
           setIsReady(true);
           return;
         }
-        if (error instanceof ApiError && error.status === 401) {
-          const refreshed = await silentRefreshSession();
-          if (cancelled) return;
-
-          if (refreshed) {
-            try {
-              const status = await fetchLoginStatusSilently(true);
-              if (!cancelled) {
-                applyLoginStatus(status);
-              }
-            } catch (refreshStatusError) {
-              if (!cancelled) {
-                if (isProfileIncompleteApiError(refreshStatusError)) {
-                  openProfileCompletion({ notify: true });
-                } else if (isSessionResetError(refreshStatusError)) {
-                  await clearSessionState();
-                } else {
-                  markSessionLoggedOut();
-                }
-              }
-            }
+        if (error instanceof ApiError && error.code === 'AUTH_SESSION_CHANGED') {
+          setIsReady(true);
+          return;
+        }
+        if (isSessionResetError(error)) {
+          await clearSessionState();
+        } else {
+          const stillHasRefreshToken = Boolean(await getStoredRefreshToken());
+          if (stillHasRefreshToken) {
+            // 네트워크/5xx 같은 일시 실패는 세션 만료가 아니다. RT를 보존하고 다음
+            // foreground/API 요청에서 다시 검증한다.
+            setAuthSessionState('loggedIn');
+            setAuthPageVisible(false);
           } else {
             markSessionLoggedOut();
           }
-        } else if (isSessionResetError(error)) {
-          await clearSessionState();
-        } else {
-          markSessionLoggedOut();
         }
         setIsReady(true);
       }
@@ -182,21 +206,38 @@ export function AuthGateProvider({ children }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [applyLoginStatus, clearSessionState, markSessionLoggedOut, openProfileCompletion]);
+  }, [
+    applyLoginStatus,
+    clearSessionState,
+    markSessionLoggedOut,
+    openProfileCompletion,
+    setAuthSessionState,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
 
     const refreshForegroundSession = async () => {
+      const foregroundGeneration = getAuthSessionGeneration();
+
       try {
         const refreshToken = await getStoredRefreshToken();
-        if (!refreshToken) return;
+        if (!refreshToken) {
+          if (!cancelled && authSessionStateRef.current !== 'loggedOut') {
+            markSessionLoggedOut();
+          }
+          return;
+        }
 
-        const shouldRefresh =
-          authSessionStateRef.current === 'loggedOut' || (await isStoredRefreshTokenRefreshDue());
+        const wasLoggedOut = authSessionStateRef.current === 'loggedOut';
+        const shouldRefresh = wasLoggedOut || (await isStoredRefreshTokenRefreshDue());
         if (!shouldRefresh) return;
+        if (getAuthSessionGeneration() !== foregroundGeneration) return;
 
-        const refreshed = await ensureFreshAppSessionIfNeeded();
+        // UI가 로그아웃 상태라면 갱신 시각과 관계없이 RT를 실제 검증한 뒤 복구한다.
+        const refreshed = wasLoggedOut
+          ? await silentRefreshSession()
+          : await ensureFreshAppSessionIfNeeded();
         if (cancelled) return;
 
         if (!refreshed) {
@@ -206,13 +247,18 @@ export function AuthGateProvider({ children }: Props) {
           }
           return;
         }
+        if (getAuthSessionGeneration() !== foregroundGeneration) return;
 
+        const statusGeneration = getAuthSessionGeneration();
         const status = await fetchLoginStatusSilently(true);
-        if (!cancelled) {
+        if (!cancelled && getAuthSessionGeneration() === statusGeneration) {
           applyLoginStatus(status);
         }
       } catch (error) {
         if (cancelled) return;
+        if (error instanceof ApiError && error.code === 'AUTH_SESSION_CHANGED') {
+          return;
+        }
         if (isProfileIncompleteApiError(error)) {
           openProfileCompletion({ notify: true });
           return;
@@ -256,10 +302,9 @@ export function AuthGateProvider({ children }: Props) {
 
   useEffect(() => {
     return subscribeUnauthorizedSession((message) => {
-      void Promise.all([
-        clearStoredAuthSession(),
-        clearStoredPushRegistrationCache(),
-      ]);
+      // HTTP 계층이 해당 세대의 RT만 조건부 삭제한 뒤 알림을 보낸다. 여기서 다시
+      // 무조건 삭제하면 이전 세션의 늦은 401이 새 로그인 토큰까지 지울 수 있다.
+      void clearStoredPushRegistrationCache();
       showToast(message || '로그인 상태를 확인해 주십시오.');
       setAuthSessionState('loggedOut');
       pendingActionRef.current = null;

@@ -1,7 +1,18 @@
-import { ApiEnvelope, ApiError, fetchApi, requestJson, silentRefreshSession, unwrapResult } from './http';
 import {
+  ApiEnvelope,
+  ApiError,
+  fetchApi,
+  requestJson,
+  runSerializedAuthSessionOperation,
+  silentRefreshSession,
+  unwrapResult,
+} from './http';
+import {
+  advanceAuthSessionGeneration,
   deleteStoredRefreshToken,
+  getAuthSessionGeneration,
   getStoredRefreshToken,
+  getStoredAuthSessionIdentityGeneration,
   saveStoredRefreshToken,
 } from './authTokenStore';
 import {
@@ -78,27 +89,90 @@ type PresignedUrl = {
 
 type JsonRecord = Record<string, unknown>;
 
+async function stabilizeStoredAppSession(
+  sourceRefreshToken: string,
+  expectedGeneration: number,
+  options?: { requireRefresh?: boolean },
+): Promise<void> {
+  if (getAuthSessionGeneration() !== expectedGeneration) {
+    throw new ApiError(
+      '로그인 상태가 변경되어 요청을 중단했습니다.',
+      409,
+      'AUTH_SESSION_CHANGED',
+    );
+  }
+
+  const refreshed = await silentRefreshSession();
+  const refreshToken = await getStoredRefreshToken();
+  if (getAuthSessionGeneration() !== expectedGeneration) {
+    if (!refreshToken) {
+      throw new ApiError(
+        '로그인 정보를 갱신할 수 없습니다. 다시 로그인해 주십시오.',
+        401,
+        'AUTH_412',
+      );
+    }
+    throw new ApiError(
+      '로그인 상태가 변경되어 요청을 중단했습니다.',
+      409,
+      'AUTH_SESSION_CHANGED',
+    );
+  }
+
+  if (refreshed) return;
+
+  if (refreshToken && refreshToken !== sourceRefreshToken) {
+    throw new ApiError(
+      '로그인 상태가 변경되어 요청을 중단했습니다.',
+      409,
+      'AUTH_SESSION_CHANGED',
+    );
+  }
+  if (!refreshToken) {
+    throw new ApiError(
+      '로그인 정보를 갱신할 수 없습니다. 다시 로그인해 주십시오.',
+      401,
+      'AUTH_412',
+    );
+  }
+
+  if (options?.requireRefresh) {
+    throw new ApiError(
+      '로그인 상태를 갱신하지 못했습니다. 잠시 후 다시 시도해 주십시오.',
+      0,
+      'SESSION_REFRESH_FAILED',
+    );
+  }
+}
+
 export async function loginByIdentifier(
   identifier: string,
   password: string,
   options?: { suppressErrorToast?: boolean },
 ): Promise<void> {
-  const response = await requestJson<ApiEnvelope<LoginResult>>('/auth/app/login', {
-    method: 'POST',
-    body: {
-      identifier,
-      password,
-    },
-    suppressErrorToast: options?.suppressErrorToast,
+  advanceAuthSessionGeneration();
+  const session = await runSerializedAuthSessionOperation(async () => {
+    const response = await requestJson<ApiEnvelope<LoginResult>>('/auth/app/login', {
+      method: 'POST',
+      body: {
+        identifier,
+        password,
+      },
+      suppressErrorToast: options?.suppressErrorToast,
+    });
+
+    const refreshToken = unwrapResult(response)?.refreshToken;
+    if (!refreshToken) {
+      throw new ApiError('로그인 토큰을 확인할 수 없습니다.', 500, 'MISSING_REFRESH_TOKEN', response);
+    }
+
+    await saveStoredRefreshToken(refreshToken);
+    return {
+      refreshToken,
+      generation: getAuthSessionGeneration(),
+    };
   });
-
-  const refreshToken = unwrapResult(response)?.refreshToken;
-  if (!refreshToken) {
-    throw new ApiError('로그인 토큰을 확인할 수 없습니다.', 500, 'MISSING_REFRESH_TOKEN', response);
-  }
-
-  await saveStoredRefreshToken(refreshToken);
-  await silentRefreshSession();
+  await stabilizeStoredAppSession(session.refreshToken, session.generation);
 }
 
 // Backward-compatible alias for existing callers.
@@ -116,22 +190,46 @@ export async function exchangeOAuthCode(
   code: string,
   options?: { suppressErrorToast?: boolean },
 ): Promise<{ isProfileCompleted: boolean }> {
-  const response = await requestJson<ApiEnvelope<OAuthExchangeResult>>('/auth/app/oauth/exchange', {
-    method: 'POST',
-    body: { code },
-    suppressErrorToast: options?.suppressErrorToast,
+  advanceAuthSessionGeneration();
+  const exchange = await runSerializedAuthSessionOperation(async () => {
+    // OAuth code 교환 응답에는 AT가 없으므로 이전 계정의 Access Cookie를 먼저 정리한다.
+    try {
+      await requestJson<ApiEnvelope<null>>('/auth/logout', {
+        method: 'POST',
+        suppressErrorToast: true,
+      });
+    } catch {
+      // 교환 직후 refresh 성공 여부를 필수 검증하므로 쿠키 정리 실패만으로 중단하지 않는다.
+    }
+
+    const response = await requestJson<ApiEnvelope<OAuthExchangeResult>>('/auth/app/oauth/exchange', {
+      method: 'POST',
+      body: { code },
+      suppressErrorToast: options?.suppressErrorToast,
+    });
+
+    const nextResult = unwrapResult(response);
+    const refreshToken = nextResult?.refreshToken;
+    if (!refreshToken) {
+      throw new ApiError('로그인 토큰을 확인할 수 없습니다.', 500, 'MISSING_REFRESH_TOKEN', response);
+    }
+
+    await saveStoredRefreshToken(refreshToken);
+    return {
+      result: nextResult,
+      refreshToken,
+      generation: getAuthSessionGeneration(),
+    };
   });
 
-  const result = unwrapResult(response);
-  const refreshToken = result?.refreshToken;
-  if (!refreshToken) {
-    throw new ApiError('로그인 토큰을 확인할 수 없습니다.', 500, 'MISSING_REFRESH_TOKEN', response);
-  }
-
-  await saveStoredRefreshToken(refreshToken);
-  await silentRefreshSession();
+  await stabilizeStoredAppSession(exchange.refreshToken, exchange.generation, {
+    requireRefresh: true,
+  });
   // 신규 소셜 가입자는 프로필 미완성 → 프로필 완성 흐름으로 분기. 응답 누락 시 보수적으로 완성 처리.
-  return { isProfileCompleted: result?.profileCompleted ?? result?.isProfileCompleted ?? true };
+  return {
+    isProfileCompleted:
+      exchange.result?.profileCompleted ?? exchange.result?.isProfileCompleted ?? true,
+  };
 }
 
 export type AppleLoginPayload = {
@@ -144,6 +242,7 @@ export async function loginWithApple(
   payload: AppleLoginPayload,
   options?: { suppressErrorToast?: boolean },
 ): Promise<void> {
+  advanceAuthSessionGeneration();
   const body: Record<string, string> = {
     identityToken: payload.identityToken,
     rawNonce: payload.rawNonce,
@@ -153,19 +252,25 @@ export async function loginWithApple(
     body.authorizationCode = payload.authorizationCode;
   }
 
-  const response = await requestJson<ApiEnvelope<LoginResult>>('/auth/app/apple/login', {
-    method: 'POST',
-    body,
-    suppressErrorToast: options?.suppressErrorToast,
+  const session = await runSerializedAuthSessionOperation(async () => {
+    const response = await requestJson<ApiEnvelope<LoginResult>>('/auth/app/apple/login', {
+      method: 'POST',
+      body,
+      suppressErrorToast: options?.suppressErrorToast,
+    });
+
+    const refreshToken = unwrapResult(response)?.refreshToken;
+    if (!refreshToken) {
+      throw new ApiError('로그인 토큰을 확인할 수 없습니다.', 500, 'MISSING_REFRESH_TOKEN', response);
+    }
+
+    await saveStoredRefreshToken(refreshToken);
+    return {
+      refreshToken,
+      generation: getAuthSessionGeneration(),
+    };
   });
-
-  const refreshToken = unwrapResult(response)?.refreshToken;
-  if (!refreshToken) {
-    throw new ApiError('로그인 토큰을 확인할 수 없습니다.', 500, 'MISSING_REFRESH_TOKEN', response);
-  }
-
-  await saveStoredRefreshToken(refreshToken);
-  await silentRefreshSession();
+  await stabilizeStoredAppSession(session.refreshToken, session.generation);
 }
 
 export async function signUpByEmail(
@@ -173,14 +278,17 @@ export async function signUpByEmail(
   password: string,
   options?: { suppressErrorToast?: boolean; agreements?: TermsAgreementPayload[] },
 ): Promise<void> {
-  await requestJson<ApiEnvelope<SignUpResult>>('/auth/signup', {
-    method: 'POST',
-    body: {
-      email,
-      password,
-      agreements: options?.agreements ?? [],
-    },
-    suppressErrorToast: options?.suppressErrorToast,
+  advanceAuthSessionGeneration();
+  await runSerializedAuthSessionOperation(async () => {
+    await requestJson<ApiEnvelope<SignUpResult>>('/auth/signup', {
+      method: 'POST',
+      body: {
+        email,
+        password,
+        agreements: options?.agreements ?? [],
+      },
+      suppressErrorToast: options?.suppressErrorToast,
+    });
   });
 }
 
@@ -364,33 +472,69 @@ export async function fetchLoginStatusSilently(
 }
 
 export async function logoutSession(): Promise<void> {
-  const refreshToken = await getStoredRefreshToken();
+  // 로그아웃이 시작된 순간부터 이전 요청의 늦은 응답/재시도를 무시한다.
+  advanceAuthSessionGeneration();
+  const logoutSessionIdentityGeneration = await runSerializedAuthSessionOperation(async () => {
+    await getStoredRefreshToken();
+    return getStoredAuthSessionIdentityGeneration();
+  });
 
   try {
-    try {
-      await unregisterCurrentPushDeviceAsync();
-    } catch (error) {
-      logPushUnregistrationError(error);
-    }
+    // 진행 중인 push 등록까지 큐 밖에서 정리해 인증 갱신과의 교착을 피한다.
+    await unregisterCurrentPushDeviceAsync();
+  } catch (error) {
+    logPushUnregistrationError(error);
+  }
 
-    if (refreshToken) {
-      await requestJson<ApiEnvelope<null>>('/auth/app/logout', {
-        method: 'POST',
-        headers: {
-          'X-Refresh-Token': refreshToken,
-        },
-        suppressErrorToast: true,
-      });
+  await runSerializedAuthSessionOperation(async () => {
+    const refreshToken = await getStoredRefreshToken();
+    const identityGeneration = getStoredAuthSessionIdentityGeneration();
+    if (identityGeneration !== logoutSessionIdentityGeneration) {
+      // push 해제 대기 중 실제로 새 RT가 저장됐다면 새 로그인 세션은 건드리지 않는다.
+      // RT가 사라진 경우에는 확정 로그아웃 상태이므로 Access Cookie만 정리한다.
+      if (refreshToken) return;
+
+      try {
+        await requestJson<ApiEnvelope<null>>('/auth/logout', {
+          method: 'POST',
+          suppressErrorToast: true,
+        });
+      } catch {
+        // RT가 없으면 일반 API는 credentials=omit이므로 쿠키 정리 실패도 인증에 쓰이지 않는다.
+      }
       return;
     }
 
-    await requestJson<ApiEnvelope<null>>('/auth/logout', {
-      method: 'POST',
-      suppressErrorToast: true,
-    });
-  } finally {
-    await deleteStoredRefreshToken();
-  }
+    try {
+      if (refreshToken) {
+        try {
+          await requestJson<ApiEnvelope<null>>('/auth/app/logout', {
+            method: 'POST',
+            headers: {
+              'X-Refresh-Token': refreshToken,
+            },
+            suppressErrorToast: true,
+          });
+          return;
+        } catch {
+          // RT가 이미 회전됐거나 무효여도 웹 로그아웃으로 Access Token 쿠키는 정리한다.
+        }
+      }
+
+      await requestJson<ApiEnvelope<null>>('/auth/logout', {
+        method: 'POST',
+        suppressErrorToast: true,
+      });
+    } finally {
+      await deleteStoredRefreshToken();
+    }
+  });
 }
 
-export { deleteStoredRefreshToken as clearStoredAuthSession, silentRefreshSession };
+export async function clearStoredAuthSession(): Promise<void> {
+  // UI가 즉시 이전 비동기 응답을 무시할 수 있도록 큐 대기 전에 세대를 먼저 변경한다.
+  advanceAuthSessionGeneration();
+  await runSerializedAuthSessionOperation(deleteStoredRefreshToken);
+}
+
+export { silentRefreshSession };

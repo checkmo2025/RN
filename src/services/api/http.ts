@@ -1,16 +1,19 @@
 import { PUBLIC_ENV } from '../../constants/publicEnv';
 import { showToast } from '../../utils/toast';
 import {
-  deleteStoredRefreshToken,
+  deleteStoredRefreshTokenIfCurrent,
+  getAuthSessionGeneration,
   getStoredRefreshToken,
   getStoredRefreshTokenUpdatedAt,
-  saveStoredRefreshToken,
+  replaceStoredRefreshTokenIfCurrent,
 } from './authTokenStore';
 
 const DEFAULT_API_BASE_URL = 'https://api.checkmo.co.kr/api/v1';
 const API_VERSION_PATH = '/api/v1';
 const DEFAULT_TIMEOUT_MS = 15_000;
 const PROACTIVE_SESSION_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
+const SESSION_REFRESH_FAILED_CODE = 'SESSION_REFRESH_FAILED';
+const AUTH_SESSION_CHANGED_CODE = 'AUTH_SESSION_CHANGED';
 
 type QueryValue = string | number | boolean | null | undefined;
 
@@ -64,6 +67,13 @@ type FetchApiOptions = RequestInit & {
 type RefreshTokenResponse = {
   refreshToken?: string;
 };
+
+type SessionRefreshOutcome =
+  | 'refreshed'
+  | 'invalid'
+  | 'transient-failure'
+  | 'missing'
+  | 'session-changed';
 
 type ProfileIncompleteSessionListener = () => void;
 type UnauthorizedSessionListener = (message: string) => void;
@@ -238,6 +248,32 @@ function shouldNotifyUnauthorizedSession(status: number, code: string | undefine
   return status === 401 || isUnauthorizedSessionCode(code);
 }
 
+function createAuthSessionChangedError(): ApiError {
+  return new ApiError(
+    '로그인 상태가 변경되어 요청을 중단했습니다.',
+    409,
+    AUTH_SESSION_CHANGED_CODE,
+  );
+}
+
+function assertAuthSessionGeneration(expectedGeneration: number): void {
+  if (getAuthSessionGeneration() !== expectedGeneration) {
+    throw createAuthSessionChangedError();
+  }
+}
+
+async function invalidateStoredSessionForGeneration(
+  expectedGeneration: number,
+): Promise<boolean> {
+  if (getAuthSessionGeneration() !== expectedGeneration) return false;
+
+  const refreshToken = await getStoredRefreshToken();
+  if (getAuthSessionGeneration() !== expectedGeneration) return false;
+  if (!refreshToken) return true;
+
+  return deleteStoredRefreshTokenIfCurrent(refreshToken);
+}
+
 async function parseResponseBody(response: Response): Promise<unknown> {
   const text = await response.text();
   if (!text) return null;
@@ -256,6 +292,19 @@ function isSessionRefreshExcludedPath(path: string): boolean {
   if (normalizedPath === 'members/find-email') return true;
 
   return false;
+}
+
+async function resolveRequestCredentials(
+  path: string,
+  requestedCredentials: RequestCredentials,
+): Promise<RequestCredentials> {
+  if (requestedCredentials === 'omit' || isSessionRefreshExcludedPath(path)) {
+    return requestedCredentials;
+  }
+
+  // 앱 인증의 기준인 SecureStore RT가 없으면 남아 있는 HttpOnly AT 쿠키도 일반 API에
+  // 싣지 않는다. 오프라인에서도 UI loggedOut/서버 loggedIn 상태가 생기지 않게 한다.
+  return (await getStoredRefreshToken()) ? requestedCredentials : 'omit';
 }
 
 function shouldUseSessionRefresh(
@@ -287,38 +336,62 @@ function shouldAttemptSessionRefresh(
   return shouldUseSessionRefresh(path, options);
 }
 
-let refreshSessionPromise: Promise<boolean> | null = null;
+let authSessionOperationQueue: Promise<void> = Promise.resolve();
+let refreshSessionPromise: Promise<SessionRefreshOutcome> | null = null;
+
+export function runSerializedAuthSessionOperation<T>(operation: () => Promise<T>): Promise<T> {
+  const result = authSessionOperationQueue.then(operation, operation);
+  authSessionOperationQueue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
 
 function shouldClearStoredRefreshTokenAfterRefreshFailure(status: number, parsed: unknown): boolean {
   const code = getParsedCode(parsed);
   return status === 401 || code === 'AUTH_412' || code === 'AUTH_405';
 }
 
-async function refreshAppSession(): Promise<boolean> {
-  const refreshToken = await getStoredRefreshToken();
-  if (!refreshToken) return false;
+async function invalidateRefreshTokenIfSessionIsCurrent(
+  refreshToken: string,
+  sessionGeneration: number,
+): Promise<SessionRefreshOutcome> {
+  if (getAuthSessionGeneration() !== sessionGeneration) return 'session-changed';
+  return (await deleteStoredRefreshTokenIfCurrent(refreshToken))
+    ? 'invalid'
+    : 'session-changed';
+}
 
+async function refreshAppSession(
+  refreshToken: string,
+  sessionGeneration: number,
+): Promise<SessionRefreshOutcome> {
   let response: Response;
   try {
-    response = await fetch(buildApiUrl('/auth/app/refresh'), {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
+    response = await fetchWithTimeout(
+      '/auth/app/refresh',
+      {
+        method: 'POST',
+        credentials: 'include',
+      },
+      {
         Accept: 'application/json',
         'X-Refresh-Token': refreshToken,
       },
-    });
+      DEFAULT_TIMEOUT_MS,
+    );
   } catch {
-    return false;
+    return 'transient-failure';
   }
 
   const parsed = await parseResponseBody(response);
 
   if (!response.ok) {
     if (shouldClearStoredRefreshTokenAfterRefreshFailure(response.status, parsed)) {
-      await deleteStoredRefreshToken();
+      return invalidateRefreshTokenIfSessionIsCurrent(refreshToken, sessionGeneration);
     }
-    return false;
+    return 'transient-failure';
   }
 
   if (
@@ -328,28 +401,39 @@ async function refreshAppSession(): Promise<boolean> {
     (parsed as { isSuccess?: unknown }).isSuccess === false
   ) {
     if (shouldClearStoredRefreshTokenAfterRefreshFailure(response.status, parsed)) {
-      await deleteStoredRefreshToken();
+      return invalidateRefreshTokenIfSessionIsCurrent(refreshToken, sessionGeneration);
     }
-    return false;
+    return 'transient-failure';
   }
 
   const result = unwrapResult(parsed as ApiEnvelope<RefreshTokenResponse>);
   if (!result?.refreshToken) {
-    return false;
+    // 서버에서 이미 회전됐을 수 있으므로 응답 계약이 깨진 토큰은 재사용하지 않는다.
+    return invalidateRefreshTokenIfSessionIsCurrent(refreshToken, sessionGeneration);
   }
 
-  await saveStoredRefreshToken(result.refreshToken);
-  return true;
+  if (getAuthSessionGeneration() !== sessionGeneration) return 'session-changed';
+  return (await replaceStoredRefreshTokenIfCurrent(refreshToken, result.refreshToken))
+    ? 'refreshed'
+    : 'session-changed';
 }
 
-export async function silentRefreshSession(): Promise<boolean> {
+async function refreshSessionWithOutcome(): Promise<SessionRefreshOutcome> {
   if (!refreshSessionPromise) {
-    refreshSessionPromise = refreshAppSession().finally(() => {
+    refreshSessionPromise = runSerializedAuthSessionOperation(async () => {
+      const refreshToken = await getStoredRefreshToken();
+      if (!refreshToken) return 'missing';
+      return refreshAppSession(refreshToken, getAuthSessionGeneration());
+    }).finally(() => {
       refreshSessionPromise = null;
     });
   }
 
   return refreshSessionPromise;
+}
+
+export async function silentRefreshSession(): Promise<boolean> {
+  return (await refreshSessionWithOutcome()) === 'refreshed';
 }
 
 export async function isStoredRefreshTokenRefreshDue(nowMillis = Date.now()): Promise<boolean> {
@@ -380,11 +464,27 @@ async function refreshStoredSessionIfNeededBeforeRequest(
 ): Promise<void> {
   if (!shouldUseSessionRefresh(path, options)) return;
 
+  const refreshToken = await getStoredRefreshToken();
+  if (!refreshToken) return;
+
+  let shouldRefresh: boolean;
   try {
-    await ensureFreshAppSessionIfNeeded();
+    shouldRefresh = await isStoredRefreshTokenRefreshDue();
   } catch {
     // 선제 갱신 실패만으로는 요청을 막지 않는다. 기존 요청/401 retry 흐름이 최종 판단한다.
+    return;
   }
+
+  if (!shouldRefresh) return;
+
+  const outcome = await refreshSessionWithOutcome();
+  if (outcome !== 'invalid') return;
+
+  // 401/AUTH_412처럼 확정적으로 무효인 RT는 저장소에서 제거된다. 남은 AT로 요청을
+  // 계속하면 최대 2시간 뒤 다시 로그아웃되므로 즉시 세션 만료를 알린다.
+  const message = '로그인 정보가 만료되었습니다. 다시 로그인해 주십시오.';
+  notifyUnauthorizedSession(message);
+  throw new ApiError(message, 401, 'AUTH_412');
 }
 
 async function fetchWithTimeout(
@@ -426,14 +526,16 @@ async function requestJsonInternal<T>(
   path: string,
   options: RequestOptions,
   didRetry: boolean,
+  requestSessionGeneration: number,
 ): Promise<T> {
   const {
     body,
     headers = {},
-    credentials = 'include',
+    credentials: requestedCredentials = 'include',
     suppressErrorToast = true,
     timeoutMs = DEFAULT_TIMEOUT_MS,
   } = options;
+  const credentials = await resolveRequestCredentials(path, requestedCredentials);
 
   const requestHeaders: Record<string, string> = {
     ...headers,
@@ -448,6 +550,7 @@ async function requestJsonInternal<T>(
     retryOnUnauthorized: options.retryOnUnauthorized,
     didRetry,
   });
+  assertAuthSessionGeneration(requestSessionGeneration);
 
   let response: Response;
   const requestUrl = buildApiUrl(path, options.query, options.apiVersion);
@@ -469,17 +572,46 @@ async function requestJsonInternal<T>(
     throw new ApiError(message, 0, 'NETWORK_ERROR', toNetworkErrorBody(requestUrl, error));
   }
 
+  assertAuthSessionGeneration(requestSessionGeneration);
+
   const shouldRefreshSession = shouldAttemptSessionRefresh(path, response.status, {
     credentials,
     retryOnUnauthorized: options.retryOnUnauthorized,
     didRetry,
   });
   const shouldNotifyUnrecoverableUnauthorized = shouldRefreshSession || didRetry;
-  if (shouldRefreshSession && (await silentRefreshSession())) {
-    return requestJsonInternal<T>(path, options, true);
+  if (shouldRefreshSession) {
+    const refreshOutcome = await refreshSessionWithOutcome();
+
+    if (getAuthSessionGeneration() !== requestSessionGeneration) {
+      if (refreshOutcome === 'invalid') {
+        const message = '로그인 정보가 만료되었습니다. 다시 로그인해 주십시오.';
+        notifyUnauthorizedSession(message);
+        throw new ApiError(message, 401, 'AUTH_412');
+      }
+      throw createAuthSessionChangedError();
+    }
+
+    if (refreshOutcome === 'refreshed') {
+      return requestJsonInternal<T>(path, options, true, requestSessionGeneration);
+    }
+
+    // 네트워크/서버의 일시 실패로 RT가 그대로 남았다면 세션을 지우지 않는다.
+    if (refreshOutcome === 'transient-failure') {
+      throw new ApiError(
+        '로그인 상태를 갱신하지 못했습니다. 잠시 후 다시 시도해 주십시오.',
+        0,
+        SESSION_REFRESH_FAILED_CODE,
+      );
+    }
+
+    if (refreshOutcome === 'session-changed') {
+      throw createAuthSessionChangedError();
+    }
   }
 
   const parsed = await parseResponseBody(response);
+  assertAuthSessionGeneration(requestSessionGeneration);
 
   if (!response.ok) {
     const code = getParsedCode(parsed);
@@ -488,11 +620,11 @@ async function requestJsonInternal<T>(
         ? PROFILE_INCOMPLETE_MESSAGE
         : getParsedMessage(parsed, toDefaultHttpErrorMessage(response.status));
 
-    if (code === 'AUTH_405') {
-      await deleteStoredRefreshToken();
-    }
     notifyProfileIncompleteSessionIfNeeded(response.status, parsed);
     if (shouldNotifyUnrecoverableUnauthorized && shouldNotifyUnauthorizedSession(response.status, code)) {
+      if (!(await invalidateStoredSessionForGeneration(requestSessionGeneration))) {
+        throw createAuthSessionChangedError();
+      }
       notifyUnauthorizedSession(message);
     }
 
@@ -513,7 +645,9 @@ async function requestJsonInternal<T>(
       code === 'AUTH_403' ? PROFILE_INCOMPLETE_MESSAGE : getParsedMessage(parsed, '요청에 실패했습니다.');
     notifyProfileIncompleteSessionIfNeeded(response.status, parsed);
     if (isUnauthorizedSessionCode(code)) {
-      await deleteStoredRefreshToken();
+      if (!(await invalidateStoredSessionForGeneration(requestSessionGeneration))) {
+        throw createAuthSessionChangedError();
+      }
       notifyUnauthorizedSession(message);
     }
     if (!suppressErrorToast) {
@@ -526,22 +660,25 @@ async function requestJsonInternal<T>(
 }
 
 export async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  return requestJsonInternal<T>(path, options, false);
+  return requestJsonInternal<T>(path, options, false, getAuthSessionGeneration());
 }
 
 export async function fetchApi(path: string, options: FetchApiOptions = {}): Promise<Response> {
+  const requestSessionGeneration = getAuthSessionGeneration();
   const {
     query,
     retryOnUnauthorized = true,
-    credentials = 'include',
+    credentials: requestedCredentials = 'include',
     apiVersion,
     ...fetchOptions
   } = options;
+  const credentials = await resolveRequestCredentials(path, requestedCredentials);
 
   await refreshStoredSessionIfNeededBeforeRequest(path, {
     credentials,
     retryOnUnauthorized,
   });
+  assertAuthSessionGeneration(requestSessionGeneration);
 
   let response: Response;
   const requestUrl = buildApiUrl(path, query, apiVersion);
@@ -558,47 +695,82 @@ export async function fetchApi(path: string, options: FetchApiOptions = {}): Pro
       toNetworkErrorBody(requestUrl, error),
     );
   }
+  assertAuthSessionGeneration(requestSessionGeneration);
 
   const shouldRefreshSession = shouldAttemptSessionRefresh(path, response.status, {
     credentials,
     retryOnUnauthorized,
     didRetry: false,
   });
-  if (shouldRefreshSession && (await silentRefreshSession())) {
-    try {
-      const retryResponse = await fetch(requestUrl, {
-        ...fetchOptions,
-        credentials,
-      });
-      if (retryResponse.status === 401) {
-        notifyUnauthorizedSession(toDefaultHttpErrorMessage(retryResponse.status));
+  if (shouldRefreshSession) {
+    const refreshOutcome = await refreshSessionWithOutcome();
+
+    if (getAuthSessionGeneration() !== requestSessionGeneration) {
+      if (refreshOutcome === 'invalid') {
+        notifyUnauthorizedSession(toDefaultHttpErrorMessage(response.status));
+        return response;
       }
-      if (retryResponse.status === 403) {
-        try {
-          const parsed = await parseResponseBody(retryResponse.clone());
-          notifyProfileIncompleteSessionIfNeeded(retryResponse.status, parsed);
-        } catch {
-          // Ignore notification parsing failures; callers still receive the original response.
+      throw createAuthSessionChangedError();
+    }
+
+    if (refreshOutcome === 'refreshed') {
+      try {
+        const retryResponse = await fetch(requestUrl, {
+          ...fetchOptions,
+          credentials,
+        });
+        assertAuthSessionGeneration(requestSessionGeneration);
+        if (retryResponse.status === 401) {
+          if (!(await invalidateStoredSessionForGeneration(requestSessionGeneration))) {
+            throw createAuthSessionChangedError();
+          }
+          notifyUnauthorizedSession(toDefaultHttpErrorMessage(retryResponse.status));
         }
+        if (retryResponse.status === 403) {
+          try {
+            const parsed = await parseResponseBody(retryResponse.clone());
+            assertAuthSessionGeneration(requestSessionGeneration);
+            notifyProfileIncompleteSessionIfNeeded(retryResponse.status, parsed);
+          } catch {
+            // Ignore notification parsing failures; callers still receive the original response.
+          }
+        }
+        return retryResponse;
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+          '네트워크 연결을 확인해 주십시오.',
+          0,
+          'NETWORK_ERROR',
+          toNetworkErrorBody(requestUrl, error),
+        );
       }
-      return retryResponse;
-    } catch (error) {
+    }
+
+    if (refreshOutcome === 'transient-failure') {
       throw new ApiError(
-        '네트워크 연결을 확인해 주십시오.',
+        '로그인 상태를 갱신하지 못했습니다. 잠시 후 다시 시도해 주십시오.',
         0,
-        'NETWORK_ERROR',
-        toNetworkErrorBody(requestUrl, error),
+        SESSION_REFRESH_FAILED_CODE,
       );
+    }
+
+    if (refreshOutcome === 'session-changed') {
+      throw createAuthSessionChangedError();
     }
   }
 
   if (shouldRefreshSession && response.status === 401) {
+    if (!(await invalidateStoredSessionForGeneration(requestSessionGeneration))) {
+      throw createAuthSessionChangedError();
+    }
     notifyUnauthorizedSession(toDefaultHttpErrorMessage(response.status));
   }
 
   if (response.status === 403) {
     try {
       const parsed = await parseResponseBody(response.clone());
+      assertAuthSessionGeneration(requestSessionGeneration);
       notifyProfileIncompleteSessionIfNeeded(response.status, parsed);
     } catch {
       // Ignore notification parsing failures; callers still receive the original response.
