@@ -491,7 +491,10 @@ export function mergeNoticeDetail(
           options: detail.voteDetail.items.map((option) => ({
             id: `notice-${detail.id}-vote-${option.itemNumber}`,
             label: option.item,
-            voters: option.votedMembers.map((member) => member.nickname),
+            voters: option.votedMembers.map((member) => ({
+              nickname: member.nickname,
+              profileImageUrl: member.profileImageUrl,
+            })),
           })),
         } satisfies NoticePoll)
       : undefined,

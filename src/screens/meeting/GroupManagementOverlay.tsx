@@ -106,6 +106,7 @@ export type GroupManagementOverlayProps = {
 
   // Management handlers
   handleCloseManagementLayer: () => void;
+  handleBackManagementScreen: () => void;
   handleCloseManagementScreen: () => void;
   closeManagementMenu: () => void;
   setSelectedJoinRequestMessage: (item: GroupJoinRequestItem | null) => void;
@@ -190,6 +191,7 @@ export function GroupManagementOverlay({
   managementSheetY,
   managementHandlePanResponder,
   handleCloseManagementLayer,
+  handleBackManagementScreen,
   handleCloseManagementScreen,
   closeManagementMenu,
   setSelectedJoinRequestMessage,
@@ -438,7 +440,7 @@ export function GroupManagementOverlay({
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={[styles.managementScreenHeader, { paddingTop: Math.max(insets.top, spacing.lg) + spacing.sm }]}>
-            <Pressable onPress={handleCloseManagementScreen} hitSlop={8}>
+            <Pressable onPress={handleBackManagementScreen} hitSlop={8}>
               <MaterialIcons name="chevron-left" size={24} color={colors.gray6} />
             </Pressable>
             <Text style={styles.managementScreenTitle}>
@@ -1320,7 +1322,7 @@ export function GroupManagementOverlay({
                   onPress={() => handleProcessJoinRequest(selectedJoinRequestAction, 'REJECT')}
                 >
                   <MaterialIcons
-                    name="delete-outline"
+                    name="close"
                     size={34}
                     color={submittingJoinRequestAction ? colors.gray3 : colors.gray5}
                   />
@@ -1330,7 +1332,7 @@ export function GroupManagementOverlay({
                       submittingJoinRequestAction && styles.managementJoinActionItemTextDisabled,
                     ]}
                   >
-                    {l('가입 거절')}
+                    {l('가입거절')}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -1484,7 +1486,25 @@ export function GroupManagementOverlay({
                 onPress={(event) => event.stopPropagation()}
                 disableFeedback
               >
-                <Text style={styles.managementRoleMenuTitle}>{l('역할 수정')}</Text>
+                <View style={styles.managementModalHeader}>
+                  <Text style={styles.managementRoleMenuTitle}>{l('역할 수정')}</Text>
+                  <Pressable
+                    onPress={() => {
+                      if (submittingMemberAction) return;
+                      setSelectedMemberActionId(null);
+                    }}
+                    hitSlop={8}
+                    disabled={submittingMemberAction}
+                    accessibilityRole="button"
+                    accessibilityLabel={l('닫기')}
+                  >
+                    <MaterialIcons
+                      name="close"
+                      size={24}
+                      color={submittingMemberAction ? colors.gray3 : colors.gray6}
+                    />
+                  </Pressable>
+                </View>
                 {[
                   {
                     key: '운영진' as const,

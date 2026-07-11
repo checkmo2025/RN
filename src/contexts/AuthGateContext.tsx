@@ -302,6 +302,8 @@ export function AuthGateProvider({ children }: Props) {
 
   useEffect(() => {
     return subscribeUnauthorizedSession((message) => {
+      // 수동 로그아웃이 완료된 뒤 늦게 도착한 이전 세션의 401은 만료 UX를 다시 열지 않는다.
+      if (authSessionStateRef.current === 'loggedOut') return;
       // HTTP 계층이 해당 세대의 RT만 조건부 삭제한 뒤 알림을 보낸다. 여기서 다시
       // 무조건 삭제하면 이전 세션의 늦은 401이 새 로그인 토큰까지 지울 수 있다.
       void clearStoredPushRegistrationCache();

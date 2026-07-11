@@ -2480,6 +2480,7 @@ export const styles = StyleSheet.create({
   noticeComposerDateRow: {
     flexDirection: 'row',
     gap: spacing.xs,
+    paddingBottom: spacing.xs,
   },
   noticeComposerDateField: {
     flex: 1,
@@ -2848,6 +2849,11 @@ export const styles = StyleSheet.create({
     ...typography.body2_2,
     color: colors.gray6,
   },
+  voteVotersModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   voteVotersList: {
     gap: spacing.xs,
   },
@@ -2866,6 +2872,11 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.gray1,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  voteVotersAvatarImage: {
+    width: '100%',
+    height: '100%',
   },
   voteVotersName: {
     ...typography.body2_3,

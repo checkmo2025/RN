@@ -437,13 +437,15 @@ export function useAccountSettingsState({
         style: 'destructive',
         onPress: () => {
           setSubmittingLogout(true);
+          // UI 인증 상태를 먼저 내리면 로그아웃 정리 중 도착하는 이전 세션의 401도
+          // 전역 만료 알림으로 다시 로그인 모달을 열 수 없다.
+          logout();
           const submit = async () => {
             try {
               await logoutSession();
             } catch {
               // 서버 로그아웃 실패 시에도 로컬 세션은 초기화
             } finally {
-              logout();
               onCloseSettings();
               navigateToHome(navigation);
               showToast(t('settings.logoutSuccess'));

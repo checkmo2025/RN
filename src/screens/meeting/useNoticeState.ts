@@ -218,7 +218,7 @@ export function useNoticeState({
   const [noticeCommentMenu, setNoticeCommentMenu] = useState<NoticeCommentMenuState | null>(null);
   const [voteVotersModal, setVoteVotersModal] = useState<{
     optionLabel: string;
-    voters: string[];
+    voters: NoticePollOption['voters'];
   } | null>(null);
   const [uploadingNoticePhoto, setUploadingNoticePhoto] = useState(false);
   const enrichingNoticeDetailKeysRef = useRef<Set<string>>(new Set());

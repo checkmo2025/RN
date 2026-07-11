@@ -175,11 +175,13 @@ export function DateTimeField({ value, onChange, placeholder, minimumDate, style
             }}
             style={styles.picker}
           />
-          {iosSelectionBeforeMinimum ? (
-            <Text style={styles.minimumDateHint}>
-              {l('선택 가능한 시간 이후로 설정해주세요.')}
-            </Text>
-          ) : null}
+          <View style={styles.minimumDateHintSlot}>
+            {iosSelectionBeforeMinimum ? (
+              <Text style={styles.minimumDateHint} accessibilityLiveRegion="polite">
+                {l('선택 가능한 시간 이후로 설정해주세요.')}
+              </Text>
+            ) : null}
+          </View>
         </BottomSheet>
       ) : null}
     </>
@@ -242,6 +244,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
+  },
+  minimumDateHintSlot: {
+    height: spacing.xxl,
   },
   picker: {
     height: 216,

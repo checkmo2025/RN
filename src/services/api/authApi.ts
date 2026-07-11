@@ -6,6 +6,7 @@ import {
   runSerializedAuthSessionOperation,
   silentRefreshSession,
   unwrapResult,
+  withUnauthorizedSessionNotificationsSuppressed,
 } from './http';
 import {
   advanceAuthSessionGeneration,
@@ -471,7 +472,7 @@ export async function fetchLoginStatusSilently(
   return unwrapResult(response) ?? null;
 }
 
-export async function logoutSession(): Promise<void> {
+async function performLogoutSession(): Promise<void> {
   // 로그아웃이 시작된 순간부터 이전 요청의 늦은 응답/재시도를 무시한다.
   advanceAuthSessionGeneration();
   const logoutSessionIdentityGeneration = await runSerializedAuthSessionOperation(async () => {
@@ -537,6 +538,10 @@ export async function logoutSession(): Promise<void> {
       await deleteStoredRefreshToken();
     }
   });
+}
+
+export async function logoutSession(): Promise<void> {
+  await withUnauthorizedSessionNotificationsSuppressed(performLogoutSession);
 }
 
 export async function clearStoredAuthSession(): Promise<void> {

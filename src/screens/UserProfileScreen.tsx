@@ -29,6 +29,7 @@ import { ScreenLayout } from '../components/common/ScreenLayout';
 import { ActionMenu, type ActionMenuItem } from '../components/common/ActionMenu';
 import { ReportMemberModal, type ReportMemberModalState } from '../components/common/ReportMemberModal';
 import { SkeletonBox } from '../components/common/SkeletonBox';
+import { ProfileImageViewer } from '../components/common/ProfileImageViewer';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { triggerSelectionHaptic } from '../utils/haptics';
@@ -186,6 +187,7 @@ export function UserProfileScreen() {
   const [blockingMember, setBlockingMember] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profile, setProfile] = useState<MemberProfile | null>(null);
+  const [profileImageViewerVisible, setProfileImageViewerVisible] = useState(false);
   const [stories, setStories] = useState<StoryCard[]>([]);
   const [books, setBooks] = useState<BookCard[]>([]);
   const [loadingBooks, setLoadingBooks] = useState(false);
@@ -212,6 +214,7 @@ export function UserProfileScreen() {
     setFollowerUsers([]);
     setFollowingUsers([]);
     setTogglingFollowNickname(null);
+    setProfileImageViewerVisible(false);
     setBooks([]);
     setGroups([]);
   }, [memberNickname]);
@@ -567,13 +570,30 @@ export function UserProfileScreen() {
     setGroupMenuClubId(null);
   }, []);
 
+  const handleVisitGroupByClubId = useCallback(
+    (clubId: number) => {
+      if (!Number.isInteger(clubId) || clubId <= 0) {
+        showToast(l('해당 모임 정보를 찾을 수 없습니다.'));
+        return;
+      }
+
+      triggerSelectionHaptic();
+      requireAuth(() => {
+        navigation.navigate('Tabs', {
+          screen: 'Meeting',
+          params: { openClubId: clubId },
+        });
+      });
+    },
+    [l, navigation, requireAuth],
+  );
+
   const handleVisitGroup = useCallback(() => {
     const clubId = groupMenuClubId;
-    setGroupMenuAnchor(null);
-    setGroupMenuClubId(null);
+    handleCloseGroupMenu();
     if (typeof clubId !== 'number') return;
-    navigation.navigate('Meeting', { openClubId: clubId });
-  }, [groupMenuClubId, navigation]);
+    handleVisitGroupByClubId(clubId);
+  }, [groupMenuClubId, handleCloseGroupMenu, handleVisitGroupByClubId]);
 
   const groupMenuItems = useMemo<ActionMenuItem[]>(
     () => [
@@ -742,18 +762,31 @@ export function UserProfileScreen() {
         <Text style={styles.emptyText}>{l('공개된 모임이 없습니다.')}</Text>
       ) : null}
       {groups.map((group) => (
-        <View key={group.id} style={styles.groupRow}>
+        <Pressable
+          key={group.id}
+          style={({ pressed }) => [styles.groupRow, pressed && styles.pressed]}
+          onPress={() => handleVisitGroupByClubId(group.clubId)}
+          accessibilityRole="button"
+          accessibilityLabel={`${group.name} ${l('방문하기')}`}
+        >
           <Text style={styles.groupName}>{group.name}</Text>
           <Pressable
             style={styles.groupMenuButton}
             hitSlop={8}
-            onPress={(event) =>
-              handleOpenGroupMenu(event.nativeEvent.pageX, event.nativeEvent.pageY, group.clubId)
-            }
+            onPress={(event) => {
+              event.stopPropagation();
+              handleOpenGroupMenu(
+                event.nativeEvent.pageX,
+                event.nativeEvent.pageY,
+                group.clubId,
+              );
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`${group.name} ${l('메뉴')}`}
           >
             <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
           </Pressable>
-        </View>
+        </Pressable>
       ))}
     </View>
   );
@@ -777,7 +810,17 @@ export function UserProfileScreen() {
       <View style={styles.followProfileArea}>
         <View style={styles.followProfileAvatar}>
           {profile?.profileImageUrl ? (
-            <Image source={{ uri: profile.profileImageUrl }} style={styles.followProfileAvatarImage} />
+            <Pressable
+              style={styles.profileAvatarButton}
+              onPress={() => {
+                triggerSelectionHaptic();
+                setProfileImageViewerVisible(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={l('프로필 사진 크게 보기')}
+            >
+              <Image source={{ uri: profile.profileImageUrl }} style={styles.followProfileAvatarImage} />
+            </Pressable>
           ) : (
             <DefaultProfileAvatar size={92} />
           )}
@@ -912,7 +955,17 @@ export function UserProfileScreen() {
               <View style={styles.profileRow}>
                 <View style={styles.profileAvatar}>
                   {profile?.profileImageUrl ? (
-                    <Image source={{ uri: profile.profileImageUrl }} style={styles.profileAvatarImage} />
+                    <Pressable
+                      style={styles.profileAvatarButton}
+                      onPress={() => {
+                        triggerSelectionHaptic();
+                        setProfileImageViewerVisible(true);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={l('프로필 사진 크게 보기')}
+                    >
+                      <Image source={{ uri: profile.profileImageUrl }} style={styles.profileAvatarImage} />
+                    </Pressable>
                   ) : (
                     <DefaultProfileAvatar size={96} />
                   )}
@@ -1006,6 +1059,11 @@ export function UserProfileScreen() {
           )}
         </ScrollView>
       </Animated.View>
+      <ProfileImageViewer
+        visible={profileImageViewerVisible}
+        imageUrl={profile?.profileImageUrl}
+        onClose={() => setProfileImageViewerVisible(false)}
+      />
       <ReportMemberModal
         visible={Boolean(reportModal)}
         target={reportModal}
@@ -1107,6 +1165,12 @@ const styles = StyleSheet.create({
   profileAvatarImage: {
     width: '100%',
     height: '100%',
+  },
+  profileAvatarButton: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 999,
+    overflow: 'hidden',
   },
   profileMeta: {
     flex: 1,

@@ -94,6 +94,7 @@ import {
 } from './mypage/useNotificationState';
 import { useAccountSettingsState } from './mypage/useAccountSettingsState';
 import { SkeletonBox } from '../components/common/SkeletonBox';
+import { ProfileImageViewer } from '../components/common/ProfileImageViewer';
 import { languageOptions, type LanguageCode } from '../i18n/translations';
 
 const tabs = ['내 책 이야기', '내 서재', '내 모임', '내 알림'] as const;
@@ -376,6 +377,7 @@ export function MyPageScreen() {
     '이제 다양한 책을 함께 읽고 서로의 생각을 나누는 특별한 시간을 시작해보세요. 한 권의 책이 주는 작은 울림이 ......',
   );
   const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>(undefined);
+  const [profileImageViewerVisible, setProfileImageViewerVisible] = useState(false);
   const [profilePhoneNumber, setProfilePhoneNumber] = useState('');
   const [profileSocial, setProfileSocial] = useState(false);
   const [profileCategoryCodes, setProfileCategoryCodes] = useState<string[]>([]);
@@ -1649,7 +1651,17 @@ export function MyPageScreen() {
       <View style={styles.followProfileArea}>
         <View style={styles.followProfileAvatar}>
           {profileImageUrl ? (
-            <Image source={{ uri: profileImageUrl }} style={styles.followProfileAvatarImage} />
+            <Pressable
+              style={styles.profileAvatarButton}
+              onPress={() => {
+                triggerSelectionHaptic();
+                setProfileImageViewerVisible(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={l('프로필 사진 크게 보기')}
+            >
+              <Image source={{ uri: profileImageUrl }} style={styles.followProfileAvatarImage} />
+            </Pressable>
           ) : (
             <DefaultProfileAvatar size={92} />
           )}
@@ -1779,6 +1791,7 @@ export function MyPageScreen() {
         setSelectedSetting(null);
         setOnboardingPreview(null);
         setShowFollowPage(false);
+        setProfileImageViewerVisible(false);
         setActiveFollowTab('FOLLOWER');
         setGroupMenu(null);
       };
@@ -2747,6 +2760,11 @@ export function MyPageScreen() {
         >
           {renderFollowPage()}
         </ScrollView>
+        <ProfileImageViewer
+          visible={profileImageViewerVisible}
+          imageUrl={profileImageUrl}
+          onClose={() => setProfileImageViewerVisible(false)}
+        />
       </ScreenLayout>
     );
   }
@@ -2887,7 +2905,17 @@ export function MyPageScreen() {
             {showProfileSkeleton ? (
               <SkeletonBox style={styles.profileAvatarSkeleton} />
             ) : profileImageUrl ? (
-              <Image source={{ uri: profileImageUrl }} style={styles.profileAvatarImage} />
+              <Pressable
+                style={styles.profileAvatarButton}
+                onPress={() => {
+                  triggerSelectionHaptic();
+                  setProfileImageViewerVisible(true);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={l('프로필 사진 크게 보기')}
+              >
+                <Image source={{ uri: profileImageUrl }} style={styles.profileAvatarImage} />
+              </Pressable>
             ) : (
               <DefaultProfileAvatar size={64} />
             )}
@@ -2980,6 +3008,12 @@ export function MyPageScreen() {
 
         <View style={styles.tabContent}>{renderTabContent()}</View>
         </ScrollView>
+
+        <ProfileImageViewer
+          visible={profileImageViewerVisible}
+          imageUrl={profileImageUrl}
+          onClose={() => setProfileImageViewerVisible(false)}
+        />
 
         <ActionMenu
           visible={Boolean(groupMenu)}
@@ -3728,6 +3762,12 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 32,
     backgroundColor: colors.gray2,
+  },
+  profileAvatarButton: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 999,
+    overflow: 'hidden',
   },
   profileAvatarSkeleton: {
     width: 64,

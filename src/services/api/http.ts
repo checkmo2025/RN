@@ -83,6 +83,7 @@ type UnauthorizedSessionListener = (message: string) => void;
 
 const profileIncompleteSessionListeners = new Set<ProfileIncompleteSessionListener>();
 const unauthorizedSessionListeners = new Set<UnauthorizedSessionListener>();
+let unauthorizedSessionNotificationSuppressionDepth = 0;
 
 export function subscribeProfileIncompleteSession(
   listener: ProfileIncompleteSessionListener,
@@ -107,7 +108,22 @@ function notifyProfileIncompleteSession(): void {
 }
 
 function notifyUnauthorizedSession(message: string): void {
+  if (unauthorizedSessionNotificationSuppressionDepth > 0) return;
   unauthorizedSessionListeners.forEach((listener) => listener(message));
+}
+
+export async function withUnauthorizedSessionNotificationsSuppressed<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  unauthorizedSessionNotificationSuppressionDepth += 1;
+  try {
+    return await operation();
+  } finally {
+    unauthorizedSessionNotificationSuppressionDepth = Math.max(
+      0,
+      unauthorizedSessionNotificationSuppressionDepth - 1,
+    );
+  }
 }
 
 function normalizeApiBaseUrl(rawBaseUrl: string): string {

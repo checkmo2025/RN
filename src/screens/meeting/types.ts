@@ -215,10 +215,15 @@ export type BookshelfCreateDraft = {
 
 export type ClubProfileMode = 'empty' | 'default' | 'uploaded';
 
+export type NoticePollVoter = {
+  nickname: string;
+  profileImageUrl?: string;
+};
+
 export type NoticePollOption = {
   id: string;
   label: string;
-  voters: string[];
+  voters: NoticePollVoter[];
 };
 
 export type NoticePoll = {

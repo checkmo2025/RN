@@ -1822,6 +1822,13 @@ function GroupHomeView({
     resetNoticeOnGroupChange,
   } = noticeState;
   const pollEditingLocked = editingNoticeId !== null && noticeDraft.pollEnabled;
+  const [voteVotersModalSuspended, setVoteVotersModalSuspended] = useState(false);
+
+  useEffect(() => {
+    return navigation.addListener('focus', () => {
+      setVoteVotersModalSuspended(false);
+    });
+  }, [navigation]);
 
   useEffect(() => {
     if (!pendingNotificationTarget || !workspaceLoaded) return;
@@ -2116,6 +2123,21 @@ function GroupHomeView({
     enabled: managementEditGuardEnabled,
     isDirty: managementEditDirty,
     onConfirmLeave: handleCloseManagementScreen,
+    guardHardwareBack: false,
+  });
+
+  const returnToManagementMenu = useCallback(() => {
+    handleCloseManagementScreen();
+    openManagementMenu();
+  }, [handleCloseManagementScreen, openManagementMenu]);
+
+  const { requestClose: requestBackToManagementMenu } = useUnsavedChangesGuard({
+    enabled: managementEditGuardEnabled,
+    isDirty: managementEditDirty,
+    onConfirmLeave: returnToManagementMenu,
+    guardNavigation: false,
+    guardTabPress: false,
+    guardHardwareBack: false,
   });
 
   const handleCloseManagementLayerWithGuard = useCallback(() => {
@@ -2124,7 +2146,7 @@ function GroupHomeView({
       return;
     }
     if (activeManagementScreen) {
-      requestCloseManagementScreen();
+      requestBackToManagementMenu();
       return;
     }
     handleCloseManagementLayer();
@@ -2133,7 +2155,7 @@ function GroupHomeView({
     bookshelfBookSelectorVisible,
     closeBookshelfBookSelector,
     handleCloseManagementLayer,
-    requestCloseManagementScreen,
+    requestBackToManagementMenu,
   ]);
 
   useEffect(() => {
@@ -2796,7 +2818,7 @@ function GroupHomeView({
     }
 
     if (activeManagementScreen) {
-      requestCloseManagementScreen();
+      requestBackToManagementMenu();
       return;
     }
 
@@ -2821,7 +2843,7 @@ function GroupHomeView({
     noticeComposerVisible,
     noticeMenuVisible,
     onBack,
-    requestCloseManagementScreen,
+    requestBackToManagementMenu,
     selectedJoinRequestActionId,
     selectedJoinRequestMessage,
     selectedMemberActionId,
@@ -2888,6 +2910,24 @@ function GroupHomeView({
       navigation.navigate('UserProfile', { memberNickname, fromScreen: 'Meeting' });
     },
     [navigation],
+  );
+
+  const handlePressVoteVoterProfile = useCallback(
+    (nickname: string) => {
+      const memberNickname = nickname.trim();
+      if (!memberNickname) return;
+      triggerSelectionHaptic();
+      if (
+        currentMemberNickname.trim().length > 0 &&
+        memberNickname.toLowerCase() === currentMemberNickname.trim().toLowerCase()
+      ) {
+        showToast(l('자기 자신입니다.'));
+        return;
+      }
+      setVoteVotersModalSuspended(true);
+      navigation.navigate('UserProfile', { memberNickname, fromScreen: 'Meeting' });
+    },
+    [currentMemberNickname, l, navigation],
   );
 
   const handleToggleClubParticipantFollow = useCallback(
@@ -3785,6 +3825,7 @@ function GroupHomeView({
         managementSheetY={managementSheetY}
         managementHandlePanResponder={managementHandlePanResponder}
         handleCloseManagementLayer={handleCloseManagementLayerWithGuard}
+        handleBackManagementScreen={requestBackToManagementMenu}
         handleCloseManagementScreen={requestCloseManagementScreen}
         closeManagementMenu={closeManagementMenu}
         setSelectedJoinRequestMessage={setSelectedJoinRequestMessage}
@@ -4154,11 +4195,9 @@ function GroupHomeView({
                 <View style={styles.noticeComposerSection}>
                   <View style={styles.noticeComposerPollHeader}>
                     <Text style={styles.noticeAttachmentTitle}>{l('투표')}</Text>
-                    {pollEditingLocked ? (
-                      <Text style={styles.noticeComposerPollEditNote}>
-                        {l('투표가 있는 공지사항은 수정이 불가합니다')}
-                      </Text>
-                    ) : null}
+                    <Text style={styles.noticeComposerPollEditNote}>
+                      {l('투표 항목 및 기타 내용은 수정이 불가합니다')}
+                    </Text>
                   </View>
                   <View style={styles.noticeComposerPollOptionList}>
                     {noticeDraft.pollOptions.map((option, index) => {
@@ -4236,11 +4275,6 @@ function GroupHomeView({
                           disabled: pollEditingLocked,
                         }}
                       >
-                        <MaterialIcons
-                          name={noticeDraft.pollAnonymous ? 'radio-button-checked' : 'radio-button-unchecked'}
-                          size={16}
-                          color={noticeDraft.pollAnonymous ? colors.primary1 : colors.gray4}
-                        />
                         <Text
                           style={[
                             styles.noticeComposerChoiceChipText,
@@ -4268,11 +4302,6 @@ function GroupHomeView({
                           disabled: pollEditingLocked,
                         }}
                       >
-                        <MaterialIcons
-                          name={!noticeDraft.pollAnonymous ? 'radio-button-checked' : 'radio-button-unchecked'}
-                          size={16}
-                          color={!noticeDraft.pollAnonymous ? colors.primary1 : colors.gray4}
-                        />
                         <Text
                           style={[
                             styles.noticeComposerChoiceChipText,
@@ -4520,22 +4549,48 @@ function GroupHomeView({
             )}
       </DialogOverlay>
       <DialogOverlay
-        visible={Boolean(voteVotersModal)}
+        visible={Boolean(voteVotersModal) && !voteVotersModalSuspended}
         onClose={() => setVoteVotersModal(null)}
         overlayStyle={styles.voteVotersModalOverlay}
         cardStyle={styles.voteVotersModalCard}
       >
         {voteVotersModal ? (
           <>
-            <Text style={styles.voteVotersModalTitle}>{voteVotersModal.optionLabel}</Text>
+            <View style={styles.voteVotersModalHeader}>
+              <Text style={styles.voteVotersModalTitle}>{voteVotersModal.optionLabel}</Text>
+              <Pressable
+                onPress={() => setVoteVotersModal(null)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={l('닫기')}
+              >
+                <MaterialIcons name="close" size={22} color={colors.gray6} />
+              </Pressable>
+            </View>
             <View style={styles.voteVotersList}>
-              {voteVotersModal.voters.map((nickname, index) => (
-                <View key={`${nickname}-${index}`} style={styles.voteVotersRow}>
+              {voteVotersModal.voters.map((voter, index) => (
+                <Pressable
+                  key={`${voter.nickname}-${index}`}
+                  style={({ pressed }) => [styles.voteVotersRow, pressed && styles.pressed]}
+                  onPress={() => handlePressVoteVoterProfile(voter.nickname)}
+                  accessibilityRole="button"
+                  accessibilityLabel={l('{nickname} 프로필 보기', {
+                    nickname: voter.nickname,
+                  })}
+                >
                   <View style={styles.voteVotersAvatar}>
-                    <DefaultProfileAvatar size={16} />
+                    {voter.profileImageUrl ? (
+                      <Image
+                        source={{ uri: voter.profileImageUrl }}
+                        style={styles.voteVotersAvatarImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <DefaultProfileAvatar size={16} />
+                    )}
                   </View>
-                  <Text style={styles.voteVotersName}>{nickname}</Text>
-                </View>
+                  <Text style={styles.voteVotersName}>{voter.nickname}</Text>
+                </Pressable>
               ))}
               {voteVotersModal.voters.length === 0 ? (
                 <Text style={styles.voteVotersEmptyText}>{l('아직 투표자가 없습니다.')}</Text>
