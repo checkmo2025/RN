@@ -3828,3 +3828,9 @@ export const interactionOpacity = {
 - Expo·runtime·package·iOS·Android 앱 버전을 `1.2.0`으로 동기화
 - 마이페이지 버전 이력에 `1.2.0`과 업데이트 날짜 `2026.07.11` 추가
 - 타입체크와 버전 설정 정합성을 확인하고 로컬 Xcode Archive용 iOS 빌드 번호를 `40`으로 동기화
+
+# 2026-07-11 20:01:40 KST Android Firebase·1.2.1 배포 준비
+
+- Firebase Android 구성 파일과 Google Services Gradle 플러그인을 연결하고 EAS production FCM V1 자격 증명을 등록
+- Expo·runtime·package·iOS·Android 앱 버전을 `1.2.1`로 동기화하고 iOS 빌드 번호를 `41`로 변경
+- 사용자 요청에 따라 테스트·타입체크를 생략하고 Android production AAB 빌드 준비

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "81339934225",
+    "project_id": "checkmo",
+    "storage_bucket": "checkmo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:81339934225:android:ad3f7a6cd4b3ef0640b3b0",
+        "android_client_info": {
+          "package_name": "kr.co.checkmo.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBheAStb1Y4kek2i3Vflg1fN7W8y0q1EHE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
