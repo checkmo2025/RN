@@ -77,6 +77,27 @@
           "sounds": [],
           "enableBackgroundRemoteNotifications": false
         }
+      ],
+      "@react-native-firebase/app",
+      [
+        "@react-native-firebase/analytics",
+        {
+          "ios": {
+            "withoutAdIdSupport": true
+          }
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static",
+            "forceStaticLinking": [
+              "RNFBApp",
+              "RNFBAnalytics"
+            ]
+          }
+        }
       ]
     ],
     "extra": {

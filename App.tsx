@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
@@ -17,8 +17,11 @@ import { PushNotificationCoordinator } from './src/components/common/PushNotific
 import { DeepLinkCoordinator } from './src/components/common/DeepLinkCoordinator';
 import { OnboardingScreen } from './src/screens/onboarding/OnboardingScreen';
 import { getOnboardingSeen, setOnboardingSeen } from './src/services/onboardingStore';
+import { trackScreenView } from './src/services/analytics';
+import { createLogger } from './src/utils/logger';
 
 const rootNavigationRef = createNavigationContainerRef<RootStackParamList>();
+const logger = createLogger('AppAnalytics');
 
 function AppRoutes() {
   const appVersionGate = useAppVersionGate();
@@ -126,11 +129,31 @@ function AppRoutes() {
 
 export default function App() {
   const [navigationReady, setNavigationReady] = useState(false);
+  const currentRouteNameRef = useRef<string | undefined>(undefined);
+
+  const trackCurrentScreen = useCallback(() => {
+    const routeName = rootNavigationRef.getCurrentRoute()?.name;
+    if (!routeName || routeName === currentRouteNameRef.current) return;
+
+    currentRouteNameRef.current = routeName;
+    void trackScreenView(routeName).catch((error) => {
+      logger.warn('화면 분석 이벤트 전송 실패', error);
+    });
+  }, []);
+
+  const handleNavigationReady = useCallback(() => {
+    setNavigationReady(true);
+    trackCurrentScreen();
+  }, [trackCurrentScreen]);
 
   return (
     <SafeAreaProvider>
       <LanguageProvider>
-        <NavigationContainer ref={rootNavigationRef} onReady={() => setNavigationReady(true)}>
+        <NavigationContainer
+          ref={rootNavigationRef}
+          onReady={handleNavigationReady}
+          onStateChange={trackCurrentScreen}
+        >
           <AuthGateProvider>
             <DeepLinkCoordinator navigationReady={navigationReady} navigationRef={rootNavigationRef} />
             <PushNotificationCoordinator navigationRef={rootNavigationRef} />

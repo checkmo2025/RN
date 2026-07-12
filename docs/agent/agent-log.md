@@ -3846,3 +3846,9 @@ export const interactionOpacity = {
 - 목차를 세로 중앙에 배치하고 분류·세부 항목 글씨와 간격을 재조정
 - 목차 분류 번호를 `1·2·3`으로 단순화하고 표지의 책모 제목을 확대
 - 본문 슬라이드 대제목의 수동 개행을 제거해 한 줄 표기로 통일
+
+# 2026-07-12 14:02:44 KST 앱 GA4·UTM 유입 추적 기반 추가
+
+- React Native Firebase Analytics를 연결하고 React Navigation 화면 조회 이벤트를 전송
+- UTM 최초·최근 유입을 로컬 저장하고 딥링크 진입 시 `campaign_details` 이벤트를 전송
+- Android 디버그 빌드와 타입·Expo 설정 검증 완료, iOS Firebase 앱 등록은 승인 후 진행
