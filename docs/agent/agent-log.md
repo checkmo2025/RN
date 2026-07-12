@@ -3852,3 +3852,9 @@ export const interactionOpacity = {
 - React Native Firebase Analytics를 연결하고 React Navigation 화면 조회 이벤트를 전송
 - UTM 최초·최근 유입을 로컬 저장하고 딥링크 진입 시 `campaign_details` 이벤트를 전송
 - Android 디버그 빌드와 타입·Expo 설정 검증 완료, iOS Firebase 앱 등록은 승인 후 진행
+
+# 2026-07-12 15:00:23 KST 앱 GA4 전환 추적 확장
+
+- 로그인·회원가입 성공 시 GA4 권장 이벤트와 최초·최근 UTM 사용자 속성을 전송
+- 모임 가입 신청과 즉시 가입 완료 상태를 각각 `club_join_request`, `join_group`으로 기록
+- 웹 로그인·가입·모임 가입 전환 이벤트 계약과 GTM 후속 설정 지점을 문서화

@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -59,6 +59,7 @@ import { loginWithSocial, type OAuthProvider } from '../services/auth/socialAuth
 import { CATEGORY_OPTIONS } from '../constants/domain/category';
 import { useEmailVerificationFlow } from '../hooks/useEmailVerificationFlow';
 import { useLanguage } from '../contexts/LanguageContext';
+import { trackLogin, trackSignUp } from '../services/analytics';
 
 type Step =
   | 'login'
@@ -205,6 +206,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   const { l } = useLanguage();
   const startsInProfileCompletion = mode === 'profileCompletion';
   const ev = useEmailVerificationFlow();
+  const signUpMethodRef = useRef(startsInProfileCompletion ? 'unknown' : 'email');
   const [step, setStep] = useState<Step>(startsInProfileCompletion ? 'terms' : 'login');
   const [profileCompletionMode, setProfileCompletionMode] = useState(startsInProfileCompletion);
   const [socialSubmitting, setSocialSubmitting] = useState<OAuthProvider | null>(null);
@@ -357,6 +359,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
 
   const startSignUp = () => {
     resetSignUpFlow();
+    signUpMethodRef.current = 'email';
     setStep('terms');
   };
 
@@ -480,9 +483,11 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
       await loginByIdentifier(identifier, password);
       await fetchLoginStatusSilently(true);
       showToast('로그인에 성공했습니다.');
+      void trackLogin('email').catch(() => undefined);
       completeAuthFlow();
     } catch (error) {
       if (isProfileIncompleteApiError(error)) {
+        signUpMethodRef.current = 'email';
         showToast(PROFILE_INCOMPLETE_MESSAGE);
         enterProfileCompletionFlow();
       } else {
@@ -507,6 +512,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
       const outcome = await loginWithSocial(provider);
       if (outcome.status === 'success') {
         if (!outcome.isProfileCompleted) {
+          signUpMethodRef.current = provider;
           showToast(PROFILE_INCOMPLETE_MESSAGE);
           enterProfileCompletionFlow();
           return;
@@ -515,9 +521,11 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
         try {
           await fetchLoginStatusSilently(true);
           showToast('로그인에 성공했습니다.');
+          void trackLogin(provider).catch(() => undefined);
           completeAuthFlow();
         } catch (error) {
           if (isProfileIncompleteApiError(error)) {
+            signUpMethodRef.current = provider;
             showToast(PROFILE_INCOMPLETE_MESSAGE);
             enterProfileCompletionFlow();
           } else {
@@ -546,9 +554,11 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
         try {
           await fetchLoginStatusSilently(true);
           showToast('로그인에 성공했습니다.');
+          void trackLogin('apple').catch(() => undefined);
           completeAuthFlow();
         } catch (error) {
           if (isProfileIncompleteApiError(error)) {
+            signUpMethodRef.current = 'apple';
             showToast(PROFILE_INCOMPLETE_MESSAGE);
             enterProfileCompletionFlow();
           } else {
@@ -949,6 +959,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
       setSignUpSessionReady(false);
 
       showToast('회원가입에 성공했습니다');
+      void trackSignUp(signUpMethodRef.current).catch(() => undefined);
       setStep('signupComplete');
     } catch (error) {
       if (error instanceof ApiError) {

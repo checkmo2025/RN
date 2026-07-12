@@ -66,6 +66,7 @@ import { MyGroupsDropdownCard } from '../components/feature/groups/MyGroupsDropd
 import { MyGroupsDropdownCardSkeleton } from '../components/feature/groups/MyGroupsDropdownCardSkeleton';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { trackClubJoined, trackClubJoinRequest } from '../services/analytics';
 import {
   ApiError,
   PROFILE_INCOMPLETE_MESSAGE,
@@ -1087,6 +1088,11 @@ export function MeetingScreen() {
               ? l('가입 완료되었습니다')
               : l('신청 완료되었습니다'));
           const nextGroup = applyGroupMembershipStatus(group, nextStatus);
+
+          void trackClubJoinRequest(clubId).catch(() => undefined);
+          if (isJoinedClubStatus(nextStatus)) {
+            void trackClubJoined(clubId).catch(() => undefined);
+          }
 
           patchClubInMeetingLists(clubId, (item) => applyGroupMembershipStatus(item, nextStatus));
           if (isJoinedClubStatus(nextStatus)) {
