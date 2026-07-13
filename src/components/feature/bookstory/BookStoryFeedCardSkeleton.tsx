@@ -99,6 +99,7 @@ const styles = StyleSheet.create({
     height: 12,
   },
   footer: {
+    marginTop: 'auto',
     flexDirection: 'row',
     gap: spacing.sm,
     borderTopWidth: 1,

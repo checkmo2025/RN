@@ -292,6 +292,7 @@ const styles = StyleSheet.create({
     color: colors.gray6,
   },
   footer: {
+    marginTop: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
     borderTopWidth: 1,
