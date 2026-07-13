@@ -3415,6 +3415,10 @@ export const styles = StyleSheet.create({
     ...typography.body1_3,
     color: colors.gray4,
   },
+  bookshelfGroupMemberModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
   bookshelfGroupMemberDropdown: {
     position: 'absolute',
     top: '100%',

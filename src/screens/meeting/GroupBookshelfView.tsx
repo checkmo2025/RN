@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
-import { Image, ScrollView, Text, View } from 'react-native';
+import { Image, Modal, ScrollView, Text, View } from 'react-native';
 import { SkeletonBox } from '../../components/common/SkeletonBox';
 import type { GestureResponderEvent } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -133,7 +133,12 @@ export function GroupBookshelfView({
   const { l } = useLanguage();
   const bookshelfSectionYRef = useRef(0);
   const detailSectionYRef = useRef(0);
+  const regularGroupMemberButtonRef = useRef<View>(null);
   const [bookshelfMenuVisible, setBookshelfMenuVisible] = useState(false);
+  const [regularGroupMemberDropdownAnchor, setRegularGroupMemberDropdownAnchor] = useState<{
+    left: number;
+    top: number;
+  } | null>(null);
   const scrollToBookshelfDetail = useCallback(() => {
     onScrollToBookshelfDetail(bookshelfSectionYRef.current + detailSectionYRef.current);
   }, [onScrollToBookshelfDetail]);
@@ -175,6 +180,39 @@ export function GroupBookshelfView({
   useEffect(() => {
     setBookshelfMenuVisible(false);
   }, [selectedBookshelfBook?.id]);
+
+  useEffect(() => {
+    if (!regularGroupMembersVisible) {
+      setRegularGroupMemberDropdownAnchor(null);
+    }
+  }, [regularGroupMembersVisible]);
+
+  const closeRegularGroupMembers = useCallback(() => {
+    if (regularGroupMembersVisible) {
+      handleToggleRegularGroupMembers();
+    }
+  }, [handleToggleRegularGroupMembers, regularGroupMembersVisible]);
+
+  const handlePressRegularGroupMembers = useCallback(() => {
+    if (regularGroupMembersVisible) {
+      handleToggleRegularGroupMembers();
+      return;
+    }
+
+    const button = regularGroupMemberButtonRef.current;
+    if (!button) {
+      handleToggleRegularGroupMembers();
+      return;
+    }
+
+    button.measureInWindow((pageX, pageY, _width, height) => {
+      setRegularGroupMemberDropdownAnchor({
+        left: pageX,
+        top: pageY + height,
+      });
+      handleToggleRegularGroupMembers();
+    });
+  }, [handleToggleRegularGroupMembers, regularGroupMembersVisible]);
 
   const bookshelfMenuItems = useMemo<BottomSheetActionMenuItem[]>(() => {
     if (!selectedBookshelfBook || !canManageClub) return [];
@@ -746,57 +784,32 @@ export function GroupBookshelfView({
                     <View style={styles.bookshelfGroupHeaderLeft}>
                       <Text style={styles.bookshelfGroupTitle}>{l(selectedRegularGroup.label)}</Text>
                       <View style={styles.bookshelfGroupMemberWrap}>
-                        <Pressable
-                          style={({ pressed }) => [
-                            styles.bookshelfGroupMemberButton,
-                            pressed && styles.pressed,
-                          ]}
-                          onPress={handleToggleRegularGroupMembers}
+                        <View
+                          ref={regularGroupMemberButtonRef}
+                          collapsable={false}
                         >
-                          <MaterialIcons name="person" size={20} color={colors.gray4} />
-                          <Text style={styles.bookshelfGroupMemberCount}>
-                            {selectedRegularGroup.memberCount}
-                          </Text>
-                          <MaterialIcons
-                            name={
-                              regularGroupMembersVisible
-                                ? 'keyboard-arrow-up'
-                                : 'keyboard-arrow-down'
-                            }
-                            size={18}
-                            color={colors.gray4}
-                          />
-                        </Pressable>
-                        {regularGroupMembersVisible ? (
-                          <View style={styles.bookshelfGroupMemberDropdown}>
-                            <Text style={styles.bookshelfGroupMemberDropdownTitle}>
-                              {l('{group} 참여자', { group: l(selectedRegularGroup.label) })}
+                          <Pressable
+                            style={({ pressed }) => [
+                              styles.bookshelfGroupMemberButton,
+                              pressed && styles.pressed,
+                            ]}
+                            onPress={handlePressRegularGroupMembers}
+                          >
+                            <MaterialIcons name="person" size={20} color={colors.gray4} />
+                            <Text style={styles.bookshelfGroupMemberCount}>
+                              {selectedRegularGroup.memberCount}
                             </Text>
-                            <View style={styles.bookshelfRegularGroupMemberList}>
-                              {selectedRegularGroup.members.map((member) => (
-                                <View
-                                  key={`${member.id}-dropdown`}
-                                  style={styles.bookshelfRegularGroupMemberRow}
-                                >
-                                  <View style={styles.bookshelfPostAvatar}>
-                                    {member.profileImageUrl ? (
-                                      <Image
-                                        source={{ uri: member.profileImageUrl }}
-                                        style={styles.bookshelfPostAvatarImage}
-                                        resizeMode="cover"
-                                      />
-                                    ) : (
-                                      <DefaultProfileAvatar size={16} />
-                                    )}
-                                  </View>
-                                  <Text style={styles.bookshelfRegularGroupMemberName}>
-                                    {member.nickname}
-                                  </Text>
-                                </View>
-                              ))}
-                            </View>
-                          </View>
-                        ) : null}
+                            <MaterialIcons
+                              name={
+                                regularGroupMembersVisible
+                                  ? 'keyboard-arrow-up'
+                                  : 'keyboard-arrow-down'
+                              }
+                              size={18}
+                              color={colors.gray4}
+                            />
+                          </Pressable>
+                        </View>
                       </View>
                     </View>
                     <View style={styles.bookshelfGroupActionRow}>
@@ -822,6 +835,60 @@ export function GroupBookshelfView({
                       </Pressable>
                     </View>
                   </View>
+
+                  <Modal
+                    visible={
+                      regularGroupMembersVisible &&
+                      regularGroupMemberDropdownAnchor !== null
+                    }
+                    transparent
+                    animationType="fade"
+                    onRequestClose={closeRegularGroupMembers}
+                  >
+                    <Pressable
+                      style={styles.bookshelfGroupMemberModalBackdrop}
+                      onPress={closeRegularGroupMembers}
+                      disableFeedback
+                    >
+                      {regularGroupMemberDropdownAnchor ? (
+                        <Pressable
+                          style={[
+                            styles.bookshelfGroupMemberDropdown,
+                            regularGroupMemberDropdownAnchor,
+                          ]}
+                          onPress={(event) => event.stopPropagation()}
+                          disableFeedback
+                        >
+                          <Text style={styles.bookshelfGroupMemberDropdownTitle}>
+                            {l('{group} 참여자', { group: l(selectedRegularGroup.label) })}
+                          </Text>
+                          <View style={styles.bookshelfRegularGroupMemberList}>
+                            {selectedRegularGroup.members.map((member) => (
+                              <View
+                                key={`${member.id}-dropdown`}
+                                style={styles.bookshelfRegularGroupMemberRow}
+                              >
+                                <View style={styles.bookshelfPostAvatar}>
+                                  {member.profileImageUrl ? (
+                                    <Image
+                                      source={{ uri: member.profileImageUrl }}
+                                      style={styles.bookshelfPostAvatarImage}
+                                      resizeMode="cover"
+                                    />
+                                  ) : (
+                                    <DefaultProfileAvatar size={16} />
+                                  )}
+                                </View>
+                                <Text style={styles.bookshelfRegularGroupMemberName}>
+                                  {member.nickname}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        </Pressable>
+                      ) : null}
+                    </Pressable>
+                  </Modal>
 
                   <View style={styles.bookshelfGroupPostList}>
                     {selectedRegularGroup.posts.map((post) => {

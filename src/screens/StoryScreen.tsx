@@ -2785,19 +2785,15 @@ export function StoryScreen() {
                   onFocus={handleFocusCommentInput}
                 />
                 <Pressable
-                  style={[
+                  style={({ pressed }) => [
                     styles.commentSubmit,
                     isCommentSubmitDisabled && styles.commentSubmitDisabled,
+                    pressed && styles.pressed,
                   ]}
                   onPress={handleSubmitComment}
                   disabled={isCommentSubmitDisabled}
                 >
-                  <Text
-                    style={[
-                      styles.commentSubmitText,
-                      isCommentSubmitDisabled && styles.commentSubmitTextDisabled,
-                    ]}
-                  >
+                  <Text style={styles.commentSubmitText}>
                     {l('등록')}
                   </Text>
                 </Pressable>
@@ -2865,19 +2861,15 @@ export function StoryScreen() {
                             onFocus={handleFocusInlineEditCommentInput}
                           />
                           <Pressable
-                            style={[
+                            style={({ pressed }) => [
                               styles.commentSubmit,
                               isCommentSubmitDisabled && styles.commentSubmitDisabled,
+                              pressed && styles.pressed,
                             ]}
                             onPress={handleSubmitComment}
                             disabled={isCommentSubmitDisabled}
                           >
-                            <Text
-                              style={[
-                                styles.commentSubmitText,
-                                isCommentSubmitDisabled && styles.commentSubmitTextDisabled,
-                              ]}
-                            >
+                            <Text style={styles.commentSubmitText}>
                               {l('수정')}
                             </Text>
                           </Pressable>
@@ -2916,19 +2908,15 @@ export function StoryScreen() {
                           onFocus={handleFocusInlineReplyInput}
                         />
                         <Pressable
-                          style={[
+                          style={({ pressed }) => [
                             styles.commentSubmit,
                             isCommentSubmitDisabled && styles.commentSubmitDisabled,
+                            pressed && styles.pressed,
                           ]}
                           onPress={handleSubmitComment}
                           disabled={isCommentSubmitDisabled}
                         >
-                          <Text
-                            style={[
-                              styles.commentSubmitText,
-                              isCommentSubmitDisabled && styles.commentSubmitTextDisabled,
-                            ]}
-                          >
+                          <Text style={styles.commentSubmitText}>
                             {l('등록')}
                           </Text>
                         </Pressable>
@@ -4141,9 +4129,6 @@ const styles = StyleSheet.create({
   commentSubmitText: {
     ...typography.body1_2,
     color: colors.white,
-  },
-  commentSubmitTextDisabled: {
-    color: colors.gray4,
   },
   commentList: {
     gap: spacing.sm,
