@@ -3892,3 +3892,8 @@ export const interactionOpacity = {
 - Expo·runtime·package·iOS·Android 앱 버전을 `1.2.2`로 동기화
 - 마이페이지 버전 이력에 `1.2.2`와 업데이트 날짜 `2026.07.13`을 추가
 - iOS build number와 Android versionCode는 EAS 원격 자동 증가 설정을 유지
+
+# 2026-07-13 15:43:22 KST iOS 1.2.2 Xcode 제출 빌드 번호 동기화
+
+- Xcode 로컬 Archive 제출을 위해 iOS build number를 `41` → `42`로 상향
+- `app.json`, `Info.plist`, Xcode Debug·Release `CURRENT_PROJECT_VERSION`을 모두 `42`로 동기화

@@ -17,7 +17,7 @@
       "supportsTablet": true,
       "requireFullScreen": true,
       "bundleIdentifier": "kr.co.checkmo.app",
-      "buildNumber": "41",
+      "buildNumber": "42",
       "usesAppleSignIn": true,
       "associatedDomains": [
         "applinks:checkmo.co.kr",
