@@ -289,7 +289,6 @@ const NOTICE_INPUT_HEIGHT_SAFETY = spacing.sm;
 const NOTICE_CONTENT_SCROLL_CHAR_THRESHOLD = 220;
 const NOTICE_CONTENT_SCROLL_LINE_THRESHOLD = 8;
 const CLUB_PARTICIPANTS_PRIVATE_MESSAGE = '모임 회원은 가입 후에 조회 가능합니다';
-const CLUB_PARTICIPANT_GRID_BREAKPOINT = 640;
 
 
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
@@ -2899,11 +2898,6 @@ function GroupHomeView({
     selectedBookshelfBook,
   ]);
 
-  const clubParticipantColumns = screenWidth >= CLUB_PARTICIPANT_GRID_BREAKPOINT ? 2 : 1;
-  const clubParticipantCardWidth =
-    clubParticipantColumns === 2
-      ? Math.max(0, (screenWidth - spacing.md * 2 - spacing.sm) / 2)
-      : '100%';
   const clubParticipantsTotalText =
     clubParticipantsTotalCount === null
       ? l('참여 인원을 확인하고 있습니다.')
@@ -3173,10 +3167,7 @@ function GroupHomeView({
                   return (
                     <View
                       key={`club-participant-${participant.clubMemberId}`}
-                      style={[
-                        styles.clubParticipantCard,
-                        { width: clubParticipantCardWidth },
-                      ]}
+                      style={styles.clubParticipantCard}
                     >
                       <Pressable
                         style={({ pressed }) => [

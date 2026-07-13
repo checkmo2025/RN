@@ -1,4 +1,5 @@
 import React from 'react';
+import type { StyleProp, ViewStyle } from 'react-native';
 
 import BookStoryFeedCard from '../bookstory/BookStoryFeedCard';
 
@@ -20,6 +21,7 @@ export type HomePost = {
 
 type Props = {
   post: HomePost;
+  style?: StyleProp<ViewStyle>;
   viewerIsLoggedIn?: boolean;
   onToggleLike: (id: string) => void;
   onToggleSubscribe: (id: string) => void;
@@ -30,6 +32,7 @@ type Props = {
 
 export default function HomePostCard({
   post,
+  style,
   viewerIsLoggedIn = false,
   onToggleLike,
   onToggleSubscribe,
@@ -41,6 +44,7 @@ export default function HomePostCard({
 
   return (
     <BookStoryFeedCard
+      style={style}
       authorName={post.author}
       profileImgSrc={post.profileImageUrl}
       timeAgo={post.timeAgo}

@@ -977,6 +977,7 @@ export const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   clubParticipantCard: {
+    width: '100%',
     minHeight: 76,
     borderWidth: 1,
     borderColor: colors.subbrown4,

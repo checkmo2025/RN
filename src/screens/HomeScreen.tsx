@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   RefreshControl,
@@ -76,6 +76,16 @@ type HomePromotionItem = NewsPromotionCarouselItem & {
   newsId?: number;
 };
 
+type HomePostRow = {
+  key: string;
+  posts: Post[];
+};
+
+const TABLET_MIN_SHORTEST_WIDTH = 600;
+const TABLET_STORY_GRID_MIN_WIDTH = 720;
+const STORY_FEED_SINGLE_COLUMN_MAX_WIDTH = 600;
+const STORY_FEED_GRID_MAX_WIDTH = 920;
+
 function getDefaultPromotions(l: (text: string) => string): HomePromotionItem[] {
   return [
     {
@@ -105,8 +115,17 @@ export function HomeScreen() {
   const { language, l } = useLanguage();
   const accessPolicy = resolveHomeAccessPolicy({ isLoggedIn });
   const relativeNowMillis = useRelativeNow();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const horizontalInset = width >= 768 ? spacing.xl : spacing.md;
+  const isTabletLayout = Math.min(width, height) >= TABLET_MIN_SHORTEST_WIDTH;
+  const storyFeedColumnCount =
+    isTabletLayout && width >= TABLET_STORY_GRID_MIN_WIDTH ? 2 : 1;
+  const storyFeedRowMaxWidth =
+    !isTabletLayout
+      ? width
+      : storyFeedColumnCount === 2
+        ? STORY_FEED_GRID_MAX_WIDTH
+        : STORY_FEED_SINGLE_COLUMN_MAX_WIDTH;
   const [userRecommendations, setUserRecommendations] = useState<UserRecommendation[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [myNickname, setMyNickname] = useState('');
@@ -120,8 +139,22 @@ export function HomeScreen() {
   const loadingMorePostsRef = useRef(false);
   const hasNextPostsRef = useRef(true);
   const nextPostsCursorRef = useRef<number | null>(null);
-  const listRef = useRef<FlatList>(null);
+  const listRef = useRef<FlatList<HomePostRow>>(null);
   useScrollToTop(listRef);
+
+  const postRows = useMemo<HomePostRow[]>(() => {
+    const rows: HomePostRow[] = [];
+
+    for (let index = 0; index < posts.length; index += storyFeedColumnCount) {
+      const rowPosts = posts.slice(index, index + storyFeedColumnCount);
+      rows.push({
+        key: `home-posts-${rowPosts.map((post) => post.id).join('-')}`,
+        posts: rowPosts,
+      });
+    }
+
+    return rows;
+  }, [posts, storyFeedColumnCount]);
 
   const removeBlockedMemberLocally = useCallback((nickname: string) => {
     setPosts((prev) => prev.filter((post) => !isSameMemberNickname(post.author, nickname)));
@@ -565,8 +598,8 @@ export function HomeScreen() {
       <View style={styles.screenBody}>
         <FlatList
           ref={listRef}
-          data={posts}
-          keyExtractor={(item) => item.id}
+          data={postRows}
+          keyExtractor={(item) => item.key}
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={header}
           ItemSeparatorComponent={() => <View style={styles.postItemSeparator} />}
@@ -579,18 +612,27 @@ export function HomeScreen() {
             loadingMorePosts ? <Text style={styles.loadingPostText}>{l('불러오는 중...')}</Text> : null
           }
           renderItem={({ item }) => (
-            <HomePostCard
-              post={{
-                ...item,
-                timeAgo: toKstTimeAgoLabel(item.createdAt, relativeNowMillis, language),
-              }}
-              viewerIsLoggedIn={isLoggedIn}
-              onPress={openPostDetail}
-              onPressComment={openPostComments}
-              onToggleLike={handleToggleLike}
-              onToggleSubscribe={handleTogglePostSubscribe}
-              onPressAuthor={openUserProfile}
-            />
+            <View style={[styles.postRow, { maxWidth: storyFeedRowMaxWidth }]}>
+              {item.posts.map((post) => (
+                <HomePostCard
+                  key={post.id}
+                  style={styles.postCard}
+                  post={{
+                    ...post,
+                    timeAgo: toKstTimeAgoLabel(post.createdAt, relativeNowMillis, language),
+                  }}
+                  viewerIsLoggedIn={isLoggedIn}
+                  onPress={openPostDetail}
+                  onPressComment={openPostComments}
+                  onToggleLike={handleToggleLike}
+                  onToggleSubscribe={handleTogglePostSubscribe}
+                  onPressAuthor={openUserProfile}
+                />
+              ))}
+              {item.posts.length < storyFeedColumnCount ? (
+                <View style={styles.postCardPlaceholder} />
+              ) : null}
+            </View>
           )}
           onEndReached={handleLoadMorePosts}
           onEndReachedThreshold={0.3}
@@ -637,6 +679,23 @@ const styles = StyleSheet.create({
   },
   postItemSeparator: {
     height: spacing.sm,
+  },
+  postRow: {
+    width: '100%',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing.sm,
+    paddingHorizontal: 18,
+  },
+  postCard: {
+    flex: 1,
+    minWidth: 0,
+    marginHorizontal: 0,
+  },
+  postCardPlaceholder: {
+    flex: 1,
+    minWidth: 0,
   },
   headerContainer: {
     gap: spacing.sm,

@@ -15,6 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "requireFullScreen": true,
       "bundleIdentifier": "kr.co.checkmo.app",
       "buildNumber": "41",
       "usesAppleSignIn": true,
@@ -24,6 +25,14 @@
       ],
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ]
       }
     },
     "android": {
