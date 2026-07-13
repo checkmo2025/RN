@@ -3886,3 +3886,9 @@ export const interactionOpacity = {
 
 - 태블릿 2열 카드의 좋아요·댓글 영역을 카드 하단에 고정해 빈 공간과 카드 간 정렬을 개선
 - 로딩 스켈레톤 푸터에도 동일한 하단 정렬을 적용
+
+# 2026-07-13 15:38:39 KST iOS·Android 앱 버전 1.2.2 상향
+
+- Expo·runtime·package·iOS·Android 앱 버전을 `1.2.2`로 동기화
+- 마이페이지 버전 이력에 `1.2.2`와 업데이트 날짜 `2026.07.13`을 추가
+- iOS build number와 Android versionCode는 EAS 원격 자동 증가 설정을 유지
