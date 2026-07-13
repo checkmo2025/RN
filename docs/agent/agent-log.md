@@ -3897,3 +3897,9 @@ export const interactionOpacity = {
 
 - Xcode 로컬 Archive 제출을 위해 iOS build number를 `41` → `42`로 상향
 - `app.json`, `Info.plist`, Xcode Debug·Release `CURRENT_PROJECT_VERSION`을 모두 `42`로 동기화
+
+# 2026-07-13 16:46:04 KST Android 1.2.2 Alpha 업데이트 제출
+
+- EAS Android 제출 트랙을 기존 비공개 테스트와 동일한 `alpha`로 설정
+- Google Play에 `1.2.2`(`versionCode 10`) 업데이트를 제출하고 검토 중 상태를 확인
+- Firebase Analytics의 광고 ID 사용 목적을 Play Console에서 애널리틱스로 선언
