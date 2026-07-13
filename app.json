@@ -92,13 +92,11 @@
         {
           "ios": {
             "useFrameworks": "static",
-            "forceStaticLinking": [
-              "RNFBApp",
-              "RNFBAnalytics"
-            ]
+            "buildReactNativeFromSource": true
           }
         }
-      ]
+      ],
+      "./plugins/withXcode26FmtWorkaround"
     ],
     "extra": {
       "eas": {

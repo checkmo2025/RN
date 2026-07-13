@@ -4,6 +4,8 @@ import {
   StyleSheet,
   Text,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -30,6 +32,7 @@ type Props = {
   onToggleSubscribe?: () => void;
   onPressAuthor?: () => void;
   onPressComment?: () => void;
+  style?: StyleProp<ViewStyle>;
 };
 
 export default function BookStoryFeedCard({
@@ -50,11 +53,12 @@ export default function BookStoryFeedCard({
   onToggleSubscribe,
   onPressAuthor,
   onPressComment,
+  style,
 }: Props) {
   const { l } = useLanguage();
 
   return (
-    <Pressable style={styles.card} onPress={onPress}>
+    <Pressable style={[styles.card, style]} onPress={onPress}>
       {/* Header */}
       <View style={styles.headerRow}>
         {onPressAuthor ? (

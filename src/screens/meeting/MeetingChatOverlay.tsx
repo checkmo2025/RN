@@ -206,7 +206,7 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
       >
         <KeyboardAvoidingView
           style={styles.chatScreen}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <Animated.View
             style={[styles.chatScreen, { transform: [{ translateX }] }]}

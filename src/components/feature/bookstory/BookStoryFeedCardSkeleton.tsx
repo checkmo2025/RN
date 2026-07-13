@@ -1,11 +1,15 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { SkeletonBox } from '../../common/SkeletonBox';
 import { colors, radius, spacing } from '../../../theme';
 
-export function BookStoryFeedCardSkeleton() {
+type Props = {
+  style?: StyleProp<ViewStyle>;
+};
+
+export function BookStoryFeedCardSkeleton({ style }: Props = {}) {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, style]}>
       <View style={styles.headerRow}>
         <SkeletonBox style={styles.avatar} />
         <View style={styles.meta}>

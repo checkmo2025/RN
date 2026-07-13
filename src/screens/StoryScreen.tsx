@@ -146,11 +146,11 @@ type Story = {
   commentList: Comment[];
 };
 
-type StoryFeedItem =
+type StoryFeedRow =
   | {
-      type: 'story';
+      type: 'stories';
       key: string;
-      story: Story;
+      stories: Story[];
     }
   | {
       type: 'recommended';
@@ -217,6 +217,11 @@ const DETAIL_BACK_TRIGGER_MAX_DY = 60;
 const FOCUSED_INPUT_TARGET_FROM_BOTTOM_RATIO = 0.6;
 const FOCUSED_INPUT_SCROLL_RETRY_DELAYS_MS = [0, 120, 300] as const;
 const MIN_BOOK_FLIP_LOADING_MS = 1000;
+const TABLET_MIN_SHORTEST_WIDTH = 600;
+const TABLET_STORY_GRID_MIN_WIDTH = 720;
+const STORY_FEED_SINGLE_COLUMN_MAX_WIDTH = 600;
+const STORY_FEED_GRID_MAX_WIDTH = 920;
+const STORY_READING_MAX_WIDTH = 720;
 const ISBN13_REGEX = /^\d{13}$/;
 const EMPTY_COMPOSE_INITIAL_DRAFT: ComposeInitialDraft = {
   title: '',
@@ -307,6 +312,25 @@ export function StoryScreen() {
   const relativeNowMillis = useRelativeNow();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const isTabletLayout =
+    Math.min(screenWidth, screenHeight) >= TABLET_MIN_SHORTEST_WIDTH;
+  const storyFeedColumnCount =
+    isTabletLayout && screenWidth >= TABLET_STORY_GRID_MIN_WIDTH ? 2 : 1;
+  const storyFeedRowMaxWidth =
+    !isTabletLayout
+      ? screenWidth
+      : storyFeedColumnCount === 2
+        ? STORY_FEED_GRID_MAX_WIDTH
+        : STORY_FEED_SINGLE_COLUMN_MAX_WIDTH;
+  const tabletReadingContentStyle =
+    isTabletLayout
+      ? {
+          width: '100%' as const,
+          maxWidth: STORY_READING_MAX_WIDTH,
+          alignSelf: 'center' as const,
+        }
+      : undefined;
+  const storySkeletonRows = storyFeedColumnCount === 2 ? [[0, 1], [2, 3]] : [[0], [1], [2]];
 
   const [selectedFilterKey, setSelectedFilterKey] = useState(ALL_STORY_TAB.key);
   const [myClubTabs, setMyClubTabs] = useState<Array<{ clubId: number; clubName: string }>>([]);
@@ -361,7 +385,7 @@ export function StoryScreen() {
   const [reportModal, setReportModal] = useState<ReportMemberModalState | null>(null);
   const [submittingReport, setSubmittingReport] = useState(false);
   const [submittingStory, setSubmittingStory] = useState(false);
-  const listRef = useRef<FlatList<StoryFeedItem>>(null);
+  const listRef = useRef<FlatList<StoryFeedRow>>(null);
   useScrollToTop(listRef);
   const listScrollOffsetRef = useRef(0);
   const pendingListScrollRestoreRef = useRef<number | null>(null);
@@ -836,29 +860,41 @@ export function StoryScreen() {
     [selectedFilterKey, storyTabs],
   );
 
-  const storyListItems = useMemo<StoryFeedItem[]>(() => {
+  const storyListItems = useMemo<StoryFeedRow[]>(() => {
     if (stories.length === 0) return [];
 
     const includeRecommendation = isLoggedIn && recommendedUsers.length > 0;
-    const items: StoryFeedItem[] = [];
+    const rows: StoryFeedRow[] = [];
+    let pendingStories: Story[] = [];
+
+    const flushPendingStories = () => {
+      if (pendingStories.length === 0) return;
+      rows.push({
+        type: 'stories',
+        key: `stories-${pendingStories.map((story) => story.id).join('-')}`,
+        stories: pendingStories,
+      });
+      pendingStories = [];
+    };
 
     stories.forEach((story, index) => {
       if (includeRecommendation && index > 0 && index % 12 === 0) {
-        items.push({
+        flushPendingStories();
+        rows.push({
           type: 'recommended',
           key: `recommended-${index}`,
         });
       }
 
-      items.push({
-        type: 'story',
-        key: story.id,
-        story,
-      });
+      pendingStories.push(story);
+      if (pendingStories.length === storyFeedColumnCount) {
+        flushPendingStories();
+      }
     });
 
-    return items;
-  }, [isLoggedIn, recommendedUsers.length, stories]);
+    flushPendingStories();
+    return rows;
+  }, [isLoggedIn, recommendedUsers.length, stories, storyFeedColumnCount]);
 
   useEffect(() => {
     if (storyTabs.some((tab) => tab.key === selectedFilterKey)) return;
@@ -2548,7 +2584,7 @@ export function StoryScreen() {
         >
           <ScrollView
             ref={detailScrollRef}
-            contentContainerStyle={styles.detailContent}
+            contentContainerStyle={[styles.detailContent, tabletReadingContentStyle]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             scrollEventThrottle={16}
@@ -2951,7 +2987,7 @@ export function StoryScreen() {
         >
           <ScrollView
             ref={composeScrollRef}
-            contentContainerStyle={styles.composeContent}
+            contentContainerStyle={[styles.composeContent, tabletReadingContentStyle]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             onScroll={handleComposeScroll}
@@ -3260,46 +3296,58 @@ export function StoryScreen() {
           renderItem={({ item }) => {
             if (item.type === 'recommended') {
               return (
-                <View style={styles.recommendedCard}>
-                  <Text style={styles.recommendedTitle}>{l('사용자 추천')}</Text>
-                  {recommendedUsers.map((user) => (
-                    <SubscribeUserItem
-                      key={user.id}
-                      nickname={user.nickname}
-                      profileImageUrl={user.profileImageUrl}
-                      subscribed={user.subscribed}
-                      onPressProfile={() => openUserProfile(user.nickname)}
-                      onPressSubscribe={() => handleToggleRecommendedSubscribe(user.id)}
-                    />
-                  ))}
+                <View style={[styles.recommendedRow, { maxWidth: storyFeedRowMaxWidth }]}>
+                  <View style={styles.recommendedCard}>
+                    <Text style={styles.recommendedTitle}>{l('사용자 추천')}</Text>
+                    {recommendedUsers.map((user) => (
+                      <SubscribeUserItem
+                        key={user.id}
+                        nickname={user.nickname}
+                        profileImageUrl={user.profileImageUrl}
+                        subscribed={user.subscribed}
+                        onPressProfile={() => openUserProfile(user.nickname)}
+                        onPressSubscribe={() => handleToggleRecommendedSubscribe(user.id)}
+                      />
+                    ))}
+                  </View>
                 </View>
               );
             }
 
-            const story = item.story;
-            const isMineForViewer = isLoggedIn && (story.mine ?? false);
             return (
-              <BookStoryFeedCard
-                authorName={story.author}
-                profileImgSrc={story.profileImageUrl}
-                timeAgo={toKstTimeAgoLabel(story.createdAt, relativeNowMillis, language)}
-                viewCount={story.views}
-                title={story.title}
-                content={story.body}
-                likeCount={story.likes}
-                commentCount={story.comments}
-                liked={story.liked}
-                isAuthor={isMineForViewer}
-                subscribed={isMineForViewer ? undefined : story.subscribed}
-                coverImgSrc={story.book?.image}
-                onPress={() => handleSelectStory(story)}
-                onPressComment={() => handleSelectStory(story, { focusComments: true })}
-                onToggleLike={() => handleToggleLike(story.id)}
-                onToggleSubscribe={
-                  isMineForViewer ? undefined : () => handleToggleSubscribe(story.id)
-                }
-                onPressAuthor={() => openUserProfile(story.author)}
-              />
+              <View style={[styles.storyFeedRow, { maxWidth: storyFeedRowMaxWidth }]}>
+                {item.stories.map((story) => {
+                  const isMineForViewer = isLoggedIn && (story.mine ?? false);
+                  return (
+                    <BookStoryFeedCard
+                      key={story.id}
+                      style={styles.storyFeedCard}
+                      authorName={story.author}
+                      profileImgSrc={story.profileImageUrl}
+                      timeAgo={toKstTimeAgoLabel(story.createdAt, relativeNowMillis, language)}
+                      viewCount={story.views}
+                      title={story.title}
+                      content={story.body}
+                      likeCount={story.likes}
+                      commentCount={story.comments}
+                      liked={story.liked}
+                      isAuthor={isMineForViewer}
+                      subscribed={isMineForViewer ? undefined : story.subscribed}
+                      coverImgSrc={story.book?.image}
+                      onPress={() => handleSelectStory(story)}
+                      onPressComment={() => handleSelectStory(story, { focusComments: true })}
+                      onToggleLike={() => handleToggleLike(story.id)}
+                      onToggleSubscribe={
+                        isMineForViewer ? undefined : () => handleToggleSubscribe(story.id)
+                      }
+                      onPressAuthor={() => openUserProfile(story.author)}
+                    />
+                  );
+                })}
+                {item.stories.length < storyFeedColumnCount ? (
+                  <View style={styles.storyFeedCardPlaceholder} />
+                ) : null}
+              </View>
             );
           }}
           ItemSeparatorComponent={() => <View style={styles.storyItemSeparator} />}
@@ -3311,12 +3359,17 @@ export function StoryScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             isInitialLoading ? (
-              <View style={styles.skeletonList}>
-                <BookStoryFeedCardSkeleton />
-                <View style={styles.storyItemSeparator} />
-                <BookStoryFeedCardSkeleton />
-                <View style={styles.storyItemSeparator} />
-                <BookStoryFeedCardSkeleton />
+              <View style={[styles.skeletonList, { maxWidth: storyFeedRowMaxWidth }]}>
+                {storySkeletonRows.map((row, rowIndex) => (
+                  <View key={`story-skeleton-row-${rowIndex}`} style={styles.storyFeedRow}>
+                    {row.map((item) => (
+                      <BookStoryFeedCardSkeleton
+                        key={`story-skeleton-${item}`}
+                        style={styles.storyFeedCard}
+                      />
+                    ))}
+                  </View>
+                ))}
               </View>
             ) : null
           }
@@ -3447,6 +3500,23 @@ const styles = StyleSheet.create({
   storyItemSeparator: {
     height: spacing.sm,
   },
+  storyFeedRow: {
+    width: '100%',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing.sm,
+    paddingHorizontal: 18,
+  },
+  storyFeedCard: {
+    flex: 1,
+    minWidth: 0,
+    marginHorizontal: 0,
+  },
+  storyFeedCardPlaceholder: {
+    flex: 1,
+    minWidth: 0,
+  },
   secondaryHeader: {
     backgroundColor: colors.white,
     borderBottomWidth: 1,
@@ -3484,7 +3554,10 @@ const styles = StyleSheet.create({
     color: colors.gray7,
   },
   skeletonList: {
+    width: '100%',
+    alignSelf: 'center',
     paddingTop: spacing.xs,
+    gap: spacing.sm,
   },
   commentSkeletonList: {
     gap: spacing.md,
@@ -3520,6 +3593,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray1,
     gap: spacing.sm,
     marginHorizontal: spacing.md,
+  },
+  recommendedRow: {
+    width: '100%',
+    alignSelf: 'center',
   },
   recommendedTitle: {
     ...typography.subhead4_1,
