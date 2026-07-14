@@ -1,0 +1,458 @@
+<svg viewBox="0 0 1280 7500" width="1280" height="7500" xmlns="http://www.w3.org/2000/svg">
+  <title>Claude Edition · 독서동아리 운영진을 위한 책모 소개서</title>
+  <defs>
+    <style>
+      text { font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, sans-serif; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1280" height="7500" fill="#cfccca" />
+
+  <!-- ============ 01 COVER ============ -->
+  <g transform="translate(0,0)">
+    <rect x="0" y="0" width="1280" height="720" fill="#4a3931" />
+    <rect x="64" y="48" width="52" height="52" rx="11" fill="#ffffff" />
+    <text x="90" y="80" font-size="15" font-weight="800" fill="#4a3931" text-anchor="middle">책모</text>
+
+    <text x="64" y="248" font-size="13" font-weight="800" fill="#d8c9c1">Claude Edition · 독서동아리 운영진을 위한 서비스 소개서</text>
+    <text x="64" y="308" font-size="52" font-weight="900" fill="#ffffff">독서모임의 처음부터 끝까지,</text>
+    <text x="64" y="392" font-size="82" font-weight="900" fill="#fffdf9">책모</text>
+
+    <text x="64" y="440" font-size="17" fill="#ffffff" opacity="0.82">불편함에 공감하고 해결책을 보여주는 순서로, Claude가 다시 짠 소개 흐름입니다.</text>
+    <text x="64" y="463" font-size="17" fill="#ffffff" opacity="0.82">운영의 반복을 줄이고 좋은 독서 경험을 오래 남기는 방법을 소개합니다.</text>
+
+    <line x1="64" y1="640" x2="1216" y2="640" stroke="#ffffff" stroke-opacity="0.24" />
+    <g font-size="13" font-weight="750" fill="#ffffff" fill-opacity="0.83">
+      <circle cx="68" cy="668" r="3" fill="#d8c9c1" /><text x="80" y="673">공지와 투표</text>
+      <circle cx="196" cy="668" r="3" fill="#d8c9c1" /><text x="208" y="673">책장과 발제</text>
+      <circle cx="324" cy="668" r="3" fill="#d8c9c1" /><text x="336" y="673">정기모임과 기록</text>
+    </g>
+    <g font-size="13" font-weight="800" fill="#ffffff" fill-opacity="0.92" text-anchor="end">
+      <text x="1216" y="655">https://checkmo.co.kr</text>
+      <text x="1216" y="675">checkmo2025@gmail.com</text>
+    </g>
+  </g>
+
+  <!-- ============ 02 CONTENTS ============ -->
+  <g transform="translate(0,750)">
+    <rect x="0" y="0" width="1280" height="720" fill="#f7f4f2" />
+    <rect x="64" y="48" width="40" height="40" rx="10" fill="#ffffff" stroke="#d8c9c1" />
+    <text x="84" y="73" font-size="11" font-weight="800" fill="#4a3931" text-anchor="middle">책모</text>
+    <text x="1216" y="73" font-size="13" font-weight="800" fill="#755c50" text-anchor="end">목차</text>
+
+    <!-- Group 1 -->
+    <rect x="64" y="252" width="365" height="5" fill="#a45445" />
+    <text x="64" y="305" font-size="44" font-weight="900" fill="#a45445">1</text>
+    <text x="110" y="298" font-size="21" font-weight="750" fill="#2c2927">공감 · 지금 불편하신가요?</text>
+    <text x="64" y="352" font-size="15" font-weight="850" fill="#a45445">01</text>
+    <text x="98" y="352" font-size="19" font-weight="700" fill="#2c2927">운영진이 겪는 불편함</text>
+    <text x="64" y="410" font-size="15" font-weight="850" fill="#a45445">02</text>
+    <text x="98" y="410" font-size="19" font-weight="700" fill="#2c2927">왜 반복되나요</text>
+
+    <!-- Group 2 -->
+    <rect x="457" y="252" width="365" height="5" fill="#4f7180" />
+    <text x="457" y="305" font-size="44" font-weight="900" fill="#4f7180">2</text>
+    <text x="503" y="298" font-size="21" font-weight="750" fill="#2c2927">해결 · 책모가 다르게 만드는 것</text>
+    <text x="457" y="352" font-size="15" font-weight="850" fill="#4f7180">03</text>
+    <text x="491" y="352" font-size="19" font-weight="700" fill="#2c2927">책모 소개</text>
+    <text x="457" y="410" font-size="15" font-weight="850" fill="#4f7180">04</text>
+    <text x="491" y="410" font-size="19" font-weight="700" fill="#2c2927">불편함과 기능 매칭</text>
+    <text x="457" y="468" font-size="15" font-weight="850" fill="#4f7180">05</text>
+    <text x="491" y="468" font-size="19" font-weight="700" fill="#2c2927">다른 도구와 무엇이 다른가</text>
+
+    <!-- Group 3 -->
+    <rect x="850" y="252" width="365" height="5" fill="#5f7354" />
+    <text x="850" y="305" font-size="44" font-weight="900" fill="#5f7354">3</text>
+    <text x="896" y="298" font-size="21" font-weight="750" fill="#2c2927">전환 · 우리 모임에 적용하기</text>
+    <text x="850" y="352" font-size="15" font-weight="850" fill="#5f7354">06</text>
+    <text x="884" y="352" font-size="19" font-weight="700" fill="#2c2927">실제 화면으로 보기</text>
+    <text x="850" y="410" font-size="15" font-weight="850" fill="#5f7354">07</text>
+    <text x="884" y="410" font-size="19" font-weight="700" fill="#2c2927">다음 모임부터 시작하기</text>
+    <text x="850" y="468" font-size="15" font-weight="850" fill="#5f7354">08</text>
+    <text x="884" y="468" font-size="19" font-weight="700" fill="#2c2927">지금 시작하기</text>
+
+    <line x1="64" y1="674" x2="1216" y2="674" stroke="#dedad7" />
+    <text x="64" y="692" font-size="11" font-weight="650" fill="#8d8884">독서동아리 운영진을 위한 책모 소개서</text>
+    <text x="1216" y="692" font-size="11" font-weight="650" fill="#8d8884" text-anchor="end">2</text>
+  </g>
+
+  <!-- ============ 03 PAIN ============ -->
+  <g transform="translate(0,1500)">
+    <rect x="0" y="0" width="1280" height="720" fill="#f7f4f2" />
+    <rect x="64" y="48" width="40" height="40" rx="10" fill="#ffffff" stroke="#d8c9c1" />
+    <text x="84" y="73" font-size="11" font-weight="800" fill="#4a3931" text-anchor="middle">책모</text>
+    <text x="1216" y="73" font-size="13" font-weight="800" fill="#755c50" text-anchor="end">01 공감 · 지금 불편하신가요?</text>
+
+    <text x="64" y="130" font-size="34" font-weight="850" fill="#2c2927">독서모임 운영, <tspan fill="#a45445">불편하지 않으셨나요?</tspan></text>
+
+    <!-- quotes -->
+    <g font-size="15" font-weight="750" fill="#2c2927">
+      <rect x="64" y="168" width="470" height="56" rx="8" fill="#ffffff" stroke="#dedad7" />
+      <text x="82" y="203" font-size="19" font-weight="900" fill="#a45445">“</text><text x="104" y="202">공지 다시 올려주세요</text>
+      <rect x="64" y="234" width="470" height="56" rx="8" fill="#ffffff" stroke="#dedad7" />
+      <text x="82" y="269" font-size="19" font-weight="900" fill="#a45445">“</text><text x="104" y="268">이번에 읽을 책이 뭐였죠?</text>
+      <rect x="64" y="300" width="470" height="56" rx="8" fill="#ffffff" stroke="#dedad7" />
+      <text x="82" y="335" font-size="19" font-weight="900" fill="#a45445">“</text><text x="104" y="334">투표 마감은 언제예요?</text>
+      <rect x="64" y="366" width="470" height="56" rx="8" fill="#ffffff" stroke="#dedad7" />
+      <text x="82" y="401" font-size="19" font-weight="900" fill="#a45445">“</text><text x="104" y="400">지난 발제는 어디에서 보죠?</text>
+    </g>
+
+    <!-- operator day -->
+    <rect x="562" y="168" width="654" height="360" rx="8" fill="#4a3931" />
+    <text x="586" y="202" font-size="19" font-weight="800" fill="#ffffff">운영진이 직접 이어 붙이는 모임의 하루</text>
+    <text x="586" y="224" font-size="13" fill="#ffffff" fill-opacity="0.62">좋은 대화를 준비하는 시간보다 전달과 정리에 더 많은 손이 갑니다.</text>
+
+    <g font-size="13" fill="#ffffff" fill-opacity="0.82">
+      <rect x="586" y="248" width="196" height="256" rx="8" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14" />
+      <text x="602" y="276" font-size="14" font-weight="750" fill="#d8c9c1">모임 전</text>
+      <text x="602" y="304">· 후보 도서 정리</text>
+      <text x="602" y="326">· 투표 링크 전달</text>
+      <text x="602" y="348">· 일정 반복 공지</text>
+      <text x="602" y="370">· 발제 수집</text>
+
+      <rect x="794" y="248" width="196" height="256" rx="8" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14" />
+      <text x="810" y="276" font-size="14" font-weight="750" fill="#d8c9c1">모임 중</text>
+      <text x="810" y="304">· 참석자 확인</text>
+      <text x="810" y="326">· 조 편성 안내</text>
+      <text x="810" y="348">· 발제 순서 공유</text>
+      <text x="810" y="370">· 자료 재전달</text>
+
+      <rect x="1002" y="248" width="196" height="256" rx="8" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14" />
+      <text x="1018" y="276" font-size="14" font-weight="750" fill="#d8c9c1">모임 후</text>
+      <text x="1018" y="304">· 후기 요청</text>
+      <text x="1018" y="326">· 기록 취합</text>
+      <text x="1018" y="348">· 다음 일정 안내</text>
+      <text x="1018" y="370">· 신규 회원 설명</text>
+    </g>
+
+    <rect x="64" y="546" width="1152" height="54" fill="#755c50" />
+    <text x="84" y="579" font-size="16" font-weight="800" fill="#ffffff">운영진은 책을 고르고 모임을 이끌어야 하지만, 실제 시간은 반복 안내와 정보 정리에 쓰이기 쉽습니다.</text>
+
+    <line x1="64" y1="674" x2="1216" y2="674" stroke="#dedad7" />
+    <text x="64" y="692" font-size="11" font-weight="650" fill="#8d8884">독서동아리 운영진을 위한 책모 소개서</text>
+    <text x="1216" y="692" font-size="11" font-weight="650" fill="#8d8884" text-anchor="end">3</text>
+  </g>
+
+  <!-- ============ 04 FRAGMENTATION ============ -->
+  <g transform="translate(0,2250)">
+    <rect x="0" y="0" width="1280" height="720" fill="#f7f4f2" />
+    <rect x="64" y="48" width="40" height="40" rx="10" fill="#ffffff" stroke="#d8c9c1" />
+    <text x="84" y="73" font-size="11" font-weight="800" fill="#4a3931" text-anchor="middle">책모</text>
+    <text x="1216" y="73" font-size="13" font-weight="800" fill="#755c50" text-anchor="end">02 왜 반복되나요</text>
+
+    <text x="64" y="130" font-size="30" font-weight="850" fill="#2c2927">도구는 많지만, <tspan fill="#a45445">운영 흐름은 연결되지 않습니다</tspan></text>
+    <text x="64" y="160" font-size="16" fill="#5f5a56">각 도구의 정보를 다시 모으고 설명하는 일이 결국 운영진에게 돌아옵니다.</text>
+
+    <g font-size="14" font-weight="750" fill="#2c2927">
+      <rect x="64" y="196" width="280" height="52" rx="8" fill="#ffffff" stroke="#dedad7" /><circle cx="90" cy="222" r="14" fill="#f8ece9"/><text x="116" y="218">단체 채팅</text><text x="116" y="234" font-size="11" font-weight="600" fill="#8d8884">공지와 대화</text>
+      <rect x="64" y="260" width="280" height="52" rx="8" fill="#ffffff" stroke="#dedad7" /><circle cx="90" cy="286" r="14" fill="#f7f1e5"/><text x="116" y="282">설문 링크</text><text x="116" y="298" font-size="11" font-weight="600" fill="#8d8884">도서·일정 투표</text>
+      <rect x="64" y="324" width="280" height="52" rx="8" fill="#ffffff" stroke="#dedad7" /><circle cx="90" cy="350" r="14" fill="#eef4f6"/><text x="116" y="346">문서와 노트</text><text x="116" y="362" font-size="11" font-weight="600" fill="#8d8884">발제와 후기</text>
+      <rect x="64" y="388" width="280" height="52" rx="8" fill="#ffffff" stroke="#dedad7" /><circle cx="90" cy="414" r="14" fill="#f0f4ed"/><text x="116" y="410">표와 캘린더</text><text x="116" y="426" font-size="11" font-weight="600" fill="#8d8884">일정과 참석</text>
+    </g>
+    <line x1="360" y1="318" x2="470" y2="318" stroke="#dedad7" stroke-width="2" />
+
+    <circle cx="640" cy="318" r="95" fill="#755c50" stroke="#d8c9c1" stroke-width="12" />
+    <text x="640" y="312" font-size="22" font-weight="800" fill="#ffffff" text-anchor="middle">운영진</text>
+    <text x="640" y="335" font-size="13" fill="#ffffff" fill-opacity="0.72" text-anchor="middle">수집 · 정리 · 전달</text>
+    <text x="640" y="352" font-size="13" fill="#ffffff" fill-opacity="0.72" text-anchor="middle">다시 확인</text>
+
+    <line x1="810" y1="318" x2="920" y2="318" stroke="#dedad7" stroke-width="2" />
+
+    <g font-size="14" font-weight="750" fill="#2c2927">
+      <rect x="936" y="196" width="280" height="52" rx="8" fill="#ffffff" stroke="#dedad7" /><circle cx="962" cy="222" r="14" fill="#f8ece9"/><text x="988" y="218">공지 누락</text><text x="988" y="234" font-size="11" font-weight="600" fill="#8d8884">대화 속에서 정보가 묻힘</text>
+      <rect x="936" y="260" width="280" height="52" rx="8" fill="#ffffff" stroke="#dedad7" /><circle cx="962" cy="286" r="14" fill="#f7f1e5"/><text x="988" y="282">기록 검색 어려움</text><text x="988" y="298" font-size="11" font-weight="600" fill="#8d8884">지난 자료를 다시 탐색</text>
+      <rect x="936" y="324" width="280" height="52" rx="8" fill="#ffffff" stroke="#dedad7" /><circle cx="962" cy="350" r="14" fill="#eef4f6"/><text x="988" y="346">반복 질문</text><text x="988" y="362" font-size="11" font-weight="600" fill="#8d8884">같은 내용을 여러 번 안내</text>
+      <rect x="936" y="388" width="280" height="52" rx="8" fill="#ffffff" stroke="#dedad7" /><circle cx="962" cy="414" r="14" fill="#f0f4ed"/><text x="988" y="410">인수인계 부담</text><text x="988" y="426" font-size="11" font-weight="600" fill="#8d8884">운영 방식이 사람에게 남음</text>
+    </g>
+
+    <line x1="64" y1="470" x2="1216" y2="470" stroke="#dedad7" />
+    <text x="64" y="500" font-size="18" font-weight="750" fill="#2c2927">문제는 도구의 수가 아닙니다.</text>
+    <text x="1216" y="494" font-size="13" fill="#5f5a56" text-anchor="end">모임의 결정과 기록이 한 흐름으로 남지 않아, 운영진이</text>
+    <text x="1216" y="512" font-size="13" fill="#5f5a56" text-anchor="end">매번 그 사이를 연결해야 한다는 점입니다.</text>
+    <line x1="64" y1="530" x2="1216" y2="530" stroke="#dedad7" />
+
+    <line x1="64" y1="674" x2="1216" y2="674" stroke="#dedad7" />
+    <text x="64" y="692" font-size="11" font-weight="650" fill="#8d8884">독서동아리 운영진을 위한 책모 소개서</text>
+    <text x="1216" y="692" font-size="11" font-weight="650" fill="#8d8884" text-anchor="end">4</text>
+  </g>
+
+  <!-- ============ 05 INTRO ============ -->
+  <g transform="translate(0,3000)">
+    <rect x="0" y="0" width="1280" height="720" fill="#f7f4f2" />
+    <rect x="64" y="48" width="40" height="40" rx="10" fill="#ffffff" stroke="#d8c9c1" />
+    <text x="84" y="73" font-size="11" font-weight="800" fill="#4a3931" text-anchor="middle">책모</text>
+    <text x="1216" y="73" font-size="13" font-weight="800" fill="#755c50" text-anchor="end">03 책모 소개</text>
+
+    <text x="64" y="130" font-size="32" font-weight="850" fill="#2c2927">책모는 <tspan fill="#4f7180">독서모임 운영을 위해 만든 앱입니다</tspan></text>
+    <text x="64" y="160" font-size="16" fill="#5f5a56">카톡방도, 네이버카페도, 엑셀도 아닌, 모임 하나를 통째로 담는 공간입니다.</text>
+
+    <g font-size="15" font-weight="750" fill="#2c2927">
+      <rect x="64" y="196" width="470" height="52" rx="8" fill="#ffffff" stroke="#dedad7" />
+      <text x="82" y="228" font-size="19" font-weight="900" fill="#4f7180">“</text><text x="104" y="227">공지부터 정리해볼까요</text>
+      <rect x="64" y="262" width="470" height="52" rx="8" fill="#ffffff" stroke="#dedad7" />
+      <text x="82" y="294" font-size="19" font-weight="900" fill="#4f7180">“</text><text x="104" y="293">이번엔 어디서 확인하죠</text>
+      <rect x="64" y="328" width="470" height="52" rx="8" fill="#ffffff" stroke="#dedad7" />
+      <text x="82" y="360" font-size="19" font-weight="900" fill="#4f7180">“</text><text x="104" y="359">이제 한 곳에서 다 돼요</text>
+    </g>
+
+    <rect x="562" y="168" width="654" height="336" rx="8" fill="#4a3931" />
+    <text x="586" y="202" font-size="19" font-weight="800" fill="#ffffff">책모가 담고 있는 세 가지 축</text>
+    <text x="586" y="224" font-size="13" fill="#ffffff" fill-opacity="0.62">공지부터 기록까지, 모임의 맥락이 끊기지 않습니다.</text>
+
+    <g font-size="13" fill="#ffffff" fill-opacity="0.82">
+      <rect x="586" y="248" width="196" height="232" rx="8" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14" />
+      <text x="602" y="276" font-size="14" font-weight="750" fill="#d8c9c1">공지 · 투표</text>
+      <text x="602" y="304">· 일정과 안건 공지</text>
+      <text x="602" y="326">· 도서·일정 투표</text>
+      <text x="602" y="348">· 의견 수렴</text>
+      <text x="602" y="370">· 결과 확인</text>
+
+      <rect x="794" y="248" width="196" height="232" rx="8" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14" />
+      <text x="810" y="276" font-size="14" font-weight="750" fill="#d8c9c1">책장 · 발제</text>
+      <text x="810" y="304">· 선정도서 관리</text>
+      <text x="810" y="326">· 발제 작성</text>
+      <text x="810" y="348">· 한줄평 기록</text>
+      <text x="810" y="370">· 별점 남기기</text>
+
+      <rect x="1002" y="248" width="196" height="232" rx="8" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14" />
+      <text x="1018" y="276" font-size="14" font-weight="750" fill="#d8c9c1">정기모임 · 조</text>
+      <text x="1018" y="304">· 정기모임 정보</text>
+      <text x="1018" y="326">· 조 편성</text>
+      <text x="1018" y="348">· 조별 채팅</text>
+      <text x="1018" y="370">· 참여 현황</text>
+    </g>
+
+    <rect x="64" y="546" width="1152" height="54" fill="#755c50" />
+    <text x="84" y="579" font-size="16" font-weight="800" fill="#ffffff">따로 관리하던 네 가지 흐름이, 책모 안에서는 하나의 모임 기록으로 이어집니다.</text>
+
+    <line x1="64" y1="674" x2="1216" y2="674" stroke="#dedad7" />
+    <text x="64" y="692" font-size="11" font-weight="650" fill="#8d8884">독서동아리 운영진을 위한 책모 소개서</text>
+    <text x="1216" y="692" font-size="11" font-weight="650" fill="#8d8884" text-anchor="end">5</text>
+  </g>
+
+  <!-- ============ 06 SOLUTION / FEATURE MAP ============ -->
+  <g transform="translate(0,3750)">
+    <rect x="0" y="0" width="1280" height="720" fill="#f7f4f2" />
+    <rect x="64" y="48" width="40" height="40" rx="10" fill="#ffffff" stroke="#d8c9c1" />
+    <text x="84" y="73" font-size="11" font-weight="800" fill="#4a3931" text-anchor="middle">책모</text>
+    <text x="1216" y="73" font-size="13" font-weight="800" fill="#755c50" text-anchor="end">04 불편함과 기능 매칭</text>
+
+    <text x="64" y="130" font-size="30" font-weight="850" fill="#2c2927">네 가지 불편함, <tspan fill="#4f7180">네 가지 기능으로 이어집니다</tspan></text>
+
+    <g font-size="16" font-weight="700" fill="#2c2927">
+      <line x1="64" y1="168" x2="756" y2="168" stroke="#dedad7" />
+      <circle cx="90" cy="200" r="18" fill="#f8ece9" />
+      <text x="130" y="196">공지와 투표</text>
+      <text x="130" y="218" font-size="13" font-weight="400" fill="#5f5a56">“공지 다시 올려주세요” — 공지 안에서 최신 안내와 투표 결과를 함께 확인</text>
+      <line x1="64" y1="246" x2="756" y2="246" stroke="#dedad7" />
+
+      <circle cx="90" cy="278" r="18" fill="#f7f1e5" />
+      <text x="130" y="274">책장과 발제</text>
+      <text x="130" y="296" font-size="13" font-weight="400" fill="#5f5a56">“지난 발제는 어디서 보죠” — 발제와 한줄평이 책장에 그대로 쌓임</text>
+      <line x1="64" y1="324" x2="756" y2="324" stroke="#dedad7" />
+
+      <circle cx="90" cy="356" r="18" fill="#eef4f6" />
+      <text x="130" y="352">정기모임과 조</text>
+      <text x="130" y="374" font-size="13" font-weight="400" fill="#5f5a56">반복되던 조 편성 안내와 자료 재전달을 한 번에 확인</text>
+      <line x1="64" y1="402" x2="756" y2="402" stroke="#dedad7" />
+
+      <circle cx="90" cy="434" r="18" fill="#f0f4ed" />
+      <text x="130" y="430">회원과 운영진 관리</text>
+      <text x="130" y="452" font-size="13" font-weight="400" fill="#5f5a56">신규 회원에게 매번 하던 설명을, 가입 승인과 역할 관리로 한 번만</text>
+      <line x1="64" y1="480" x2="756" y2="480" stroke="#dedad7" />
+    </g>
+
+    <rect x="820" y="168" width="172" height="373" rx="20" fill="#2f2b29" transform="rotate(-2 906 355)" />
+    <rect x="828" y="176" width="156" height="357" rx="16" fill="#eef4f6" transform="rotate(-2 906 355)" />
+    <rect x="1040" y="188" width="172" height="373" rx="20" fill="#2f2b29" transform="rotate(2 1126 375)" />
+    <rect x="1048" y="196" width="156" height="357" rx="16" fill="#f8ece9" transform="rotate(2 1126 375)" />
+    <rect x="812" y="176" width="140" height="26" rx="13" fill="#4a3931" /><text x="882" y="193" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">모임 찾기와 생성</text>
+    <rect x="1052" y="540" width="130" height="26" rx="13" fill="#a45445" /><text x="1117" y="557" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">읽고 나누는 경험</text>
+
+    <line x1="64" y1="674" x2="1216" y2="674" stroke="#dedad7" />
+    <text x="64" y="692" font-size="11" font-weight="650" fill="#8d8884">독서동아리 운영진을 위한 책모 소개서</text>
+    <text x="1216" y="692" font-size="11" font-weight="650" fill="#8d8884" text-anchor="end">6</text>
+  </g>
+
+  <!-- ============ 07 DIFFERENTIATION ============ -->
+  <g transform="translate(0,4500)">
+    <rect x="0" y="0" width="1280" height="720" fill="#f7f4f2" />
+    <rect x="64" y="48" width="40" height="40" rx="10" fill="#ffffff" stroke="#d8c9c1" />
+    <text x="84" y="73" font-size="11" font-weight="800" fill="#4a3931" text-anchor="middle">책모</text>
+    <text x="1216" y="73" font-size="13" font-weight="800" fill="#755c50" text-anchor="end">05 다른 도구와 무엇이 다른가</text>
+
+    <text x="64" y="130" font-size="30" font-weight="850" fill="#2c2927">카톡방, 네이버카페, 엑셀 대신 <tspan fill="#755c50">책모 하나로</tspan></text>
+
+    <g font-size="12" font-weight="800" fill="#8d8884">
+      <text x="64" y="176">운영 업무</text><text x="230" y="176">흩어진 도구들</text><text x="900" y="176">책모에서</text>
+    </g>
+    <line x1="64" y1="188" x2="1216" y2="188" stroke="#dedad7" />
+
+    <g font-size="13" fill="#2c2927">
+      <text x="64" y="222" font-weight="850" fill="#755c50">공지 전달</text>
+      <text x="230" y="222" fill="#5f5a56">카톡방 + 네이버카페 게시판에 각각 올리고 링크 공유</text>
+      <text x="770" y="222" font-weight="900" fill="#a45445">→</text>
+      <text x="800" y="222" font-weight="750">모임 공지 하나로 안내, 댓글로 확인까지</text>
+      <line x1="64" y1="240" x2="1216" y2="240" stroke="#dedad7" />
+
+      <text x="64" y="274" font-weight="850" fill="#755c50">의견 수렴</text>
+      <text x="230" y="274" fill="#5f5a56">구글폼·네이버폼 링크 발송 후 결과 캡처해 공유</text>
+      <text x="770" y="274" font-weight="900" fill="#a45445">→</text>
+      <text x="800" y="274" font-weight="750">공지 안에서 투표 참여, 결과 자동 집계</text>
+      <line x1="64" y1="292" x2="1216" y2="292" stroke="#dedad7" />
+
+      <text x="64" y="326" font-weight="850" fill="#755c50">도서와 발제</text>
+      <text x="230" y="326" fill="#5f5a56">노션·한글 파일로 각자 작성 후 링크 전달</text>
+      <text x="770" y="326" font-weight="900" fill="#a45445">→</text>
+      <text x="800" y="326" font-weight="750">책장 안에 발제와 한줄평이 그대로 쌓임</text>
+      <line x1="64" y1="344" x2="1216" y2="344" stroke="#dedad7" />
+
+      <text x="64" y="378" font-weight="850" fill="#755c50">구성원 관리</text>
+      <text x="230" y="378" fill="#5f5a56">엑셀 명단으로 가입·탈퇴를 수기 관리</text>
+      <text x="770" y="378" font-weight="900" fill="#a45445">→</text>
+      <text x="800" y="378" font-weight="750">가입 신청부터 역할까지 앱에서 한 번에</text>
+      <line x1="64" y1="396" x2="1216" y2="396" stroke="#dedad7" />
+
+      <text x="64" y="430" font-weight="850" fill="#755c50">운영 인수인계</text>
+      <text x="230" y="430" fill="#5f5a56">전임 운영진 개인 카톡·파일에 의존</text>
+      <text x="770" y="430" font-weight="900" fill="#a45445">→</text>
+      <text x="800" y="430" font-weight="750">모임 안에 공지·기록이 남아 그대로 인계</text>
+      <line x1="64" y1="448" x2="1216" y2="448" stroke="#dedad7" />
+    </g>
+
+    <rect x="64" y="472" width="1152" height="58" fill="#755c50" />
+    <text x="84" y="503" font-size="17" font-weight="800" fill="#ffffff">여러 도구를 오가는 대신, 책모 하나면 충분합니다.</text>
+    <text x="1196" y="503" font-size="12" fill="#ffffff" fill-opacity="0.72" text-anchor="end">책모는 운영 판단을 대신하지 않고 운영의 맥락을 정리합니다.</text>
+
+    <line x1="64" y1="674" x2="1216" y2="674" stroke="#dedad7" />
+    <text x="64" y="692" font-size="11" font-weight="650" fill="#8d8884">독서동아리 운영진을 위한 책모 소개서</text>
+    <text x="1216" y="692" font-size="11" font-weight="650" fill="#8d8884" text-anchor="end">7</text>
+  </g>
+
+  <!-- ============ 08 SCREENS ============ -->
+  <g transform="translate(0,5250)">
+    <rect x="0" y="0" width="1280" height="720" fill="#f7f4f2" />
+    <rect x="64" y="48" width="40" height="40" rx="10" fill="#ffffff" stroke="#d8c9c1" />
+    <text x="84" y="73" font-size="11" font-weight="800" fill="#4a3931" text-anchor="middle">책모</text>
+    <text x="1216" y="73" font-size="13" font-weight="800" fill="#755c50" text-anchor="end">06 실제 화면으로 보기</text>
+
+    <text x="64" y="130" font-size="30" font-weight="850" fill="#2c2927">모임 운영이, <tspan fill="#78657e">책모에서는 이렇게 보입니다</tspan></text>
+    <text x="64" y="160" font-size="16" fill="#5f5a56">공지와 발제, 정기모임과 한줄평이 각각 흩어지지 않고 하나의 모임 안에서 이어집니다.</text>
+
+    <g font-size="13" font-weight="850">
+      <circle cx="130" cy="200" r="13" fill="#a45445" /><text x="130" y="204" fill="#ffffff" text-anchor="middle" font-size="11">1</text>
+      <text x="152" y="205" fill="#a45445">준비 · 공지</text>
+      <rect x="90" y="228" width="166" height="360" rx="6" fill="#ffffff" stroke="#dedad7" />
+
+      <circle cx="410" cy="200" r="13" fill="#86662f" /><text x="410" y="204" fill="#ffffff" text-anchor="middle" font-size="11">2</text>
+      <text x="432" y="205" fill="#86662f">읽기 · 발제</text>
+      <rect x="370" y="228" width="166" height="360" rx="6" fill="#ffffff" stroke="#dedad7" />
+
+      <circle cx="690" cy="200" r="13" fill="#4f7180" /><text x="690" y="204" fill="#ffffff" text-anchor="middle" font-size="11">3</text>
+      <text x="712" y="205" fill="#4f7180">모임 · 정기모임</text>
+      <rect x="650" y="228" width="166" height="360" rx="6" fill="#ffffff" stroke="#dedad7" />
+
+      <circle cx="970" cy="200" r="13" fill="#5f7354" /><text x="970" y="204" fill="#ffffff" text-anchor="middle" font-size="11">4</text>
+      <text x="992" y="205" fill="#5f7354">회고 · 한줄평</text>
+      <rect x="930" y="228" width="166" height="360" rx="6" fill="#ffffff" stroke="#dedad7" />
+    </g>
+
+    <line x1="64" y1="674" x2="1216" y2="674" stroke="#dedad7" />
+    <text x="64" y="692" font-size="11" font-weight="650" fill="#8d8884">독서동아리 운영진을 위한 책모 소개서</text>
+    <text x="1216" y="692" font-size="11" font-weight="650" fill="#8d8884" text-anchor="end">8</text>
+  </g>
+
+  <!-- ============ 09 ADOPTION ============ -->
+  <g transform="translate(0,6000)">
+    <rect x="0" y="0" width="1280" height="720" fill="#f7f4f2" />
+    <rect x="64" y="48" width="40" height="40" rx="10" fill="#ffffff" stroke="#d8c9c1" />
+    <text x="84" y="73" font-size="11" font-weight="800" fill="#4a3931" text-anchor="middle">책모</text>
+    <text x="1216" y="73" font-size="13" font-weight="800" fill="#755c50" text-anchor="end">07 다음 모임부터 시작하기</text>
+
+    <text x="64" y="130" font-size="26" font-weight="850" fill="#2c2927">전부 바꾸지 않아도 됩니다. <tspan fill="#4f7180">다음 모임 하나부터 시작하세요</tspan></text>
+
+    <g>
+      <rect x="64" y="178" width="486" height="98" rx="8" fill="#ffffff" stroke="#dedad7" />
+      <circle cx="106" cy="227" r="26" fill="#4f7180" /><text x="106" y="233" font-size="15" font-weight="900" fill="#ffffff" text-anchor="middle">01</text>
+      <text x="148" y="220" font-size="16" font-weight="700" fill="#2c2927">모임을 개설합니다</text>
+      <text x="148" y="242" font-size="13" fill="#5f5a56">동아리 소개와 기본 운영 정보를 등록해 모임 공간을 만듭니다.</text>
+
+      <rect x="64" y="290" width="486" height="98" rx="8" fill="#ffffff" stroke="#dedad7" />
+      <circle cx="106" cy="339" r="26" fill="#4f7180" /><text x="106" y="345" font-size="15" font-weight="900" fill="#ffffff" text-anchor="middle">02</text>
+      <text x="148" y="332" font-size="16" font-weight="700" fill="#2c2927">회원과 역할을 정리합니다</text>
+      <text x="148" y="354" font-size="13" fill="#5f5a56">가입 신청을 승인하고 개설자와 운영진의 역할을 나눕니다.</text>
+
+      <rect x="64" y="402" width="486" height="98" rx="8" fill="#ffffff" stroke="#dedad7" />
+      <circle cx="106" cy="451" r="26" fill="#4f7180" /><text x="106" y="457" font-size="15" font-weight="900" fill="#ffffff" text-anchor="middle">03</text>
+      <text x="148" y="444" font-size="16" font-weight="700" fill="#2c2927">첫 책장과 공지를 엽니다</text>
+      <text x="148" y="466" font-size="13" fill="#5f5a56">다음 선정도서와 일정 공지, 필요한 투표부터 책모에서 시작합니다.</text>
+
+      <rect x="64" y="514" width="486" height="46" fill="#eef4f6" />
+      <text x="80" y="542" font-size="13" font-weight="750" fill="#4a3931">처음부터 모든 기록을 옮기기보다, 다음 모임에 필요한 정보부터 모으는 방식이 좋습니다.</text>
+    </g>
+
+    <g font-size="14">
+      <line x1="590" y1="178" x2="1216" y2="178" stroke="#dedad7" />
+      <text x="590" y="200" font-size="22" font-weight="900" fill="#a45445">Q</text>
+      <text x="626" y="198" font-size="15" font-weight="700" fill="#2c2927">단체 채팅을 바로 없애야 하나요?</text>
+      <text x="626" y="220" font-size="13" fill="#5f5a56">아니요. 공지와 책장, 기록부터 책모에 모으고 기존 대화 채널은</text>
+      <text x="626" y="238" font-size="13" fill="#5f5a56">단계적으로 정리할 수 있습니다.</text>
+      <line x1="590" y1="258" x2="1216" y2="258" stroke="#dedad7" />
+
+      <text x="590" y="288" font-size="22" font-weight="900" fill="#a45445">Q</text>
+      <text x="626" y="286" font-size="15" font-weight="700" fill="#2c2927">기존 자료를 모두 옮겨야 하나요?</text>
+      <text x="626" y="308" font-size="13" fill="#5f5a56">다음 모임부터 새 기록을 쌓아도 됩니다. 중요한 발제와 도서</text>
+      <text x="626" y="326" font-size="13" fill="#5f5a56">정보만 선택적으로 정리하면 됩니다.</text>
+      <line x1="590" y1="346" x2="1216" y2="346" stroke="#dedad7" />
+
+      <text x="590" y="376" font-size="22" font-weight="900" fill="#a45445">Q</text>
+      <text x="626" y="374" font-size="15" font-weight="700" fill="#2c2927">운영 역할을 나눌 수 있나요?</text>
+      <text x="626" y="396" font-size="13" fill="#5f5a56">개설자와 운영진 권한을 구분해 가입, 공지, 책장과 조 편성을</text>
+      <text x="626" y="414" font-size="13" fill="#5f5a56">함께 관리할 수 있습니다.</text>
+      <line x1="590" y1="434" x2="1216" y2="434" stroke="#dedad7" />
+    </g>
+
+    <line x1="64" y1="674" x2="1216" y2="674" stroke="#dedad7" />
+    <text x="64" y="692" font-size="11" font-weight="650" fill="#8d8884">독서동아리 운영진을 위한 책모 소개서</text>
+    <text x="1216" y="692" font-size="11" font-weight="650" fill="#8d8884" text-anchor="end">9</text>
+  </g>
+
+  <!-- ============ 10 CLOSING ============ -->
+  <g transform="translate(0,6750)">
+    <rect x="0" y="0" width="1280" height="720" fill="#3a2c24" />
+    <rect x="70" y="48" width="52" height="52" rx="11" fill="#ffffff" />
+    <text x="96" y="80" font-size="15" font-weight="800" fill="#4a3931" text-anchor="middle">책모</text>
+    <text x="70" y="130" font-size="12" font-weight="800" fill="#d8c9c1">08 지금 시작하기 · Claude Edition</text>
+
+    <text x="70" y="180" font-size="42" font-weight="900" fill="#ffffff">다음 정기모임을</text>
+    <text x="70" y="228" font-size="42" font-weight="900" fill="#d8c9c1">책모에서 열어보세요</text>
+    <text x="70" y="270" font-size="16" fill="#ffffff" fill-opacity="0.76">한 번의 모임을 운영해보면, 우리 동아리에 필요한 흐름과</text>
+    <text x="70" y="292" font-size="16" fill="#ffffff" fill-opacity="0.76">남겨야 할 기록이 보입니다.</text>
+
+    <rect x="70" y="320" width="150" height="42" rx="21" fill="#a45445" />
+    <text x="145" y="346" font-size="13" font-weight="800" fill="#ffffff" text-anchor="middle">iOS 앱 다운로드</text>
+    <rect x="234" y="320" width="220" height="42" rx="21" fill="none" stroke="#ffffff" stroke-opacity="0.25" />
+    <text x="344" y="346" font-size="13" font-weight="800" fill="#ffffff" text-anchor="middle">checkmo2025@gmail.com</text>
+
+    <rect x="790" y="150" width="420" height="330" rx="8" fill="#ffffff" fill-opacity="0.08" stroke="#ffffff" stroke-opacity="0.22" />
+    <text x="814" y="182" font-size="12" font-weight="850" fill="#d8c9c1">START WITH ONE MEETING</text>
+
+    <circle cx="828" cy="222" r="14" fill="#ffffff" /><text x="828" y="227" font-size="12" fill="#4a3931" text-anchor="middle">1</text>
+    <text x="854" y="227" font-size="14" font-weight="750" fill="#ffffff">모임 만들기</text>
+    <circle cx="828" cy="262" r="14" fill="#ffffff" /><text x="828" y="267" font-size="12" fill="#4a3931" text-anchor="middle">2</text>
+    <text x="854" y="267" font-size="14" font-weight="750" fill="#ffffff">운영진과 회원 정리</text>
+    <circle cx="828" cy="302" r="14" fill="#ffffff" /><text x="828" y="307" font-size="12" fill="#4a3931" text-anchor="middle">3</text>
+    <text x="854" y="307" font-size="14" font-weight="750" fill="#ffffff">첫 책장과 공지 등록</text>
+
+    <line x1="814" y1="330" x2="1186" y2="330" stroke="#ffffff" stroke-opacity="0.18" />
+    <rect x="814" y="346" width="76" height="76" rx="5" fill="#ffffff" />
+    <text x="852" y="388" font-size="10" fill="#4a3931" text-anchor="middle">QR</text>
+    <text x="906" y="366" font-size="13" font-weight="750" fill="#ffffff">iOS App Store</text>
+    <text x="906" y="386" font-size="12" fill="#ffffff" fill-opacity="0.68">QR 코드를 스캔해</text>
+    <text x="906" y="402" font-size="12" fill="#ffffff" fill-opacity="0.68">책모를 다운로드하세요</text>
+
+    <line x1="814" y1="434" x2="1186" y2="434" stroke="#ffffff" stroke-opacity="0.18" />
+    <text x="814" y="454" font-size="12" fill="#ffffff" fill-opacity="0.68">독서동아리 운영 도입 문의</text>
+    <text x="814" y="472" font-size="12" fill="#ffffff" fill-opacity="0.68">checkmo2025@gmail.com</text>
+  </g>
+</svg>

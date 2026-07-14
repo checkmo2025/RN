@@ -3903,3 +3903,10 @@ export const interactionOpacity = {
 - EAS Android 제출 트랙을 기존 비공개 테스트와 동일한 `alpha`로 설정
 - Google Play에 `1.2.2`(`versionCode 10`) 업데이트를 제출하고 검토 중 상태를 확인
 - Firebase Analytics의 광고 ID 사용 목적을 Play Console에서 애널리틱스로 선언
+
+# 2026-07-14 18:35:40 KST 운영진 소개서 표지·목차 재디자인
+
+- `docs/pm/club-operator-introduction.html` 표지·마무리를 브랜드 웜톤으로 재디자인(사진 배경 제거, 정면 아이폰 목업 + `assets/home.png`, App Store·Google Play 컬러 로고와 도메인 표기)
+- 전 슬라이드 푸터를 제거하고 헤더 우측을 `책모 서비스 소개서 | NN`(페이지 번호)으로 통일
+- 목차(02) 대제목 1·2·3은 유지하고 하위 항목을 간결 키워드형으로 정리
+- Claude 편집본 소개서(`claude-club-operator-introduction.html`·`.svg`, `claude-club-operator-fresh.html`) 신규 추가
