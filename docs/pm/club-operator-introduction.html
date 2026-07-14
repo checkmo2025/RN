@@ -616,6 +616,120 @@
       text-align: right;
     }
 
+    /* 04b. Overwhelmed operator */
+    .overwhelm {
+      position: relative;
+      height: 452px;
+      margin-top: 20px;
+    }
+
+    .overwhelm-lines {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .overwhelm-lines line {
+      stroke: var(--brand-soft);
+      stroke-width: 2.5;
+      stroke-dasharray: 6 8;
+    }
+
+    .tool-big {
+      position: absolute;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 160px;
+      text-align: center;
+    }
+
+    .tool-ico {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 92px;
+      height: 92px;
+      border-radius: 22px;
+      background: #ffffff;
+      box-shadow: 0 18px 38px -18px rgba(44, 41, 39, 0.42);
+    }
+
+    .tool-ico img {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+    }
+
+    .tool-ico svg {
+      width: 58px;
+      height: 58px;
+    }
+
+    .tool-big b {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .tool-big small {
+      display: block;
+      margin-top: 4px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .t-kakao { top: 4px; left: 56px; }
+    .t-meeting { top: 4px; left: 50%; transform: translateX(-50%); }
+    .t-notion { top: 4px; right: 56px; }
+    .t-book { bottom: 4px; left: 150px; }
+    .t-question { bottom: 4px; right: 150px; }
+
+    .operator-person {
+      position: absolute;
+      z-index: 2;
+      top: 60%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .operator-person .person-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 190px;
+      height: 190px;
+      border-radius: 50%;
+      background: #f0e9e4;
+    }
+
+    .operator-person .person-badge img {
+      width: 138px;
+      height: 138px;
+      object-fit: contain;
+    }
+
+    .operator-person b {
+      font-size: 21px;
+      font-weight: 800;
+      color: var(--brand-deep);
+    }
+
+    .operator-person span {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--coral);
+    }
+
     /* 05. Solution */
     .solution-layout {
       display: grid;
@@ -1651,64 +1765,11 @@
     </div>
   </section>
 
-  <!-- 02. Contents -->
-  <section class="slide" id="contents" style="--accent: var(--brand); --accent-soft: var(--warm-strong);">
-    <div class="slide-header">
-      <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">책모 서비스 소개서 | 02</span>
-    </div>
-    <div class="contents-grid">
-      <section class="contents-group" style="--group-color: var(--coral);">
-        <div class="contents-group-head">
-          <span class="contents-phase">1</span>
-          <div>
-            <h3>독서 모임 운영의 불편함</h3>
-          </div>
-        </div>
-        <ol class="contents-list">
-          <li><span class="item-no">01</span><span>반복되는 운영 업무</span></li>
-          <li><span class="item-no">02</span><span>흩어진 정보와 도구</span></li>
-        </ol>
-      </section>
-
-      <section class="contents-group" style="--group-color: var(--blue);">
-        <div class="contents-group-head">
-          <span class="contents-phase">2</span>
-          <div>
-            <h3>책모가 해결하는 방식</h3>
-          </div>
-        </div>
-        <ol class="contents-list">
-          <li><span class="item-no">03</span><span>하나로 모인 운영</span></li>
-          <li><span class="item-no">04</span><span>핵심 기능 한눈에</span></li>
-          <li><span class="item-no">05</span><span>모임 운영 흐름</span></li>
-          <li><span class="item-no">06</span><span>달라지는 경험</span></li>
-        </ol>
-      </section>
-
-      <section class="contents-group" style="--group-color: var(--green);">
-        <div class="contents-group-head">
-          <span class="contents-phase">3</span>
-          <div>
-            <h3>우리 모임에 적용하는 방법</h3>
-          </div>
-        </div>
-        <ol class="contents-list">
-          <li><span class="item-no">07</span><span>한 달 운영 시나리오</span></li>
-          <li><span class="item-no">08</span><span>실제 화면 미리보기</span></li>
-          <li><span class="item-no">09</span><span>시작 가이드</span></li>
-          <li><span class="item-no">10</span><span>도입 안내·문의</span></li>
-        </ol>
-      </section>
-    </div>
-
-  </section>
-
   <!-- 03. Operator pain -->
   <section class="slide warm" id="pain" style="--accent: var(--coral); --accent-soft: var(--coral-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">책모 서비스 소개서 | 03</span>
+      <span class="section-code">책모 서비스 소개서 | 02</span>
     </div>
     <h2 class="slide-title">독서모임 운영, <span class="accent-text">불편하지 않으셨나요?</span></h2>
 
@@ -1721,34 +1782,34 @@
       </div>
 
       <div class="operator-day">
-        <h3>운영진이 직접 이어 붙이는 모임의 하루</h3>
-        <p>좋은 대화를 준비하는 시간보다 전달과 정리에 더 많은 손이 갑니다.</p>
+        <h3>모임 한 번에 운영진이 챙기는 일</h3>
+        <p>책을 읽고 대화하는 시간보다, 준비하고 전달하고 정리하는 데 더 많은 손이 갑니다.</p>
         <div class="day-phases">
           <section class="day-phase">
             <strong>모임 전</strong>
             <ul>
-              <li>후보 도서 정리</li>
-              <li>투표 링크 전달</li>
-              <li>일정 반복 공지</li>
-              <li>발제 수집</li>
+              <li>읽을 책 후보 추리기</li>
+              <li>도서·일정 투표</li>
+              <li>날짜·장소·회비 공지</li>
+              <li>참석 여부 취합</li>
             </ul>
           </section>
           <section class="day-phase">
             <strong>모임 중</strong>
             <ul>
-              <li>참석자 확인</li>
-              <li>조 편성 안내</li>
-              <li>발제 순서 공유</li>
-              <li>자료 재전달</li>
+              <li>출석 체크</li>
+              <li>새 회원 소개</li>
+              <li>발제·토론 진행</li>
+              <li>다음 책·일정 정하기</li>
             </ul>
           </section>
           <section class="day-phase">
             <strong>모임 후</strong>
             <ul>
-              <li>후기 요청</li>
-              <li>기록 취합</li>
-              <li>다음 일정 안내</li>
-              <li>신규 회원 설명</li>
+              <li>사진·후기 공유</li>
+              <li>회비 정산</li>
+              <li>불참자에게 내용 전달</li>
+              <li>다음 모임 리마인드</li>
             </ul>
           </section>
         </div>
@@ -1762,39 +1823,50 @@
   <section class="slide" id="fragmentation" style="--accent: var(--coral); --accent-soft: var(--coral-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">책모 서비스 소개서 | 04</span>
+      <span class="section-code">책모 서비스 소개서 | 03</span>
     </div>
     <h2 class="slide-title">도구는 많지만, <span class="accent-text">운영 흐름은 연결되지 않습니다</span></h2>
     <p class="slide-desc">각 도구의 정보를 다시 모으고 설명하는 일이 결국 운영진에게 돌아옵니다.</p>
 
-    <div class="fragment-map">
-      <div class="tool-stack">
-        <div class="tool-item"><div class="icon-box" style="--icon-bg: var(--coral-soft);"><img src="../../assets/icons/Chat.svg" alt="" /></div><div>단체 채팅<small>공지와 대화</small></div></div>
-        <div class="tool-item"><div class="icon-box" style="--icon-bg: var(--yellow-soft);"><img src="../../assets/icons/vote.svg" alt="" /></div><div>설문 링크<small>도서·일정 투표</small></div></div>
-        <div class="tool-item"><div class="icon-box" style="--icon-bg: var(--blue-soft);"><img src="../../assets/icons/Document.svg" alt="" /></div><div>문서와 노트<small>발제와 후기</small></div></div>
-        <div class="tool-item"><div class="icon-box" style="--icon-bg: var(--green-soft);"><img src="../../assets/icons/Calendar.svg" alt="" /></div><div>표와 캘린더<small>일정과 참석</small></div></div>
+    <div class="overwhelm">
+      <svg class="overwhelm-lines" viewBox="0 0 1000 452" preserveAspectRatio="none" aria-hidden="true">
+        <line x1="118" y1="64" x2="500" y2="272" />
+        <line x1="500" y1="58" x2="500" y2="272" />
+        <line x1="882" y1="64" x2="500" y2="272" />
+        <line x1="200" y1="404" x2="500" y2="272" />
+        <line x1="800" y1="404" x2="500" y2="272" />
+      </svg>
+
+      <div class="tool-big t-kakao">
+        <span class="tool-ico"><img src="assets/카톡아이콘.png" alt="" /></span>
+        <div><b>카카오톡</b><small>공지·대화</small></div>
       </div>
 
-      <div class="map-arrow" aria-hidden="true"></div>
-
-      <div class="operator-hub">
-        <strong>운영진</strong>
-        <span>수집 · 정리 · 전달<br />다시 확인</span>
+      <div class="tool-big t-meeting">
+        <span class="tool-ico"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="18" cy="19" r="6" fill="#5f7354"/><circle cx="32" cy="19" r="6" fill="#8aa07e"/><path d="M6 37c0-6.6 5.4-11 12-11s12 4.4 12 11z" fill="#5f7354"/><path d="M18 37c0-6.6 5.4-11 12-11s12 4.4 12 11z" fill="#8aa07e"/></svg></span>
+        <div><b>모임 명단</b><small>출석·회비 관리</small></div>
       </div>
 
-      <div class="map-arrow" aria-hidden="true"></div>
-
-      <div class="result-stack">
-        <div class="result-item"><div class="icon-box" style="--icon-bg: var(--coral-soft);"><img src="../../assets/icons/notification.svg" alt="" /></div><div>공지 누락<small>대화 속에서 정보가 묻힘</small></div></div>
-        <div class="result-item"><div class="icon-box" style="--icon-bg: var(--yellow-soft);"><img src="../../assets/icons/thick_search.svg" alt="" /></div><div>기록 검색 어려움<small>지난 자료를 다시 탐색</small></div></div>
-        <div class="result-item"><div class="icon-box" style="--icon-bg: var(--blue-soft);"><img src="../../assets/icons/comment.svg" alt="" /></div><div>반복 질문<small>같은 내용을 여러 번 안내</small></div></div>
-        <div class="result-item"><div class="icon-box" style="--icon-bg: var(--green-soft);"><img src="../../assets/icons/member.svg" alt="" /></div><div>인수인계 부담<small>운영 방식이 사람에게 남음</small></div></div>
+      <div class="tool-big t-notion">
+        <span class="tool-ico"><img src="assets/notionicon.png" alt="" /></span>
+        <div><b>노션·문서</b><small>발제·정리</small></div>
       </div>
-    </div>
 
-    <div class="fragment-message takeaway-bar">
-      <strong>문제는 도구의 수가 아닙니다.</strong>
-      <span>모임의 결정과 기록이 한 흐름으로 남지 않아, 운영진이 매번 그 사이를 연결해야 한다는 점입니다.</span>
+      <div class="tool-big t-book">
+        <span class="tool-ico"><img src="assets/책아이콘.png" alt="" /></span>
+        <div><b>책·자료</b><small>도서·기록</small></div>
+      </div>
+
+      <div class="tool-big t-question">
+        <span class="tool-ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18.5 20 a6 6 0 1 1 10 4.2 c-2.2 1.7 -4 3.2 -4 5.8" fill="none" stroke="#a45445" stroke-width="3.8" stroke-linecap="round"/><circle cx="24.4" cy="35.5" r="2.5" fill="#a45445"/></svg></span>
+        <div><b>반복 질문</b><small>같은 안내 반복</small></div>
+      </div>
+
+      <div class="operator-person">
+        <span class="person-badge"><img src="assets/사람아이콘새로운거.png" alt="" /></span>
+        <b>운영진</b>
+        <span>혼자 다 떠안는 중</span>
+      </div>
     </div>
   </section>
 
@@ -1802,7 +1874,7 @@
   <section class="slide warm" id="solution" style="--accent: var(--blue); --accent-soft: var(--blue-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">책모 서비스 소개서 | 05</span>
+      <span class="section-code">책모 서비스 소개서 | 04</span>
     </div>
     <h2 class="slide-title">책모 하나로 <span class="accent-text">모임 운영의 맥락을 이어갑니다</span></h2>
 
@@ -1831,10 +1903,10 @@
       </div>
 
       <div class="phones" aria-label="책모 앱 화면 예시">
-        <span class="phone-label one">모임 찾기와 생성</span>
-        <div class="phone club-phone"><img src="../../assets/onboarding/onboarding-club.png" alt="책모 모임 온보딩 화면" /></div>
-        <div class="phone story-phone"><img src="../../assets/onboarding/onboarding-bookstory.png" alt="책모 책 이야기 온보딩 화면" /></div>
-        <span class="phone-label two">읽고 나누는 경험</span>
+        <span class="phone-label one">모임 관리</span>
+        <div class="phone club-phone"><img src="assets/모임%20관리.png" alt="책모 모임 관리 화면" /></div>
+        <div class="phone story-phone"><img src="assets/정기모임.png" alt="책모 정기모임 화면" /></div>
+        <span class="phone-label two">정기 모임</span>
       </div>
     </div>
 
@@ -1844,9 +1916,9 @@
   <section class="slide" id="journey" style="--accent: var(--blue); --accent-soft: var(--blue-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">책모 서비스 소개서 | 06</span>
+      <span class="section-code">책모 서비스 소개서 | 05</span>
     </div>
-    <h2 class="slide-title">모임 준비부터 회고까지, <span class="accent-text">한 흐름으로 이어집니다</span></h2>
+    <h2 class="slide-title">독서 모임의 처음부터 끝까지, <span class="accent-text">책모가 해결합니다</span></h2>
     <p class="slide-desc">각 단계의 결과가 다음 운영에 다시 쓰이는 모임 기록이 됩니다.</p>
 
     <div class="journey-phases">
@@ -1876,16 +1948,15 @@
       </section>
     </div>
 
-    <div class="journey-result takeaway-bar"><strong>한 번의 모임이 끝나도, 다음 모임을 더 쉽게 만드는 기록은 계속 남습니다.</strong></div>
   </section>
 
   <!-- 07. Before / After -->
   <section class="slide warm" id="before-after" style="--accent: var(--brand); --accent-soft: var(--warm-strong);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">책모 서비스 소개서 | 07</span>
+      <span class="section-code">책모 서비스 소개서 | 06</span>
     </div>
-    <h2 class="slide-title">운영의 반복은 줄이고, <span class="accent-text">모임을 설계하는 시간은 늘립니다</span></h2>
+    <h2 class="slide-title">기존의 복잡한 운영을 <span class="accent-text">책모로 개선해보세요</span></h2>
 
     <div class="compare-table" role="table" aria-label="기존 운영 방식과 책모 사용 비교">
       <div class="compare-row header" role="row"><span>운영 업무</span><span>흩어진 방식</span><span></span><span>책모에서</span></div>
@@ -1896,14 +1967,13 @@
       <div class="compare-row" role="row"><span class="compare-label">운영 인수인계</span><span class="compare-before">운영진의 기억과 개인 파일에 의존</span><span class="compare-arrow">&rarr;</span><span class="compare-after">모임 안에 공지와 독서 활동 이력 축적</span></div>
     </div>
 
-    <div class="compare-message takeaway-bar"><strong>반복 안내자에서, 좋은 모임을 설계하는 운영진으로.</strong><span>책모는 운영 판단을 대신하지 않고 운영의 맥락을 정리합니다.</span></div>
   </section>
 
   <!-- 08. Member experience -->
   <section class="slide" id="member-experience" style="--accent: var(--green); --accent-soft: var(--green-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">책모 서비스 소개서 | 08</span>
+      <span class="section-code">책모 서비스 소개서 | 07</span>
     </div>
     <h2 class="slide-title">회원이 스스로 확인할수록 <span class="accent-text">운영은 더 가벼워집니다</span></h2>
 
@@ -1941,44 +2011,13 @@
 
   </section>
 
-  <!-- 09. One month scenario -->
-  <section class="slide warm" id="monthly-scenario" style="--accent: var(--purple); --accent-soft: var(--purple-soft);">
-    <div class="slide-header">
-      <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">책모 서비스 소개서 | 09</span>
-    </div>
-    <h2 class="slide-title">한 달 운영 예시: <span class="accent-text">다음 책 한 권을 함께 읽는 과정</span></h2>
-    <p class="slide-desc">새로운 운영 체계를 한 번에 도입하지 않아도, 한 권의 책과 한 번의 정기모임부터 시작할 수 있습니다.</p>
-
-    <div class="month-flow">
-      <section class="week" style="--week-color: var(--coral); --week-soft: var(--coral-soft);">
-        <div class="week-node">WEEK 1</div><h3>준비</h3><div class="week-subtitle">무엇을 읽을지 정합니다</div>
-        <ul><li>후보 도서와 소개 정리</li><li>선정도서 투표 공지</li><li>다음 모임 일정 안내</li></ul><span class="week-feature">책장 · 공지 · 투표</span>
-      </section>
-      <section class="week" style="--week-color: var(--yellow); --week-soft: var(--yellow-soft);">
-        <div class="week-node">WEEK 2</div><h3>읽기</h3><div class="week-subtitle">대화의 재료를 모읍니다</div>
-        <ul><li>선정도서 최종 안내</li><li>회원별 발제 작성</li><li>조 편성 준비</li></ul><span class="week-feature">책장 · 발제</span>
-      </section>
-      <section class="week" style="--week-color: var(--blue); --week-soft: var(--blue-soft);">
-        <div class="week-node">WEEK 3</div><h3>모임</h3><div class="week-subtitle">함께 읽고 대화합니다</div>
-        <ul><li>정기모임 정보 확인</li><li>조별 발제와 대화</li><li>필요한 내용 채팅 공유</li></ul><span class="week-feature">정기모임 · 조 · 채팅</span>
-      </section>
-      <section class="week" style="--week-color: var(--green); --week-soft: var(--green-soft);">
-        <div class="week-node">WEEK 4</div><h3>회고</h3><div class="week-subtitle">경험을 다음 달로 남깁니다</div>
-        <ul><li>한줄평과 별점 작성</li><li>발제와 대화 기록 확인</li><li>다음 책 준비 시작</li></ul><span class="week-feature">한줄평 · 기록</span>
-      </section>
-    </div>
-
-    <div class="month-result takeaway-bar"><strong>이번 달의 공지, 선택, 발제와 감상이 다음 달 운영의 출발점으로 남습니다.</strong></div>
-  </section>
-
   <!-- 10. App screen examples -->
   <section class="slide" id="app-examples" style="--accent: var(--purple); --accent-soft: var(--purple-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">책모 서비스 소개서 | 10</span>
+      <span class="section-code">책모 서비스 소개서 | 08</span>
     </div>
-    <h2 class="slide-title">한 달 운영, <span class="accent-text">책모에서는 이렇게 보입니다</span></h2>
+    <h2 class="slide-title">책모에서 <span class="accent-text">모든 기능을 만나보세요!</span></h2>
     <p class="slide-desc">공지와 발제, 정기모임과 한줄평이 각각 흩어지지 않고 하나의 모임 안에서 이어집니다.</p>
 
     <div class="app-screen-grid" aria-label="책모 앱의 한 달 운영 화면 예시">
@@ -2006,7 +2045,7 @@
   <section class="slide" id="adoption" style="--accent: var(--blue); --accent-soft: var(--blue-soft);">
     <div class="slide-header">
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
-      <span class="section-code">책모 서비스 소개서 | 11</span>
+      <span class="section-code">책모 서비스 소개서 | 09</span>
     </div>
     <h2 class="slide-title">전부 바꾸지 않아도 됩니다. <span class="accent-text">다음 모임 하나부터 시작하세요</span></h2>
 
@@ -2015,7 +2054,6 @@
         <section class="start-step"><span class="start-no">01</span><div><h3>모임을 개설합니다</h3><p>동아리 소개와 기본 운영 정보를 등록해 모임 공간을 만듭니다.</p></div></section>
         <section class="start-step"><span class="start-no">02</span><div><h3>회원과 역할을 정리합니다</h3><p>가입 신청을 승인하고 개설자와 운영진의 역할을 나눕니다.</p></div></section>
         <section class="start-step"><span class="start-no">03</span><div><h3>첫 책장과 공지를 엽니다</h3><p>다음 선정도서와 일정 공지, 필요한 투표부터 책모에서 시작합니다.</p></div></section>
-        <div class="adoption-note takeaway-bar"><strong>처음부터 모든 기록을 옮기기보다, 다음 정기모임에 필요한 정보부터 모으는 방식이 좋습니다.</strong></div>
       </div>
 
       <div class="faq-list">
