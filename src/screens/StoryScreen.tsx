@@ -1550,40 +1550,49 @@ export function StoryScreen() {
       }
       const storyRemoteId = selectedStory.remoteId;
       const commentRemoteId = comment.remoteId;
-
       const originalStory = selectedStory;
-      const nextStory: Story = {
-        ...originalStory,
-        commentList: originalStory.commentList.filter(
-          (item) => item.id !== comment.id,
-        ),
-        comments: Math.max(0, originalStory.comments - 1),
-      };
-      applyStoryUpdate(nextStory);
-      editingCommentIdRef.current = null;
-      editingCommentOriginalTextRef.current = '';
-      commentDraftTextRef.current = '';
-      setEditingCommentId(null);
-      setEditingCommentOriginalText('');
-      setReplyTarget(null);
-      setCommentInput('');
-      setCommentMenu(null);
 
-      const submit = async () => {
-        try {
-          await deleteBookStoryComment(
-            storyRemoteId,
-            commentRemoteId,
-          );
-          showToast(l('댓글을 삭제했습니다.'));
-        } catch (error) {
-          applyStoryUpdate(originalStory);
-          if (!(error instanceof ApiError)) {
-            showToast(l('댓글 삭제에 실패했습니다.'));
-          }
-        }
-      };
-      void submit();
+      Alert.alert(l('댓글 삭제'), l('이 댓글을 삭제하시겠습니까?'), [
+        { text: l('취소'), style: 'cancel' },
+        {
+          text: l('삭제'),
+          style: 'destructive',
+          onPress: () => {
+            const nextStory: Story = {
+              ...originalStory,
+              commentList: originalStory.commentList.filter(
+                (item) => item.id !== comment.id,
+              ),
+              comments: Math.max(0, originalStory.comments - 1),
+            };
+            applyStoryUpdate(nextStory);
+            editingCommentIdRef.current = null;
+            editingCommentOriginalTextRef.current = '';
+            commentDraftTextRef.current = '';
+            setEditingCommentId(null);
+            setEditingCommentOriginalText('');
+            setReplyTarget(null);
+            setCommentInput('');
+            setCommentMenu(null);
+
+            const submit = async () => {
+              try {
+                await deleteBookStoryComment(
+                  storyRemoteId,
+                  commentRemoteId,
+                );
+                showToast(l('댓글을 삭제했습니다.'));
+              } catch (error) {
+                applyStoryUpdate(originalStory);
+                if (!(error instanceof ApiError)) {
+                  showToast(l('댓글 삭제에 실패했습니다.'));
+                }
+              }
+            };
+            void submit();
+          },
+        },
+      ]);
     },
     [applyStoryUpdate, l, selectedStory],
   );
