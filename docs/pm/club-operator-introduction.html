@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="독서동아리 운영진을 위한 책모 서비스 소개서" />
   <title>모임은 책에 집중하고, 운영은 책모가 정리합니다</title>
   <style>
@@ -1508,11 +1508,16 @@
       text-decoration: none;
     }
 
+    .orientation-notice {
+      display: none;
+    }
+
     @media screen {
       html,
       body {
         width: 100%;
         height: 100%;
+        height: 100dvh;
         overflow: hidden;
         background: var(--brand-deep);
       }
@@ -1525,6 +1530,7 @@
         display: flex;
         width: 100vw;
         height: 100vh;
+        height: 100dvh;
         overflow-x: auto;
         overflow-y: hidden;
         scroll-behavior: smooth;
@@ -1544,15 +1550,19 @@
         flex: 0 0 100vw;
         width: 100vw;
         height: 100vh;
+        height: 100dvh;
         overflow: hidden;
         scroll-snap-align: start;
         scroll-snap-stop: always;
       }
 
       .slide-viewport .slide {
+        position: absolute;
+        top: 50%;
+        left: 50%;
         flex: none;
         margin: 0;
-        transform: scale(var(--deck-scale));
+        transform: translate(-50%, -50%) scale(var(--deck-scale));
         transform-origin: center center;
         box-shadow: 0 18px 54px rgba(0, 0, 0, 0.34);
       }
@@ -1617,6 +1627,71 @@
       }
     }
 
+    @media screen and (max-width: 700px) and (orientation: portrait) {
+      html,
+      body {
+        background: var(--warm);
+      }
+
+      .deck,
+      .deck-controls {
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .orientation-notice {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: calc(32px + env(safe-area-inset-top)) 28px calc(32px + env(safe-area-inset-bottom));
+        color: var(--ink);
+        text-align: center;
+        background:
+          radial-gradient(circle at 50% 38%, rgba(216, 201, 193, 0.42), transparent 34%),
+          var(--warm);
+      }
+
+      .orientation-phone {
+        position: relative;
+        width: 50px;
+        height: 82px;
+        margin-bottom: 34px;
+        border: 4px solid var(--brand);
+        border-radius: 13px;
+        transform: rotate(90deg);
+        box-shadow: 0 10px 24px rgba(74, 57, 49, 0.14);
+      }
+
+      .orientation-phone::after {
+        content: "";
+        position: absolute;
+        bottom: 5px;
+        left: 50%;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--brand);
+        transform: translateX(-50%);
+      }
+
+      .orientation-notice strong {
+        font-size: clamp(22px, 6.5vw, 29px);
+        line-height: 1.35;
+        font-weight: 850;
+      }
+
+      .orientation-notice p {
+        margin-top: 12px;
+        color: var(--ink-soft);
+        font-size: 15px;
+        line-height: 1.6;
+      }
+    }
+
     @media print {
       html,
       body {
@@ -1672,6 +1747,9 @@
       }
 
       body.deck-ready .slide {
+        position: relative;
+        top: auto;
+        left: auto;
         margin: 0;
         transform: none !important;
         box-shadow: none;
@@ -2042,6 +2120,11 @@
       </aside>
     </div>
   </section>
+  <div class="orientation-notice" role="status" aria-live="polite">
+    <span class="orientation-phone" aria-hidden="true"></span>
+    <strong>휴대폰을 가로로 돌려주세요</strong>
+    <p>가로 화면에서 소개서를 편하게 볼 수 있어요.</p>
+  </div>
   <script>
     (() => {
       const slides = Array.from(document.querySelectorAll('.slide'));
