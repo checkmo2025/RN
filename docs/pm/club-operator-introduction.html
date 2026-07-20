@@ -122,7 +122,6 @@
       width: 40px;
       height: 40px;
       padding: 2px;
-      border: 1px solid var(--brand-soft);
       border-radius: 10px;
       background: #ffffff;
       box-shadow: 0 2px 7px rgba(74, 57, 49, 0.08);
@@ -796,16 +795,6 @@
       object-fit: cover;
     }
 
-    .member-phone::after {
-      content: "";
-      position: absolute;
-      inset: 7px;
-      border-radius: 18px;
-      background: var(--brand);
-      mix-blend-mode: color;
-      pointer-events: none;
-    }
-
     .phone-label {
       position: absolute;
       z-index: 2;
@@ -1003,103 +992,53 @@
       height: 390px;
     }
 
-    .member-phone {
-      position: relative;
-      width: 175px;
-      height: 380px;
-      margin: 0 auto;
-      padding: 7px;
-      border: 2px solid #2f2b29;
-      border-radius: 24px;
-      background: #2f2b29;
-      box-shadow: 0 18px 38px rgba(44, 41, 39, 0.18);
-    }
-
-    .member-phone img {
+    .member-visual-image {
       width: 100%;
       height: 100%;
-      border-radius: 18px;
-      object-fit: cover;
-    }
-
-    .member-callout {
-      position: absolute;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 12px;
-      border-radius: 8px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      object-fit: contain;
       background: #ffffff;
-      box-shadow: 0 10px 24px rgba(44, 41, 39, 0.14);
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .member-callout::before {
-      content: "";
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--callout-color);
-    }
-
-    .member-callout.top {
-      top: 30px;
-      right: -4px;
-    }
-
-    .member-callout.bottom {
-      bottom: 48px;
-      left: -5px;
+      box-shadow: 0 18px 38px rgba(44, 41, 39, 0.12);
     }
 
     .member-moments {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(2, minmax(0, 1fr));
       gap: 12px;
-      align-content: start;
+      height: 390px;
     }
 
     .member-moment {
-      min-height: 130px;
-      padding: 15px;
+      min-height: 0;
+      padding: 22px;
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: 12px;
       background: #ffffff;
     }
 
+    .member-moment .icon-box {
+      width: 50px;
+      height: 50px;
+      border-radius: 10px;
+    }
+
+    .member-moment .icon-box img {
+      width: 27px;
+      height: 27px;
+    }
+
     .member-moment h3 {
-      margin-top: 10px;
-      font-size: 15px;
+      margin-top: 16px;
+      font-size: 17px;
     }
 
     .member-moment p {
-      margin-top: 7px;
+      margin-top: 10px;
       color: var(--ink-soft);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .member-message {
-      grid-column: 1 / -1;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      min-height: 62px;
-      padding: 0 20px;
-      background: var(--green-soft);
-      color: var(--brand-deep);
-    }
-
-    .member-message strong {
-      font-size: 16px;
-    }
-
-    .member-message span {
-      max-width: 310px;
-      font-size: 12px;
-      line-height: 1.5;
-      text-align: right;
+      font-size: 14px;
+      line-height: 1.55;
     }
 
     /* 09. Monthly scenario */
@@ -1215,8 +1154,27 @@
     }
 
     .app-screen-item {
+      position: relative;
       min-width: 0;
       text-align: center;
+    }
+
+    .app-screen-item:not(:last-child)::after {
+      content: "\2192";
+      position: absolute;
+      z-index: 2;
+      top: 50%;
+      right: -25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      color: var(--screen-color);
+      font-size: 30px;
+      font-weight: 850;
+      line-height: 1;
+      transform: translateY(-50%);
     }
 
     .app-screen-item figcaption {
@@ -1227,7 +1185,7 @@
       min-height: 28px;
       margin-bottom: 9px;
       color: var(--screen-color);
-      font-size: 13px;
+      font-size: 16px;
       font-weight: 850;
     }
 
@@ -1378,10 +1336,6 @@
       text-align: right;
     }
 
-    .member-message.takeaway-bar {
-      margin-top: 0;
-    }
-
     .adoption-note.takeaway-bar {
       margin-top: 4px;
     }
@@ -1432,7 +1386,7 @@
     }
 
     .closing h2 strong {
-      color: var(--coral);
+      color: var(--brand-deep);
     }
 
     .closing-desc {
@@ -1443,29 +1397,11 @@
       line-height: 1.65;
     }
 
-    .closing-actions {
+    .closing-footer {
       display: flex;
-      gap: 12px;
+      flex-direction: column;
+      gap: 16px;
       margin-top: 28px;
-    }
-
-    .closing-action {
-      display: inline-flex;
-      align-items: center;
-      min-height: 42px;
-      padding: 0 16px;
-      border: 1px solid var(--brand-soft);
-      border-radius: 999px;
-      color: var(--brand-deep);
-      font-size: 13px;
-      font-weight: 800;
-      text-decoration: none;
-    }
-
-    .closing-action.primary {
-      border-color: var(--coral);
-      background: var(--coral);
-      color: #ffffff;
     }
 
     .closing-steps {
@@ -1477,7 +1413,7 @@
     }
 
     .closing-steps > span {
-      color: var(--coral);
+      color: var(--brand);
       font-size: 12px;
       font-weight: 850;
       text-transform: uppercase;
@@ -1503,7 +1439,7 @@
       width: 28px;
       height: 28px;
       border-radius: 50%;
-      background: var(--coral);
+      background: var(--brand);
       color: #ffffff;
       font-size: 12px;
     }
@@ -1513,22 +1449,30 @@
       font-weight: 750;
     }
 
-    .closing-qr {
+    .closing-store-grid {
       display: grid;
-      grid-template-columns: 76px 1fr;
-      gap: 14px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
       align-items: center;
       margin-top: 14px;
       padding-top: 14px;
       border-top: 1px solid var(--line);
+    }
+
+    .closing-qr {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      align-items: center;
       color: var(--ink);
       text-decoration: none;
+      text-align: center;
     }
 
     .closing-qr img {
       display: block;
-      width: 76px;
-      height: 76px;
+      width: 72px;
+      height: 72px;
       border-radius: 5px;
       background: #ffffff;
       border: 1px solid var(--line);
@@ -1540,15 +1484,14 @@
     }
 
     .closing-qr strong {
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.35;
     }
 
     .closing-qr small {
-      margin-top: 5px;
       color: var(--ink-soft);
-      font-size: 12px;
-      line-height: 1.5;
+      font-size: 10px;
+      line-height: 1.35;
     }
 
     .contact-line {
@@ -1650,7 +1593,7 @@
 
       .deck-controls button:hover,
       .deck-controls button:focus-visible {
-        background: var(--coral);
+        background: var(--brand);
         outline: none;
       }
 
@@ -1975,13 +1918,11 @@
       <div class="brand-mark"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
       <span class="section-code">책모 서비스 소개서 | 07</span>
     </div>
-    <h2 class="slide-title">회원이 스스로 확인할수록 <span class="accent-text">운영은 더 가벼워집니다</span></h2>
+    <h2 class="slide-title">회원이 스스로 확인함으로써, <span class="accent-text">운영을 가볍게 해보세요!</span></h2>
 
     <div class="member-layout">
       <div class="member-visual">
-        <div class="member-phone"><img src="../../assets/onboarding/onboarding-home.png" alt="책모 홈 온보딩 화면" /></div>
-        <div class="member-callout top" style="--callout-color: var(--coral);">최신 소식 확인</div>
-        <div class="member-callout bottom" style="--callout-color: var(--green);">모임 활동 참여</div>
+        <img class="member-visual-image" src="assets/7페이지.png" alt="책모 모임 메뉴와 책장 화면" />
       </div>
 
       <div class="member-moments">
@@ -2005,7 +1946,6 @@
           <h3>소속 조에서 대화 지속</h3>
           <p>정기모임 전후에도 소속 조 채팅으로 필요한 대화를 이어갑니다.</p>
         </section>
-        <div class="member-message takeaway-bar"><strong>회원이 쉽게 참여할 때 운영 도구가 완성됩니다.</strong><span>회원의 직접 확인과 기록이 늘수록 운영진의 반복 전달은 자연스럽게 줄어듭니다.</span></div>
       </div>
     </div>
 
@@ -2073,9 +2013,13 @@
         <div class="closing-brand"><img src="../../assets/checkmo-app-icon-ios.png" alt="책모 앱 아이콘" /></div>
         <h2>다음 정기모임을<br /><strong>책모에서 열어보세요</strong></h2>
         <p class="closing-desc">한 번의 모임을 운영해보면, 우리 동아리에 필요한 흐름과 남겨야 할 기록이 보입니다.</p>
-        <div class="closing-actions">
-          <a class="closing-action primary" href="https://apps.apple.com/app/id6777671102">iOS 앱 다운로드</a>
-          <a class="closing-action" href="mailto:checkmo2025@gmail.com">checkmo2025@gmail.com</a>
+        <div class="closing-footer">
+          <div class="cover-stores">
+            <a class="store-logo-link" href="https://apps.apple.com/app/id6777671102" aria-label="App Store"><svg viewBox="0 0 512 512" aria-hidden="true"><defs><linearGradient id="closing-asg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17C9FB"/><stop offset="1" stop-color="#1A74E8"/></linearGradient></defs><rect width="512" height="512" rx="114" fill="url(#closing-asg)"/><path fill="#fff" transform="translate(96 100) scale(13)" d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19-.13.09-2.383 1.37-2.383 4.19 0 3.26 2.854 4.42 2.955 4.45z"/></svg></a>
+            <a class="store-logo-link" href="https://play.google.com/store/apps/details?id=kr.co.checkmo.app" aria-label="Google Play"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4.6 3.4C4.3 3.6 4.2 4 4.2 4.5v23c0 .5.1.9.4 1.1l.1.1 12.9-12.9v-.3L4.6 3.4z" fill="#2196F3"/><path d="M21.8 20.3l-4.3-4.3v-.3l4.3-4.3.1.1 5.1 2.9c1.5.8 1.5 2.2 0 3l-5.2 2.9z" fill="#FFC107"/><path d="M21.9 20.2 17.5 16 4.6 28.6c.5.5 1.3.6 2.2.1l15.1-8.5" fill="#F44336"/><path d="M21.9 11.8 6.8 3.3C5.9 2.8 5.1 2.9 4.6 3.4L17.5 16l4.4-4.2z" fill="#4CAF50"/></svg></a>
+            <a class="cover-domain" href="https://checkmo.co.kr">https://checkmo.co.kr</a>
+          </div>
+          <p class="cover-foot">Checkmo. Copyright &copy; 2025 All rights reserved.</p>
         </div>
       </div>
 
@@ -2084,10 +2028,16 @@
         <div class="closing-step"><strong>1</strong><span>모임 만들기</span></div>
         <div class="closing-step"><strong>2</strong><span>운영진과 회원 정리</span></div>
         <div class="closing-step"><strong>3</strong><span>첫 책장과 공지 등록</span></div>
-        <a class="closing-qr" href="https://apps.apple.com/app/id6777671102" aria-label="책모 iOS App Store 열기">
-          <img src="assets/ios-app-store-qr.png" alt="책모 iOS App Store QR 코드" />
-          <span><strong>iOS App Store</strong><small>QR 코드를 스캔해<br />책모를 다운로드하세요</small></span>
-        </a>
+        <div class="closing-store-grid">
+          <a class="closing-qr" href="https://apps.apple.com/app/id6777671102" aria-label="책모 iOS App Store 열기">
+            <img src="assets/ios-app-store-qr.png" alt="책모 iOS App Store QR 코드" />
+            <span><strong>iOS App Store</strong><small>QR로 다운로드</small></span>
+          </a>
+          <a class="closing-qr" href="https://play.google.com/store/apps/details?id=kr.co.checkmo.app" aria-label="책모 Google Play 열기">
+            <img src="assets/google-play-qr.svg" alt="책모 Google Play QR 코드" />
+            <span><strong>Google Play</strong><small>QR로 다운로드</small></span>
+          </a>
+        </div>
         <p class="contact-line">독서동아리 운영 도입 문의<br /><a href="mailto:checkmo2025@gmail.com">checkmo2025@gmail.com</a></p>
       </aside>
     </div>
