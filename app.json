@@ -2,7 +2,7 @@
   "expo": {
     "name": "책모",
     "slug": "checkmo_rn",
-    "version": "1.2.2",
+    "version": "1.2.3",
     "scheme": "checkmo",
     "orientation": "portrait",
     "icon": "./assets/checkmo-app-icon-ios.png",
@@ -17,7 +17,7 @@
       "supportsTablet": true,
       "requireFullScreen": true,
       "bundleIdentifier": "kr.co.checkmo.app",
-      "buildNumber": "42",
+      "buildNumber": "43",
       "usesAppleSignIn": true,
       "associatedDomains": [
         "applinks:checkmo.co.kr",
@@ -113,7 +113,7 @@
       }
     },
     "owner": "yhi9839",
-    "runtimeVersion": "1.2.2",
+    "runtimeVersion": "1.2.3",
     "updates": {
       "url": "https://u.expo.dev/429392b9-bdb4-4d90-9bb5-1cec1fe58fcd"
     }

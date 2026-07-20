@@ -3946,3 +3946,9 @@ export const interactionOpacity = {
 
 - 책이야기 댓글·대댓글 삭제 전에 취소·삭제 확인창을 표시하도록 개선
 - 삭제 확인 이후에만 기존 낙관적 삭제와 실패 복구 처리가 실행되도록 유지
+
+# 2026-07-20 20:08:41 KST iOS 앱 버전 1.2.3 제출 준비
+
+- Expo·runtime·package·iOS 마케팅 버전을 `1.2.3`으로 동기화
+- Xcode 로컬 Archive 제출을 위해 iOS build number를 `42` → `43`으로 상향
+- 앱 버전·빌드 번호 필드 동기화와 타입 검사를 완료
