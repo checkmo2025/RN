@@ -30,6 +30,7 @@ import { emailRegex, passwordRegex, phoneRegex, nicknameRegex } from '../constan
 import { colors, dialog, interactionOpacity, radius, spacing, typography } from '../theme';
 import { AppButton } from '../components/common/PrimaryButton';
 import { DialogOverlay } from '../components/common/DialogOverlay';
+import { DefaultProfileAvatar } from '../components/common/DefaultProfileAvatar';
 import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { FormTextInput } from '../components/common/FormTextInput';
 import {
@@ -1608,7 +1609,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
                   style={styles.avatarImage}
                 />
               ) : (
-                <MaterialIcons name="person" size={54} color={colors.subbrown3} />
+                <DefaultProfileAvatar size={94} />
               )}
             </View>
             <Pressable
@@ -1695,7 +1696,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
             {signupCompleteProfileUri ? (
               <Image source={{ uri: signupCompleteProfileUri }} style={styles.completeAvatarImage} />
             ) : (
-              <MaterialIcons name="person" size={54} color={colors.subbrown3} />
+              <DefaultProfileAvatar size={86} />
             )}
           </View>
           <Text style={styles.completeNickname}>{nickname || l('닉네임')}</Text>

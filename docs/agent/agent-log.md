@@ -3952,3 +3952,9 @@ export const interactionOpacity = {
 - Expo·runtime·package·iOS 마케팅 버전을 `1.2.3`으로 동기화
 - Xcode 로컬 Archive 제출을 위해 iOS build number를 `42` → `43`으로 상향
 - 앱 버전·빌드 번호 필드 동기화와 타입 검사를 완료
+
+# 2026-07-21 18:48:12 KST 웹 기본 프로필 이미지 앱 호환
+
+- 웹 회원가입 기본 이미지 `profile2.svg`를 앱 자산으로 추가
+- `/profile2.svg` 응답을 앱 번들 기본 프로필로 표시하고 회원가입 화면의 기본 이미지를 통일
+- TypeScript 타입 검사와 변경 파일 ESLint 검사를 완료
