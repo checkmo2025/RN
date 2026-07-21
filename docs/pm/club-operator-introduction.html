@@ -38,6 +38,8 @@
       --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
       --pretendard: "Pretendard Variable", "Pretendard", "Noto Sans KR", sans-serif;
       --deck-scale: 1;
+      --deck-offset-x: 0px;
+      --deck-offset-y: 0px;
     }
 
     @page {
@@ -1558,12 +1560,12 @@
 
       .slide-viewport .slide {
         position: absolute;
-        top: 50%;
-        left: 50%;
+        top: var(--deck-offset-y);
+        left: var(--deck-offset-x);
         flex: none;
         margin: 0;
-        transform: translate(-50%, -50%) scale(var(--deck-scale));
-        transform-origin: center center;
+        transform: scale(var(--deck-scale));
+        transform-origin: top left;
         box-shadow: 0 18px 54px rgba(0, 0, 0, 0.34);
       }
 
@@ -1620,10 +1622,11 @@
         text-align: center;
       }
 
-      @media (prefers-reduced-motion: reduce) {
-        .deck {
-          scroll-behavior: auto;
-        }
+    }
+
+    @media screen and (prefers-reduced-motion: reduce) {
+      .deck {
+        scroll-behavior: auto;
       }
     }
 
@@ -2159,13 +2162,37 @@
       const counter = controls.querySelector('.deck-counter');
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       let currentIndex = 0;
+      let fitFrame = 0;
       let scrollFrame = 0;
       let wheelLocked = false;
 
+      const getDeckSize = () => {
+        const rect = deck.getBoundingClientRect();
+        return {
+          width: Math.max(1, rect.width || deck.clientWidth || window.innerWidth),
+          height: Math.max(1, rect.height || deck.clientHeight || window.innerHeight),
+        };
+      };
+
       const fitSlides = () => {
-        const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+        const { width, height } = getDeckSize();
+        const scale = Math.min(width / 1280, height / 720);
+        const offsetX = Math.max(0, (width - 1280 * scale) / 2);
+        const offsetY = Math.max(0, (height - 720 * scale) / 2);
         document.documentElement.style.setProperty('--deck-scale', String(scale));
-        deck.scrollTo({ left: currentIndex * deck.clientWidth, behavior: 'auto' });
+        document.documentElement.style.setProperty('--deck-offset-x', `${offsetX}px`);
+        document.documentElement.style.setProperty('--deck-offset-y', `${offsetY}px`);
+        deck.scrollTo({ left: currentIndex * width, behavior: 'auto' });
+      };
+
+      const scheduleFitSlides = () => {
+        if (fitFrame) window.cancelAnimationFrame(fitFrame);
+        fitFrame = window.requestAnimationFrame(() => {
+          fitFrame = window.requestAnimationFrame(() => {
+            fitFrame = 0;
+            fitSlides();
+          });
+        });
       };
 
       const updateControls = () => {
@@ -2176,7 +2203,7 @@
 
       const goToSlide = (index, behavior = reducedMotion ? 'auto' : 'smooth') => {
         currentIndex = Math.max(0, Math.min(slides.length - 1, index));
-        deck.scrollTo({ left: currentIndex * deck.clientWidth, behavior });
+        deck.scrollTo({ left: currentIndex * getDeckSize().width, behavior });
         updateControls();
       };
 
@@ -2186,7 +2213,8 @@
       deck.addEventListener('scroll', () => {
         if (scrollFrame) return;
         scrollFrame = window.requestAnimationFrame(() => {
-          currentIndex = Math.max(0, Math.min(slides.length - 1, Math.round(deck.scrollLeft / deck.clientWidth)));
+          const deckWidth = getDeckSize().width;
+          currentIndex = Math.max(0, Math.min(slides.length - 1, Math.round(deck.scrollLeft / deckWidth)));
           updateControls();
           scrollFrame = 0;
         });
@@ -2224,8 +2252,11 @@
         }
       });
 
-      window.addEventListener('resize', fitSlides);
+      window.addEventListener('resize', scheduleFitSlides);
+      window.addEventListener('orientationchange', scheduleFitSlides);
+      window.visualViewport?.addEventListener('resize', scheduleFitSlides);
       fitSlides();
+      scheduleFitSlides();
       updateControls();
     })();
   </script>
