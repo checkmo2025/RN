@@ -3968,3 +3968,9 @@ export const interactionOpacity = {
 
 - Expo·runtime·package·iOS 마케팅 버전을 `1.2.4`로 동기화
 - iOS build number는 `43`을 유지하고 타입 검사를 완료
+
+# 2026-08-07 13:02:17 KST Android 1.2.4 Alpha 업데이트 제출
+
+- Android 네이티브 표시 버전을 Expo 설정과 동일한 `1.2.4`로 동기화
+- EAS 프로덕션 서명 AAB를 `versionCode 11`로 생성하고 패키지·SDK·런타임·서명을 검증
+- Google Play 비공개 테스트 Alpha에 `1.2.4` 업데이트를 제출하고 검토 중 상태를 확인
