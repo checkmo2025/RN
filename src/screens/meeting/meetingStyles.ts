@@ -3354,23 +3354,6 @@ export const styles = StyleSheet.create({
   bookshelfGroupSection: {
     gap: spacing.sm,
   },
-  bookshelfRegularGroupPreviewCard: {
-    borderWidth: 1,
-    borderColor: colors.gray2,
-    borderRadius: radius.md,
-    backgroundColor: colors.white,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  bookshelfRegularGroupPreviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  bookshelfRegularGroupPreviewLabel: {
-    ...typography.body2_2,
-    color: colors.gray4,
-  },
   bookshelfRegularGroupMemberList: {
     gap: spacing.xs,
   },
@@ -3382,10 +3365,6 @@ export const styles = StyleSheet.create({
   bookshelfRegularGroupMemberName: {
     ...typography.body1_3,
     color: colors.gray6,
-  },
-  bookshelfRegularGroupHint: {
-    ...typography.body2_3,
-    color: colors.gray4,
   },
   bookshelfGroupHeader: {
     flexDirection: 'row',

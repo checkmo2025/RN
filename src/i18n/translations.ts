@@ -439,8 +439,6 @@ const enLiteralMessages: Record<string, string> = {
   '{group} 참여자': '{group} Participants',
   '조': 'Group',
   '조 관리하기': 'Manage Groups',
-  '조 페이지로 이동해 발제를 선택하고 모임을 진행하세요.':
-    'Go to the group page, choose a discussion topic, and run the meeting.',
   '정렬하기': 'Sort',
   '등록된 조 발제가 없습니다.': 'No group discussion topics.',
   '책장 메뉴': 'Bookshelf Menu',

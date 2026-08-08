@@ -1712,7 +1712,6 @@ function GroupHomeView({
     handleBackToBookshelfGrid,
     handleChangeBookshelfTab,
     handleSelectRegularGroup,
-    handleEnterRegularGroup,
     handleToggleRegularGroupMembers,
     handleToggleRegularGroupPost,
     handleSortRegularGroupPosts,
@@ -1752,7 +1751,8 @@ function GroupHomeView({
   useEffect(() => {
     if (
       activeTab === 'bookshelf' &&
-      bookshelfViewMode === 'REGULAR_GROUP' &&
+      bookshelfViewMode === 'DETAIL' &&
+      bookshelfDetailTab === 'REGULAR' &&
       selectedRegularGroup
     ) {
       return;
@@ -1760,6 +1760,7 @@ function GroupHomeView({
     meetingChatState.closeChat();
   }, [
     activeTab,
+    bookshelfDetailTab,
     bookshelfViewMode,
     meetingChatState.closeChat,
     selectedRegularGroup,
@@ -3320,7 +3321,6 @@ function GroupHomeView({
           handleToggleRegularGroupMembers={handleToggleRegularGroupMembers}
           handleToggleRegularGroupPost={handleToggleRegularGroupPost}
           handleSortRegularGroupPosts={handleSortRegularGroupPosts}
-          handleEnterRegularGroup={handleEnterRegularGroup}
           handleOpenBookshelfEdit={handleOpenBookshelfEdit}
           handleDeleteSelectedBookshelf={handleDeleteSelectedBookshelf}
           handlePressManageRegularGroups={handlePressManageRegularGroups}
@@ -3329,7 +3329,8 @@ function GroupHomeView({
       ) : null}
       </ScrollView>
       {activeTab === 'bookshelf' &&
-      bookshelfViewMode === 'REGULAR_GROUP' &&
+      bookshelfViewMode === 'DETAIL' &&
+      bookshelfDetailTab === 'REGULAR' &&
       selectedRegularGroup &&
       isMember &&
       !meetingChatState.pickerVisible &&

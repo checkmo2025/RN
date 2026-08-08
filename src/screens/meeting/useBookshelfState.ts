@@ -463,6 +463,20 @@ export function useBookshelfState({
     return regularMeetingInfo.groups.find((g) => g.id === selectedRegularGroupId) ?? null;
   }, [regularMeetingInfo, selectedRegularGroupId]);
 
+  const canUseSelectedRegularGroupRealtime = useMemo(() => {
+    if (!selectedRegularGroup) return false;
+    if (canManageClub) return true;
+
+    const normalizedCurrentNickname = currentMemberNickname.trim();
+    if (!normalizedCurrentNickname) return false;
+    return selectedRegularGroup.members.some(
+      (member) =>
+        member.nickname.trim().localeCompare(normalizedCurrentNickname, 'ko', {
+          sensitivity: 'accent',
+        }) === 0,
+    );
+  }, [canManageClub, currentMemberNickname, selectedRegularGroup]);
+
   useEffect(() => {
     if (!baseRegularMeetingInfo) return;
     const mapping: Record<number, string> = {};
@@ -502,7 +516,11 @@ export function useBookshelfState({
     clubId: group.clubId,
     meetingId: selectedBookshelfBook?.remoteMeetingId,
     teamId: selectedRegularGroup?.teamId,
-    enabled: isLoggedIn && bookshelfViewMode === 'REGULAR_GROUP',
+    enabled:
+      isLoggedIn &&
+      bookshelfViewMode === 'DETAIL' &&
+      bookshelfDetailTab === 'REGULAR' &&
+      canUseSelectedRegularGroupRealtime,
     onTopicUpdate: handleStompTopicUpdate,
   });
 
@@ -561,8 +579,21 @@ export function useBookshelfState({
     ) {
       return;
     }
-    setSelectedRegularGroupId(regularMeetingInfo.groups[0]?.id ?? null);
-  }, [regularMeetingInfo, selectedRegularGroupId]);
+    const normalizedCurrentNickname = currentMemberNickname.trim();
+    const currentMemberGroup = normalizedCurrentNickname
+      ? regularMeetingInfo.groups.find((groupItem) =>
+          groupItem.members.some(
+            (member) =>
+              member.nickname.trim().localeCompare(normalizedCurrentNickname, 'ko', {
+                sensitivity: 'accent',
+              }) === 0,
+          ),
+        )
+      : undefined;
+    setSelectedRegularGroupId(
+      currentMemberGroup?.id ?? regularMeetingInfo.groups[0]?.id ?? null,
+    );
+  }, [currentMemberNickname, regularMeetingInfo, selectedRegularGroupId]);
 
   useEffect(() => {
     setRegularGroupMembersVisible(false);
@@ -1658,12 +1689,6 @@ export function useBookshelfState({
 
   const handleSelectRegularGroup = useCallback((groupId: string) => {
     setSelectedRegularGroupId(groupId);
-  }, []);
-
-  const handleEnterRegularGroup = useCallback((groupId: string) => {
-    setSelectedRegularGroupId(groupId);
-    setBookshelfDetailTab('REGULAR');
-    setBookshelfViewMode('REGULAR_GROUP');
   }, []);
 
   const handleToggleRegularGroupMembers = useCallback(() => {
@@ -2774,7 +2799,6 @@ export function useBookshelfState({
     handleBackToBookshelfGrid,
     handleChangeBookshelfTab,
     handleSelectRegularGroup,
-    handleEnterRegularGroup,
     handleToggleRegularGroupMembers,
     handleToggleRegularGroupPost,
     handleSortRegularGroupPosts,

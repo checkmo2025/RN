@@ -86,7 +86,7 @@ export type BookshelfItem = {
 };
 
 export type BookshelfDetailTab = 'TOPIC' | 'REVIEW' | 'REGULAR';
-export type BookshelfViewMode = 'GRID' | 'DETAIL' | 'REGULAR_GROUP';
+export type BookshelfViewMode = 'GRID' | 'DETAIL';
 
 export type BookshelfDetailSection = 'base' | 'topic' | 'review' | 'regular';
 

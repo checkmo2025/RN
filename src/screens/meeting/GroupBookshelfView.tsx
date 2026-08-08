@@ -81,7 +81,6 @@ export type GroupBookshelfViewProps = {
   handleToggleRegularGroupMembers: () => void;
   handleToggleRegularGroupPost: (groupId: string, postId: string) => void;
   handleSortRegularGroupPosts: (groupId: string) => void;
-  handleEnterRegularGroup: (groupId: string) => void;
   handleOpenBookshelfEdit: () => void;
   handleDeleteSelectedBookshelf: () => void;
   handlePressManageRegularGroups: () => void;
@@ -124,7 +123,6 @@ export function GroupBookshelfView({
   handleToggleRegularGroupMembers,
   handleToggleRegularGroupPost,
   handleSortRegularGroupPosts,
-  handleEnterRegularGroup,
   handleOpenBookshelfEdit,
   handleDeleteSelectedBookshelf,
   handlePressManageRegularGroups,
@@ -171,11 +169,6 @@ export function GroupBookshelfView({
       </Pressable>
     </View>
   );
-
-  useEffect(() => {
-    if (bookshelfViewMode !== 'REGULAR_GROUP') return;
-    scrollToBookshelfDetail();
-  }, [bookshelfViewMode, scrollToBookshelfDetail]);
 
   useEffect(() => {
     setBookshelfMenuVisible(false);
@@ -735,50 +728,7 @@ export function GroupBookshelfView({
                 </View>
               ) : null}
 
-              {bookshelfViewMode !== 'REGULAR_GROUP' && selectedRegularGroup ? (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.bookshelfRegularGroupPreviewCard,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() => handleEnterRegularGroup(selectedRegularGroup.id)}
-                >
-                  <View style={styles.bookshelfRegularGroupPreviewHeader}>
-                    <View style={styles.bookshelfGroupHeaderLeft}>
-                      <Text style={styles.bookshelfGroupTitle}>{l(selectedRegularGroup.label)}</Text>
-                      <MaterialIcons name="person" size={20} color={colors.gray4} />
-                      <Text style={styles.bookshelfGroupMemberCount}>
-                        {selectedRegularGroup.memberCount}
-                      </Text>
-                    </View>
-                    <MaterialIcons name="chevron-right" size={20} color={colors.gray4} />
-                  </View>
-                  <Text style={styles.bookshelfRegularGroupPreviewLabel}>{l('참여자')}</Text>
-                  <View style={styles.bookshelfRegularGroupMemberList}>
-                    {selectedRegularGroup.members.map((member) => (
-                      <View key={member.id} style={styles.bookshelfRegularGroupMemberRow}>
-                        <View style={styles.bookshelfPostAvatar}>
-                          {member.profileImageUrl ? (
-                            <Image
-                              source={{ uri: member.profileImageUrl }}
-                              style={styles.bookshelfPostAvatarImage}
-                              resizeMode="cover"
-                            />
-                          ) : (
-                            <DefaultProfileAvatar size={16} />
-                          )}
-                        </View>
-                        <Text style={styles.bookshelfRegularGroupMemberName}>{member.nickname}</Text>
-                      </View>
-                    ))}
-                  </View>
-                  <Text style={styles.bookshelfRegularGroupHint}>
-                    {l('조 페이지로 이동해 발제를 선택하고 모임을 진행하세요.')}
-                  </Text>
-                </Pressable>
-              ) : null}
-
-              {bookshelfViewMode === 'REGULAR_GROUP' && selectedRegularGroup ? (
+              {selectedRegularGroup ? (
                 <View style={styles.bookshelfGroupSection}>
                   <View style={styles.bookshelfGroupHeader}>
                     <View style={styles.bookshelfGroupHeaderLeft}>
