@@ -26,7 +26,7 @@ import {
   SOCIAL_KAKAO_URI,
   SOCIAL_NAVER_URI,
 } from '../constants/iconMap';
-import { emailRegex, passwordRegex, phoneRegex, nicknameRegex } from '../constants/validation';
+import { emailRegex, passwordRegex, phoneRegex } from '../constants/validation';
 import { colors, dialog, interactionOpacity, radius, spacing, typography } from '../theme';
 import { AppButton } from '../components/common/PrimaryButton';
 import { DialogOverlay } from '../components/common/DialogOverlay';
@@ -61,6 +61,11 @@ import { CATEGORY_OPTIONS } from '../constants/domain/category';
 import { useEmailVerificationFlow } from '../hooks/useEmailVerificationFlow';
 import { useLanguage } from '../contexts/LanguageContext';
 import { trackLogin, trackSignUp } from '../services/analytics';
+import {
+  isSameNicknameIdentity,
+  normalizeNickname,
+  validateNickname,
+} from '../utils/nickname';
 
 type Step =
   | 'login'
@@ -116,37 +121,7 @@ function normalizeDisplayImageUri(uri?: string): string | undefined {
 
 function resolveNicknameFormatError(value: string): string {
   if (!value) return '';
-  if (/\s/.test(value)) return '아이디에는 띄어쓰기를 사용할 수 없습니다.';
-  if (/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(value)) {
-    return '아이디에는 한글을 사용할 수 없습니다.';
-  }
-  if (!nicknameRegex.test(value)) {
-    return '아이디는 영문 소문자, 숫자, 특수문자만 사용할 수 있습니다.';
-  }
-  return '';
-}
-
-function normalizeNicknameInput(value: string): { value: string; error: string } {
-  const lowercased = value.toLowerCase();
-  const hasWhitespace = /\s/.test(lowercased);
-  const hasKorean = /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(lowercased);
-  const withoutKoreanAndSpaces = lowercased
-    .replace(/\s/g, '')
-    .replace(/[ㄱ-ㅎㅏ-ㅣ가-힣]/g, '');
-  const normalized = Array.from(withoutKoreanAndSpaces)
-    .filter((character) => nicknameRegex.test(character))
-    .join('');
-
-  if (hasWhitespace) {
-    return { value: normalized, error: '아이디에는 띄어쓰기를 사용할 수 없습니다.' };
-  }
-  if (hasKorean) {
-    return { value: normalized, error: '아이디에는 한글을 사용할 수 없습니다.' };
-  }
-  if (normalized !== withoutKoreanAndSpaces) {
-    return { value: normalized, error: '아이디는 영문 소문자, 숫자, 특수문자만 사용할 수 있습니다.' };
-  }
-  return { value: normalized, error: '' };
+  return validateNickname(value).message;
 }
 
 function normalizeTermAgreementState(
@@ -241,7 +216,6 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     value: string;
     duplicate: boolean;
   } | null>(null);
-  const [nicknameLengthExceeded, setNicknameLengthExceeded] = useState(false);
   const [checkingNickname, setCheckingNickname] = useState(false);
 
   const [description, setDescription] = useState('');
@@ -269,7 +243,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     activeTerms.length > 0 && activeTerms.every((term) => termsAgreements[term.id] === true);
   const isNicknameValidCheck =
     nicknameChecked &&
-    nicknameChecked.value === nickname.trim() &&
+    isSameNicknameIdentity(nicknameChecked.value, normalizeNickname(nickname)) &&
     !nicknameChecked.duplicate;
   const hideTopBrand =
     step === 'login' ||
@@ -333,7 +307,6 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
     setNickname('');
     setNicknameInputError('');
     setNicknameChecked(null);
-    setNicknameLengthExceeded(false);
     setDescription('');
     setName('');
     setPhoneNumber('');
@@ -471,7 +444,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
 
   const handleLogin = async () => {
     Keyboard.dismiss();
-    const identifier = loginIdentifier.trim();
+    const identifier = normalizeNickname(loginIdentifier);
     const password = loginPassword.trim();
 
     if (!identifier || !password) {
@@ -652,12 +625,10 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   };
 
   const handleNicknameChange = (value: string) => {
-    const normalized = normalizeNicknameInput(value);
-    const nextNickname = normalized.value.slice(0, INPUT_LIMITS.NICKNAME);
-    setNicknameInputError(normalized.error);
-    setNicknameLengthExceeded(normalized.value.length > INPUT_LIMITS.NICKNAME);
-    setNickname(nextNickname);
-    if (nicknameChecked && nicknameChecked.value !== nextNickname) {
+    const normalized = normalizeNickname(value);
+    setNicknameInputError(resolveNicknameFormatError(value));
+    setNickname(value);
+    if (nicknameChecked && !isSameNicknameIdentity(nicknameChecked.value, normalized)) {
       setNicknameChecked(null);
     }
   };
@@ -745,19 +716,14 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
 
   const handleCheckNickname = async () => {
     Keyboard.dismiss();
-    const normalized = nickname.trim();
-    if (!normalized) {
-      showToast('닉네임을 입력해야 합니다.');
+    const validation = validateNickname(nickname);
+    if (!validation.isValid) {
+      showToast(validation.message);
       return;
     }
-    if (normalized.length > 20) {
-      showToast('닉네임은 최대 20자까지 가능합니다.');
-      return;
-    }
-    if (!nicknameRegex.test(normalized)) {
-      showToast('닉네임은 영어 소문자/숫자/특수문자만 사용할 수 있습니다.');
-      return;
-    }
+    const normalized = validation.normalized;
+    setNickname(normalized);
+    setNicknameInputError('');
     setCheckingNickname(true);
     try {
       const duplicate = await checkNicknameDuplicate(normalized);
@@ -776,14 +742,9 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
 
   const handleProfileBasicNext = () => {
     Keyboard.dismiss();
-    const normalizedNickname = nickname.trim();
-
-    if (!normalizedNickname) {
-      showToast('닉네임을 입력해야 합니다.');
-      return;
-    }
-    if (!nicknameRegex.test(normalizedNickname)) {
-      showToast('닉네임은 영어 소문자/숫자/특수문자만 사용할 수 있습니다.');
+    const validation = validateNickname(nickname);
+    if (!validation.isValid) {
+      showToast(validation.message);
       return;
     }
     if (!isNicknameValidCheck) {
@@ -948,7 +909,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
       }
 
       await submitAdditionalInfo({
-        nickname: nickname.trim(),
+        nickname: normalizeNickname(nickname),
         name: name.trim(),
         phoneNumber: phoneNumber.trim(),
         description: description.trim(),
@@ -1151,7 +1112,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
   };
 
   const hasProfileBasicDraft = () =>
-    nickname.trim().length > 0 ||
+    nickname.length > 0 ||
     description.trim().length > 0 ||
     name.trim().length > 0 ||
     phoneNumber.trim().length > 0;
@@ -1510,7 +1471,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
               <Text style={styles.outlineText}>{checkingNickname ? l('확인 중') : l('중복확인')}</Text>
             </Pressable>
           </View>
-          {nicknameChecked && nicknameChecked.value === nickname.trim() ? (
+          {nicknameChecked && isSameNicknameIdentity(nicknameChecked.value, nickname) ? (
             <Text
               style={[
                 styles.nicknameCheckText,
@@ -1525,12 +1486,6 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
               {l(nicknameFormatError)}
             </Text>
           ) : null}
-          {nicknameLengthExceeded ? (
-            <Text style={[styles.nicknameCheckText, styles.nicknameCheckError]}>
-              {l('닉네임은 최대 {count}글자까지 입력할 수 있습니다.', { count: 20 })}
-            </Text>
-          ) : null}
-
           <View style={styles.descriptionFieldGroup}>
             <View style={styles.descriptionLabelRow}>
               <Text style={styles.label}>{l('소개')}</Text>

@@ -61,6 +61,7 @@ import {
 } from '../services/api/bookStoryApi';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { emitMemberBlocked, isSameMemberNickname } from '../utils/blockedMembers';
+import { normalizeNickname, validateNickname } from '../utils/nickname';
 
 type TabKey = '책 이야기' | '서재' | '모임';
 type UserProfileRouteParams = {
@@ -203,10 +204,12 @@ export function UserProfileScreen() {
   const [showBlockReportModal, setShowBlockReportModal] = useState(false);
   const [groupMenuAnchor, setGroupMenuAnchor] = useState<{ pageX: number; pageY: number } | null>(null);
   const [groupMenuClubId, setGroupMenuClubId] = useState<number | null>(null);
-  const memberNickname =
-    typeof route.params?.memberNickname === 'string' && route.params.memberNickname.trim().length > 0
-      ? route.params.memberNickname.trim()
-      : '_hy_0716';
+  const routeNicknameValidation = validateNickname(
+    typeof route.params?.memberNickname === 'string' ? route.params.memberNickname : '',
+  );
+  const memberNickname = routeNicknameValidation.isValid
+    ? routeNicknameValidation.normalized
+    : '_hy_0716';
 
   useEffect(() => {
     setShowFollowPage(false);
@@ -427,7 +430,7 @@ export function UserProfileScreen() {
   }, [l, loadProfile, memberNickname, profile, submittingFollow]);
 
   const following = profile?.following ?? false;
-  const profileName = profile?.nickname?.trim() || memberNickname;
+  const profileName = normalizeNickname(profile?.nickname ?? '') || memberNickname;
   const profileDesc =
     profile?.description?.trim() ||
     l('소개글이 없습니다.');

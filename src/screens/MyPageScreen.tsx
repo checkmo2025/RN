@@ -84,7 +84,10 @@ import { useConsumeRouteParam } from '../hooks/useConsumeRouteParam';
 import { useRelativeNow } from '../hooks/useRelativeNow';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { INPUT_LIMITS } from '../constants/inputLimits';
-import { nicknameRegex } from '../constants/validation';
+import {
+  isSameNicknameIdentity,
+  validateNickname,
+} from '../utils/nickname';
 import { BOOK_DEFAULT_IMAGE } from '../constants/defaultAssets';
 import { APP_VERSION_HISTORY } from '../constants/appVersionHistory';
 import { CLUB_ONBOARDING_SLIDES, ONBOARDING_SLIDES } from '../constants/onboardingSlides';
@@ -404,9 +407,31 @@ export function MyPageScreen() {
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   const [submittingProfileEdit, setSubmittingProfileEdit] = useState(false);
   const [profileEditNickname, setProfileEditNickname] = useState('');
-  const [nicknameChecked, setNicknameChecked] = useState(true);
-  const [nicknameStatus, setNicknameStatus] = useState<'idle' | 'available' | 'duplicate'>('idle');
+  const [nicknameCheck, setNicknameCheck] = useState<{
+    value: string;
+    duplicate: boolean;
+  } | null>(null);
   const [checkingNickname, setCheckingNickname] = useState(false);
+
+  const profileEditNicknameValidation = validateNickname(profileEditNickname);
+  const isCurrentNicknameIdentity =
+    profileEditNicknameValidation.isValid &&
+    isSameNicknameIdentity(profileEditNicknameValidation.normalized, profileName);
+  const isMatchingNicknameCheck =
+    nicknameCheck !== null &&
+    isSameNicknameIdentity(nicknameCheck.value, profileEditNicknameValidation.normalized);
+  const nicknameChecked =
+    isCurrentNicknameIdentity || (isMatchingNicknameCheck && !nicknameCheck.duplicate);
+  const nicknameStatus: 'idle' | 'available' | 'duplicate' | 'current' =
+    isCurrentNicknameIdentity
+      ? profileEditNicknameValidation.normalized === profileName
+        ? 'idle'
+        : 'current'
+      : isMatchingNicknameCheck
+        ? nicknameCheck.duplicate
+          ? 'duplicate'
+          : 'available'
+        : 'idle';
 
   const {
     alarms,
@@ -856,14 +881,8 @@ export function MyPageScreen() {
 
 
   const handleProfileEditNicknameChange = useCallback((text: string) => {
-    const filtered = text
-      .replace(/[^a-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/g, '')
-      .slice(0, INPUT_LIMITS.NICKNAME);
-    setProfileEditNickname(filtered);
-    // 현재 닉네임 그대로면 자동 통과, 바뀌면 중복확인 필요
-    setNicknameChecked(filtered === profileName);
-    setNicknameStatus('idle');
-  }, [profileName]);
+    setProfileEditNickname(text);
+  }, []);
 
   const handleProfileEditDescriptionChange = useCallback((text: string) => {
     setProfileEditDescription(normalizeProfileDescription(text));
@@ -871,33 +890,31 @@ export function MyPageScreen() {
 
   const handleCheckNickname = useCallback(() => {
     Keyboard.dismiss();
-    const nickname = profileEditNickname.trim();
-    if (!nickname) {
-      showToast('닉네임을 입력해주세요.');
+    const validation = validateNickname(profileEditNickname);
+    if (!validation.isValid) {
+      showToast(validation.message);
       return;
     }
-    // 본인 현재 닉네임이면 중복으로 처리하지 않고 API 호출 생략
-    if (nickname === profileName) {
-      setNicknameChecked(true);
-      setNicknameStatus('idle');
-      showToast('현재 사용 중인 닉네임입니다.');
+    const nickname = validation.normalized;
+    setProfileEditNickname(nickname);
+    // 대소문자만 다른 경우를 포함해 본인 닉네임과 비교 키가 같으면 자동 통과한다.
+    if (isSameNicknameIdentity(nickname, profileName)) {
+      setNicknameCheck(null);
+      showToast(
+        nickname === profileName
+          ? '현재 사용 중인 닉네임입니다.'
+          : '현재 닉네임과 같은 아이디입니다. 표시 닉네임만 변경됩니다.',
+      );
       return;
     }
     setCheckingNickname(true);
     const run = async () => {
       try {
         const duplicate = await checkNicknameDuplicate(nickname);
-        if (duplicate) {
-          setNicknameChecked(false);
-          setNicknameStatus('duplicate');
-          showToast('이미 사용 중인 닉네임입니다.');
-        } else {
-          setNicknameChecked(true);
-          setNicknameStatus('available');
-          showToast('사용 가능한 닉네임입니다.');
-        }
+        setNicknameCheck({ value: nickname, duplicate });
+        showToast(duplicate ? '이미 사용 중인 닉네임입니다.' : '사용 가능한 닉네임입니다.');
       } catch (error) {
-        setNicknameChecked(false);
+        setNicknameCheck(null);
         showToast(error instanceof ApiError ? error.message : '닉네임 확인 중 오류가 발생했습니다.');
       } finally {
         setCheckingNickname(false);
@@ -908,16 +925,13 @@ export function MyPageScreen() {
 
   const handleSubmitProfileEdit = useCallback(() => {
     Keyboard.dismiss();
-    const nickname = profileEditNickname.trim();
-    if (!nickname) {
-      showToast('닉네임을 입력해주세요.');
+    const validation = validateNickname(profileEditNickname);
+    if (!validation.isValid) {
+      showToast(validation.message);
       return;
     }
-    if (!nicknameRegex.test(nickname)) {
-      showToast('닉네임은 영어 소문자/숫자/특수문자만 사용할 수 있습니다.');
-      return;
-    }
-    if (nickname !== profileName && !nicknameChecked) {
+    const nickname = validation.normalized;
+    if (!isSameNicknameIdentity(nickname, profileName) && !nicknameChecked) {
       showToast('닉네임 중복확인을 해주세요.');
       return;
     }
@@ -971,8 +985,7 @@ export function MyPageScreen() {
         if (error instanceof ApiError) {
           // 중복확인 ↔ 저장 사이에 닉네임이 선점된 경우(BE 재검증) 다시 확인하도록 초기화
           if (error.code === 'MEMBER_416') {
-            setNicknameChecked(false);
-            setNicknameStatus('duplicate');
+            setNicknameCheck({ value: nickname, duplicate: true });
           }
         } else {
           showToast('프로필 변경에 실패했습니다.');
@@ -1118,10 +1131,11 @@ export function MyPageScreen() {
 
   const openMemberProfile = useCallback(
     (nickname: string) => {
-      const memberNickname = nickname.trim();
-      if (!memberNickname) return;
+      const validation = validateNickname(nickname);
+      if (!validation.isValid) return;
+      const memberNickname = validation.normalized;
 
-      if (profileName.trim() && memberNickname === profileName.trim()) {
+      if (isSameNicknameIdentity(memberNickname, profileName)) {
         setShowFollowPage(false);
         navigation.navigate('My');
         return;
@@ -1864,8 +1878,7 @@ export function MyPageScreen() {
   useEffect(() => {
     if (selectedSetting !== 'profileEdit') return;
     setProfileEditNickname(profileName);
-    setNicknameChecked(true);
-    setNicknameStatus('idle');
+    setNicknameCheck(null);
     setProfileEditDescription(
       normalizeProfileDescription(profileDesc === '소개글이 없습니다.' ? '' : profileDesc),
     );
@@ -2152,21 +2165,23 @@ export function MyPageScreen() {
                 <FormTextInput
                   value={profileEditNickname}
                   onChangeText={handleProfileEditNicknameChange}
-                  placeholder={l('영어 소문자/숫자/특수문자, 최대 20자')}
+                  placeholder={l('한글/영문/숫자/허용 특수문자, 최대 20자')}
                   placeholderTextColor={colors.gray3}
                   style={[styles.inputField, styles.inputFieldDescenderSafe]}
                   maxLength={INPUT_LIMITS.NICKNAME}
+                  enforceMaxLength={false}
+                  fieldType="nickname"
                   autoCapitalize="none"
                 />
               </View>
               <Pressable
                 style={[
                   styles.nicknameCheckButton,
-                  !profileEditNickname || nicknameChecked || checkingNickname
+                  !profileEditNicknameValidation.isValid || nicknameChecked || checkingNickname
                     ? styles.nicknameCheckButtonDisabled
                     : null,
                 ]}
-                disabled={!profileEditNickname || nicknameChecked || checkingNickname}
+                disabled={!profileEditNicknameValidation.isValid || nicknameChecked || checkingNickname}
                 onPress={handleCheckNickname}
               >
                 <Text style={styles.nicknameCheckButtonText}>
@@ -2178,15 +2193,19 @@ export function MyPageScreen() {
               <Text
                 style={[
                   styles.nicknameStatusText,
-                  nicknameStatus === 'available'
+                  nicknameStatus === 'available' || nicknameStatus === 'current'
                     ? styles.nicknameStatusAvailable
                     : nicknameStatus === 'duplicate'
                       ? styles.nicknameStatusDuplicate
                       : null,
                 ]}
               >
-                {nicknameStatus === 'available'
+                {!profileEditNicknameValidation.isValid
+                  ? l(profileEditNicknameValidation.message)
+                  : nicknameStatus === 'available'
                   ? l('사용 가능한 닉네임입니다.')
+                  : nicknameStatus === 'current'
+                    ? l('현재 닉네임과 같은 아이디입니다. 표시 닉네임만 변경됩니다.')
                   : nicknameStatus === 'duplicate'
                     ? l('이미 사용 중인 닉네임입니다.')
                     : l('닉네임 중복확인을 해주세요.')}

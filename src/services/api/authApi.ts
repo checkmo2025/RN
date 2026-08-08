@@ -20,6 +20,7 @@ import {
   logPushUnregistrationError,
   unregisterCurrentPushDeviceAsync,
 } from '../push/pushNotificationService';
+import { normalizeNickname } from '../../utils/nickname';
 
 type SignUpResult = {
   email?: string;
@@ -156,7 +157,7 @@ export async function loginByIdentifier(
     const response = await requestJson<ApiEnvelope<LoginResult>>('/auth/app/login', {
       method: 'POST',
       body: {
-        identifier,
+        identifier: normalizeNickname(identifier),
         password,
       },
       suppressErrorToast: options?.suppressErrorToast,
@@ -355,7 +356,7 @@ export async function checkNicknameDuplicate(nickname: string): Promise<boolean>
   const response = await fetchApi('/members/check-nickname', {
     method: 'POST',
     query: {
-      nickname,
+      nickname: normalizeNickname(nickname),
     },
   });
 
@@ -392,7 +393,10 @@ export async function checkNicknameDuplicate(nickname: string): Promise<boolean>
 export async function submitAdditionalInfo(payload: AdditionalInfoPayload): Promise<void> {
   await requestJson<ApiEnvelope<null>>('/members/additional-info', {
     method: 'POST',
-    body: payload,
+    body: {
+      ...payload,
+      nickname: normalizeNickname(payload.nickname),
+    },
   });
 }
 

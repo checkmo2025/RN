@@ -1,3 +1,5 @@
+import { validateNickname } from '../utils/nickname';
+
 export type DeepLinkTarget =
   | {
       screen: 'Home';
@@ -67,8 +69,8 @@ function normalizePathSegments(url: URL): string[] | null {
 function decodePathSegment(value: string | undefined): string | null {
   if (!value) return null;
   try {
-    const decoded = decodeURIComponent(value).trim();
-    return decoded || null;
+    const validation = validateNickname(decodeURIComponent(value));
+    return validation.isValid ? validation.normalized : null;
   } catch {
     return null;
   }

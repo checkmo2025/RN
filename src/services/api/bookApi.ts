@@ -1,5 +1,6 @@
 import { ApiEnvelope, requestJson, unwrapResult } from './http';
 import { normalizeRemoteImageUrl } from '../../utils/image';
+import { encodeNicknamePathSegment } from '../../utils/nickname';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -249,7 +250,7 @@ export async function fetchMemberLikedBooks(
   cursorId?: number,
 ): Promise<MemberLikedBookListResult> {
   const response = await requestJson<LikedBookListResponse>(
-    `/books/${encodeURIComponent(memberNickname)}/likes`,
+    `/books/${encodeNicknamePathSegment(memberNickname)}/likes`,
     {
       method: 'GET',
       query: {

@@ -1,5 +1,6 @@
 import { ApiEnvelope, requestJson, unwrapResult } from './http';
 import { normalizeRemoteImageUrl } from '../../utils/image';
+import { encodeNicknamePathSegment } from '../../utils/nickname';
 
 type UnknownRecord = Record<string, unknown>;
 type ViewerContextOptions = {
@@ -510,7 +511,7 @@ export async function fetchMemberBookStories(
   nickname: string,
   cursorId?: number,
 ): Promise<StoryFeed> {
-  const encodedNickname = encodeURIComponent(nickname);
+  const encodedNickname = encodeNicknamePathSegment(nickname);
   return fetchStoryFeedByPath(`/book-stories/members/${encodedNickname}`, cursorId);
 }
 

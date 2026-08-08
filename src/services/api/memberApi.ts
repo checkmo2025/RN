@@ -1,6 +1,7 @@
 import { ApiEnvelope, requestJson, unwrapResult } from './http';
 import { normalizeRemoteImageUrl } from '../../utils/image';
 import { collectAllCursorPages } from '../../utils/pagination';
+import { encodeNicknamePathSegment, normalizeNickname } from '../../utils/nickname';
 
 type FollowInfo = {
   nickname?: string;
@@ -222,7 +223,7 @@ export async function setFollowingMember(
   nickname: string,
   following: boolean,
 ): Promise<void> {
-  const encodedNickname = encodeURIComponent(nickname);
+  const encodedNickname = encodeNicknamePathSegment(nickname);
 
   await requestJson<unknown>(`/members/${encodedNickname}/following`, {
     method: following ? 'POST' : 'DELETE',
@@ -232,7 +233,7 @@ export async function setFollowingMember(
 export async function deleteFollowerMember(
   nickname: string,
 ): Promise<void> {
-  const encodedNickname = encodeURIComponent(nickname);
+  const encodedNickname = encodeNicknamePathSegment(nickname);
 
   await requestJson<unknown>(`/members/${encodedNickname}/follower`, {
     method: 'DELETE',
@@ -265,7 +266,7 @@ export async function fetchMyProfile(options?: {
 }
 
 export async function fetchMemberProfile(nickname: string): Promise<MemberProfile | null> {
-  const encodedNickname = encodeURIComponent(nickname);
+  const encodedNickname = encodeNicknamePathSegment(nickname);
   const response = await requestJson<ApiEnvelope<DetailInfo & FollowInfo & {
     followerCount?: number;
     followingCount?: number;
@@ -347,7 +348,7 @@ export async function fetchMyFollowCount(): Promise<FollowCount> {
 }
 
 export async function fetchMemberFollowers(nickname: string, cursorId?: number): Promise<FollowList> {
-  const encodedNickname = encodeURIComponent(nickname);
+  const encodedNickname = encodeNicknamePathSegment(nickname);
   const response = await requestJson<ApiEnvelope<FollowListResult>>(
     `/members/${encodedNickname}/followers`,
     {
@@ -367,7 +368,7 @@ export async function fetchMemberFollowers(nickname: string, cursorId?: number):
 }
 
 export async function fetchMemberFollowings(nickname: string, cursorId?: number): Promise<FollowList> {
-  const encodedNickname = encodeURIComponent(nickname);
+  const encodedNickname = encodeNicknamePathSegment(nickname);
   const response = await requestJson<ApiEnvelope<FollowListResult>>(
     `/members/${encodedNickname}/followings`,
     {
@@ -419,7 +420,12 @@ export async function updateMyProfile(payload: UpdateMyProfilePayload): Promise<
   const response = await requestJson<ApiEnvelope<DetailInfo>>('/members/me', {
     method: 'PATCH',
     suppressErrorToast: false,
-    body: payload,
+    body: {
+      ...payload,
+      ...(payload.nickname === undefined
+        ? {}
+        : { nickname: normalizeNickname(payload.nickname) }),
+    },
   });
   const result = unwrapResult(response);
   if (!result) return null;
@@ -531,14 +537,14 @@ export async function fetchBlockedMembers(cursorId?: number): Promise<{
 }
 
 export async function blockMember(nickname: string): Promise<void> {
-  await requestJson<ApiEnvelope<void>>(`/members/${encodeURIComponent(nickname)}/block`, {
+  await requestJson<ApiEnvelope<void>>(`/members/${encodeNicknamePathSegment(nickname)}/block`, {
     method: 'POST',
     suppressErrorToast: false,
   });
 }
 
 export async function unblockMember(nickname: string): Promise<void> {
-  await requestJson<ApiEnvelope<void>>(`/members/${encodeURIComponent(nickname)}/block`, {
+  await requestJson<ApiEnvelope<void>>(`/members/${encodeNicknamePathSegment(nickname)}/block`, {
     method: 'DELETE',
     suppressErrorToast: false,
   });

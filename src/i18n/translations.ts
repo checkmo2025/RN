@@ -922,6 +922,9 @@ const enLiteralMessages: Record<string, string> = {
   '닉네임 중복 확인에 실패했습니다.': 'Could not check nickname availability.',
   '닉네임 중복 확인을 완료해야 합니다.': 'Complete nickname duplicate check.',
   '닉네임 중복확인을 해주세요.': 'Please check nickname availability.',
+  '닉네임에는 공백을 사용할 수 없습니다.': 'Nickname cannot contain whitespace.',
+  '닉네임은 한글, 영문, 숫자, 허용된 특수문자만 사용할 수 있습니다.':
+    'Nickname can only use Korean or English letters, numbers, and allowed special characters.',
   '닉네임은 영어 소문자/숫자/특수문자만 사용할 수 있습니다.':
     'Nickname can only use lowercase English letters, numbers, and special characters.',
   '닉네임은 최대 20자까지 가능합니다.': 'Nickname can be up to 20 characters.',
@@ -1030,6 +1033,10 @@ const enLiteralMessages: Record<string, string> = {
   '신고한 내역이 없습니다.': 'No reports submitted.',
   '영어 소문자/숫자/특수문자, 최대 20자':
     'Lowercase letters, numbers, special characters, max 20 chars',
+  '한글/영문/숫자/허용 특수문자, 최대 20자':
+    'Korean/English letters, numbers, allowed special characters, max 20 chars',
+  '현재 닉네임과 같은 아이디입니다. 표시 닉네임만 변경됩니다.':
+    'This is the same account ID. Only the displayed capitalization will change.',
   '인증 완료': 'Complete Verification',
   '인증번호 입력': 'Enter verification code',
   '차단 해제': 'Unblock',
