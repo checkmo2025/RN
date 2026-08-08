@@ -515,10 +515,16 @@ export function GroupBookshelfView({
               <Text style={styles.bookshelfPanelTitle}>{l('전체 발제')}</Text>
             </View>
             <Pressable
-              style={({ pressed }) => [styles.bookshelfPanelAddButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.bookshelfGroupActionButton,
+                pressed && styles.pressed,
+              ]}
               onPress={() => handleOpenBookshelfComposer('TOPIC')}
+              accessibilityRole="button"
+              accessibilityLabel={l('발제 추가하기')}
             >
-              <MaterialIcons name="add" size={20} color={colors.primary1} />
+              <MaterialIcons name="edit" size={18} color={colors.gray4} />
+              <Text style={styles.bookshelfGroupSortText}>{l('발제')}</Text>
             </Pressable>
           </View>
 
@@ -582,10 +588,16 @@ export function GroupBookshelfView({
               <Text style={styles.bookshelfPanelTitle}>{l('한줄평')}</Text>
             </View>
             <Pressable
-              style={({ pressed }) => [styles.bookshelfPanelAddButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.bookshelfGroupActionButton,
+                pressed && styles.pressed,
+              ]}
               onPress={() => handleOpenBookshelfComposer('REVIEW')}
+              accessibilityRole="button"
+              accessibilityLabel={l('한줄평 추가하기')}
             >
-              <MaterialIcons name="add" size={20} color={colors.primary1} />
+              <MaterialIcons name="edit" size={18} color={colors.gray4} />
+              <Text style={styles.bookshelfGroupSortText}>{l('한줄평')}</Text>
             </Pressable>
           </View>
 
