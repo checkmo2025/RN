@@ -37,7 +37,17 @@ function sanitizeCell(value) {
   return String(value).replaceAll('|', '／').replace(/\s+/g, ' ').trim();
 }
 
-export async function readQueue(queuePath = DEFAULT_QUEUE_PATH) {
+export function queuePersonaFromArgs(args) {
+  const personaIndex = args.indexOf('--persona');
+  if (personaIndex < 0) return null;
+
+  const value = args[personaIndex + 1]?.trim().toLowerCase();
+  if (value === 'admin') return '관리자';
+  if (value === 'emotion') return '감성회원';
+  throw new AutomationAuthError('`--persona` 뒤에 `admin` 또는 `emotion`을 입력해 주세요.');
+}
+
+export async function readQueue(queuePath = DEFAULT_QUEUE_PATH, desiredPersona = null) {
   let source;
   try {
     source = await readFile(queuePath, 'utf8');
@@ -80,9 +90,12 @@ export async function readQueue(queuePath = DEFAULT_QUEUE_PATH) {
     });
   }
 
-  const nextItem = items.find((item) => item.status === '작성전');
+  const nextItem = items.find(
+    (item) => item.status === '작성전' && (!desiredPersona || item.persona === desiredPersona),
+  );
   if (!nextItem) {
-    throw new AutomationAuthError('처리할 `작성전` 항목이 없습니다.');
+    const personaLabel = desiredPersona ? ` + ${desiredPersona}` : '';
+    throw new AutomationAuthError(`처리할 \`작성전${personaLabel}\` 항목이 없습니다.`);
   }
 
   return { queuePath, source, lines, items, nextItem };

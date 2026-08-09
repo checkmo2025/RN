@@ -66,8 +66,12 @@ export async function selectQueueBook(item) {
   return validateSelectedBook(candidates[0], item);
 }
 
-export async function findExistingStory(isbn, title) {
-  const payload = await authenticatedApiRequest('/book-stories/me', { method: 'GET' });
+export async function findExistingStory(isbn, title, authProfile = 'admin') {
+  const payload = await authenticatedApiRequest(
+    '/book-stories/me',
+    { method: 'GET' },
+    authProfile,
+  );
   const stories = payload?.result?.basicInfoList;
   if (!Array.isArray(stories)) return null;
   return (
@@ -79,20 +83,26 @@ export async function findExistingStory(isbn, title) {
   );
 }
 
-export async function publishBookStory({ isbn, title, description }) {
-  const payload = await authenticatedApiRequest('/book-stories', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ isbn, title, description, imageUrls: [], status: 'PUBLISHED' }),
-  });
+export async function publishBookStory({ isbn, title, description }, authProfile = 'admin') {
+  const payload = await authenticatedApiRequest(
+    '/book-stories',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isbn, title, description, imageUrls: [], status: 'PUBLISHED' }),
+    },
+    authProfile,
+  );
   const bookStoryId = Number(payload?.result);
   if (!Number.isSafeInteger(bookStoryId) || bookStoryId <= 0) {
     throw new AutomationAuthError('게시 응답에서 책이야기 번호를 확인하지 못했습니다.');
   }
 
-  const verification = await authenticatedApiRequest(`/book-stories/${bookStoryId}`, {
-    method: 'GET',
-  });
+  const verification = await authenticatedApiRequest(
+    `/book-stories/${bookStoryId}`,
+    { method: 'GET' },
+    authProfile,
+  );
   const story = verification?.result;
   if (
     Number(story?.bookStoryId) !== bookStoryId ||

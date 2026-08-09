@@ -1,7 +1,11 @@
-import { AutomationAuthError } from './auth-client.mjs';
+import {
+  authProfileDisplayName,
+  authProfileForPersona,
+  AutomationAuthError,
+} from './auth-client.mjs';
 import { findExistingStory, publishBookStory, selectQueueBook } from './book-story-client.mjs';
 import { readDraft, validateDraft } from './draft.mjs';
-import { readQueue, updateQueueItem } from './queue.mjs';
+import { queuePersonaFromArgs, readQueue, updateQueueItem } from './queue.mjs';
 
 const shouldPublish = process.argv.includes('--confirm');
 let activeQueue = null;
@@ -20,13 +24,16 @@ function publishedAt() {
 }
 
 async function main() {
-  activeQueue = await readQueue();
+  const desiredPersona = queuePersonaFromArgs(process.argv.slice(2));
+  activeQueue = await readQueue(undefined, desiredPersona);
   activeItem = activeQueue.nextItem;
   const draft = await readDraft();
   const validation = validateDraft(draft, activeItem);
   const book = await selectQueueBook(activeItem);
+  const authProfile = authProfileForPersona(activeItem.persona);
 
   console.log(`책 확인: ${book.title} / ${book.author} / ${book.isbn}`);
+  console.log(`게시 계정: ${authProfileDisplayName(authProfile)} 계정`);
   console.log(`제목: ${draft.title} (${validation.titleLength}자)`);
   console.log(`본문: ${validation.descriptionLength}자 / ${activeItem.persona}`);
   console.log('금칙어·이모지·분량 검사를 통과했습니다.');
@@ -36,18 +43,21 @@ async function main() {
     return;
   }
 
-  const existingStory = await findExistingStory(book.isbn, draft.title);
+  const existingStory = await findExistingStory(book.isbn, draft.title, authProfile);
   if (existingStory) {
     throw new AutomationAuthError(
       `같은 책과 제목의 내 게시물(${existingStory.bookStoryId}번)이 이미 있어 중복 게시를 중단했습니다.`,
     );
   }
 
-  const bookStoryId = await publishBookStory({
-    isbn: book.isbn,
-    title: draft.title,
-    description: draft.description,
-  });
+  const bookStoryId = await publishBookStory(
+    {
+      isbn: book.isbn,
+      title: draft.title,
+      description: draft.description,
+    },
+    authProfile,
+  );
   await updateQueueItem(activeQueue, activeItem, {
     status: '완료',
     result: `게시 완료 · 책이야기 ID ${bookStoryId} · ${publishedAt()}`,

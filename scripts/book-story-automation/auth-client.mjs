@@ -2,9 +2,20 @@ import { execFileSync } from 'node:child_process';
 import { userInfo } from 'node:os';
 
 const DEFAULT_API_BASE_URL = 'https://api.checkmo.co.kr/api/v1';
-const KEYCHAIN_SERVICE = 'kr.co.checkmo.book-story-automation.refresh-token';
-const KEYCHAIN_LABEL = '책모 책이야기 자동화 로그인';
 const REQUEST_TIMEOUT_MS = 15_000;
+
+const AUTH_PROFILES = Object.freeze({
+  admin: Object.freeze({
+    service: 'kr.co.checkmo.book-story-automation.refresh-token',
+    label: '책모 책이야기 자동화 관리자 로그인',
+    displayName: '관리자',
+  }),
+  emotion: Object.freeze({
+    service: 'kr.co.checkmo.book-story-automation.refresh-token.emotion',
+    label: '책모 책이야기 자동화 감성회원 로그인',
+    displayName: '감성회원',
+  }),
+});
 
 export class AutomationAuthError extends Error {
   constructor(message, options = {}) {
@@ -21,6 +32,34 @@ function requireMacOS() {
 
 function keychainAccount() {
   return userInfo().username;
+}
+
+export function normalizeAuthProfile(profile = 'admin') {
+  const normalized = String(profile).trim().toLowerCase();
+  if (!Object.hasOwn(AUTH_PROFILES, normalized)) {
+    throw new AutomationAuthError('로그인 프로필은 `admin` 또는 `emotion`이어야 합니다.');
+  }
+  return normalized;
+}
+
+export function authProfileFromArgs(args) {
+  const profileIndex = args.indexOf('--profile');
+  if (profileIndex < 0) return 'admin';
+  const profile = args[profileIndex + 1];
+  if (!profile || profile.startsWith('-')) {
+    throw new AutomationAuthError('`--profile` 뒤에 `admin` 또는 `emotion`을 입력해 주세요.');
+  }
+  return normalizeAuthProfile(profile);
+}
+
+export function authProfileDisplayName(profile) {
+  return AUTH_PROFILES[normalizeAuthProfile(profile)].displayName;
+}
+
+export function authProfileForPersona(persona) {
+  if (persona === '관리자') return 'admin';
+  if (persona === '감성회원') return 'emotion';
+  throw new AutomationAuthError(`지원하지 않는 글 컨셉입니다: ${persona || '컨셉 없음'}`);
 }
 
 function apiBaseUrl() {
@@ -55,11 +94,13 @@ function runSecurity(args) {
   }
 }
 
-export function saveRefreshToken(refreshToken) {
+export function saveRefreshToken(refreshToken, profile = 'admin') {
   const normalized = refreshToken.trim();
   if (!normalized) {
     throw new AutomationAuthError('저장할 로그인 토큰이 비어 있습니다.');
   }
+
+  const config = AUTH_PROFILES[normalizeAuthProfile(profile)];
 
   runSecurity([
     'add-generic-password',
@@ -67,21 +108,22 @@ export function saveRefreshToken(refreshToken) {
     '-a',
     keychainAccount(),
     '-s',
-    KEYCHAIN_SERVICE,
+    config.service,
     '-l',
-    KEYCHAIN_LABEL,
+    config.label,
     '-w',
     normalized,
   ]);
 }
 
-export function readRefreshToken() {
+export function readRefreshToken(profile = 'admin') {
+  const config = AUTH_PROFILES[normalizeAuthProfile(profile)];
   return runSecurity([
     'find-generic-password',
     '-a',
     keychainAccount(),
     '-s',
-    KEYCHAIN_SERVICE,
+    config.service,
     '-w',
   ]);
 }
@@ -208,12 +250,13 @@ export async function verifyLoginStatus(accessToken) {
   });
 }
 
-export async function authenticatedApiRequest(path, options = {}) {
-  const refreshToken = readRefreshToken();
+export async function authenticatedApiRequest(path, options = {}, profile = 'admin') {
+  const normalizedProfile = normalizeAuthProfile(profile);
+  const refreshToken = readRefreshToken(normalizedProfile);
   const { accessToken, nextRefreshToken } = await refreshSession(refreshToken);
 
   // 갱신 토큰은 한 번 사용하면 회전되므로 후속 API 성공 여부와 관계없이 즉시 보관한다.
-  saveRefreshToken(nextRefreshToken);
+  saveRefreshToken(nextRefreshToken, normalizedProfile);
 
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');

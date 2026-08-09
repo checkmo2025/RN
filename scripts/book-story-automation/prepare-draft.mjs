@@ -1,9 +1,10 @@
 import { AutomationAuthError } from './auth-client.mjs';
 import { createDraftTemplate, DEFAULT_DRAFT_PATH } from './draft.mjs';
-import { readQueue } from './queue.mjs';
+import { queuePersonaFromArgs, readQueue } from './queue.mjs';
 
 async function main() {
-  const queue = await readQueue();
+  const desiredPersona = queuePersonaFromArgs(process.argv.slice(2));
+  const queue = await readQueue(undefined, desiredPersona);
   const draftPath = await createDraftTemplate(queue.nextItem, DEFAULT_DRAFT_PATH, {
     overwrite: process.argv.includes('--force'),
   });
