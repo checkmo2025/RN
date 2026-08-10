@@ -4006,3 +4006,9 @@ export const interactionOpacity = {
 - 실행 인자로 관리자·감성회원 목록을 각각 선택하고 해당 컨셉이 없을 때 다른 컨셉으로 우회하지 않도록 보강
 - 관리자 월·수·금·토 21:05, 감성회원 화 13:13·목 14:51·일 20:17 자동 게시 일정을 적용
 - Node 문법·TypeScript 검사와 컨셉별 다음 책 선택, 두 계정 세션을 확인
+
+# 2026-08-10 22:39:10 KST RN 앱 버전 1.2.5 상향
+
+- Expo·runtime·package·iOS·Android 네이티브 표시 버전을 `1.2.5`로 동기화
+- iOS 로컬 Expo 업데이트 런타임도 `1.2.5`로 맞추고 build number `43`은 유지
+- TypeScript와 타이포그래피·간격 검사, Expo Doctor 18개 항목을 통과

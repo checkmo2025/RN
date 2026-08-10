@@ -2,7 +2,7 @@
   "expo": {
     "name": "책모",
     "slug": "checkmo_rn",
-    "version": "1.2.4",
+    "version": "1.2.5",
     "scheme": "checkmo",
     "orientation": "portrait",
     "icon": "./assets/checkmo-app-icon-ios.png",
@@ -113,7 +113,7 @@
       }
     },
     "owner": "yhi9839",
-    "runtimeVersion": "1.2.4",
+    "runtimeVersion": "1.2.5",
     "updates": {
       "url": "https://u.expo.dev/429392b9-bdb4-4d90-9bb5-1cec1fe58fcd"
     }
