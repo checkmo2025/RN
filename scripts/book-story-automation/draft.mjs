@@ -113,7 +113,7 @@ function assertDraftBinding(draft, item) {
   }
 }
 
-function hasRequiredBoundaryEmoji(description) {
+function inspectBoundaryEmoji(description) {
   const emoji = String.raw`\p{Extended_Pictographic}\uFE0F?`;
   return {
     startsWithEmoji: new RegExp(`^(?:${emoji}){1,2}`, 'u').test(description),
@@ -146,9 +146,12 @@ export function validateDraft(draft, item) {
     );
   }
 
-  const { startsWithEmoji, endsWithEmoji } = hasRequiredBoundaryEmoji(draft.description);
-  if (!startsWithEmoji || !endsWithEmoji) {
-    throw new AutomationAuthError('본문 시작과 마지막에 각각 이모지 1~2개를 넣어 주세요.');
+  const { startsWithEmoji, endsWithEmoji } = inspectBoundaryEmoji(draft.description);
+  if (startsWithEmoji) {
+    throw new AutomationAuthError('본문 시작에는 이모지를 사용하지 마세요.');
+  }
+  if (!endsWithEmoji) {
+    throw new AutomationAuthError('본문 마지막에 내용과 어울리는 이모지 1~2개를 넣어 주세요.');
   }
 
   const combined = `${draft.title}\n${draft.description}`;

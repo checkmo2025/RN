@@ -4012,3 +4012,10 @@ export const interactionOpacity = {
 - Expo·runtime·package·iOS·Android 네이티브 표시 버전을 `1.2.5`로 동기화
 - iOS 로컬 Expo 업데이트 런타임도 `1.2.5`로 맞추고 build number `43`은 유지
 - TypeScript와 타이포그래피·간격 검사, Expo Doctor 18개 항목을 통과
+
+# 2026-08-13 15:26:41 KST 책모 소식 자동화 및 유지보수
+
+- 공식 출처 기반 소식 초안 검증, 중복 방지, 이미지 업로드, 승인 ID 기반 게시·재검증 흐름을 추가
+- 책이야기 자동 게시 본문은 시작 이모지를 금지하고 마지막에만 어울리는 이미지 1~2개를 사용하도록 검증 규칙을 변경
+- 책이야기 좋아요 회원 목록의 백엔드 API·앱 UI 구현 계획을 문서화
+- Expo와 Expo Updates를 SDK 54 호환 패치 버전으로 업데이트하고 자동화 테스트·타입 검사·Expo Doctor를 통과
