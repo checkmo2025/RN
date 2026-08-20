@@ -44,7 +44,13 @@ type MemberTermsStatusResult = {
 };
 
 export type EmailVerificationType = 'SIGN_UP' | 'UPDATE_EMAIL';
-export type ImageUploadType = 'PROFILE' | 'CLUB' | 'NOTICE';
+export type ImageUploadType =
+  | 'PROFILE'
+  | 'CLUB'
+  | 'NOTICE'
+  | 'BOOK_STORY'
+  | 'BOOK_STORY_COMMENT'
+  | 'NOTICE_COMMENT';
 export type TermsType =
   | 'SERVICE_TERMS'
   | 'PRIVACY_COLLECTION'

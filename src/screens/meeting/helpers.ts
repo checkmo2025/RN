@@ -517,6 +517,7 @@ export function mapNoticeCommentToUi(
     authorProfileImageUrl: item.profileImageUrl,
     date: formatDotDate(item.updatedAt ?? item.createdAt),
     content: item.content,
+    imageUrls: item.imageUrls,
     mine:
       Boolean(normalizedCurrentNickname) &&
       normalizedAuthor.localeCompare(normalizedCurrentNickname ?? '', 'ko', {

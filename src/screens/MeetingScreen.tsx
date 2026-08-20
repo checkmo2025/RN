@@ -1773,6 +1773,7 @@ function GroupHomeView({
     editingNoticeCommentId, setEditingNoticeCommentId,
     submittingNotice,
     submittingNoticeComment,
+    noticeCommentAttachments,
     noticeItems, setNoticeItems,
     noticeCommentsById, setNoticeCommentsById,
     noticeDetailLoadStateById,
@@ -1807,6 +1808,7 @@ function GroupHomeView({
     retryNoticeComments,
     handleOpenNoticeDetailByRemoteId,
     handleSubmitNoticeComment,
+    handleCancelNoticeCommentEdit,
     handlePressCommentMenu,
     handleSelectNoticeCommentMenuAction,
     handleReportNotice,
@@ -3257,6 +3259,7 @@ function GroupHomeView({
           selectedNoticeId={selectedNoticeId}
           noticeCommentInput={noticeCommentInput}
           submittingNoticeComment={submittingNoticeComment}
+          noticeCommentAttachments={noticeCommentAttachments}
           editingNoticeCommentId={editingNoticeCommentId}
           noticeCommentsById={noticeCommentsById}
           noticeDetailLoadStateById={noticeDetailLoadStateById}
@@ -3277,6 +3280,7 @@ function GroupHomeView({
           handleOpenVoteVoters={handleOpenVoteVoters}
           handleSubmitVote={handleSubmitVote}
           handleSubmitNoticeComment={handleSubmitNoticeComment}
+          handleCancelNoticeCommentEdit={handleCancelNoticeCommentEdit}
           handlePressCommentMenu={handlePressCommentMenu}
           retryNoticeDetail={retryNoticeDetail}
           retryNoticeComments={retryNoticeComments}

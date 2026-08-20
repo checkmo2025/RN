@@ -8,6 +8,9 @@ import { colors } from '../../theme';
 import { DefaultProfileAvatar } from '../../components/common/DefaultProfileAvatar';
 import { FeedbackPressable as Pressable } from '../../components/common/FeedbackPressable';
 import { FormTextInput } from '../../components/common/FormTextInput';
+import { ImageAttachmentPicker } from '../../components/common/ImageAttachmentPicker';
+import { ImageGallery } from '../../components/common/ImageGallery';
+import type { ImageAttachmentsController } from '../../hooks/useImageAttachments';
 import { INPUT_LIMITS } from '../../constants/inputLimits';
 import { styles } from './meetingStyles';
 import {
@@ -79,6 +82,7 @@ export type GroupNoticeViewProps = {
   selectedNoticeId: string | null;
   noticeCommentInput: string;
   submittingNoticeComment: boolean;
+  noticeCommentAttachments: ImageAttachmentsController;
   editingNoticeCommentId: string | null;
   noticeCommentsById: Record<string, NoticeComment[]>;
   noticeDetailLoadStateById: Record<string, AsyncLoadStatus>;
@@ -101,6 +105,7 @@ export type GroupNoticeViewProps = {
   handleOpenVoteVoters: (optionId: string) => void;
   handleSubmitVote: () => void;
   handleSubmitNoticeComment: () => void;
+  handleCancelNoticeCommentEdit: () => void;
   handlePressCommentMenu: (comment: NoticeComment, event: GestureResponderEvent) => void;
   retryNoticeDetail: () => void;
   retryNoticeComments: () => void;
@@ -116,6 +121,7 @@ export function GroupNoticeView({
   selectedNoticeId,
   noticeCommentInput,
   submittingNoticeComment,
+  noticeCommentAttachments,
   editingNoticeCommentId,
   noticeCommentsById,
   noticeDetailLoadStateById,
@@ -136,6 +142,7 @@ export function GroupNoticeView({
   handleOpenVoteVoters,
   handleSubmitVote,
   handleSubmitNoticeComment,
+  handleCancelNoticeCommentEdit,
   handlePressCommentMenu,
   retryNoticeDetail,
   retryNoticeComments,
@@ -509,13 +516,15 @@ export function GroupNoticeView({
               </Text>
             </Pressable>
           </View>
+          <ImageAttachmentPicker
+            controller={noticeCommentAttachments}
+            compact
+            disabled={submittingNoticeComment}
+          />
           {editingNoticeCommentId ? (
             <Pressable
               style={({ pressed }) => [styles.breadcrumbPress, pressed && styles.pressed]}
-              onPress={() => {
-                setEditingNoticeCommentId(null);
-                setNoticeCommentInput('');
-              }}
+              onPress={handleCancelNoticeCommentEdit}
             >
               <Text style={styles.breadcrumbText}>{l('댓글 수정 취소')}</Text>
             </Pressable>
@@ -574,6 +583,13 @@ export function GroupNoticeView({
                     </Pressable>
                   </View>
                   <Text style={styles.noticeCommentText}>{comment.content}</Text>
+                  <ImageGallery
+                    imageUrls={comment.imageUrls}
+                    compact
+                    onPressImage={(index) =>
+                      setPhotoViewer({ photos: comment.imageUrls, index })
+                    }
+                  />
                 </View>
               </View>
             ))}

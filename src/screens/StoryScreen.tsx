@@ -59,6 +59,9 @@ import { ToastHost } from '../components/common/ToastHost';
 import BookStoryFeedCard from '../components/feature/bookstory/BookStoryFeedCard';
 import { BookStoryFeedCardSkeleton } from '../components/feature/bookstory/BookStoryFeedCardSkeleton';
 import { SkeletonBox } from '../components/common/SkeletonBox';
+import { ImageAttachmentPicker } from '../components/common/ImageAttachmentPicker';
+import { ImageGallery } from '../components/common/ImageGallery';
+import { ImageViewerModal } from '../components/common/ImageViewerModal';
 import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
 import { useAuthGate } from '../contexts/AuthGateContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -105,6 +108,7 @@ import {
 import { useEdgeBackSwipe } from '../hooks/useEdgeBackSwipe';
 import { useBookSearch } from '../hooks/useBookSearch';
 import { useRelativeNow } from '../hooks/useRelativeNow';
+import { useImageAttachments } from '../hooks/useImageAttachments';
 
 type Book = {
   id: string;
@@ -121,6 +125,7 @@ type Comment = {
   profileImageUrl?: string;
   createdAt?: string;
   text: string;
+  imageUrls: string[];
   mine?: boolean;
   deleted?: boolean;
   replyTo?: string;
@@ -137,6 +142,7 @@ type Story = {
   title: string;
   body: string;
   fullText: string;
+  imageUrls: string[];
   likes: number;
   comments: number;
   tag: string;
@@ -188,6 +194,7 @@ type StoryRouteParams = {
   openDraftTitle?: string;
   openDraftBody?: string;
   openDraftBook?: unknown;
+  openDraftImageUrls?: string[];
   openDraftReturnTarget?: 'MY_STORIES';
 };
 
@@ -336,7 +343,6 @@ export function StoryScreen() {
   const [myClubTabs, setMyClubTabs] = useState<Array<{ clubId: number; clubName: string }>>([]);
   const [recommendedUsers, setRecommendedUsers] = useState<RecommendedUser[]>([]);
   const [myNickname, setMyNickname] = useState('');
-  const [myProfileImageUrl, setMyProfileImageUrl] = useState<string | undefined>(undefined);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [showBookPicker, setShowBookPicker] = useState(false);
   const {
@@ -381,10 +387,26 @@ export function StoryScreen() {
     author: string;
   } | null>(null);
   const [commentMenu, setCommentMenu] = useState<CommentMenuState | null>(null);
+  const storyAttachments = useImageAttachments([], INPUT_LIMITS.BOOK_STORY_IMAGE_COUNT);
+  const commentAttachments = useImageAttachments([], INPUT_LIMITS.BOOK_STORY_COMMENT_IMAGE_COUNT);
+  const {
+    isDirty: storyAttachmentsDirty,
+    reset: resetStoryAttachments,
+    resolveImageUrls: resolveStoryImageUrls,
+    getIsDirty: getIsStoryAttachmentsDirty,
+  } = storyAttachments;
+  const {
+    isDirty: commentAttachmentsDirty,
+    reset: resetCommentAttachments,
+    resolveImageUrls: resolveCommentImageUrls,
+    getIsDirty: getIsCommentAttachmentsDirty,
+  } = commentAttachments;
+  const [imageViewer, setImageViewer] = useState<{ imageUrls: string[]; index: number } | null>(null);
   const [storyMenu, setStoryMenu] = useState(false);
   const [reportModal, setReportModal] = useState<ReportMemberModalState | null>(null);
   const [submittingReport, setSubmittingReport] = useState(false);
   const [submittingStory, setSubmittingStory] = useState(false);
+  const [submittingComment, setSubmittingComment] = useState(false);
   const listRef = useRef<FlatList<StoryFeedRow>>(null);
   useScrollToTop(listRef);
   const listScrollOffsetRef = useRef(0);
@@ -527,13 +549,15 @@ export function StoryScreen() {
     setStoryMenu(false);
     setCommentInput('');
     setEditingCommentOriginalText('');
+    resetCommentAttachments([]);
+    setImageViewer(null);
     pendingDetailFocusRef.current = null;
     commentSectionYRef.current = 0;
 
     if (returnTarget === 'MY_STORIES') {
       navigation.navigate('My', { openMyTab: '내 책 이야기' });
     }
-  }, [animateTransition, detailTranslateX, navigation]);
+  }, [animateTransition, detailTranslateX, navigation, resetCommentAttachments]);
 
   useEffect(() => {
     if (selectedStory || isComposing) return;
@@ -610,7 +634,7 @@ export function StoryScreen() {
 
   const openCompose = useCallback((
     initialBook?: Book,
-    draft?: { id: number; title: string; body: string },
+    draft?: { id: number; title: string; body: string; imageUrls: string[] },
     returnTarget?: StoryRouteParams['openDraftReturnTarget'],
   ) => {
     requireAuth(() => {
@@ -647,10 +671,19 @@ export function StoryScreen() {
       setReplyTarget(null);
       setCommentMenu(null);
       setStoryMenu(false);
+      resetStoryAttachments(draft?.imageUrls ?? []);
+      resetCommentAttachments([]);
       animateTransition();
       setIsComposing(true);
     });
-  }, [animateTransition, requireAuth]);
+  }, [
+    animateTransition,
+    requireAuth,
+    resetBookSearch,
+    resetCommentAttachments,
+    resetStoryAttachments,
+    setBookSearchQuery,
+  ]);
 
   const closeCompose = useCallback((returnToSource = false) => {
     const returnTarget = composeReturnTargetRef.current;
@@ -671,22 +704,26 @@ export function StoryScreen() {
     setReplyTarget(null);
     setCommentMenu(null);
     setStoryMenu(false);
+    resetStoryAttachments([]);
+    resetCommentAttachments([]);
     if (returnToSource && returnTarget === 'MY_STORIES') {
       navigation.navigate('My', { openMyTab: '내 책 이야기' });
     }
-  }, [animateTransition, navigation]);
+  }, [animateTransition, navigation, resetCommentAttachments, resetStoryAttachments]);
 
   const hasUnsavedStoryChanges = useMemo(() => {
     const composingDraft =
       isComposing &&
       (title !== composeInitialDraft.title ||
         body !== composeInitialDraft.body ||
-        getComposeBookKey(selectedBook) !== composeInitialDraft.bookKey);
+        getComposeBookKey(selectedBook) !== composeInitialDraft.bookKey ||
+        storyAttachmentsDirty);
     const commentDraft =
       Boolean(selectedStory) &&
-      (editingCommentId !== null
+      ((editingCommentId !== null
         ? commentInput !== editingCommentOriginalText
-        : commentInput.trim().length > 0);
+        : commentInput.trim().length > 0) ||
+        commentAttachmentsDirty);
     return composingDraft || commentDraft;
   }, [
     body,
@@ -695,11 +732,14 @@ export function StoryScreen() {
     editingCommentId,
     editingCommentOriginalText,
     isComposing,
+    commentAttachmentsDirty,
     selectedBook,
     selectedStory,
+    storyAttachmentsDirty,
     title,
   ]);
-  const isCommentSubmitDisabled = commentInput.trim().length === 0;
+  const isCommentSubmitDisabled =
+    commentInput.trim().length === 0 || submittingComment || commentAttachments.isUploading;
 
   const hasUnsavedStoryChangesNow = useCallback(() => {
     const initialDraft = composeInitialDraftRef.current;
@@ -707,14 +747,16 @@ export function StoryScreen() {
       isComposingRef.current &&
       (titleValueRef.current !== initialDraft.title ||
         bodyValueRef.current !== initialDraft.body ||
-        getComposeBookKey(selectedBookValueRef.current) !== initialDraft.bookKey);
+        getComposeBookKey(selectedBookValueRef.current) !== initialDraft.bookKey ||
+        getIsStoryAttachmentsDirty());
     const commentDraft =
       Boolean(selectedStoryValueRef.current) &&
-      (editingCommentIdRef.current !== null
+      ((editingCommentIdRef.current !== null
         ? commentDraftTextRef.current !== editingCommentOriginalTextRef.current
-        : commentDraftTextRef.current.trim().length > 0);
+        : commentDraftTextRef.current.trim().length > 0) ||
+        getIsCommentAttachmentsDirty());
     return composingDraft || commentDraft;
-  }, []);
+  }, [getIsCommentAttachmentsDirty, getIsStoryAttachmentsDirty]);
 
   const showDiscardStoryAlert = useCallback(
     (onClose: () => void) => {
@@ -977,7 +1019,6 @@ export function StoryScreen() {
   useEffect(() => {
     if (!isLoggedIn) {
       setMyNickname('');
-      setMyProfileImageUrl(undefined);
       return;
     }
 
@@ -988,16 +1029,13 @@ export function StoryScreen() {
         const profile = await fetchMyProfile({ suppressErrorToast: true });
         if (cancelled) return;
         setMyNickname(profile?.nickname?.trim() ?? '');
-        setMyProfileImageUrl(profile?.profileImageUrl);
       } catch (error) {
         if (cancelled) return;
         if (error instanceof ApiError && error.status === 401) {
           setMyNickname('');
-          setMyProfileImageUrl(undefined);
           return;
         }
         setMyNickname('');
-        setMyProfileImageUrl(undefined);
       }
     };
 
@@ -1241,6 +1279,8 @@ export function StoryScreen() {
       setReplyTarget(null);
       setCommentMenu(null);
       setStoryMenu(false);
+      resetStoryAttachments([]);
+      resetCommentAttachments([]);
 
       const requestId = ++storyDetailRequestIdRef.current;
       setIsDetailLoading(true);
@@ -1289,7 +1329,14 @@ export function StoryScreen() {
         }
       }
     },
-    [animateTransition, detailTranslateX, isLoggedIn, l],
+    [
+      animateTransition,
+      resetCommentAttachments,
+      detailTranslateX,
+      isLoggedIn,
+      l,
+      resetStoryAttachments,
+    ],
   );
 
   const startEditStory = useCallback(
@@ -1331,6 +1378,8 @@ export function StoryScreen() {
       setReplyTarget(null);
       setCommentMenu(null);
       setStoryMenu(false);
+      resetStoryAttachments(story.imageUrls);
+      resetCommentAttachments([]);
       animateTransition();
       setIsComposing(true);
       // 모달 dismiss/화면 전환이 끝난 뒤에 포커스해야 iOS first-responder 충돌 크래시를 피한다.
@@ -1338,7 +1387,7 @@ export function StoryScreen() {
         bodyInputRef.current?.focus();
       });
     },
-    [animateTransition],
+    [animateTransition, resetCommentAttachments, resetStoryAttachments],
   );
 
   const handleDeleteStory = useCallback(
@@ -1520,12 +1569,13 @@ export function StoryScreen() {
       setEditingCommentOriginalText(nextCommentText);
       setReplyTarget(null);
       setCommentInput(nextCommentText);
+      resetCommentAttachments(comment.imageUrls);
       requestAnimationFrame(() => {
         inlineEditCommentInputRef.current?.focus();
         scheduleStoryInputFocusScroll(() => inlineEditCommentInputRef.current);
       });
     },
-    [scheduleStoryInputFocusScroll],
+    [resetCommentAttachments, scheduleStoryInputFocusScroll],
   );
 
   const cancelEditComment = useCallback(() => {
@@ -1535,7 +1585,8 @@ export function StoryScreen() {
     setEditingCommentId(null);
     setEditingCommentOriginalText('');
     setCommentInput('');
-  }, []);
+    resetCommentAttachments([]);
+  }, [resetCommentAttachments]);
 
   const deleteComment = useCallback(
     (comment: Comment) => {
@@ -1574,6 +1625,7 @@ export function StoryScreen() {
             setReplyTarget(null);
             setCommentInput('');
             setCommentMenu(null);
+            resetCommentAttachments([]);
 
             const submit = async () => {
               try {
@@ -1594,7 +1646,7 @@ export function StoryScreen() {
         },
       ]);
     },
-    [applyStoryUpdate, l, selectedStory],
+    [applyStoryUpdate, isLoggedIn, l, resetCommentAttachments, selectedStory],
   );
 
   const handleSelectCommentMenuAction = useCallback(
@@ -1643,6 +1695,7 @@ export function StoryScreen() {
         author: current.author,
       });
       setCommentInput('');
+      resetCommentAttachments([]);
       requestAnimationFrame(() => {
         setTimeout(() => {
           inlineReplyInputRef.current?.focus();
@@ -1653,6 +1706,7 @@ export function StoryScreen() {
     [
       beginEditComment,
       commentMenu,
+      resetCommentAttachments,
       deleteComment,
       l,
       openReportModal,
@@ -1795,28 +1849,36 @@ export function StoryScreen() {
       }
 
       const save = async () => {
+        let isbn: string | null = null;
+        if (draftStoryId === null) {
+          if (!selectedBook) {
+            showToast(l('책을 선택해야 임시저장할 수 있습니다.'));
+            return;
+          }
+          isbn = selectedBook.id.trim();
+          if (!ISBN13_REGEX.test(isbn)) {
+            showToast(l('책 정보 형식이 올바르지 않습니다.'));
+            return;
+          }
+        }
+
         setSubmittingStory(true);
         try {
+          const imageUrls = await resolveStoryImageUrls('BOOK_STORY');
           if (draftStoryId !== null) {
             await updateBookStory(draftStoryId, {
               description: nextBody,
               title: nextTitle || undefined,
+              imageUrls,
               status: 'DRAFT' as BookStoryStatus,
             });
           } else {
-            if (!selectedBook) {
-              showToast(l('책을 선택해야 임시저장할 수 있습니다.'));
-              return;
-            }
-            const isbn = selectedBook.id.trim();
-            if (!ISBN13_REGEX.test(isbn)) {
-              showToast(l('책 정보 형식이 올바르지 않습니다.'));
-              return;
-            }
+            if (!isbn) return;
             const newId = await createBookStory({
               isbn,
               title: nextTitle || l('임시저장'),
               description: nextBody,
+              imageUrls,
               status: 'DRAFT' as BookStoryStatus,
             });
             if (newId > 0) setDraftStoryId(newId);
@@ -1833,7 +1895,18 @@ export function StoryScreen() {
 
       void save();
     });
-  }, [body, draftStoryId, l, navigation, requireAuth, selectedBook, submittingStory, title]);
+  }, [
+    body,
+    draftStoryId,
+    l,
+    navigation,
+    requireAuth,
+    selectedBook,
+    closeCompose,
+    resolveStoryImageUrls,
+    submittingStory,
+    title,
+  ]);
 
   const handleSubmit = () => {
     if (submittingStory) {
@@ -1902,6 +1975,7 @@ export function StoryScreen() {
         setSubmittingStory(true);
         try {
           let updatedEditedStory: Story | null = null;
+          const imageUrls = await resolveStoryImageUrls('BOOK_STORY');
 
           if (currentEditingStoryId !== null) {
             storyLog.info('edit_update_start', {
@@ -1913,6 +1987,7 @@ export function StoryScreen() {
             await updateBookStory(currentEditingStoryId, {
               title: nextTitle || undefined,
               description: nextDescription,
+              imageUrls,
             });
             storyLog.info('edit_update_success', { remoteId: currentEditingStoryId });
             try {
@@ -1941,6 +2016,7 @@ export function StoryScreen() {
             await updateBookStory(currentDraftStoryId, {
               title: nextTitle,
               description: nextDescription,
+              imageUrls,
               status: 'PUBLISHED' as BookStoryStatus,
             });
             showToast(l('책이야기를 등록했습니다.'));
@@ -1959,6 +2035,7 @@ export function StoryScreen() {
               isbn,
               title: nextTitle,
               description: nextDescription,
+              imageUrls,
               status: 'PUBLISHED' as BookStoryStatus,
             });
             showToast(l('책이야기를 등록했습니다.'));
@@ -2163,9 +2240,17 @@ export function StoryScreen() {
       setCommentMenu(null);
       setStoryMenu(false);
       setCommentInput('');
+      resetStoryAttachments([]);
+      resetCommentAttachments([]);
       void loadStoryDetail(story);
     },
-    [animateTransition, detailTranslateX, loadStoryDetail],
+    [
+      animateTransition,
+      resetCommentAttachments,
+      detailTranslateX,
+      loadStoryDetail,
+      resetStoryAttachments,
+    ],
   );
 
   const handleRetryStoryDetail = useCallback(() => {
@@ -2259,6 +2344,7 @@ export function StoryScreen() {
   };
 
   const handleSubmitComment = () => {
+    if (submittingComment) return;
     requireAuth(() => {
       Keyboard.dismiss();
       if (!selectedStory || !commentInput.trim()) {
@@ -2280,84 +2366,59 @@ export function StoryScreen() {
         if (replyParent?.replyTo) {
           showToast(l('대댓글에는 다시 답글을 달 수 없습니다.'));
           setReplyTarget(null);
+          resetCommentAttachments([]);
           return;
         }
       }
-      let updated: Story;
-
-      if (isEditing) {
-        updated = {
-          ...selectedStory,
-          commentList: selectedStory.commentList.map((comment) =>
-            comment.remoteId === editingCommentId ? { ...comment, text: content } : comment,
-          ),
-        };
-      } else {
-        const newComment: Comment = {
-          id: `c-${Date.now()}`,
-          author: myNickname || l('나'),
-          profileImageUrl: myProfileImageUrl,
-          createdAt: new Date().toISOString(),
-          text: content,
-          mine: true,
-          replyTo: replyCommentKey,
-        };
-        const nextCommentList = [...selectedStory.commentList];
-        if (replyCommentKey) {
-          const targetIndex = nextCommentList.findIndex((item) => item.id === replyCommentKey);
-          if (targetIndex >= 0) {
-            nextCommentList.splice(targetIndex + 1, 0, newComment);
-          } else {
-            nextCommentList.unshift(newComment);
-          }
-        } else {
-          nextCommentList.unshift(newComment);
-        }
-        updated = {
-          ...selectedStory,
-          commentList: nextCommentList,
-          comments: selectedStory.comments + 1,
-        };
-      }
-
-      applyStoryUpdate(updated);
-      selectedStoryValueRef.current = updated;
-      commentDraftTextRef.current = '';
-      editingCommentIdRef.current = null;
-      editingCommentOriginalTextRef.current = '';
-      setCommentInput('');
-      setEditingCommentId(null);
-      setEditingCommentOriginalText('');
-      setReplyTarget(null);
-      setCommentMenu(null);
 
       const remoteId = selectedStory.remoteId;
       if (typeof remoteId !== 'number') return;
 
       const submit = async () => {
+        setSubmittingComment(true);
         try {
+          const imageUrls = await resolveCommentImageUrls('BOOK_STORY_COMMENT');
           if (isEditing && typeof editingCommentId === 'number') {
-            await updateBookStoryComment(remoteId, editingCommentId, content);
+            await updateBookStoryComment(remoteId, editingCommentId, content, imageUrls);
           } else {
-            await createBookStoryComment(remoteId, content, parentCommentId);
+            await createBookStoryComment(remoteId, content, parentCommentId, imageUrls);
           }
 
-          // Keep local optimistic rendering but sync with server to recover remote IDs/profile.
-          const detail = await fetchBookStoryDetail(remoteId, {
-            viewerAuthenticated: isLoggedIn,
-          });
-          if (detail) {
-            const mapped = mapRemoteDetailToStory(detail, l);
-            setStories((prev) => {
-              const exists = prev.some((story) => story.id === mapped.id);
-              if (!exists) return [mapped, ...prev];
-              return prev.map((story) => (story.id === mapped.id ? mapped : story));
+          commentDraftTextRef.current = '';
+          editingCommentIdRef.current = null;
+          editingCommentOriginalTextRef.current = '';
+          setCommentInput('');
+          setEditingCommentId(null);
+          setEditingCommentOriginalText('');
+          setReplyTarget(null);
+          setCommentMenu(null);
+          resetCommentAttachments([]);
+
+          try {
+            const detail = await fetchBookStoryDetail(remoteId, {
+              viewerAuthenticated: isLoggedIn,
             });
-            selectedStoryValueRef.current = mapped;
-            setSelectedStory(mapped);
+            if (detail) {
+              const mapped = mapRemoteDetailToStory(detail, l);
+              setStories((prev) => {
+                const exists = prev.some((story) => story.id === mapped.id);
+                if (!exists) return [mapped, ...prev];
+                return prev.map((story) => (story.id === mapped.id ? mapped : story));
+              });
+              selectedStoryValueRef.current = mapped;
+              setSelectedStory(mapped);
+            } else {
+              showToast(l('댓글은 등록되었지만 최신 목록을 불러오지 못했습니다.'));
+            }
+          } catch {
+            showToast(l('댓글은 등록되었지만 최신 목록을 불러오지 못했습니다.'));
           }
-        } catch {
-          applyStoryUpdate(selectedStory);
+        } catch (error) {
+          if (!(error instanceof ApiError)) {
+            showToast(l(isEditing ? '댓글 수정에 실패했습니다.' : '댓글 등록에 실패했습니다.'));
+          }
+        } finally {
+          setSubmittingComment(false);
         }
       };
       void submit();
@@ -2387,8 +2448,11 @@ export function StoryScreen() {
         setCommentMenu(null);
         setStoryMenu(false);
         setCommentInput('');
+        resetStoryAttachments([]);
+        resetCommentAttachments([]);
+        setImageViewer(null);
       };
-    }, []),
+    }, [resetCommentAttachments, resetStoryAttachments]),
   );
 
   useEffect(() => {
@@ -2409,12 +2473,14 @@ export function StoryScreen() {
       id: draftId,
       title: route.params?.openDraftTitle ?? '',
       body: route.params?.openDraftBody ?? '',
+      imageUrls: route.params?.openDraftImageUrls ?? [],
     }, returnTarget);
     navigation.setParams({
       openDraftId: undefined,
       openDraftTitle: undefined,
       openDraftBody: undefined,
       openDraftBook: undefined,
+      openDraftImageUrls: undefined,
       openDraftReturnTarget: undefined,
     });
   }, [
@@ -2423,6 +2489,7 @@ export function StoryScreen() {
     route.params?.openDraftBook,
     route.params?.openDraftBody,
     route.params?.openDraftId,
+    route.params?.openDraftImageUrls,
     route.params?.openDraftReturnTarget,
     route.params?.openDraftTitle,
   ]);
@@ -2759,6 +2826,16 @@ export function StoryScreen() {
           ) : (
             <Text style={styles.detailBody}>{selectedStory.fullText}</Text>
           )}
+          {!isDetailLoading && !detailLoadError && selectedStory.imageUrls.length > 0 ? (
+            <View style={styles.detailImageGallery}>
+              <ImageGallery
+                imageUrls={selectedStory.imageUrls}
+                onPressImage={(index) =>
+                  setImageViewer({ imageUrls: selectedStory.imageUrls, index })
+                }
+              />
+            </View>
+          ) : null}
 
           <View style={styles.commentSection} onLayout={handleCommentSectionLayout}>
             <Text style={styles.commentHeader}>{l('댓글')}</Text>
@@ -2776,36 +2853,44 @@ export function StoryScreen() {
               </View>
             )}
             {!editingCommentId && !replyTarget && (
-              <View style={styles.commentInputRow}>
-                <FormTextInput
-                  ref={commentInputRef}
-                  style={styles.commentInput}
-                  placeholder={l('댓글 내용 (최대 {limit}자)', {
-                    limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
-                  })}
-                  placeholderTextColor={colors.gray3}
-                  value={commentInput}
-                  onChangeText={handleChangeCommentInput}
-                  multiline
-                  maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
-                  overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
-                    limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
-                  })}
-                  onFocus={handleFocusCommentInput}
+              <View style={styles.commentComposerBlock}>
+                <View style={styles.commentInputRow}>
+                  <FormTextInput
+                    ref={commentInputRef}
+                    style={styles.commentInput}
+                    placeholder={l('댓글 내용 (최대 {limit}자)', {
+                      limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                    })}
+                    placeholderTextColor={colors.gray3}
+                    value={commentInput}
+                    onChangeText={handleChangeCommentInput}
+                    multiline
+                    maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
+                    overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
+                      limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                    })}
+                    onFocus={handleFocusCommentInput}
+                    editable={!submittingComment}
+                  />
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.commentSubmit,
+                      isCommentSubmitDisabled && styles.commentSubmitDisabled,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={handleSubmitComment}
+                    disabled={isCommentSubmitDisabled}
+                  >
+                    <Text style={styles.commentSubmitText}>
+                      {submittingComment ? l('처리 중') : l('등록')}
+                    </Text>
+                  </Pressable>
+                </View>
+                <ImageAttachmentPicker
+                  controller={commentAttachments}
+                  compact
+                  disabled={submittingComment}
                 />
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.commentSubmit,
-                    isCommentSubmitDisabled && styles.commentSubmitDisabled,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={handleSubmitComment}
-                  disabled={isCommentSubmitDisabled}
-                >
-                  <Text style={styles.commentSubmitText}>
-                    {l('등록')}
-                  </Text>
-                </Pressable>
               </View>
             )}
 
@@ -2868,6 +2953,7 @@ export function StoryScreen() {
                               limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
                             })}
                             onFocus={handleFocusInlineEditCommentInput}
+                            editable={!submittingComment}
                           />
                           <Pressable
                             style={({ pressed }) => [
@@ -2879,10 +2965,15 @@ export function StoryScreen() {
                             disabled={isCommentSubmitDisabled}
                           >
                             <Text style={styles.commentSubmitText}>
-                              {l('수정')}
+                              {submittingComment ? l('처리 중') : l('수정')}
                             </Text>
                           </Pressable>
                         </View>
+                        <ImageAttachmentPicker
+                          controller={commentAttachments}
+                          compact
+                          disabled={submittingComment}
+                        />
                         <Pressable
                           style={({ pressed }) => [
                             styles.commentEditCancelButton,
@@ -2896,39 +2987,56 @@ export function StoryScreen() {
                         </Pressable>
                       </View>
                     ) : (
-                      <Text style={styles.commentText}>{comment.text}</Text>
+                      <>
+                        <Text style={styles.commentText}>{comment.text}</Text>
+                        <ImageGallery
+                          imageUrls={comment.imageUrls}
+                          compact
+                          onPressImage={(index) =>
+                            setImageViewer({ imageUrls: comment.imageUrls, index })
+                          }
+                        />
+                      </>
                     )}
                     {!editingCommentId && replyTarget?.commentKey === comment.id && (
-                      <View style={styles.inlineReplyRow}>
-                        <FormTextInput
-                          ref={inlineReplyInputRef}
-                          style={styles.commentInput}
-                          placeholder={l('대댓글 내용 (최대 {limit}자)', {
-                            limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
-                          })}
-                          placeholderTextColor={colors.gray3}
-                          value={commentInput}
-                          onChangeText={handleChangeCommentInput}
-                          multiline
-                          maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
-                          overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
-                            limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
-                          })}
-                          onFocus={handleFocusInlineReplyInput}
+                      <View style={styles.commentComposerBlock}>
+                        <View style={styles.inlineReplyRow}>
+                          <FormTextInput
+                            ref={inlineReplyInputRef}
+                            style={styles.commentInput}
+                            placeholder={l('대댓글 내용 (최대 {limit}자)', {
+                              limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                            })}
+                            placeholderTextColor={colors.gray3}
+                            value={commentInput}
+                            onChangeText={handleChangeCommentInput}
+                            multiline
+                            maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
+                            overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
+                              limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                            })}
+                            onFocus={handleFocusInlineReplyInput}
+                            editable={!submittingComment}
+                          />
+                          <Pressable
+                            style={({ pressed }) => [
+                              styles.commentSubmit,
+                              isCommentSubmitDisabled && styles.commentSubmitDisabled,
+                              pressed && styles.pressed,
+                            ]}
+                            onPress={handleSubmitComment}
+                            disabled={isCommentSubmitDisabled}
+                          >
+                            <Text style={styles.commentSubmitText}>
+                              {submittingComment ? l('처리 중') : l('등록')}
+                            </Text>
+                          </Pressable>
+                        </View>
+                        <ImageAttachmentPicker
+                          controller={commentAttachments}
+                          compact
+                          disabled={submittingComment}
                         />
-                        <Pressable
-                          style={({ pressed }) => [
-                            styles.commentSubmit,
-                            isCommentSubmitDisabled && styles.commentSubmitDisabled,
-                            pressed && styles.pressed,
-                          ]}
-                          onPress={handleSubmitComment}
-                          disabled={isCommentSubmitDisabled}
-                        >
-                          <Text style={styles.commentSubmitText}>
-                            {l('등록')}
-                          </Text>
-                        </Pressable>
                       </View>
                     )}
                   </View>
@@ -2968,6 +3076,16 @@ export function StoryScreen() {
           onClose={closeReportModal}
           onSubmit={submitReport}
         />
+        {imageViewer ? (
+          <ImageViewerModal
+            imageUrls={imageViewer.imageUrls}
+            index={imageViewer.index}
+            onIndexChange={(index) =>
+              setImageViewer((current) => (current ? { ...current, index } : null))
+            }
+            onClose={() => setImageViewer(null)}
+          />
+        ) : null}
         </KeyboardAvoidingView>
         </Animated.View>
       </ScreenLayout>
@@ -3096,6 +3214,13 @@ export function StoryScreen() {
             <Text style={styles.bodyCounterText}>
               {body.length}/{INPUT_LIMITS.BOOK_STORY_CONTENT}
             </Text>
+            <View style={styles.composeAttachmentSection}>
+              <Text style={styles.composeAttachmentTitle}>{l('사진 첨부')}</Text>
+              <ImageAttachmentPicker
+                controller={storyAttachments}
+                disabled={submittingStory}
+              />
+            </View>
           </View>
         </ScrollView>
         <View
@@ -3425,6 +3550,7 @@ function mapRemoteStoryToStory(
     title: item.title,
     body: item.description,
     fullText: item.description,
+    imageUrls: item.imageUrls,
     likes: item.likeCount,
     comments: item.commentCount,
     tag: l('전체'),
@@ -3446,6 +3572,7 @@ function mapRemoteCommentToComment(
     profileImageUrl: normalizeRemoteImageUrl(comment.profileImageUrl),
     createdAt: comment.createdAt,
     text: comment.deleted ? l('삭제된 댓글입니다.') : comment.content,
+    imageUrls: comment.deleted ? [] : comment.imageUrls,
     mine: comment.mine,
     deleted: comment.deleted,
     replyTo: typeof comment.parentCommentId === 'number' ? `comment-${comment.parentCommentId}` : undefined,
@@ -3853,6 +3980,17 @@ const styles = StyleSheet.create({
   storyMeta: {
     flex: 1,
   },
+  composeAttachmentSection: {
+    marginTop: spacing.xs,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.gray2,
+    gap: spacing.sm,
+  },
+  composeAttachmentTitle: {
+    ...typography.body1_2,
+    color: colors.gray6,
+  },
   storyAuthor: {
     ...typography.body1_2,
     color: colors.gray6,
@@ -4064,6 +4202,9 @@ const styles = StyleSheet.create({
     color: colors.gray6,
     marginTop: spacing.xs,
   },
+  detailImageGallery: {
+    marginTop: spacing.md,
+  },
   detailBodyLoading: {
     marginTop: spacing.xs,
     gap: spacing.xs,
@@ -4113,6 +4254,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: spacing.xs,
+  },
+  commentComposerBlock: {
+    gap: spacing.sm,
   },
   commentInput: {
     flex: 1,

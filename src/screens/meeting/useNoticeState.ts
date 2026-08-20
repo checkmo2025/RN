@@ -27,6 +27,7 @@ import {
 import { showToast } from '../../utils/toast';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { useImageAttachments } from '../../hooks/useImageAttachments';
 import type {
   AsyncLoadStatus,
   BookshelfItem,
@@ -181,6 +182,14 @@ export function useNoticeState({
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
   const [noticeCommentInput, setNoticeCommentInput] = useState('');
   const [editingNoticeCommentId, setEditingNoticeCommentId] = useState<string | null>(null);
+  const noticeCommentAttachments = useImageAttachments(
+    [],
+    INPUT_LIMITS.NOTICE_COMMENT_IMAGE_COUNT,
+  );
+  const {
+    reset: resetNoticeCommentAttachments,
+    resolveImageUrls: resolveNoticeCommentImageUrls,
+  } = noticeCommentAttachments;
   const [submittingNotice, setSubmittingNotice] = useState(false);
   const [submittingNoticeComment, setSubmittingNoticeComment] = useState(false);
   const [noticeItems, setNoticeItems] = useState<NoticeItem[]>([]);
@@ -256,6 +265,12 @@ export function useNoticeState({
     () => noticeItems.find((item) => item.id === selectedNoticeId) ?? null,
     [noticeItems, selectedNoticeId],
   );
+
+  useEffect(() => {
+    setNoticeCommentInput('');
+    setEditingNoticeCommentId(null);
+    resetNoticeCommentAttachments([]);
+  }, [resetNoticeCommentAttachments, selectedNoticeId]);
 
   const currentNoticeComments = useMemo(
     () => (selectedNotice ? (noticeCommentsById[selectedNotice.id] ?? []) : []),
@@ -755,20 +770,22 @@ export function useNoticeState({
     const submit = async () => {
       setSubmittingNoticeComment(true);
       try {
+        const imageUrls = await resolveNoticeCommentImageUrls('NOTICE_COMMENT');
         const editingComment = currentNoticeComments.find(
           (comment) => comment.id === editingNoticeCommentId,
         );
         const commentId = editingComment?.remoteId;
 
         if (typeof commentId === 'number') {
-          await updateClubNoticeComment(clubId, noticeId, commentId, { content });
+          await updateClubNoticeComment(clubId, noticeId, commentId, { content, imageUrls });
         } else {
-          await createClubNoticeComment(clubId, noticeId, { content });
+          await createClubNoticeComment(clubId, noticeId, { content, imageUrls });
         }
 
         await refreshNoticeComments(clubId, noticeId, selectedNotice.id);
         setNoticeCommentInput('');
         setEditingNoticeCommentId(null);
+        resetNoticeCommentAttachments([]);
       } catch (error) {
         if (!(error instanceof ApiError)) {
           showToast(
@@ -788,9 +805,17 @@ export function useNoticeState({
     isManagedClub,
     l,
     noticeCommentInput,
+    resetNoticeCommentAttachments,
+    resolveNoticeCommentImageUrls,
     refreshNoticeComments,
     selectedNotice,
   ]);
+
+  const handleCancelNoticeCommentEdit = useCallback(() => {
+    setNoticeCommentInput('');
+    setEditingNoticeCommentId(null);
+    resetNoticeCommentAttachments([]);
+  }, [resetNoticeCommentAttachments]);
 
   const handlePressCommentMenu = useCallback(
     (comment: NoticeComment, event: GestureResponderEvent) => {
@@ -812,6 +837,7 @@ export function useNoticeState({
       if (action === 'edit') {
         setNoticeCommentInput(comment.content);
         setEditingNoticeCommentId(comment.id);
+        resetNoticeCommentAttachments(comment.imageUrls);
         return;
       }
 
@@ -851,6 +877,7 @@ export function useNoticeState({
                 if (editingNoticeCommentId === comment.id) {
                   setNoticeCommentInput('');
                   setEditingNoticeCommentId(null);
+                  resetNoticeCommentAttachments([]);
                 }
               } catch (error) {
                 if (!(error instanceof ApiError)) {
@@ -871,6 +898,7 @@ export function useNoticeState({
       isManagedClub,
       l,
       noticeCommentMenu,
+      resetNoticeCommentAttachments,
       refreshNoticeComments,
       selectedNotice,
       setReportModal,
@@ -1379,6 +1407,7 @@ export function useNoticeState({
         }
         setNoticeCommentInput('');
         setEditingNoticeCommentId(null);
+        resetNoticeCommentAttachments([]);
         setNoticeMenuVisible(false);
         setLatestNoticeId(typeof latestNotice?.id === 'number' ? latestNotice.id : null);
         setManagedGroup((prev) => ({ ...prev, notice: latestNotice?.title }));
@@ -1419,6 +1448,7 @@ export function useNoticeState({
     noticeDraft,
     noticeItems,
     onNoticeSubmitSuccess,
+    resetNoticeCommentAttachments,
     setLatestNoticeId,
     setManagedGroup,
     submittingNotice,
@@ -1532,8 +1562,10 @@ export function useNoticeState({
     setNoticePage(1);
     setSelectedNoticeId(null);
     setNoticeCommentInput('');
+    setEditingNoticeCommentId(null);
+    resetNoticeCommentAttachments([]);
     setVoteVotersModal(null);
-  }, [resetNoticeLoadState]);
+  }, [resetNoticeCommentAttachments, resetNoticeLoadState]);
 
   return {
     noticePage,
@@ -1546,6 +1578,7 @@ export function useNoticeState({
     setEditingNoticeCommentId,
     submittingNotice,
     submittingNoticeComment,
+    noticeCommentAttachments,
     noticeItems,
     setNoticeItems,
     noticeCommentsById,
@@ -1595,6 +1628,7 @@ export function useNoticeState({
     retryNoticeComments,
     handleOpenNoticeDetailByRemoteId,
     handleSubmitNoticeComment,
+    handleCancelNoticeCommentEdit,
     handlePressCommentMenu,
     handleSelectNoticeCommentMenuAction,
     handleReportNotice,

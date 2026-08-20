@@ -1,5 +1,5 @@
 import { ApiEnvelope, requestJson, unwrapResult } from './http';
-import { normalizeRemoteImageUrl } from '../../utils/image';
+import { normalizeRemoteImageUrl, normalizeRemoteImageUrls } from '../../utils/image';
 import { encodeNicknamePathSegment } from '../../utils/nickname';
 
 type UnknownRecord = Record<string, unknown>;
@@ -38,6 +38,7 @@ export type RemoteStoryComment = {
   nickname: string;
   profileImageUrl?: string;
   content: string;
+  imageUrls: string[];
   createdAt?: string;
   parentCommentId?: number;
   deleted: boolean;
@@ -48,6 +49,7 @@ export type RemoteStoryItem = {
   id: number;
   title: string;
   description: string;
+  imageUrls: string[];
   nickname: string;
   profileImageUrl?: string;
   createdAt?: string;
@@ -211,6 +213,7 @@ function normalizeStoryItem(raw: unknown): RemoteStoryItem | null {
       toStringValue(firstDefined(record.title, record.bookStoryTitle, record.storyTitle)) ??
       '제목 없음',
     description: toStringValue(firstDefined(record.description, record.content, record.body)) ?? '',
+    imageUrls: normalizeRemoteImageUrls(record.imageUrls),
     nickname,
     profileImageUrl: normalizeRemoteImageUrl(
       toStringValue(
@@ -298,6 +301,7 @@ function normalizeStoryCommentTree(raw: unknown, fallbackParentCommentId?: numbe
       ),
     ),
     content: toStringValue(firstDefined(record.content, record.comment, record.description)) ?? '',
+    imageUrls: normalizeRemoteImageUrls(record.imageUrls),
     createdAt: toStringValue(firstDefined(record.createdAt, record.updatedAt)),
     parentCommentId,
     deleted: toBoolean(firstDefined(record.deleted, record.isDeleted)) ?? false,
@@ -547,6 +551,7 @@ export async function createBookStory(payload: {
   isbn: string;
   title: string;
   description: string;
+  imageUrls?: string[];
   status?: BookStoryStatus;
 }): Promise<number> {
   const response = await requestJson<ApiEnvelope<unknown>>('/book-stories', {
@@ -555,6 +560,7 @@ export async function createBookStory(payload: {
       isbn: payload.isbn,
       title: payload.title,
       description: payload.description,
+      ...(payload.imageUrls !== undefined && { imageUrls: payload.imageUrls }),
       status: payload.status ?? 'PUBLISHED',
     },
   });
@@ -568,6 +574,7 @@ export async function updateBookStory(
     description: string;
     title?: string;
     isbn?: string;
+    imageUrls?: string[];
     status?: BookStoryStatus;
   },
 ): Promise<void> {
@@ -577,6 +584,7 @@ export async function updateBookStory(
       description: payload.description,
       ...(payload.title !== undefined && { title: payload.title }),
       ...(payload.isbn !== undefined && { isbn: payload.isbn }),
+      ...(payload.imageUrls !== undefined && { imageUrls: payload.imageUrls }),
       ...(payload.status !== undefined && { status: payload.status }),
     },
   });
@@ -598,6 +606,7 @@ export async function createBookStoryComment(
   bookStoryId: number,
   content: string,
   parentCommentId?: number,
+  imageUrls?: string[],
 ): Promise<void> {
   await requestJson<unknown>(`/book-stories/${bookStoryId}/comments`, {
     method: 'POST',
@@ -606,6 +615,7 @@ export async function createBookStoryComment(
     },
     body: {
       content,
+      ...(imageUrls !== undefined && { imageUrls }),
     },
   });
 }
@@ -614,11 +624,13 @@ export async function updateBookStoryComment(
   bookStoryId: number,
   commentId: number,
   content: string,
+  imageUrls?: string[],
 ): Promise<void> {
   await requestJson<unknown>(`/book-stories/${bookStoryId}/comments/${commentId}`, {
     method: 'PATCH',
     body: {
       content,
+      ...(imageUrls !== undefined && { imageUrls }),
     },
   });
 }

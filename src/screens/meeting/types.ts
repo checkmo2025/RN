@@ -56,6 +56,7 @@ export type NoticeComment = {
   authorProfileImageUrl?: string;
   date: string;
   content: string;
+  imageUrls: string[];
   mine?: boolean;
   isAuthor?: boolean;
 };

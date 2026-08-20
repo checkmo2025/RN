@@ -51,3 +51,11 @@ export function normalizeRemoteImageUrl(url?: string | null): string | undefined
 
   return undefined;
 }
+
+export function normalizeRemoteImageUrls(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => normalizeRemoteImageUrl(typeof item === 'string' ? item : undefined))
+    .filter((item): item is string => Boolean(item));
+}

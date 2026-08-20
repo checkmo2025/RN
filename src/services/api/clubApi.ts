@@ -1,6 +1,6 @@
 import { ApiEnvelope, ApiError, fetchApi, requestJson, unwrapResult } from './http';
 import { asRecord, toBooleanValue, toNumberValue, toStringValue, firstDefined } from './parseUtils';
-import { normalizeRemoteImageUrl } from '../../utils/image';
+import { normalizeRemoteImageUrl, normalizeRemoteImageUrls } from '../../utils/image';
 
 export type ClubCategoryCode =
   | 'FICTION_POETRY_DRAMA'
@@ -268,6 +268,7 @@ export type ClubNoticeComment = {
   nickname: string;
   profileImageUrl?: string;
   content: string;
+  imageUrls: string[];
   createdAt?: string;
   updatedAt?: string;
 };
@@ -315,6 +316,7 @@ export type UpdateClubNoticePayload = {
 
 export type CreateClubNoticeCommentPayload = {
   content: string;
+  imageUrls?: string[];
 };
 
 export type SubmitClubVotePayload = {
@@ -978,6 +980,7 @@ function normalizeClubNoticeComment(raw: unknown): ClubNoticeComment | null {
     nickname: authorInfo.nickname,
     profileImageUrl: authorInfo.profileImageUrl,
     content: toStringValue(record.content) ?? '',
+    imageUrls: normalizeRemoteImageUrls(record.imageUrls),
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
   };

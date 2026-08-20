@@ -167,6 +167,7 @@ type StoryCard = {
   liked: boolean;
   comments: number;
   status?: 'DRAFT' | 'PUBLISHED';
+  imageUrls: string[];
   bookInfo?: {
     isbn?: string;
     title?: string;
@@ -746,6 +747,7 @@ export function MyPageScreen() {
             liked: item.liked ?? false,
             comments: item.commentCount ?? 0,
             status: item.status,
+            imageUrls: item.imageUrls,
             bookInfo: item.bookInfo,
           }));
           setStories(mapped);
@@ -1381,6 +1383,7 @@ export function MyPageScreen() {
                 openDraftTitle: item.title,
                 openDraftBody: item.excerpt,
                 openDraftBook: item.bookInfo,
+                openDraftImageUrls: item.imageUrls,
                 openDraftReturnTarget: 'MY_STORIES',
               });
             } else {

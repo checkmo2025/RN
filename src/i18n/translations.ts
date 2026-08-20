@@ -165,6 +165,18 @@ const enLiteralMessages: Record<string, string> = {
   '삭제 중...': 'Deleting...',
   '처리 중...': 'Processing...',
   '처리 중': 'Processing',
+  '사진 첨부': 'Attach Photos',
+  '이미지 첨부': 'Attach Images',
+  '이미지는 최대 {limit}개까지 첨부할 수 있습니다.':
+    'You can attach up to {limit} images.',
+  '지원하지 않는 이미지 형식은 첨부할 수 없습니다.':
+    'Unsupported image formats cannot be attached.',
+  '첨부 이미지 {index} 삭제': 'Remove attached image {index}',
+  '첨부 이미지 {index} 크게 보기': 'View attached image {index}',
+  '이미지 순서를 앞으로 이동': 'Move image earlier',
+  '이미지 순서를 뒤로 이동': 'Move image later',
+  '댓글은 등록되었지만 최신 목록을 불러오지 못했습니다.':
+    'The comment was submitted, but the latest list could not be loaded.',
   '입력': 'Submit',
   '수정': 'Edit',
   '삭제': 'Delete',
