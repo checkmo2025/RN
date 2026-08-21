@@ -3221,41 +3221,43 @@ export function StoryScreen() {
             <Text style={styles.titleCounterText}>
               {title.length}/{INPUT_LIMITS.BOOK_STORY_TITLE}
             </Text>
-            <View style={styles.storyBodyInputWithAttachment}>
-              <FormTextInput
-                ref={bodyInputRef}
-                value={body}
-                onChangeText={handleChangeStoryBody}
-                placeholder={l('자신의 책이야기를 들려주세요. (최대 {limit}자)', {
-                  limit: INPUT_LIMITS.BOOK_STORY_CONTENT,
-                })}
-                placeholderTextColor={colors.gray3}
-                style={[styles.bodyInput, styles.bodyInputAttachmentPadding]}
-                multiline
-                scrollEnabled={false}
-                textAlignVertical="top"
-                onFocus={handleFocusStoryBodyInput}
-                onBlur={handleBlurStoryBodyInput}
-                onContentSizeChange={handleStoryBodyContentSizeChange}
-                maxLength={INPUT_LIMITS.BOOK_STORY_CONTENT}
-                overLimitMessage={l('책이야기 본문은 {limit}자 이하여야 합니다.', {
-                  limit: INPUT_LIMITS.BOOK_STORY_CONTENT,
-                })}
-              />
-              <View style={styles.storyAttachmentButton}>
-                <ImageAttachmentButton
-                  controller={storyAttachments}
-                  disabled={submittingStory}
-                  variant="embedded"
-                />
-              </View>
-            </View>
+            <FormTextInput
+              ref={bodyInputRef}
+              value={body}
+              onChangeText={handleChangeStoryBody}
+              placeholder={l('자신의 책이야기를 들려주세요. (최대 {limit}자)', {
+                limit: INPUT_LIMITS.BOOK_STORY_CONTENT,
+              })}
+              placeholderTextColor={colors.gray3}
+              style={styles.bodyInput}
+              multiline
+              scrollEnabled={false}
+              textAlignVertical="top"
+              onFocus={handleFocusStoryBodyInput}
+              onBlur={handleBlurStoryBodyInput}
+              onContentSizeChange={handleStoryBodyContentSizeChange}
+              maxLength={INPUT_LIMITS.BOOK_STORY_CONTENT}
+              overLimitMessage={l('책이야기 본문은 {limit}자 이하여야 합니다.', {
+                limit: INPUT_LIMITS.BOOK_STORY_CONTENT,
+              })}
+            />
             <Text style={styles.bodyCounterText}>
               {body.length}/{INPUT_LIMITS.BOOK_STORY_CONTENT}
             </Text>
+            <View style={styles.storyAttachmentRow}>
+              <ImageAttachmentButton
+                controller={storyAttachments}
+                disabled={submittingStory}
+                variant="embedded"
+              />
+              <Text style={styles.storyAttachmentCounter}>
+                {storyAttachments.items.length}/{storyAttachments.maxCount}
+              </Text>
+            </View>
             <ImageAttachmentPreviewList
               controller={storyAttachments}
               disabled={submittingStory}
+              showCounter={false}
             />
           </View>
         </ScrollView>
@@ -3292,7 +3294,7 @@ export function StoryScreen() {
                   : l('처리 중...')
                 : editingStoryId
                   ? l('수정하기')
-                  : l('등록/임시저장')}
+                  : l('등록·임시저장')}
             </Text>
           </Pressable>
         </View>
@@ -3984,23 +3986,24 @@ const styles = StyleSheet.create({
     paddingRight: spacing.lg,
     paddingBottom: spacing.lg,
   },
-  storyBodyInputWithAttachment: {
-    position: 'relative',
-  },
-  bodyInputAttachmentPadding: {
-    paddingRight: spacing.xxl + spacing.xl,
-    paddingBottom: spacing.xxl + spacing.lg,
-  },
-  storyAttachmentButton: {
-    position: 'absolute',
-    right: 0,
-    bottom: spacing.xxs,
-  },
   bodyCounterText: {
     ...typography.body2_3,
     color: colors.gray4,
     textAlign: 'right',
     marginTop: spacing.xxs,
+  },
+  storyAttachmentRow: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.gray2,
+  },
+  storyAttachmentCounter: {
+    ...typography.body2_3,
+    color: colors.gray4,
   },
   formActions: {
     flexDirection: 'row',

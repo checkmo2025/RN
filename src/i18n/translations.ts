@@ -311,6 +311,7 @@ const enLiteralMessages: Record<string, string> = {
   '임시저장되었습니다.': 'Draft saved.',
   '임시저장에 실패했습니다.': 'Could not save draft.',
   '등록': 'Submit',
+  '등록·임시저장': 'Submit · Save Draft',
   '책이야기를 등록했습니다.': 'Book story posted.',
   '책이야기를 수정했습니다.': 'Book story updated.',
   '책이야기를 삭제했습니다.': 'Book story deleted.',
