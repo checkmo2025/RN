@@ -12,86 +12,139 @@ type Props = {
   disabled?: boolean;
 };
 
-export function ImageAttachmentPicker({ controller, compact = false, disabled = false }: Props) {
+type ButtonProps = Pick<Props, 'controller' | 'disabled'> & {
+  variant?: 'labeled' | 'embedded';
+};
+
+export function ImageAttachmentButton({
+  controller,
+  disabled = false,
+  variant = 'labeled',
+}: ButtonProps) {
   const { l } = useLanguage();
   const blocked = disabled || controller.isUploading;
   const atLimit = controller.items.length >= controller.maxCount;
+  const embedded = variant === 'embedded';
 
+  return (
+    <Pressable
+      style={[
+        styles.addButton,
+        embedded && styles.embeddedButton,
+        (blocked || atLimit) && styles.disabled,
+      ]}
+      onPress={() => void controller.pickFromLibrary()}
+      disabled={blocked || atLimit}
+      accessibilityRole="button"
+      accessibilityLabel={l('이미지 첨부')}
+    >
+      {controller.isUploading ? (
+        <ActivityIndicator size="small" color={colors.primary1} />
+      ) : (
+        <MaterialIcons
+          name="add-photo-alternate"
+          size={embedded ? 22 : 19}
+          color={colors.primary1}
+        />
+      )}
+      {!embedded ? (
+        <Text style={styles.addButtonText}>
+          {controller.isUploading ? l('업로드 중...') : l('이미지 첨부')}
+        </Text>
+      ) : null}
+    </Pressable>
+  );
+}
+
+type PreviewListProps = Props & {
+  showCounter?: boolean;
+};
+
+export function ImageAttachmentPreviewList({
+  controller,
+  compact = false,
+  disabled = false,
+  showCounter = true,
+}: PreviewListProps) {
+  const { l } = useLanguage();
+  const blocked = disabled || controller.isUploading;
+  if (controller.items.length === 0) return null;
+
+  return (
+    <View style={styles.previewContainer}>
+      {showCounter ? (
+        <Text style={styles.previewCounter}>
+          {controller.items.length}/{controller.maxCount}
+        </Text>
+      ) : null}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.list}
+        keyboardShouldPersistTaps="handled"
+      >
+        {controller.items.map((item, index) => (
+          <View
+            key={item.id}
+            style={[styles.item, compact ? styles.itemCompact : styles.itemRegular]}
+          >
+            <Image source={{ uri: item.previewUri }} style={styles.image} resizeMode="cover" />
+            <Pressable
+              style={styles.removeButton}
+              onPress={() => controller.remove(item.id)}
+              disabled={blocked}
+              accessibilityRole="button"
+              accessibilityLabel={l('첨부 이미지 {index} 삭제', { index: index + 1 })}
+            >
+              <MaterialIcons name="close" size={15} color={colors.white} />
+            </Pressable>
+            {controller.items.length > 1 ? (
+              <View style={styles.moveRow}>
+                <Pressable
+                  style={[styles.moveButton, index === 0 && styles.moveButtonDisabled]}
+                  onPress={() => controller.move(item.id, -1)}
+                  disabled={blocked || index === 0}
+                  accessibilityRole="button"
+                  accessibilityLabel={l('이미지 순서를 앞으로 이동')}
+                >
+                  <MaterialIcons name="chevron-left" size={18} color={colors.white} />
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.moveButton,
+                    index === controller.items.length - 1 && styles.moveButtonDisabled,
+                  ]}
+                  onPress={() => controller.move(item.id, 1)}
+                  disabled={blocked || index === controller.items.length - 1}
+                  accessibilityRole="button"
+                  accessibilityLabel={l('이미지 순서를 뒤로 이동')}
+                >
+                  <MaterialIcons name="chevron-right" size={18} color={colors.white} />
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+export function ImageAttachmentPicker({ controller, compact = false, disabled = false }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable
-          style={[styles.addButton, (blocked || atLimit) && styles.disabled]}
-          onPress={() => void controller.pickFromLibrary()}
-          disabled={blocked || atLimit}
-          accessibilityRole="button"
-          accessibilityLabel={l('이미지 첨부')}
-        >
-          {controller.isUploading ? (
-            <ActivityIndicator size="small" color={colors.primary1} />
-          ) : (
-            <MaterialIcons name="add-photo-alternate" size={19} color={colors.primary1} />
-          )}
-          <Text style={styles.addButtonText}>
-            {controller.isUploading ? l('업로드 중...') : l('이미지 첨부')}
-          </Text>
-        </Pressable>
+        <ImageAttachmentButton controller={controller} disabled={disabled} />
         <Text style={styles.counter}>
           {controller.items.length}/{controller.maxCount}
         </Text>
       </View>
-
-      {controller.items.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.list}
-          keyboardShouldPersistTaps="handled"
-        >
-          {controller.items.map((item, index) => (
-            <View
-              key={item.id}
-              style={[styles.item, compact ? styles.itemCompact : styles.itemRegular]}
-            >
-              <Image source={{ uri: item.previewUri }} style={styles.image} resizeMode="cover" />
-              <Pressable
-                style={styles.removeButton}
-                onPress={() => controller.remove(item.id)}
-                disabled={blocked}
-                accessibilityRole="button"
-                accessibilityLabel={l('첨부 이미지 {index} 삭제', { index: index + 1 })}
-              >
-                <MaterialIcons name="close" size={15} color={colors.white} />
-              </Pressable>
-              {controller.items.length > 1 ? (
-                <View style={styles.moveRow}>
-                  <Pressable
-                    style={[styles.moveButton, index === 0 && styles.moveButtonDisabled]}
-                    onPress={() => controller.move(item.id, -1)}
-                    disabled={blocked || index === 0}
-                    accessibilityRole="button"
-                    accessibilityLabel={l('이미지 순서를 앞으로 이동')}
-                  >
-                    <MaterialIcons name="chevron-left" size={18} color={colors.white} />
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.moveButton,
-                      index === controller.items.length - 1 && styles.moveButtonDisabled,
-                    ]}
-                    onPress={() => controller.move(item.id, 1)}
-                    disabled={blocked || index === controller.items.length - 1}
-                    accessibilityRole="button"
-                    accessibilityLabel={l('이미지 순서를 뒤로 이동')}
-                  >
-                    <MaterialIcons name="chevron-right" size={18} color={colors.white} />
-                  </Pressable>
-                </View>
-              ) : null}
-            </View>
-          ))}
-        </ScrollView>
-      ) : null}
+      <ImageAttachmentPreviewList
+        controller={controller}
+        compact={compact}
+        disabled={disabled}
+        showCounter={false}
+      />
     </View>
   );
 }
@@ -118,6 +171,17 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     backgroundColor: colors.white,
   },
+  embeddedButton: {
+    width: 44,
+    height: 44,
+    minHeight: 44,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+  },
   disabled: {
     opacity: 0.5,
   },
@@ -127,6 +191,14 @@ const styles = StyleSheet.create({
   },
   counter: {
     ...typography.body2_3,
+    color: colors.gray4,
+  },
+  previewContainer: {
+    gap: spacing.xs,
+  },
+  previewCounter: {
+    ...typography.body2_3,
+    alignSelf: 'flex-end',
     color: colors.gray4,
   },
   list: {

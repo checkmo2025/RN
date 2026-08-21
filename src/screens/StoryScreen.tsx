@@ -59,7 +59,10 @@ import { ToastHost } from '../components/common/ToastHost';
 import BookStoryFeedCard from '../components/feature/bookstory/BookStoryFeedCard';
 import { BookStoryFeedCardSkeleton } from '../components/feature/bookstory/BookStoryFeedCardSkeleton';
 import { SkeletonBox } from '../components/common/SkeletonBox';
-import { ImageAttachmentPicker } from '../components/common/ImageAttachmentPicker';
+import {
+  ImageAttachmentButton,
+  ImageAttachmentPreviewList,
+} from '../components/common/ImageAttachmentPicker';
 import { ImageGallery } from '../components/common/ImageGallery';
 import { ImageViewerModal } from '../components/common/ImageViewerModal';
 import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
@@ -2855,23 +2858,32 @@ export function StoryScreen() {
             {!editingCommentId && !replyTarget && (
               <View style={styles.commentComposerBlock}>
                 <View style={styles.commentInputRow}>
-                  <FormTextInput
-                    ref={commentInputRef}
-                    style={styles.commentInput}
-                    placeholder={l('댓글 내용 (최대 {limit}자)', {
-                      limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
-                    })}
-                    placeholderTextColor={colors.gray3}
-                    value={commentInput}
-                    onChangeText={handleChangeCommentInput}
-                    multiline
-                    maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
-                    overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
-                      limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
-                    })}
-                    onFocus={handleFocusCommentInput}
-                    editable={!submittingComment}
-                  />
+                  <View style={styles.commentInputWithAttachment}>
+                    <FormTextInput
+                      ref={commentInputRef}
+                      style={[styles.commentInput, styles.commentInputAttachmentPadding]}
+                      placeholder={l('댓글 내용 (최대 {limit}자)', {
+                        limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                      })}
+                      placeholderTextColor={colors.gray3}
+                      value={commentInput}
+                      onChangeText={handleChangeCommentInput}
+                      multiline
+                      maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
+                      overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
+                        limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                      })}
+                      onFocus={handleFocusCommentInput}
+                      editable={!submittingComment}
+                    />
+                    <View style={styles.commentAttachmentButton}>
+                      <ImageAttachmentButton
+                        controller={commentAttachments}
+                        disabled={submittingComment}
+                        variant="embedded"
+                      />
+                    </View>
+                  </View>
                   <Pressable
                     style={({ pressed }) => [
                       styles.commentSubmit,
@@ -2886,7 +2898,7 @@ export function StoryScreen() {
                     </Text>
                   </Pressable>
                 </View>
-                <ImageAttachmentPicker
+                <ImageAttachmentPreviewList
                   controller={commentAttachments}
                   compact
                   disabled={submittingComment}
@@ -2933,28 +2945,37 @@ export function StoryScreen() {
                     {editingCommentId === comment.remoteId ? (
                       <View style={styles.inlineCommentEditBlock}>
                         <View style={styles.inlineReplyRow}>
-                          <FormTextInput
-                            ref={inlineEditCommentInputRef}
-                            style={styles.commentInput}
-                            placeholder={l(
-                              comment.replyTo
-                                ? '대댓글 수정 (최대 {limit}자)'
-                                : '댓글 수정 (최대 {limit}자)',
-                              {
+                          <View style={styles.commentInputWithAttachment}>
+                            <FormTextInput
+                              ref={inlineEditCommentInputRef}
+                              style={[styles.commentInput, styles.commentInputAttachmentPadding]}
+                              placeholder={l(
+                                comment.replyTo
+                                  ? '대댓글 수정 (최대 {limit}자)'
+                                  : '댓글 수정 (최대 {limit}자)',
+                                {
+                                  limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                                },
+                              )}
+                              placeholderTextColor={colors.gray3}
+                              value={commentInput}
+                              onChangeText={handleChangeCommentInput}
+                              multiline
+                              maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
+                              overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
                                 limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
-                              },
-                            )}
-                            placeholderTextColor={colors.gray3}
-                            value={commentInput}
-                            onChangeText={handleChangeCommentInput}
-                            multiline
-                            maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
-                            overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
-                              limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
-                            })}
-                            onFocus={handleFocusInlineEditCommentInput}
-                            editable={!submittingComment}
-                          />
+                              })}
+                              onFocus={handleFocusInlineEditCommentInput}
+                              editable={!submittingComment}
+                            />
+                            <View style={styles.commentAttachmentButton}>
+                              <ImageAttachmentButton
+                                controller={commentAttachments}
+                                disabled={submittingComment}
+                                variant="embedded"
+                              />
+                            </View>
+                          </View>
                           <Pressable
                             style={({ pressed }) => [
                               styles.commentSubmit,
@@ -2969,7 +2990,7 @@ export function StoryScreen() {
                             </Text>
                           </Pressable>
                         </View>
-                        <ImageAttachmentPicker
+                        <ImageAttachmentPreviewList
                           controller={commentAttachments}
                           compact
                           disabled={submittingComment}
@@ -3001,23 +3022,32 @@ export function StoryScreen() {
                     {!editingCommentId && replyTarget?.commentKey === comment.id && (
                       <View style={styles.commentComposerBlock}>
                         <View style={styles.inlineReplyRow}>
-                          <FormTextInput
-                            ref={inlineReplyInputRef}
-                            style={styles.commentInput}
-                            placeholder={l('대댓글 내용 (최대 {limit}자)', {
-                              limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
-                            })}
-                            placeholderTextColor={colors.gray3}
-                            value={commentInput}
-                            onChangeText={handleChangeCommentInput}
-                            multiline
-                            maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
-                            overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
-                              limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
-                            })}
-                            onFocus={handleFocusInlineReplyInput}
-                            editable={!submittingComment}
-                          />
+                          <View style={styles.commentInputWithAttachment}>
+                            <FormTextInput
+                              ref={inlineReplyInputRef}
+                              style={[styles.commentInput, styles.commentInputAttachmentPadding]}
+                              placeholder={l('대댓글 내용 (최대 {limit}자)', {
+                                limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                              })}
+                              placeholderTextColor={colors.gray3}
+                              value={commentInput}
+                              onChangeText={handleChangeCommentInput}
+                              multiline
+                              maxLength={INPUT_LIMITS.BOOK_STORY_COMMENT}
+                              overLimitMessage={l('댓글은 {limit}자 이하여야 합니다.', {
+                                limit: INPUT_LIMITS.BOOK_STORY_COMMENT,
+                              })}
+                              onFocus={handleFocusInlineReplyInput}
+                              editable={!submittingComment}
+                            />
+                            <View style={styles.commentAttachmentButton}>
+                              <ImageAttachmentButton
+                                controller={commentAttachments}
+                                disabled={submittingComment}
+                                variant="embedded"
+                              />
+                            </View>
+                          </View>
                           <Pressable
                             style={({ pressed }) => [
                               styles.commentSubmit,
@@ -3032,7 +3062,7 @@ export function StoryScreen() {
                             </Text>
                           </Pressable>
                         </View>
-                        <ImageAttachmentPicker
+                        <ImageAttachmentPreviewList
                           controller={commentAttachments}
                           compact
                           disabled={submittingComment}
@@ -3191,36 +3221,42 @@ export function StoryScreen() {
             <Text style={styles.titleCounterText}>
               {title.length}/{INPUT_LIMITS.BOOK_STORY_TITLE}
             </Text>
-            <FormTextInput
-              ref={bodyInputRef}
-              value={body}
-              onChangeText={handleChangeStoryBody}
-              placeholder={l('자신의 책이야기를 들려주세요. (최대 {limit}자)', {
-                limit: INPUT_LIMITS.BOOK_STORY_CONTENT,
-              })}
-              placeholderTextColor={colors.gray3}
-              style={styles.bodyInput}
-              multiline
-              scrollEnabled={false}
-              textAlignVertical="top"
-              onFocus={handleFocusStoryBodyInput}
-              onBlur={handleBlurStoryBodyInput}
-              onContentSizeChange={handleStoryBodyContentSizeChange}
-              maxLength={INPUT_LIMITS.BOOK_STORY_CONTENT}
-              overLimitMessage={l('책이야기 본문은 {limit}자 이하여야 합니다.', {
-                limit: INPUT_LIMITS.BOOK_STORY_CONTENT,
-              })}
-            />
+            <View style={styles.storyBodyInputWithAttachment}>
+              <FormTextInput
+                ref={bodyInputRef}
+                value={body}
+                onChangeText={handleChangeStoryBody}
+                placeholder={l('자신의 책이야기를 들려주세요. (최대 {limit}자)', {
+                  limit: INPUT_LIMITS.BOOK_STORY_CONTENT,
+                })}
+                placeholderTextColor={colors.gray3}
+                style={[styles.bodyInput, styles.bodyInputAttachmentPadding]}
+                multiline
+                scrollEnabled={false}
+                textAlignVertical="top"
+                onFocus={handleFocusStoryBodyInput}
+                onBlur={handleBlurStoryBodyInput}
+                onContentSizeChange={handleStoryBodyContentSizeChange}
+                maxLength={INPUT_LIMITS.BOOK_STORY_CONTENT}
+                overLimitMessage={l('책이야기 본문은 {limit}자 이하여야 합니다.', {
+                  limit: INPUT_LIMITS.BOOK_STORY_CONTENT,
+                })}
+              />
+              <View style={styles.storyAttachmentButton}>
+                <ImageAttachmentButton
+                  controller={storyAttachments}
+                  disabled={submittingStory}
+                  variant="embedded"
+                />
+              </View>
+            </View>
             <Text style={styles.bodyCounterText}>
               {body.length}/{INPUT_LIMITS.BOOK_STORY_CONTENT}
             </Text>
-            <View style={styles.composeAttachmentSection}>
-              <Text style={styles.composeAttachmentTitle}>{l('사진 첨부')}</Text>
-              <ImageAttachmentPicker
-                controller={storyAttachments}
-                disabled={submittingStory}
-              />
-            </View>
+            <ImageAttachmentPreviewList
+              controller={storyAttachments}
+              disabled={submittingStory}
+            />
           </View>
         </ScrollView>
         <View
@@ -3948,6 +3984,18 @@ const styles = StyleSheet.create({
     paddingRight: spacing.lg,
     paddingBottom: spacing.lg,
   },
+  storyBodyInputWithAttachment: {
+    position: 'relative',
+  },
+  bodyInputAttachmentPadding: {
+    paddingRight: spacing.xxl + spacing.xl,
+    paddingBottom: spacing.xxl + spacing.lg,
+  },
+  storyAttachmentButton: {
+    position: 'absolute',
+    right: 0,
+    bottom: spacing.xxs,
+  },
   bodyCounterText: {
     ...typography.body2_3,
     color: colors.gray4,
@@ -3979,17 +4027,6 @@ const styles = StyleSheet.create({
   },
   storyMeta: {
     flex: 1,
-  },
-  composeAttachmentSection: {
-    marginTop: spacing.xs,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.gray2,
-    gap: spacing.sm,
-  },
-  composeAttachmentTitle: {
-    ...typography.body1_2,
-    color: colors.gray6,
   },
   storyAuthor: {
     ...typography.body1_2,
@@ -4258,6 +4295,12 @@ const styles = StyleSheet.create({
   commentComposerBlock: {
     gap: spacing.sm,
   },
+  commentInputWithAttachment: {
+    position: 'relative',
+    flex: 1,
+    minHeight: 48,
+    maxHeight: 120,
+  },
   commentInput: {
     flex: 1,
     minHeight: 48,
@@ -4269,6 +4312,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     ...typography.body1_3,
     color: colors.gray6,
+  },
+  commentInputAttachmentPadding: {
+    paddingRight: spacing.xxl + spacing.xl,
+  },
+  commentAttachmentButton: {
+    position: 'absolute',
+    right: spacing.xxs,
+    bottom: spacing.xxs / 2,
   },
   commentSubmit: {
     paddingHorizontal: spacing.md,
