@@ -11,7 +11,7 @@ export const DEFAULT_DRAFT_PATH = path.resolve(
 );
 
 const FORBIDDEN_PATTERNS = [
-  /씨?발/u,
+  /씨발/u,
   /시발/u,
   /병신/u,
   /개새끼/u,

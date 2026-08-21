@@ -16,6 +16,7 @@ const REQUIRED_COLUMNS = [
   '저자',
   '컨셉',
   'ISBN',
+  '예정 일시 (KST)',
   '추가 지시',
   '처리 결과',
 ];
@@ -85,8 +86,9 @@ export async function readQueue(queuePath = DEFAULT_QUEUE_PATH, desiredPersona =
       author: values[2],
       persona: values[3],
       isbn: values[4].replaceAll('-', ''),
-      instruction: values[5],
-      result: values[6],
+      scheduledAt: values[5],
+      instruction: values[6],
+      result: values[7],
     });
   }
 
@@ -104,7 +106,7 @@ export async function readQueue(queuePath = DEFAULT_QUEUE_PATH, desiredPersona =
 export async function updateQueueItem(queue, item, { status = item.status, result }) {
   const values = [...item.values];
   values[0] = sanitizeCell(status);
-  values[6] = sanitizeCell(result);
+  values[7] = sanitizeCell(result);
   queue.lines[item.rowLineIndex] = `| ${values.join(' | ')} |`;
 
   const nextSource = queue.lines.join('\n');
