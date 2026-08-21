@@ -1868,7 +1868,7 @@ export function AuthFlowScreen({ mode = 'login', onClose, onLoginSuccess }: Prop
           <Text style={styles.linkText}>{l('아직 회원이 아니신가요? 회원가입하러가기')}</Text>
         </Pressable>
         <Pressable onPress={() => Linking.openURL(PUBLIC_ENV.SUPPORT_FORM_URL).catch(() => null)}>
-          <Text style={styles.linkText}>{l('고객센터/문의하기')}</Text>
+          <Text style={styles.linkText}>{l('고객센터 문의하기')}</Text>
         </Pressable>
       </View>
     </>,

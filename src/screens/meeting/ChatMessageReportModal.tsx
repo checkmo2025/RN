@@ -26,9 +26,9 @@ import type { MeetingChatReportTarget } from './useMeetingChatState';
 
 const reasonOptions: Array<{ type: ReportReason; label: string }> = [
   { type: 'GENERAL', label: '일반' },
-  { type: 'INSULT', label: '욕설/비방' },
-  { type: 'INAPPROPRIATE_CONTENT', label: '음란/부적절' },
-  { type: 'SPAM', label: '홍보/도배' },
+  { type: 'INSULT', label: '욕설·비방' },
+  { type: 'INAPPROPRIATE_CONTENT', label: '음란·부적절' },
+  { type: 'SPAM', label: '홍보·도배' },
 ];
 
 type Props = {

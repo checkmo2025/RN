@@ -24,9 +24,9 @@ import { useLanguage } from '../../contexts/LanguageContext';
 
 const reasonLabelByCode: Record<string, string> = {
   GENERAL: '일반',
-  INSULT: '욕설/비방',
-  INAPPROPRIATE_CONTENT: '음란/부적절',
-  SPAM: '홍보/도배',
+  INSULT: '욕설·비방',
+  INAPPROPRIATE_CONTENT: '음란·부적절',
+  SPAM: '홍보·도배',
 };
 
 export type ReportHistoryItem = {

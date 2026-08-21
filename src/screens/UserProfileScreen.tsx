@@ -1019,7 +1019,7 @@ export function UserProfileScreen() {
                   style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
                   onPress={() => setShowBlockReportModal(true)}
                 >
-                  <Text style={styles.secondaryButtonText}>{l('신고/차단')}</Text>
+                  <Text style={styles.secondaryButtonText}>{l('신고·차단')}</Text>
                 </Pressable>
               </View>
 
