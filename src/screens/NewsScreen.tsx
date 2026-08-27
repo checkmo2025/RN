@@ -39,7 +39,7 @@ import {
 import { NewsPromotionCarouselSkeleton } from '../components/feature/news/NewsPromotionCarouselSkeleton';
 import {
   fetchNewsDetail,
-  fetchNewsList,
+  fetchNewsFeed,
   type RemoteNewsDetail,
   type RemoteNewsSummary,
 } from '../services/api/newsApi';
@@ -47,7 +47,6 @@ import { fetchRecommendedBooks, type BookItem } from '../services/api/bookApi';
 import { ApiError } from '../services/api/http';
 import { formatKstDateLabel } from '../utils/date';
 import { showToast } from '../utils/toast';
-import { collectAllCursorPages } from '../utils/pagination';
 import { resolveApiError } from '../utils/resolveApiError';
 import { useEdgeBackSwipe } from '../hooks/useEdgeBackSwipe';
 import { useConsumeRouteParam } from '../hooks/useConsumeRouteParam';
@@ -127,7 +126,6 @@ function toDateLabel(value?: string): string {
 
 function toNewsItem(
   item: RemoteNewsSummary,
-  index: number,
   keyPrefix: 'news' | 'promo',
   fallbackExcerpt: string,
 ): NewsItem {
@@ -198,17 +196,12 @@ export function NewsScreen() {
     const fallbackPromotions = getFallbackPromotions(l);
     const fallbackExcerpt = l('소식 내용을 확인해보세요.');
     try {
-      const allItems = await collectAllCursorPages({
-        fetchPage: (cursor) => fetchNewsList(cursor),
-        dedupeId: (item) => item.id,
-      });
-
-      const promotions = allItems.filter((item) => item.carousel === 'PROMOTION');
-      const mappedPromotions = promotions.map((item, index) =>
-        toNewsItem(item, index, 'promo', fallbackExcerpt),
+      const { items: allItems, promotions } = await fetchNewsFeed();
+      const mappedPromotions = promotions.map((item) =>
+        toNewsItem(item, 'promo', fallbackExcerpt),
       );
-      const mappedList = allItems.map((item, index) =>
-        toNewsItem(item, index, 'news', fallbackExcerpt),
+      const mappedList = allItems.map((item) =>
+        toNewsItem(item, 'news', fallbackExcerpt),
       );
 
       setItems(mappedList);

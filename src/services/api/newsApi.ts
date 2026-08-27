@@ -1,4 +1,5 @@
 import { ApiEnvelope, requestJson, unwrapResult } from './http';
+import { collectAllCursorPages } from '../../utils/pagination';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -142,6 +143,18 @@ export async function fetchNewsList(cursorId?: number): Promise<RemoteNewsSummar
     },
   });
   return normalizeNewsListResult(response);
+}
+
+export async function fetchNewsFeed() {
+  const items = await collectAllCursorPages({
+    fetchPage: fetchNewsList,
+    dedupeId: (item) => item.id,
+  });
+
+  return {
+    items,
+    promotions: items.filter((item) => item.carousel === 'PROMOTION'),
+  };
 }
 
 export async function fetchMyNewsList(cursorId?: number): Promise<RemoteNewsSummaryList> {

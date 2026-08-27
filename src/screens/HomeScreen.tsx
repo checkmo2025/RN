@@ -33,14 +33,13 @@ import {
   fetchRecommendedMembers,
   setFollowingMember,
 } from '../services/api/memberApi';
-import { fetchNewsList } from '../services/api/newsApi';
+import { fetchNewsFeed } from '../services/api/newsApi';
 import { ApiError } from '../services/api/http';
 import { toKstTimeAgoLabel } from '../utils/date';
 import { triggerSelectionHaptic } from '../utils/haptics';
 import { normalizeRemoteImageUrl } from '../utils/image';
 import { showToast } from '../utils/toast';
 import { resolveApiError } from '../utils/resolveApiError';
-import { collectAllCursorPages } from '../utils/pagination';
 import {
   isBlockedMemberNickname,
   isSameMemberNickname,
@@ -263,12 +262,7 @@ export function HomeScreen() {
     setLoadingPromotions(true);
     const defaultPromotions = getDefaultPromotions(l);
     try {
-      const allNews = await collectAllCursorPages({
-        fetchPage: (cursor) => fetchNewsList(cursor),
-        dedupeId: (item) => item.id,
-      });
-
-      const promotions = allNews.filter((item) => item.carousel === 'PROMOTION');
+      const { promotions } = await fetchNewsFeed();
       if (promotions.length === 0) {
         setPromotions(defaultPromotions);
         return;
