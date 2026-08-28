@@ -820,24 +820,10 @@ export function MyPageScreen() {
 
     setLoadingMyNews(true);
     try {
-      const allItems: RemoteNewsSummary[] = [];
-      let cursorId: number | undefined;
-      const visitedCursors = new Set<number>();
-      const seenNewsIds = new Set<number>();
-
-      for (let i = 0; i < 100; i += 1) {
-        const response = await fetchMyNewsList(cursorId);
-        response.items.forEach((item) => {
-          if (seenNewsIds.has(item.id)) return;
-          seenNewsIds.add(item.id);
-          allItems.push(item);
-        });
-        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
-        if (visitedCursors.has(response.nextCursor)) break;
-
-        visitedCursors.add(response.nextCursor);
-        cursorId = response.nextCursor;
-      }
+      const allItems = await collectAllCursorPages({
+        fetchPage: fetchMyNewsList,
+        dedupeId: (item) => item.id,
+      });
 
       setMyNews(mapMyNewsItems(allItems));
     } catch (error) {

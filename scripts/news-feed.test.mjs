@@ -82,6 +82,20 @@ test('stops when the server repeats a cursor', async () => {
   assert.equal(feed.promotions.length, 1);
 });
 
+test('stops after 100 pages by default', async () => {
+  let calls = 0;
+  const { fetchNewsFeed } = createFeedApi(async () => {
+    calls += 1;
+    return { result: {
+      basicInfoList: [{ newsId: calls, title: `소식 ${calls}` }],
+      hasNext: true,
+      nextCursor: calls,
+    } };
+  });
+  await fetchNewsFeed();
+  assert.equal(calls, 100);
+});
+
 test('propagates a later page error so screens can keep their fallback handling', async () => {
   const failure = new Error('Network unavailable');
   const { fetchNewsFeed } = createFeedApi(async (_path, { query }) => {
