@@ -4071,3 +4071,9 @@ export const interactionOpacity = {
 - 화면 수집 코드를 18줄에서 4줄로 줄이고 동일 규칙의 변경 지점을 2곳에서 1곳으로 축소
 - 기본 100페이지 상한 회귀 테스트를 추가하고 Ponytail 변경 전후·가설·측정·결론 기록을 작성
 - 회귀 테스트 6개, TypeScript, 대상 ESLint와 문서 검증을 완료
+
+# 2026-08-28 19:50:25 KST 프로젝트 전용 Caveman 스킬 추가
+
+- 공식 `JuliusBrussee/caveman`의 `17f9f2ec2377b0bfe16b52ee03a462e7f0a02bc8` 커밋에서 응답 압축 스킬과 MIT 라이선스 원문을 추가
+- 프로젝트의 `.agents/skills/caveman`에만 설치하고 전역 설정·앱 코드·기존 Ponytail 스킬을 유지
+- CLI·프록시·텔레메트리는 설치하지 않았으며 스킬 형식과 다운로드한 원본 해시를 검증
