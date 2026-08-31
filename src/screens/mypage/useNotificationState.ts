@@ -18,6 +18,7 @@ import {
   type PushPreferenceUpdateResult,
 } from '../../services/push/pushNotificationService';
 import { formatNotificationText, resolveNotificationTarget } from '../../utils/notification';
+import { collectAllCursorPages } from '../../utils/pagination';
 import { showToast } from '../../utils/toast';
 import { resolveApiError } from '../../utils/resolveApiError';
 
@@ -114,24 +115,10 @@ export function useNotificationState({ isLoggedIn, navigation }: Params) {
 
     setLoadingAlarms(true);
     try {
-      const allItems: NotificationItem[] = [];
-      let cursorId: number | undefined;
-      const visitedCursors = new Set<number>();
-      const seenNotificationIds = new Set<number>();
-
-      for (let i = 0; i < 100; i += 1) {
-        const response = await fetchNotifications(cursorId);
-        response.items.forEach((item) => {
-          if (seenNotificationIds.has(item.notificationId)) return;
-          seenNotificationIds.add(item.notificationId);
-          allItems.push(item);
-        });
-        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
-        if (visitedCursors.has(response.nextCursor)) break;
-
-        visitedCursors.add(response.nextCursor);
-        cursorId = response.nextCursor;
-      }
+      const allItems = await collectAllCursorPages({
+        fetchPage: fetchNotifications,
+        dedupeId: (item) => item.notificationId,
+      });
 
       setAlarms(allItems.map(mapNotificationToAlarm));
     } catch (error) {

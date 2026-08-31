@@ -4077,3 +4077,10 @@ export const interactionOpacity = {
 - 공식 `JuliusBrussee/caveman`의 `17f9f2ec2377b0bfe16b52ee03a462e7f0a02bc8` 커밋에서 응답 압축 스킬과 MIT 라이선스 원문을 추가
 - 프로젝트의 `.agents/skills/caveman`에만 설치하고 전역 설정·앱 코드·기존 Ponytail 스킬을 유지
 - CLI·프록시·텔레메트리는 설치하지 않았으며 스킬 형식과 다운로드한 원본 해시를 검증
+
+# 2026-08-31 17:39:20 KST 마이페이지 알림 수집·팔로우 목록 최적화
+
+- 알림의 직접 커서 수집 루프를 공통 페이지 수집 유틸로 바꾸고 ID 중복 제거·순서·오류·로딩 동작을 유지
+- 팔로워·팔로잉 목록을 `FlatList`로 가상화하고 프로필 이동·삭제·팔로우·새로고침·빈 결과 동작을 유지
+- Ponytail 기록 디렉터리를 `docs/optimization`으로 옮기고 두 작업의 변경 전후·가설·측정 결과를 기록
+- 회귀 테스트 6개, TypeScript, 대상 ESLint와 iOS 프로덕션 JS export를 통과

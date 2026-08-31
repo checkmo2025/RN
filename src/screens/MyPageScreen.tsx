@@ -4,6 +4,7 @@ import {
   Animated,
   BackHandler,
   Easing,
+  FlatList,
   Keyboard,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,7 @@ import {
   Image,
   RefreshControl,
   Linking,
+  type ListRenderItemInfo,
   useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -1638,7 +1640,7 @@ export function MyPageScreen() {
   const activeFollowUsers =
     activeFollowTab === 'FOLLOWER' ? followerUsers : followingUsers;
 
-  const renderFollowPage = () => (
+  const renderFollowHeader = () => (
     <View style={styles.followPageWrap}>
       <View style={styles.breadcrumbRow}>
         <Pressable
@@ -1707,82 +1709,102 @@ export function MyPageScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.followListWrap}>
-        {loadingFollowUsers ? (
-          <>
-            {[0, 1, 2].map((i) => (
-              <View key={i} style={styles.followUserRow}>
-                <View style={styles.followUserMeta}>
-                  <SkeletonBox style={{ width: 28, height: 28, borderRadius: 14 }} />
-                  <SkeletonBox style={{ flex: 1, height: 16, borderRadius: radius.xs }} />
-                </View>
-                <SkeletonBox style={{ width: 56, height: 26, borderRadius: radius.sm }} />
-              </View>
-            ))}
-          </>
-        ) : null}
-
-        {!loadingFollowUsers && activeFollowUsers.length === 0 ? (
-          <Text style={styles.emptyText}>{l('표시할 사용자가 없습니다.')}</Text>
-        ) : null}
-
-        {activeFollowUsers.map((user) => {
-          const isFollowerTab = activeFollowTab === 'FOLLOWER';
-          const deleting = deletingFollowerNickname === user.nickname;
-
-          return (
-            <View key={`${activeFollowTab}-${user.nickname}`} style={styles.followUserRow}>
-            <Pressable
-              style={({ pressed }) => [styles.followUserMeta, pressed && styles.pressed]}
-              onPress={() => openMemberProfile(user.nickname)}
-            >
-              <View style={styles.followUserAvatar}>
-                {user.profileImageUrl ? (
-                  <Image source={{ uri: user.profileImageUrl }} style={styles.followUserAvatarImage} />
-                ) : (
-                  <DefaultProfileAvatar size={28} />
-                )}
-              </View>
-              <Text style={styles.followUserName}>{user.nickname}</Text>
-            </Pressable>
-
-            {isFollowerTab ? (
-              <Pressable
-                style={[
-                  styles.followDeleteButton,
-                  deleting ? styles.followDeleteButtonDisabled : null,
-                ]}
-                onPress={() => handleDeleteFollower(user.nickname)}
-                disabled={deleting}
-              >
-                <Text style={styles.followDeleteButtonText}>
-                  {deleting ? l('삭제 중...') : l('삭제')}
-                </Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                style={[
-                  styles.followButton,
-                  user.following ? styles.followButtonActive : styles.followButtonInactive,
-                ]}
-                onPress={() => handleToggleFollowUser(user.nickname, !user.following)}
-              >
-                <Text
-                  style={[
-                    styles.followButtonText,
-                    user.following ? styles.followButtonTextActive : styles.followButtonTextInactive,
-                  ]}
-                >
-                  {user.following ? t('profile.following') : t('profile.follow')}
-                </Text>
-              </Pressable>
-            )}
-          </View>
-          );
-        })}
-      </View>
+      <View style={styles.followListTopSpacing} />
     </View>
   );
+
+  const renderFollowUser = useCallback(
+    ({ item: user }: ListRenderItemInfo<FollowUser>) => {
+      const isFollowerTab = activeFollowTab === 'FOLLOWER';
+      const deleting = deletingFollowerNickname === user.nickname;
+
+      return (
+        <View style={styles.followUserRow}>
+          <Pressable
+            style={({ pressed }) => [styles.followUserMeta, pressed && styles.pressed]}
+            onPress={() => openMemberProfile(user.nickname)}
+          >
+            <View style={styles.followUserAvatar}>
+              {user.profileImageUrl ? (
+                <Image source={{ uri: user.profileImageUrl }} style={styles.followUserAvatarImage} />
+              ) : (
+                <DefaultProfileAvatar size={28} />
+              )}
+            </View>
+            <Text style={styles.followUserName}>{user.nickname}</Text>
+          </Pressable>
+
+          {isFollowerTab ? (
+            <Pressable
+              style={[
+                styles.followDeleteButton,
+                deleting ? styles.followDeleteButtonDisabled : null,
+              ]}
+              onPress={() => handleDeleteFollower(user.nickname)}
+              disabled={deleting}
+            >
+              <Text style={styles.followDeleteButtonText}>
+                {deleting ? l('삭제 중...') : l('삭제')}
+              </Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              style={[
+                styles.followButton,
+                user.following ? styles.followButtonActive : styles.followButtonInactive,
+              ]}
+              onPress={() => handleToggleFollowUser(user.nickname, !user.following)}
+            >
+              <Text
+                style={[
+                  styles.followButtonText,
+                  user.following ? styles.followButtonTextActive : styles.followButtonTextInactive,
+                ]}
+              >
+                {user.following ? t('profile.following') : t('profile.follow')}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      );
+    },
+    [
+      activeFollowTab,
+      deletingFollowerNickname,
+      handleDeleteFollower,
+      handleToggleFollowUser,
+      l,
+      openMemberProfile,
+      t,
+    ],
+  );
+
+  const renderFollowListStatus = () => {
+    if (loadingFollowUsers) {
+      return (
+        <View
+          style={[
+            styles.followListWrap,
+            activeFollowUsers.length > 0 && styles.followListLoadingWithItems,
+          ]}
+        >
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={styles.followUserRow}>
+              <View style={styles.followUserMeta}>
+                <SkeletonBox style={{ width: 28, height: 28, borderRadius: 14 }} />
+                <SkeletonBox style={{ flex: 1, height: 16, borderRadius: radius.xs }} />
+              </View>
+              <SkeletonBox style={{ width: 56, height: 26, borderRadius: radius.sm }} />
+            </View>
+          ))}
+        </View>
+      );
+    }
+
+    return activeFollowUsers.length === 0 ? (
+      <Text style={styles.emptyText}>{l('표시할 사용자가 없습니다.')}</Text>
+    ) : null;
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -2748,9 +2770,20 @@ export function MyPageScreen() {
   if (showFollowPage) {
     return (
       <ScreenLayout title={t('profile.screenTitle')}>
-        <ScrollView
+        <FlatList
           style={styles.container}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, styles.followListContent]}
+          data={activeFollowUsers}
+          keyExtractor={(user) => `${activeFollowTab}-${user.nickname}`}
+          renderItem={renderFollowUser}
+          ItemSeparatorComponent={() => <View style={styles.followListSeparator} />}
+          ListHeaderComponent={(
+            <>
+              {renderFollowHeader()}
+              {activeFollowUsers.length > 0 ? renderFollowListStatus() : null}
+            </>
+          )}
+          ListEmptyComponent={renderFollowListStatus()}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -2765,9 +2798,7 @@ export function MyPageScreen() {
               }}
             />
           }
-        >
-          {renderFollowPage()}
-        </ScrollView>
+        />
         <ProfileImageViewer
           visible={profileImageViewerVisible}
           imageUrl={profileImageUrl}
@@ -3674,7 +3705,18 @@ const styles = StyleSheet.create({
   },
   followListWrap: {
     gap: spacing.xs,
-    paddingTop: spacing.sm,
+  },
+  followListLoadingWithItems: {
+    marginBottom: spacing.xs,
+  },
+  followListContent: {
+    gap: 0,
+  },
+  followListTopSpacing: {
+    height: spacing.sm,
+  },
+  followListSeparator: {
+    height: spacing.xs,
   },
   followUserRow: {
     backgroundColor: colors.white,
