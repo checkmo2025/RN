@@ -4084,3 +4084,9 @@ export const interactionOpacity = {
 - 팔로워·팔로잉 목록을 `FlatList`로 가상화하고 프로필 이동·삭제·팔로우·새로고침·빈 결과 동작을 유지
 - Ponytail 기록 디렉터리를 `docs/optimization`으로 옮기고 두 작업의 변경 전후·가설·측정 결과를 기록
 - 회귀 테스트 6개, TypeScript, 대상 ESLint와 iOS 프로덕션 JS export를 통과
+
+# 2026-08-31 18:09:32 KST 앱 1.2.7 출시 준비
+
+- Expo·iOS·Android 앱 및 런타임 버전을 1.2.7로 동기화하고 iOS 로컬 빌드 번호를 44로 갱신
+- Android production 제출 트랙과 EAS 빌드 제외 항목을 정리하고 versionCode 15 production 빌드를 시작
+- TypeScript와 버전 설정 검증을 완료하고 EAS 자동 제출은 실행하지 않음

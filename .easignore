@@ -6,6 +6,12 @@ web-build/
 ref_code/
 docs/
 tests/
+google-service-account.json
+.agents/
+.codex-output-service-introduction/
+checkmo-service-introduction-cover-1200x750.png
+checkmo-service-introduction-cover-2400x1500.jpg
+scripts/news-automation/generated/
 
 android/.gradle/
 android/build/
