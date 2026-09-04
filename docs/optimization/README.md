@@ -66,3 +66,4 @@ ponytail-관련-기능-YYYY-MM-DD-HHmm.md
 | 2026-08-28 19:38 | [마이페이지 내 소식 페이지 수집 공통화](./ponytail-mypage-my-news-pagination-2026-08-28-1938.md) | 화면 수집 코드 18→4줄, 변경 지점 2→1 | 확인 |
 | 2026-08-28 19:57 | [마이페이지 알림 페이지 수집 공통화](./ponytail-mypage-notification-pagination-2026-08-28-1957.md) | 훅 수집 코드 18→4줄, 변경 지점 2→1 | 확인 |
 | 2026-08-28 20:09 | [마이페이지 팔로우 목록 가상화](./ponytail-mypage-follow-list-virtualization-2026-08-28-2009.md) | 전체 행 즉시 생성 1→0, 런타임 성능 측정 보류 | 부분 확인 |
+| 2026-09-01 22:04 | [사용자 프로필 팔로우 목록 가상화](./ponytail-user-profile-follow-list-virtualization-2026-09-01-2204.md) | 19명 초기 커밋 16.9% 단축, 7명은 22.8% 증가 | 부분 확인 |

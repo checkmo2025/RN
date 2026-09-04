@@ -2,11 +2,13 @@ import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import {
   Alert,
   Animated,
+  FlatList,
   Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  type ListRenderItemInfo,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -800,7 +802,7 @@ export function UserProfileScreen() {
     return renderMeetings();
   };
 
-  const renderFollowPage = () => (
+  const renderFollowHeader = () => (
     <View style={styles.followPageWrap}>
       <Pressable
         style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
@@ -856,8 +858,63 @@ export function UserProfileScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.followListWrap}>
-        {loadingFollowUsers ? (
+      <View style={styles.followListTopSpacing} />
+    </View>
+  );
+
+  const renderFollowUser = useCallback(
+    ({ item: user }: ListRenderItemInfo<FollowUser>) => {
+      const toggling = togglingFollowNickname === user.nickname;
+
+      return (
+        <View style={styles.followUserRow}>
+          <Pressable
+            style={({ pressed }) => [styles.followUserMeta, pressed && styles.pressed]}
+            onPress={() => openMemberProfile(user.nickname)}
+          >
+            <View style={styles.followUserAvatar}>
+              {user.profileImageUrl ? (
+                <Image source={{ uri: user.profileImageUrl }} style={styles.followUserAvatarImage} />
+              ) : (
+                <DefaultProfileAvatar size={28} />
+              )}
+            </View>
+            <Text style={styles.followUserName}>{user.nickname}</Text>
+          </Pressable>
+
+          <Pressable
+            style={[
+              styles.followButton,
+              user.following ? styles.followButtonActive : styles.followButtonInactive,
+              toggling && styles.followButtonDisabled,
+            ]}
+            onPress={() => handleToggleFollowUser(user.nickname, !user.following)}
+            disabled={toggling}
+          >
+            <Text
+              style={[
+                styles.followButtonText,
+                user.following ? styles.followButtonTextActive : styles.followButtonTextInactive,
+              ]}
+            >
+              {toggling ? l('처리 중...') : user.following ? l('구독중') : l('구독')}
+            </Text>
+          </Pressable>
+        </View>
+      );
+    },
+    [handleToggleFollowUser, l, openMemberProfile, togglingFollowNickname],
+  );
+
+  const renderFollowListStatus = () => {
+    if (loadingFollowUsers) {
+      return (
+        <View
+          style={[
+            styles.followListWrap,
+            activeFollowUsers.length > 0 && styles.followListLoadingWithItems,
+          ]}
+        >
           <View style={styles.followSkeletonWrap}>
             {[0, 1, 2].map((i) => (
               <View key={i} style={styles.followSkeletonRow}>
@@ -867,53 +924,14 @@ export function UserProfileScreen() {
               </View>
             ))}
           </View>
-        ) : null}
-        {!loadingFollowUsers && activeFollowUsers.length === 0 ? (
-          <Text style={styles.emptyText}>{l('표시할 사용자가 없습니다.')}</Text>
-        ) : null}
+        </View>
+      );
+    }
 
-        {activeFollowUsers.map((user) => {
-          const toggling = togglingFollowNickname === user.nickname;
-          return (
-            <View key={`${activeFollowTab}-${user.nickname}`} style={styles.followUserRow}>
-              <Pressable
-                style={({ pressed }) => [styles.followUserMeta, pressed && styles.pressed]}
-                onPress={() => openMemberProfile(user.nickname)}
-              >
-                <View style={styles.followUserAvatar}>
-                  {user.profileImageUrl ? (
-                    <Image source={{ uri: user.profileImageUrl }} style={styles.followUserAvatarImage} />
-                  ) : (
-                    <DefaultProfileAvatar size={28} />
-                  )}
-                </View>
-                <Text style={styles.followUserName}>{user.nickname}</Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.followButton,
-                  user.following ? styles.followButtonActive : styles.followButtonInactive,
-                  toggling && styles.followButtonDisabled,
-                ]}
-                onPress={() => handleToggleFollowUser(user.nickname, !user.following)}
-                disabled={toggling}
-              >
-                <Text
-                  style={[
-                    styles.followButtonText,
-                    user.following ? styles.followButtonTextActive : styles.followButtonTextInactive,
-                  ]}
-                >
-                  {toggling ? l('처리 중...') : user.following ? l('구독중') : l('구독')}
-                </Text>
-              </Pressable>
-            </View>
-          );
-        })}
-      </View>
-    </View>
-  );
+    return activeFollowUsers.length === 0 ? (
+      <Text style={styles.emptyText}>{l('표시할 사용자가 없습니다.')}</Text>
+    ) : null;
+  };
 
   const backSwipeResponder = useEdgeBackSwipe({
     isActive: true,
@@ -933,19 +951,32 @@ export function UserProfileScreen() {
         style={[styles.container, { transform: [{ translateX }] }]}
         {...backSwipeResponder.panHandlers}
       >
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={showFollowPage ? handleFollowPageRefresh : handleRefresh}
-            />
-          }
-        >
-          {showFollowPage ? (
-            renderFollowPage()
-          ) : (
+        {showFollowPage ? (
+          <FlatList
+            style={styles.container}
+            contentContainerStyle={[styles.content, styles.followListContent]}
+            data={activeFollowUsers}
+            keyExtractor={(user) => `${activeFollowTab}-${user.nickname}`}
+            renderItem={renderFollowUser}
+            ItemSeparatorComponent={() => <View style={styles.followListSeparator} />}
+            ListHeaderComponent={(
+              <>
+                {renderFollowHeader()}
+                {activeFollowUsers.length > 0 ? renderFollowListStatus() : null}
+              </>
+            )}
+            ListEmptyComponent={renderFollowListStatus()}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleFollowPageRefresh} />
+            }
+          />
+        ) : (
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+          >
             <>
               <Pressable
                 style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
@@ -1059,8 +1090,8 @@ export function UserProfileScreen() {
                 )}
               </View>
             </>
-          )}
-        </ScrollView>
+          </ScrollView>
+        )}
       </Animated.View>
       <ProfileImageViewer
         visible={profileImageViewerVisible}
@@ -1450,7 +1481,18 @@ const styles = StyleSheet.create({
   },
   followListWrap: {
     gap: spacing.xs,
-    paddingTop: spacing.sm,
+  },
+  followListLoadingWithItems: {
+    marginBottom: spacing.xs,
+  },
+  followListContent: {
+    gap: 0,
+  },
+  followListTopSpacing: {
+    height: spacing.sm,
+  },
+  followListSeparator: {
+    height: spacing.xs,
   },
   followUserRow: {
     backgroundColor: colors.white,

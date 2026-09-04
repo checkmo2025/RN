@@ -4090,3 +4090,9 @@ export const interactionOpacity = {
 - Expo·iOS·Android 앱 및 런타임 버전을 1.2.7로 동기화하고 iOS 로컬 빌드 번호를 44로 갱신
 - Android production 제출 트랙과 EAS 빌드 제외 항목을 정리하고 versionCode 15 production 빌드를 시작
 - TypeScript와 버전 설정 검증을 완료하고 EAS 자동 제출은 실행하지 않음
+
+# 2026-09-04 18:34:00 KST 사용자 프로필 팔로우 목록 가상화
+
+- 다른 사용자 프로필의 팔로워·팔로잉 목록을 `FlatList`로 바꾸고 데이터·순서·상호작용·새로고침 동작을 유지
+- iOS Release에서 목록 규모별 30회 측정해 19명 초기 커밋 16.9% 단축과 7명 22.8% 증가를 기록
+- TypeScript, 대상 ESLint, iOS Release·Debug 빌드와 로그인 시뮬레이터 화면을 검증
