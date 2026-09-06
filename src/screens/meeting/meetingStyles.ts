@@ -139,6 +139,19 @@ export const styles = StyleSheet.create({
   groupList: {
     gap: spacing.sm,
   },
+  discoverListContent: {
+    gap: 0,
+  },
+  discoverListHeader: {
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  discoverListHeaderCell: {
+    zIndex: layers.dropdown,
+  },
+  discoverListSeparator: {
+    height: spacing.sm,
+  },
   applyModalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.48)',

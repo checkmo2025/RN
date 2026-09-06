@@ -22,6 +22,7 @@ import {
 import type {
   GestureResponderEvent,
   LayoutChangeEvent,
+  ListRenderItemInfo,
   NativeScrollEvent,
   NativeSyntheticEvent,
   TextInputContentSizeChangeEventData,
@@ -449,7 +450,7 @@ function upsertGroupByClubId(groups: Group[], nextGroup: Group): Group[] {
 
 
 export function MeetingScreen() {
-  const meetingScrollRef = useRef<ScrollView>(null);
+  const meetingScrollRef = useRef<FlatList<Group>>(null);
   const applyModalScrollRef = useRef<ScrollView>(null);
   const meetingScrollYRef = useRef(0);
   const meetingSearchInputRef = useRef<TextInput>(null);
@@ -504,8 +505,8 @@ export function MeetingScreen() {
     (inputY: number, inputHeight: number) => {
       const inputCenterY = inputY + inputHeight / 2;
       const targetCenterY = getFocusedInputTargetCenterY(screenHeight);
-      meetingScrollRef.current?.scrollTo({
-        y: Math.max(0, meetingScrollYRef.current + inputCenterY - targetCenterY),
+      meetingScrollRef.current?.scrollToOffset({
+        offset: Math.max(0, meetingScrollYRef.current + inputCenterY - targetCenterY),
         animated: true,
       });
     },
@@ -678,7 +679,7 @@ export function MeetingScreen() {
 
   const scrollMeetingSearchToTop = useCallback((animated = false) => {
     requestAnimationFrame(() => {
-      meetingScrollRef.current?.scrollTo({ y: 0, animated });
+      meetingScrollRef.current?.scrollToOffset({ offset: 0, animated });
     });
   }, []);
 
@@ -1047,12 +1048,32 @@ export function MeetingScreen() {
     setPendingOpenNoticeId(null);
   }, []);
 
-  const handleOpenApply = (groupId: string) => {
-    requireAuth(() => {
-      setApplyReason('');
-      setApplyOpenId(groupId);
-    });
-  };
+  const handleOpenApply = useCallback(
+    (groupId: string) => {
+      requireAuth(() => {
+        setApplyReason('');
+        setApplyOpenId(groupId);
+      });
+    },
+    [requireAuth],
+  );
+
+  const renderDiscoverGroup = useCallback(
+    ({ item: group }: ListRenderItemInfo<Group>) => (
+      <MeetingListCard
+        name={group.name}
+        tags={group.tags}
+        topic={group.topic}
+        region={group.region}
+        profileImageUrl={group.profileImageUrl}
+        isPrivate={group.isPrivate}
+        applicationStatus={group.applicationStatus}
+        onPressApply={() => handleOpenApply(group.id)}
+        onPressVisit={() => openGroupHome(group)}
+      />
+    ),
+    [handleOpenApply, openGroupHome],
+  );
 
   const handleSubmitApply = (group: Group) => {
     requireAuth(() => {
@@ -1188,10 +1209,14 @@ export function MeetingScreen() {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView
+        <FlatList
           ref={meetingScrollRef}
           style={styles.container}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, styles.discoverListContent]}
+          data={visibleDiscoverGroups}
+          keyExtractor={(group) => group.id}
+          renderItem={renderDiscoverGroup}
+          ItemSeparatorComponent={() => <View style={styles.discoverListSeparator} />}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           scrollEventThrottle={16}
@@ -1204,7 +1229,8 @@ export function MeetingScreen() {
               onRefresh={handleRefresh}
             />
           }
-        >
+          ListHeaderComponent={(
+            <View style={styles.discoverListHeader}>
       <Text style={styles.sectionTitle}>{l('독서모임')}</Text>
       <Pressable
         style={({ pressed }) => [styles.createButton, pressed && styles.pressed]}
@@ -1332,25 +1358,11 @@ export function MeetingScreen() {
       </View>
 
       <Text style={styles.sectionTitle}>{discoverSectionTitle}</Text>
-
-      <View
-        style={styles.groupList}
-      >
-        {visibleDiscoverGroups.map((group) => (
-          <View key={group.id}>
-            <MeetingListCard
-              name={group.name}
-              tags={group.tags}
-              topic={group.topic}
-              region={group.region}
-              profileImageUrl={group.profileImageUrl}
-              isPrivate={group.isPrivate}
-              applicationStatus={group.applicationStatus}
-              onPressApply={() => handleOpenApply(group.id)}
-              onPressVisit={() => openGroupHome(group)}
-            />
-          </View>
-        ))}
+            </View>
+          )}
+          ListHeaderComponentStyle={styles.discoverListHeaderCell}
+          ListEmptyComponent={(
+            <View style={styles.groupList}>
         {discoverLoading && visibleDiscoverGroups.length === 0 ? (
           <>
             <MeetingListCardSkeleton />
@@ -1361,10 +1373,11 @@ export function MeetingScreen() {
         {!discoverLoading && visibleDiscoverGroups.length === 0 ? (
           <View style={styles.emptySearchBox}>
             <Text style={styles.emptySearchText}>{l('검색 결과가 없습니다.')}</Text>
-          </View>
-        ) : null}
-      </View>
-        </ScrollView>
+            </View>
+          ) : null}
+            </View>
+          )}
+        />
       </KeyboardAvoidingView>
       <Modal
         visible={Boolean(applyModalGroup)}
