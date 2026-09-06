@@ -4096,3 +4096,9 @@ export const interactionOpacity = {
 - 다른 사용자 프로필의 팔로워·팔로잉 목록을 `FlatList`로 바꾸고 데이터·순서·상호작용·새로고침 동작을 유지
 - iOS Release에서 목록 규모별 30회 측정해 19명 초기 커밋 16.9% 단축과 7명 22.8% 증가를 기록
 - TypeScript, 대상 ESLint, iOS Release·Debug 빌드와 로그인 시뮬레이터 화면을 검증
+
+# 2026-09-06 17:34:58 KST 마이페이지 내 소식 목록 가상화
+
+- `내 소식` 목록을 `FlatList`로 바꾸고 데이터·순서·문구·상세 이동·로딩·오류 동작을 유지
+- iOS Release에서 목록 규모별 30회 측정해 19개 16.9%, 100개 78.5%, 500개 94.8% 초기 커밋 단축과 7개 8.9% 증가를 기록
+- TypeScript, 대상 ESLint, 디자인 토큰 검사와 iOS 프로덕션 JS export를 통과

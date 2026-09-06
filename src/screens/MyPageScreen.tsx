@@ -1560,52 +1560,6 @@ export function MyPageScreen() {
     </View>
   );
 
-  const renderMyNews = () => (
-    <View style={styles.listContainer}>
-      {loadingMyNews ? (
-        <>
-          {[0, 1, 2].map((i) => (
-            <View key={i} style={styles.myNewsRow}>
-              <SkeletonBox style={{ width: 64, height: 64, borderRadius: radius.sm }} />
-              <View style={styles.myNewsBody}>
-                <SkeletonBox style={{ height: 16, width: '90%', borderRadius: radius.xs }} />
-                <SkeletonBox style={{ height: 13, width: '70%', borderRadius: radius.xs }} />
-              </View>
-              <SkeletonBox style={{ width: 40, height: 12, alignSelf: 'flex-start', borderRadius: radius.xs }} />
-            </View>
-          ))}
-        </>
-      ) : null}
-      {!loadingMyNews && myNews.length === 0 ? (
-        <Text style={styles.emptyText}>{l('등록한 소식이 없습니다.')}</Text>
-      ) : null}
-      {myNews.map((item) => (
-        <Pressable
-          key={item.id}
-          style={({ pressed }) => [styles.myNewsRow, pressed && styles.pressed]}
-          onPress={() => handleOpenMyNews(item)}
-        >
-          {item.thumbnailUrl ? (
-            <Image source={{ uri: item.thumbnailUrl }} style={styles.myNewsThumb} />
-          ) : (
-            <View style={styles.myNewsThumbPlaceholder}>
-              <MaterialIcons name="article" size={20} color={colors.gray3} />
-            </View>
-          )}
-          <View style={styles.myNewsBody}>
-            <Text style={styles.myNewsTitle} numberOfLines={1}>
-              {item.title}
-            </Text>
-            <Text style={styles.myNewsExcerpt} numberOfLines={2}>
-              {item.excerpt}
-            </Text>
-          </View>
-          <Text style={styles.myNewsDate}>{item.date}</Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-
   const renderGuestPrompt = () => (
     <View style={styles.guestPromptWrap}>
       <Text style={styles.emptyText}>{t('profile.guestPrompt')}</Text>
@@ -1986,6 +1940,71 @@ export function MyPageScreen() {
 
     navigation.navigate('News', { openNewsId: item.newsId });
   }, [navigation]);
+
+  const renderMyNewsItem = useCallback(
+    ({ item }: ListRenderItemInfo<MyNewsItem>) => (
+      <Pressable
+        style={({ pressed }) => [styles.myNewsRow, pressed && styles.pressed]}
+        onPress={() => handleOpenMyNews(item)}
+      >
+        {item.thumbnailUrl ? (
+          <Image source={{ uri: item.thumbnailUrl }} style={styles.myNewsThumb} />
+        ) : (
+          <View style={styles.myNewsThumbPlaceholder}>
+            <MaterialIcons name="article" size={20} color={colors.gray3} />
+          </View>
+        )}
+        <View style={styles.myNewsBody}>
+          <Text style={styles.myNewsTitle} numberOfLines={1}>
+            {item.title}
+          </Text>
+          <Text style={styles.myNewsExcerpt} numberOfLines={2}>
+            {item.excerpt}
+          </Text>
+        </View>
+        <Text style={styles.myNewsDate}>{item.date}</Text>
+      </Pressable>
+    ),
+    [handleOpenMyNews],
+  );
+
+  const renderMyNewsHeader = () => (
+    <View style={styles.settingsDetailWrap}>
+      <Pressable
+        style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
+        onPress={accountUpdateGuardEnabled ? handleAccountUpdateBack : handleCloseSelectedSetting}
+      >
+        <MaterialIcons name="chevron-left" size={18} color={colors.gray4} />
+        <Text style={styles.breadcrumbText}>{t('common.back')}</Text>
+      </Pressable>
+      <Text style={styles.detailTitle}>{getSettingLabel('myNews')}</Text>
+      <Text style={styles.detailDivider} />
+      <View style={styles.myNewsListTopSpacing} />
+    </View>
+  );
+
+  const renderMyNewsStatus = () => {
+    if (!loadingMyNews) {
+      return myNews.length === 0
+        ? <Text style={styles.emptyText}>{l('등록한 소식이 없습니다.')}</Text>
+        : null;
+    }
+
+    return (
+      <View style={myNews.length > 0 ? styles.myNewsLoadingWithItems : styles.myNewsSkeletonList}>
+        {[0, 1, 2].map((i) => (
+          <View key={i} style={styles.myNewsRow}>
+            <SkeletonBox style={{ width: 64, height: 64, borderRadius: radius.sm }} />
+            <View style={styles.myNewsBody}>
+              <SkeletonBox style={{ height: 16, width: '90%', borderRadius: radius.xs }} />
+              <SkeletonBox style={{ height: 13, width: '70%', borderRadius: radius.xs }} />
+            </View>
+            <SkeletonBox style={{ width: 40, height: 12, alignSelf: 'flex-start', borderRadius: radius.xs }} />
+          </View>
+        ))}
+      </View>
+    );
+  };
 
   const handleWriteStory = useCallback(() => {
     requireAuth(() => {
@@ -2464,17 +2483,6 @@ export function MyPageScreen() {
       );
     }
 
-    if (selectedSetting === 'myNews') {
-      return (
-        <View style={styles.settingsDetailWrap}>
-          {back}
-          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
-          <Text style={styles.detailDivider} />
-          {renderMyNews()}
-        </View>
-      );
-    }
-
     if (selectedSetting === 'report') {
       return (
         <View style={styles.settingsDetailWrap}>
@@ -2803,6 +2811,30 @@ export function MyPageScreen() {
           visible={profileImageViewerVisible}
           imageUrl={profileImageUrl}
           onClose={() => setProfileImageViewerVisible(false)}
+        />
+      </ScreenLayout>
+    );
+  }
+
+  if (showSettings && selectedSetting === 'myNews') {
+    return (
+      <ScreenLayout title={t('profile.screenTitle')}>
+        <FlatList
+          style={styles.container}
+          contentContainerStyle={[styles.settingsContent, styles.myNewsListContent]}
+          data={myNews}
+          keyExtractor={(item) => item.id}
+          renderItem={renderMyNewsItem}
+          ItemSeparatorComponent={() => <View style={styles.myNewsListSeparator} />}
+          ListHeaderComponent={(
+            <>
+              {renderMyNewsHeader()}
+              {myNews.length > 0 ? renderMyNewsStatus() : null}
+            </>
+          )}
+          ListEmptyComponent={renderMyNewsStatus()}
+          ListFooterComponent={<View style={styles.myNewsListBottomSpacing} />}
+          showsVerticalScrollIndicator={false}
         />
       </ScreenLayout>
     );
@@ -3607,6 +3639,25 @@ const styles = StyleSheet.create({
     ...typography.body2_3,
     color: colors.gray4,
     alignSelf: 'flex-start',
+  },
+  myNewsListContent: {
+    gap: 0,
+  },
+  myNewsListTopSpacing: {
+    height: spacing.sm,
+  },
+  myNewsSkeletonList: {
+    gap: spacing.sm,
+  },
+  myNewsLoadingWithItems: {
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  myNewsListSeparator: {
+    height: spacing.sm,
+  },
+  myNewsListBottomSpacing: {
+    height: spacing.sm,
   },
   guestPromptWrap: {
     backgroundColor: colors.white,
