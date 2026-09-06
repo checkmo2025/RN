@@ -96,6 +96,7 @@ import { CLUB_ONBOARDING_SLIDES, ONBOARDING_SLIDES } from '../constants/onboardi
 import {
   useNotificationState,
   notificationSettingRows,
+  type AlarmItem,
 } from './mypage/useNotificationState';
 import { useAccountSettingsState } from './mypage/useAccountSettingsState';
 import { SkeletonBox } from '../components/common/SkeletonBox';
@@ -354,7 +355,7 @@ export function MyPageScreen() {
   const { isLoggedIn, logout, requireAuth } = useAuthGate();
   const { language, setLanguage, t, l } = useLanguage();
   const relativeNowMillis = useRelativeNow();
-  const myPageScrollRef = useRef<ScrollView>(null);
+  const myPageScrollRef = useRef<FlatList<AlarmItem>>(null);
   useScrollToTop(myPageScrollRef);
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ My: MyPageRouteParams }, 'My'>>();
@@ -1524,39 +1525,37 @@ export function MyPageScreen() {
     </View>
   );
 
-  const renderAlarms = () => (
+  const renderAlarmItem = useCallback(
+    ({ item }: ListRenderItemInfo<AlarmItem>) => (
+      <Pressable
+        style={({ pressed }) => [styles.alarmRow, pressed && styles.pressed]}
+        onPress={() => handlePressAlarm(item)}
+      >
+        <View style={[styles.alarmDot, item.unread ? styles.alarmDotActive : null]} />
+        <View style={styles.alarmBody}>
+          <Text style={styles.alarmText} numberOfLines={2}>
+            {item.text}
+          </Text>
+        </View>
+        <Text style={styles.alarmTime}>
+          {toKstTimeAgoLabel(item.createdAt, relativeNowMillis, language)}
+        </Text>
+      </Pressable>
+    ),
+    [handlePressAlarm, language, relativeNowMillis],
+  );
+
+  const renderAlarmStatus = () => (
     <View style={styles.listContainer}>
-      {loadingAlarms ? (
-        <>
-          {[0, 1, 2].map((i) => (
+      {loadingAlarms
+        ? [0, 1, 2].map((i) => (
             <View key={i} style={styles.alarmRow}>
               <SkeletonBox style={{ width: 8, height: 8, borderRadius: 4 }} />
               <SkeletonBox style={{ flex: 1, height: 16, borderRadius: radius.xs }} />
               <SkeletonBox style={{ width: 40, height: 12, borderRadius: radius.xs }} />
             </View>
-          ))}
-        </>
-      ) : null}
-      {!loadingAlarms && alarms.length === 0 ? (
-        <Text style={styles.emptyText}>{l('도착한 알림이 없습니다.')}</Text>
-      ) : null}
-      {alarms.map((alarm) => (
-        <Pressable
-          key={alarm.id}
-          style={({ pressed }) => [styles.alarmRow, pressed && styles.pressed]}
-          onPress={() => handlePressAlarm(alarm)}
-        >
-          <View style={[styles.alarmDot, alarm.unread ? styles.alarmDotActive : null]} />
-          <View style={styles.alarmBody}>
-            <Text style={styles.alarmText} numberOfLines={2}>
-              {alarm.text}
-            </Text>
-          </View>
-          <Text style={styles.alarmTime}>
-            {toKstTimeAgoLabel(alarm.createdAt, relativeNowMillis, language)}
-          </Text>
-        </Pressable>
-      ))}
+          ))
+        : <Text style={styles.emptyText}>{l('도착한 알림이 없습니다.')}</Text>}
     </View>
   );
 
@@ -1585,7 +1584,7 @@ export function MyPageScreen() {
       case '내 모임':
         return renderGroups();
       case '내 알림':
-        return renderAlarms();
+        return null;
       default:
         return null;
     }
@@ -2947,30 +2946,15 @@ export function MyPageScreen() {
   return (
     <ScreenLayout title={t('profile.screenTitle')}>
       <View style={styles.container}>
-        <ScrollView
+        <FlatList
           ref={myPageScrollRef}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                const refresh = async () => {
-                  await loadMyPageData();
-                  if (activeTab === '내 알림') {
-                    await loadAllNotifications();
-                  }
-                  if (selectedSetting === 'notifications') {
-                    await loadNotificationSettingInfo();
-                  }
-                  setRefreshing(false);
-                };
-                void refresh();
-              }}
-            />
-          }
-        >
+          contentContainerStyle={[styles.scrollContent, styles.mainListContent]}
+          data={isLoggedIn && activeTab === '내 알림' ? alarms : []}
+          keyExtractor={(alarm) => alarm.id}
+          renderItem={renderAlarmItem}
+          ItemSeparatorComponent={() => <View style={styles.alarmListSeparator} />}
+          ListHeaderComponent={(
+            <>
         <View style={styles.profileRow}>
           <View style={styles.profileAvatar}>
             {showProfileSkeleton ? (
@@ -3077,8 +3061,47 @@ export function MyPageScreen() {
           })}
         </View>
 
-        <View style={styles.tabContent}>{renderTabContent()}</View>
-        </ScrollView>
+        {activeTab === '내 알림' && isLoggedIn ? (
+          alarms.length > 0
+            ? loadingAlarms
+              ? renderAlarmStatus()
+              : <View style={styles.alarmListTopSpacing} />
+            : <View />
+        ) : (
+          <View style={styles.tabContent}>{renderTabContent()}</View>
+        )}
+            </>
+          )}
+          ListHeaderComponentStyle={styles.mainHeader}
+          ListEmptyComponent={
+            activeTab === '내 알림' && isLoggedIn ? renderAlarmStatus() : null
+          }
+          ListFooterComponent={
+            activeTab === '내 알림' && alarms.length > 0
+              ? <View style={styles.alarmListBottomSpacing} />
+              : null
+          }
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                const refresh = async () => {
+                  await loadMyPageData();
+                  if (activeTab === '내 알림') {
+                    await loadAllNotifications();
+                  }
+                  if (selectedSetting === 'notifications') {
+                    await loadNotificationSettingInfo();
+                  }
+                  setRefreshing(false);
+                };
+                void refresh();
+              }}
+            />
+          }
+        />
 
         <ProfileImageViewer
           visible={profileImageViewerVisible}
@@ -3116,6 +3139,21 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.md,
     paddingBottom: spacing.xl * 2,
+  },
+  mainListContent: {
+    gap: 0,
+  },
+  mainHeader: {
+    gap: spacing.md,
+  },
+  alarmListSeparator: {
+    height: spacing.sm,
+  },
+  alarmListTopSpacing: {
+    height: spacing.sm,
+  },
+  alarmListBottomSpacing: {
+    height: spacing.sm,
   },
   breadcrumbRow: {
     flexDirection: 'row',
