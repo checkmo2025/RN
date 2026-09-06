@@ -12,6 +12,7 @@ import {
 import {
   ActivityIndicator,
   Animated,
+  FlatList,
   Image,
   Keyboard,
   Linking,
@@ -1152,27 +1153,28 @@ export function AppHeader(props: Props) {
               },
             ]}
           >
-            <ScrollView
-              style={styles.searchPageScroll}
-              contentContainerStyle={[
-                styles.searchPageContent,
-                { paddingBottom: searchPageBottomPadding },
-              ]}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-              scrollEventThrottle={16}
-              onScroll={({ nativeEvent }) => {
-                if (searchStage !== 'results') return;
-                const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-                const distanceToBottom =
-                  contentSize.height - (layoutMeasurement.height + contentOffset.y);
-                if (distanceToBottom <= 240) {
-                  void loadMoreSearchResults();
-                }
-              }}
-            >
-              {searchStage === 'results' ? (
-                <>
+            {searchStage === 'results' ? (
+              <FlatList
+                style={styles.searchPageScroll}
+                contentContainerStyle={[
+                  styles.searchPageContent,
+                  { gap: 0, paddingBottom: searchPageBottomPadding },
+                ]}
+                data={searchResults}
+                keyExtractor={(book, index) => `${book.isbn}-${index}`}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                scrollEventThrottle={16}
+                onScroll={({ nativeEvent }) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+                  const distanceToBottom =
+                    contentSize.height - (layoutMeasurement.height + contentOffset.y);
+                  if (distanceToBottom <= 240) {
+                    void loadMoreSearchResults();
+                  }
+                }}
+                ListHeaderComponent={(
+                  <View style={{ gap: spacing.md }}>
                   <View style={styles.searchPageInputRow}>
                     <TextInput
                       value={query}
@@ -1222,76 +1224,76 @@ export function AppHeader(props: Props) {
                     <Text style={styles.searchEmptyText}>{l('검색 결과가 없습니다.')}</Text>
                   ) : null}
 
-                  <View style={styles.resultList}>
-                    {searchLoading ? (
-                      <>
-                        {[0, 1, 2].map((i) => (
-                          <View key={i} style={styles.resultCard}>
-                            <SkeletonBox style={{ width: 96, height: 138, borderRadius: radius.sm }} />
-                            <View style={[styles.resultBody, { gap: spacing.xs }]}>
-                              <SkeletonBox style={{ height: 18, width: '90%', borderRadius: radius.xs }} />
-                              <SkeletonBox style={{ height: 18, width: '70%', borderRadius: radius.xs }} />
-                              <SkeletonBox style={{ height: 14, width: '55%', borderRadius: radius.xs }} />
-                              <SkeletonBox style={{ height: 13, width: '85%', borderRadius: radius.xs }} />
-                              <SkeletonBox style={{ height: 13, width: '75%', borderRadius: radius.xs }} />
-                            </View>
+                  {searchLoading ? (
+                    <View style={styles.resultList}>
+                      {[0, 1, 2].map((i) => (
+                        <View key={i} style={styles.resultCard}>
+                          <SkeletonBox style={{ width: 96, height: 138, borderRadius: radius.sm }} />
+                          <View style={[styles.resultBody, { gap: spacing.xs }]}>
+                            <SkeletonBox style={{ height: 18, width: '90%', borderRadius: radius.xs }} />
+                            <SkeletonBox style={{ height: 18, width: '70%', borderRadius: radius.xs }} />
+                            <SkeletonBox style={{ height: 14, width: '55%', borderRadius: radius.xs }} />
+                            <SkeletonBox style={{ height: 13, width: '85%', borderRadius: radius.xs }} />
+                            <SkeletonBox style={{ height: 13, width: '75%', borderRadius: radius.xs }} />
                           </View>
-                        ))}
-                      </>
-                    ) : null}
-                    {searchResults.map((book, index) => (
-                      <Pressable
-                        key={`${book.isbn}-${index}`}
-                        style={styles.resultCard}
-                        onPress={() => handleSelectBook(book)}
-                      >
-                        {book.imgUrl ? (
-                          <Image source={{ uri: book.imgUrl }} style={styles.resultThumb} />
-                        ) : (
-                          <View style={styles.resultThumb} />
-                        )}
-
-                        <View style={styles.resultBody}>
-                          <Text style={styles.resultTitle} numberOfLines={2}>
-                            {book.title}
-                          </Text>
-                          <Text style={styles.resultAuthor}>{book.author}</Text>
-                          <Text style={styles.resultDesc} numberOfLines={3}>
-                            {toSearchDescription(book, l('책 설명이 없습니다.'))}
-                          </Text>
                         </View>
-
-                        <Pressable
-                          style={styles.resultLikeButton}
-                          onPress={(event) => {
-                            event.stopPropagation();
-                            handleToggleBookLike(book);
-                          }}
-                        >
-                          <MaterialIcons
-                            name={isBookLikedInUi(book) ? 'favorite' : 'favorite-border'}
-                            size={24}
-                            color={isBookLikedInUi(book) ? colors.secondary1 : colors.gray5}
-                          />
-                        </Pressable>
-
-                        <Pressable
-                          style={({ pressed }) => [
-                            styles.resultWriteButton,
-                            pressed && styles.resultWriteButtonPressed,
-                          ]}
-                          onPress={(event) => {
-                            event.stopPropagation();
-                            openStoryCompose(book);
-                          }}
-                        >
-                          <WriteIcon width={20} height={20} />
-                        </Pressable>
-                      </Pressable>
-                    ))}
+                      ))}
+                    </View>
+                  ) : null}
                   </View>
+                )}
+                ListHeaderComponentStyle={
+                  searchResults.length > 0 ? { marginBottom: spacing.md } : undefined
+                }
+                renderItem={({ item: book }) => (
+                  <Pressable style={styles.resultCard} onPress={() => handleSelectBook(book)}>
+                    {book.imgUrl ? (
+                      <Image source={{ uri: book.imgUrl }} style={styles.resultThumb} />
+                    ) : (
+                      <View style={styles.resultThumb} />
+                    )}
 
-                  {searched && searchResults.length > 0 ? (
+                    <View style={styles.resultBody}>
+                      <Text style={styles.resultTitle} numberOfLines={2}>
+                        {book.title}
+                      </Text>
+                      <Text style={styles.resultAuthor}>{book.author}</Text>
+                      <Text style={styles.resultDesc} numberOfLines={3}>
+                        {toSearchDescription(book, l('책 설명이 없습니다.'))}
+                      </Text>
+                    </View>
+
+                    <Pressable
+                      style={styles.resultLikeButton}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        handleToggleBookLike(book);
+                      }}
+                    >
+                      <MaterialIcons
+                        name={isBookLikedInUi(book) ? 'favorite' : 'favorite-border'}
+                        size={24}
+                        color={isBookLikedInUi(book) ? colors.secondary1 : colors.gray5}
+                      />
+                    </Pressable>
+
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.resultWriteButton,
+                        pressed && styles.resultWriteButtonPressed,
+                      ]}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        openStoryCompose(book);
+                      }}
+                    >
+                      <WriteIcon width={20} height={20} />
+                    </Pressable>
+                  </Pressable>
+                )}
+                ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
+                ListFooterComponent={
+                  searched && searchResults.length > 0 ? (
                     searchHasNext ? (
                       <View style={styles.searchMoreSpinner}>
                         <ActivityIndicator size="small" color={colors.primary1} />
@@ -1299,10 +1301,20 @@ export function AppHeader(props: Props) {
                     ) : (
                       <Text style={styles.searchEndText}>{l('마지막 검색 결과입니다.')}</Text>
                     )
-                  ) : null}
-                </>
-              ) : (
-                <>
+                  ) : null
+                }
+                ListFooterComponentStyle={{ marginTop: spacing.md }}
+              />
+            ) : (
+              <ScrollView
+                style={styles.searchPageScroll}
+                contentContainerStyle={[
+                  styles.searchPageContent,
+                  { paddingBottom: searchPageBottomPadding },
+                ]}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
                   <Pressable
                     style={styles.detailBackRow}
                     onPress={() => {
@@ -1424,9 +1436,8 @@ export function AppHeader(props: Props) {
                       );
                     })}
                   </View>
-                </>
-              )}
-            </ScrollView>
+              </ScrollView>
+            )}
           </View>
         </View>
       ) : null}
