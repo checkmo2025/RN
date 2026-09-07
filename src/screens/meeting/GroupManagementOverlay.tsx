@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  FlatList,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -365,23 +366,22 @@ export function GroupManagementOverlay({
                 {l('검색어를 입력하고 책을 선택해야 합니다.')}
               </Text>
             )}
-            <ScrollView
+            <FlatList
               style={styles.bookshelfBookSearchScroll}
               contentContainerStyle={styles.bookshelfBookSearchList}
+              data={bookshelfBookSearchResults}
+              keyExtractor={(book, index) => `bookshelf-create-book-${book.isbn}-${index}`}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
               scrollEventThrottle={16}
               onScroll={handleBookshelfBookSearchScroll}
-            >
-              {bookshelfBookSearchSearched &&
-              !bookshelfBookSearchLoading &&
-              bookshelfBookSearchResults.length === 0 ? (
-                <Text style={styles.bookshelfBookSearchEmpty}>{l('검색 결과가 없습니다.')}</Text>
-              ) : null}
-
-              {bookshelfBookSearchResults.map((book, index) => (
+              ListEmptyComponent={
+                bookshelfBookSearchSearched && !bookshelfBookSearchLoading ? (
+                  <Text style={styles.bookshelfBookSearchEmpty}>{l('검색 결과가 없습니다.')}</Text>
+                ) : null
+              }
+              renderItem={({ item: book }) => (
                 <Pressable
-                  key={`bookshelf-create-book-${book.isbn}-${index}`}
                   style={({ pressed }) => [
                     styles.bookshelfBookSearchItem,
                     bookshelfCreateDraft.sourceBook?.isbn === book.isbn &&
@@ -416,22 +416,23 @@ export function GroupManagementOverlay({
                     ) : null}
                   </View>
                 </Pressable>
-              ))}
-
-              {bookshelfBookSearchSearched &&
-              !bookshelfBookSearchLoading &&
-              bookshelfBookSearchResults.length > 0 ? (
-                bookshelfBookSearchLoadingMore ? (
-                  <View style={styles.bookshelfBookSearchLoadingMore}>
-                    <ActivityIndicator size="small" color={colors.primary1} />
-                  </View>
-                ) : !bookshelfBookSearchHasNext ? (
-                  <Text style={styles.bookshelfBookSearchEndText}>
-                    {l('마지막 검색 결과입니다.')}
-                  </Text>
+              )}
+              ListFooterComponent={
+                bookshelfBookSearchSearched &&
+                !bookshelfBookSearchLoading &&
+                bookshelfBookSearchResults.length > 0 ? (
+                  bookshelfBookSearchLoadingMore ? (
+                    <View style={styles.bookshelfBookSearchLoadingMore}>
+                      <ActivityIndicator size="small" color={colors.primary1} />
+                    </View>
+                  ) : !bookshelfBookSearchHasNext ? (
+                    <Text style={styles.bookshelfBookSearchEndText}>
+                      {l('마지막 검색 결과입니다.')}
+                    </Text>
+                  ) : null
                 ) : null
-              ) : null}
-            </ScrollView>
+              }
+            />
           </View>
         </KeyboardAvoidingView>
       ) : activeManagementScreen ? (
