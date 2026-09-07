@@ -3359,24 +3359,25 @@ export function StoryScreen() {
                   style={styles.bookPickerListArea}
                   behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 >
-                  <ScrollView
+                  <FlatList
                     style={styles.bookPickerScroll}
                     contentContainerStyle={[
                       styles.bookPickerContent,
                       { paddingBottom: insets.bottom + spacing.lg },
                     ]}
+                    data={bookSearchResults}
+                    keyExtractor={(bookItem, index) => `${bookItem.isbn}-${index}`}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                     scrollEventThrottle={16}
                     onScroll={handleBookSearchScroll}
-                  >
-                    {bookSearchSearched && !bookSearchLoading && bookSearchResults.length === 0 ? (
-                      <Text style={styles.bookPickerEmptyText}>{l('검색 결과가 없습니다.')}</Text>
-                    ) : null}
-
-                    {bookSearchResults.map((bookItem, index) => (
+                    ListEmptyComponent={
+                      bookSearchSearched && !bookSearchLoading ? (
+                        <Text style={styles.bookPickerEmptyText}>{l('검색 결과가 없습니다.')}</Text>
+                      ) : null
+                    }
+                    renderItem={({ item: bookItem }) => (
                       <Pressable
-                        key={`${bookItem.isbn}-${index}`}
                         onPress={() => handleSelectBookFromSearch(bookItem)}
                         style={styles.bookOption}
                       >
@@ -3395,22 +3396,23 @@ export function StoryScreen() {
                           </Text>
                         </View>
                       </Pressable>
-                    ))}
-
-                    {bookSearchSearched &&
-                    !bookSearchLoading &&
-                    bookSearchResults.length > 0 ? (
-                      bookSearchLoadingMore ? (
-                        <View style={styles.bookSearchPaginationFooter}>
-                          <ActivityIndicator size="small" color={colors.primary1} />
-                        </View>
-                      ) : !bookSearchHasNext ? (
-                        <Text style={styles.bookSearchEndText}>
-                          {l('마지막 검색 결과입니다.')}
-                        </Text>
+                    )}
+                    ListFooterComponent={
+                      bookSearchSearched &&
+                      !bookSearchLoading &&
+                      bookSearchResults.length > 0 ? (
+                        bookSearchLoadingMore ? (
+                          <View style={styles.bookSearchPaginationFooter}>
+                            <ActivityIndicator size="small" color={colors.primary1} />
+                          </View>
+                        ) : !bookSearchHasNext ? (
+                          <Text style={styles.bookSearchEndText}>
+                            {l('마지막 검색 결과입니다.')}
+                          </Text>
+                        ) : null
                       ) : null
-                    ) : null}
-                  </ScrollView>
+                    }
+                  />
                 </KeyboardAvoidingView>
           </View>
           {showBookPicker ? <ToastHost /> : null}
