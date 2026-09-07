@@ -179,6 +179,8 @@ type StoryCard = {
   };
 };
 
+type MyPageListItem = AlarmItem | StoryCard[];
+
 type BookCard = {
   id: string;
   isbn: string;
@@ -355,7 +357,7 @@ export function MyPageScreen() {
   const { isLoggedIn, logout, requireAuth } = useAuthGate();
   const { language, setLanguage, t, l } = useLanguage();
   const relativeNowMillis = useRelativeNow();
-  const myPageScrollRef = useRef<FlatList<AlarmItem>>(null);
+  const myPageScrollRef = useRef<FlatList<MyPageListItem>>(null);
   useScrollToTop(myPageScrollRef);
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const route = useRoute<RouteProp<{ My: MyPageRouteParams }, 'My'>>();
@@ -1331,7 +1333,15 @@ export function MyPageScreen() {
     [deletingDraftStoryId],
   );
 
-  const renderStories = () => (
+  const storyRows = useMemo(
+    () =>
+      Array.from({ length: Math.ceil(stories.length / 2) }, (_, index) =>
+        stories.slice(index * 2, index * 2 + 2),
+      ),
+    [stories],
+  );
+
+  const renderStoryStatus = () => (
     <View style={[styles.gridContent, styles.cardWrap]}>
       {loadingStories ? (
         <>
@@ -1356,7 +1366,13 @@ export function MyPageScreen() {
       {!loadingStories && stories.length === 0 ? (
         <Text style={styles.emptyText}>{l('작성한 책이야기가 없습니다.')}</Text>
       ) : null}
-      {stories.map((item) => (
+    </View>
+  );
+
+  const renderStoryRow = useCallback(
+    (row: StoryCard[]) => (
+      <View style={styles.storyListRow}>
+        {row.map((item) => (
         <Pressable
           key={item.id}
           style={({ pressed }) => [styles.storyCard, pressed && styles.pressed]}
@@ -1438,8 +1454,10 @@ export function MyPageScreen() {
             )}
           </View>
         </Pressable>
-      ))}
-    </View>
+        ))}
+      </View>
+    ),
+    [CommentIcon, deletingDraftStoryId, handleDeleteDraftStory, l, navigation],
   );
 
   const renderBooks = () => (
@@ -1526,7 +1544,7 @@ export function MyPageScreen() {
   );
 
   const renderAlarmItem = useCallback(
-    ({ item }: ListRenderItemInfo<AlarmItem>) => (
+    (item: AlarmItem) => (
       <Pressable
         style={({ pressed }) => [styles.alarmRow, pressed && styles.pressed]}
         onPress={() => handlePressAlarm(item)}
@@ -1543,6 +1561,19 @@ export function MyPageScreen() {
       </Pressable>
     ),
     [handlePressAlarm, language, relativeNowMillis],
+  );
+
+  const mainListItems: MyPageListItem[] =
+    isLoggedIn && activeTab === '내 알림'
+      ? alarms
+      : isLoggedIn && activeTab === '내 책 이야기'
+        ? storyRows
+        : [];
+
+  const renderMainListItem = useCallback(
+    ({ item }: ListRenderItemInfo<MyPageListItem>) =>
+      Array.isArray(item) ? renderStoryRow(item) : renderAlarmItem(item),
+    [renderAlarmItem, renderStoryRow],
   );
 
   const renderAlarmStatus = () => (
@@ -1578,7 +1609,7 @@ export function MyPageScreen() {
 
     switch (activeTab) {
       case '내 책 이야기':
-        return renderStories();
+        return renderStoryStatus();
       case '내 서재':
         return renderBooks();
       case '내 모임':
@@ -2949,10 +2980,12 @@ export function MyPageScreen() {
         <FlatList
           ref={myPageScrollRef}
           contentContainerStyle={[styles.scrollContent, styles.mainListContent]}
-          data={isLoggedIn && activeTab === '내 알림' ? alarms : []}
-          keyExtractor={(alarm) => alarm.id}
-          renderItem={renderAlarmItem}
-          ItemSeparatorComponent={() => <View style={styles.alarmListSeparator} />}
+          data={mainListItems}
+          keyExtractor={(item) =>
+            Array.isArray(item) ? `story-row-${item[0]?.id}` : item.id
+          }
+          renderItem={renderMainListItem}
+          ItemSeparatorComponent={() => <View style={styles.mainListSeparator} />}
           ListHeaderComponent={(
             <>
         <View style={styles.profileRow}>
@@ -3065,8 +3098,13 @@ export function MyPageScreen() {
           alarms.length > 0
             ? loadingAlarms
               ? renderAlarmStatus()
-              : <View style={styles.alarmListTopSpacing} />
+              : <View style={styles.mainListTopSpacing} />
             : <View />
+        ) : activeTab === '내 책 이야기' &&
+          isLoggedIn &&
+          stories.length > 0 &&
+          !loadingStories ? (
+          <View style={styles.mainListTopSpacing} />
         ) : (
           <View style={styles.tabContent}>{renderTabContent()}</View>
         )}
@@ -3077,8 +3115,9 @@ export function MyPageScreen() {
             activeTab === '내 알림' && isLoggedIn ? renderAlarmStatus() : null
           }
           ListFooterComponent={
-            activeTab === '내 알림' && alarms.length > 0
-              ? <View style={styles.alarmListBottomSpacing} />
+            (activeTab === '내 알림' && alarms.length > 0) ||
+            (activeTab === '내 책 이야기' && stories.length > 0)
+              ? <View style={styles.mainListBottomSpacing} />
               : null
           }
           showsVerticalScrollIndicator={false}
@@ -3146,13 +3185,13 @@ const styles = StyleSheet.create({
   mainHeader: {
     gap: spacing.md,
   },
-  alarmListSeparator: {
+  mainListSeparator: {
     height: spacing.sm,
   },
-  alarmListTopSpacing: {
+  mainListTopSpacing: {
     height: spacing.sm,
   },
-  alarmListBottomSpacing: {
+  mainListBottomSpacing: {
     height: spacing.sm,
   },
   breadcrumbRow: {
@@ -4029,6 +4068,10 @@ const styles = StyleSheet.create({
   cardWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  storyListRow: {
+    flexDirection: 'row',
     gap: spacing.sm,
   },
   storyCard: {
