@@ -179,8 +179,6 @@ type StoryCard = {
   };
 };
 
-type MyPageListItem = AlarmItem | StoryCard[];
-
 type BookCard = {
   id: string;
   isbn: string;
@@ -190,6 +188,8 @@ type BookCard = {
   imageUrl?: string;
   liked: boolean;
 };
+
+type MyPageListItem = AlarmItem | StoryCard[] | BookCard[];
 
 function toBookLikePayload(book: BookCard) {
   return {
@@ -1341,6 +1341,14 @@ export function MyPageScreen() {
     [stories],
   );
 
+  const bookRows = useMemo(
+    () =>
+      Array.from({ length: Math.ceil(books.length / 3) }, (_, index) =>
+        books.slice(index * 3, index * 3 + 3),
+      ),
+    [books],
+  );
+
   const renderStoryStatus = () => (
     <View style={[styles.gridContent, styles.cardWrap]}>
       {loadingStories ? (
@@ -1371,7 +1379,7 @@ export function MyPageScreen() {
 
   const renderStoryRow = useCallback(
     (row: StoryCard[]) => (
-      <View style={styles.storyListRow}>
+      <View style={styles.gridListRow}>
         {row.map((item) => (
         <Pressable
           key={item.id}
@@ -1460,7 +1468,7 @@ export function MyPageScreen() {
     [CommentIcon, deletingDraftStoryId, handleDeleteDraftStory, l, navigation],
   );
 
-  const renderBooks = () => (
+  const renderBookStatus = () => (
     <View style={[styles.gridContent, styles.bookWrap]}>
       {loadingBooks ? (
         <>
@@ -1476,30 +1484,38 @@ export function MyPageScreen() {
       {!loadingBooks && books.length === 0 ? (
         <Text style={styles.emptyText}>{l('내 서재에 표시할 책이 없습니다.')}</Text>
       ) : null}
-      {books.map((item) => (
-        <View key={item.id} style={[styles.bookCard, { width: bookshelfCardWidth }]}>
-          <View style={styles.bookThumb}>
-            <Image source={{ uri: item.imageUrl || BOOK_DEFAULT_IMAGE }} style={styles.bookThumbImage} resizeMode="cover" />
-            <Pressable
-              style={({ pressed }) => [styles.bookLikeBadge, pressed && styles.pressed]}
-              onPress={() => handleToggleBookLike(item)}
-            >
-              <MaterialIcons
-                name={item.liked ? 'favorite' : 'favorite-border'}
-                size={18}
-                color={item.liked ? colors.secondary1 : colors.gray3}
-              />
-            </Pressable>
-          </View>
-          <Text style={styles.bookTitle} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={styles.bookAuthor} numberOfLines={1}>
-            {item.author}
-          </Text>
-        </View>
-      ))}
     </View>
+  );
+
+  const renderBookRow = useCallback(
+    (row: BookCard[]) => (
+      <View style={styles.gridListRow}>
+        {row.map((item) => (
+          <View key={item.id} style={[styles.bookCard, { width: bookshelfCardWidth }]}>
+            <View style={styles.bookThumb}>
+              <Image source={{ uri: item.imageUrl || BOOK_DEFAULT_IMAGE }} style={styles.bookThumbImage} resizeMode="cover" />
+              <Pressable
+                style={({ pressed }) => [styles.bookLikeBadge, pressed && styles.pressed]}
+                onPress={() => handleToggleBookLike(item)}
+              >
+                <MaterialIcons
+                  name={item.liked ? 'favorite' : 'favorite-border'}
+                  size={18}
+                  color={item.liked ? colors.secondary1 : colors.gray3}
+                />
+              </Pressable>
+            </View>
+            <Text style={styles.bookTitle} numberOfLines={1}>
+              {item.title}
+            </Text>
+            <Text style={styles.bookAuthor} numberOfLines={1}>
+              {item.author}
+            </Text>
+          </View>
+        ))}
+      </View>
+    ),
+    [bookshelfCardWidth, handleToggleBookLike],
   );
 
   const renderGroups = () => (
@@ -1568,12 +1584,18 @@ export function MyPageScreen() {
       ? alarms
       : isLoggedIn && activeTab === '내 책 이야기'
         ? storyRows
-        : [];
+        : isLoggedIn && activeTab === '내 서재'
+          ? bookRows
+          : [];
 
   const renderMainListItem = useCallback(
-    ({ item }: ListRenderItemInfo<MyPageListItem>) =>
-      Array.isArray(item) ? renderStoryRow(item) : renderAlarmItem(item),
-    [renderAlarmItem, renderStoryRow],
+    ({ item }: ListRenderItemInfo<MyPageListItem>) => {
+      if (!Array.isArray(item)) return renderAlarmItem(item);
+      return activeTab === '내 서재'
+        ? renderBookRow(item as BookCard[])
+        : renderStoryRow(item as StoryCard[]);
+    },
+    [activeTab, renderAlarmItem, renderBookRow, renderStoryRow],
   );
 
   const renderAlarmStatus = () => (
@@ -1611,7 +1633,7 @@ export function MyPageScreen() {
       case '내 책 이야기':
         return renderStoryStatus();
       case '내 서재':
-        return renderBooks();
+        return renderBookStatus();
       case '내 모임':
         return renderGroups();
       case '내 알림':
@@ -2982,7 +3004,7 @@ export function MyPageScreen() {
           contentContainerStyle={[styles.scrollContent, styles.mainListContent]}
           data={mainListItems}
           keyExtractor={(item) =>
-            Array.isArray(item) ? `story-row-${item[0]?.id}` : item.id
+            Array.isArray(item) ? `grid-row-${item[0]?.id}` : item.id
           }
           renderItem={renderMainListItem}
           ItemSeparatorComponent={() => <View style={styles.mainListSeparator} />}
@@ -3105,6 +3127,11 @@ export function MyPageScreen() {
           stories.length > 0 &&
           !loadingStories ? (
           <View style={styles.mainListTopSpacing} />
+        ) : activeTab === '내 서재' &&
+          isLoggedIn &&
+          books.length > 0 &&
+          !loadingBooks ? (
+          <View style={styles.mainListTopSpacing} />
         ) : (
           <View style={styles.tabContent}>{renderTabContent()}</View>
         )}
@@ -3116,7 +3143,8 @@ export function MyPageScreen() {
           }
           ListFooterComponent={
             (activeTab === '내 알림' && alarms.length > 0) ||
-            (activeTab === '내 책 이야기' && stories.length > 0)
+            (activeTab === '내 책 이야기' && stories.length > 0) ||
+            (activeTab === '내 서재' && books.length > 0)
               ? <View style={styles.mainListBottomSpacing} />
               : null
           }
@@ -4070,7 +4098,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  storyListRow: {
+  gridListRow: {
     flexDirection: 'row',
     gap: spacing.sm,
   },

@@ -4138,3 +4138,9 @@ export const interactionOpacity = {
 - `내 책 이야기` 2열 카드를 기존 바깥 `FlatList`의 행으로 가상화하고 데이터·순서·문구·상세·임시저장 동작을 유지
 - iOS Release/Hermes에서 조건별 30회 측정해 100개 70.2%, 500개 95.0% 초기 커밋 단축과 19개 11.7% 증가를 기록
 - TypeScript, 대상 ESLint, 디자인 토큰 검사, iOS Release 빌드와 `book_cafe` 로그인 시뮬레이터 목록·상세·탭 전환을 검증
+
+# 2026-09-07 17:36:22 KST 마이페이지 내 서재 목록 가상화
+
+- `내 서재` 3열 책 카드를 기존 바깥 `FlatList`의 행으로 가상화하고 데이터·순서·문구·좋아요·로딩 동작을 유지
+- iOS Release/Hermes에서 조건별 30회 측정해 100권 54.6%, 500권 90.2% 초기 커밋 단축과 실제 규모에 가까운 19권 7.0% 증가를 기록
+- TypeScript, 대상 ESLint, 디자인 토큰 검사, iOS Release 빌드와 `book_cafe`의 실제 15권 목록·탭 전환을 검증

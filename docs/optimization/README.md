@@ -74,3 +74,4 @@ ponytail-관련-기능-YYYY-MM-DD-HHmm.md
 | 2026-09-07 11:48 | [책이야기 도서 선택 검색 결과 가상화](./ponytail-story-book-picker-results-virtualization-2026-09-07-1148.md) | 19개 23.1%, 100개 78.3%, 500개 94.6% 단축; 7개는 3.3% 증가 | 부분 확인 |
 | 2026-09-07 16:39 | [모임 책장 도서 검색 결과 가상화](./ponytail-group-bookshelf-book-search-results-virtualization-2026-09-07-1639.md) | 19개 23.5%, 100개 77.4%, 500개 96.2% 단축; 7개는 22.5% 증가 | 부분 확인 |
 | 2026-09-07 17:00 | [마이페이지 내 책 이야기 목록 가상화](./ponytail-mypage-my-stories-list-virtualization-2026-09-07-1700.md) | 100개 70.2%, 500개 95.0% 단축; 19개는 11.7% 증가 | 부분 확인 |
+| 2026-09-07 17:31 | [마이페이지 내 서재 목록 가상화](./ponytail-mypage-bookshelf-list-virtualization-2026-09-07-1731.md) | 100개 54.6%, 500개 90.2% 단축; 실제 규모에 가까운 19개는 7.0% 증가 | 부분 확인 |
