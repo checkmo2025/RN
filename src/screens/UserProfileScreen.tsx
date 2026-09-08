@@ -5,7 +5,6 @@ import {
   FlatList,
   Image,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   type ListRenderItemInfo,
@@ -677,42 +676,60 @@ export function UserProfileScreen() {
     [navigation],
   );
 
-  const renderStoryCards = () => (
+  const storyRows = useMemo(
+    () =>
+      Array.from({ length: Math.ceil(stories.length / 2) }, (_, index) =>
+        stories.slice(index * 2, index * 2 + 2),
+      ),
+    [stories],
+  );
+  const showStoryRows =
+    activeTab === '책 이야기' && stories.length > 0 && (!profileLoading || refreshing);
+
+  const renderStoryStatus = () => (
     <View style={[styles.gridContent, styles.cardWrap]}>
       {stories.length === 0 ? <Text style={styles.emptyText}>{l('작성한 책이야기가 없습니다.')}</Text> : null}
-      {stories.map((story) => (
-        <Pressable
-          key={story.id}
-          style={({ pressed }) => [styles.storyCard, pressed && styles.pressed]}
-          onPress={() => handleOpenStoryDetail(story)}
-        >
-          <View style={styles.storyThumb}>
-            {story.imageUrl ? (
-              <Image source={{ uri: story.imageUrl }} style={styles.storyThumbImage} resizeMode="cover" />
-            ) : null}
-          </View>
-          <View style={styles.storyTextWrap}>
-            <Text style={styles.storyTitle} numberOfLines={2}>
-              {story.title}
-            </Text>
-            <Text style={styles.storyExcerpt} numberOfLines={2}>
-              {story.excerpt}
-            </Text>
-          </View>
-          <View style={styles.storyActions}>
-            <View style={styles.inlineAction}>
-              <LikeIcon width={18} height={18} />
-              <Text style={styles.inlineText}>{story.likes}</Text>
-            </View>
-            <View style={styles.actionDivider} />
-            <View style={styles.inlineAction}>
-              <CommentIcon width={18} height={18} />
-              <Text style={styles.inlineText}>{story.comments}</Text>
-            </View>
-          </View>
-        </Pressable>
-      ))}
     </View>
+  );
+
+  const renderStoryRow = useCallback(
+    ({ item: row }: ListRenderItemInfo<StoryCard[]>) => (
+      <View style={styles.storyListRow}>
+        {row.map((story) => (
+          <Pressable
+            key={story.id}
+            style={({ pressed }) => [styles.storyCard, pressed && styles.pressed]}
+            onPress={() => handleOpenStoryDetail(story)}
+          >
+            <View style={styles.storyThumb}>
+              {story.imageUrl ? (
+                <Image source={{ uri: story.imageUrl }} style={styles.storyThumbImage} resizeMode="cover" />
+              ) : null}
+            </View>
+            <View style={styles.storyTextWrap}>
+              <Text style={styles.storyTitle} numberOfLines={2}>
+                {story.title}
+              </Text>
+              <Text style={styles.storyExcerpt} numberOfLines={2}>
+                {story.excerpt}
+              </Text>
+            </View>
+            <View style={styles.storyActions}>
+              <View style={styles.inlineAction}>
+                <LikeIcon width={18} height={18} />
+                <Text style={styles.inlineText}>{story.likes}</Text>
+              </View>
+              <View style={styles.actionDivider} />
+              <View style={styles.inlineAction}>
+                <CommentIcon width={18} height={18} />
+                <Text style={styles.inlineText}>{story.comments}</Text>
+              </View>
+            </View>
+          </Pressable>
+        ))}
+      </View>
+    ),
+    [handleOpenStoryDetail],
   );
 
   const renderLibraryCards = () => (
@@ -797,7 +814,7 @@ export function UserProfileScreen() {
   );
 
   const renderTabContent = () => {
-    if (activeTab === '책 이야기') return renderStoryCards();
+    if (activeTab === '책 이야기') return renderStoryStatus();
     if (activeTab === '서재') return renderLibraryCards();
     return renderMeetings();
   };
@@ -972,11 +989,12 @@ export function UserProfileScreen() {
             }
           />
         ) : (
-          <ScrollView
-            contentContainerStyle={styles.content}
-            showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-          >
+          <FlatList
+            contentContainerStyle={[styles.content, styles.mainListContent]}
+            data={showStoryRows ? storyRows : []}
+            keyExtractor={(row) => `story-row-${row[0]?.id}`}
+            renderItem={renderStoryRow}
+            ListHeaderComponent={(
             <>
               <Pressable
                 style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
@@ -1078,19 +1096,23 @@ export function UserProfileScreen() {
                 })}
               </View>
 
-              <View style={styles.tabContent}>
+              <View style={showStoryRows ? styles.storyListTopSpacing : styles.tabContent}>
                 {profileLoading && !refreshing ? (
                   <View style={styles.profileSkeletonWrap}>
                     <SkeletonBox style={styles.profileSkeletonAvatar} />
                     <SkeletonBox style={styles.profileSkeletonName} />
                     <SkeletonBox style={styles.profileSkeletonBio} />
                   </View>
-                ) : (
+                ) : !showStoryRows ? (
                   renderTabContent()
-                )}
+                ) : null}
               </View>
             </>
-          </ScrollView>
+            )}
+            ListHeaderComponentStyle={styles.mainListHeader}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+          />
         )}
       </Animated.View>
       <ProfileImageViewer
@@ -1169,6 +1191,15 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.md,
     paddingBottom: spacing.xl * 2,
+  },
+  mainListContent: {
+    gap: 0,
+  },
+  mainListHeader: {
+    gap: spacing.md,
+  },
+  storyListTopSpacing: {
+    height: spacing.sm,
   },
   breadcrumbRow: {
     flexDirection: 'row',
@@ -1299,6 +1330,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  storyListRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   storyCard: {
     width: '48%',
