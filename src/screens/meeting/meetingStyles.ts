@@ -19,6 +19,12 @@ export const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingBottom: spacing.xl * 2,
   },
+  groupHomeVirtualizedContent: {
+    gap: 0,
+  },
+  groupHomeListHeader: {
+    gap: spacing.sm,
+  },
   createContainer: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1982,6 +1988,12 @@ export const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.md,
   },
+  noticeDetailVirtualizedHeader: {
+    borderBottomWidth: 0,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    paddingBottom: 0,
+  },
   noticeDetailTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2226,8 +2238,28 @@ export const styles = StyleSheet.create({
     ...typography.body1_2,
     color: colors.white,
   },
-  noticeCommentList: {
+  noticeCommentVirtualizedCell: {
+    paddingTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: colors.subbrown4,
+    backgroundColor: colors.white,
+  },
+  noticeCommentVirtualizedFooter: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.subbrown4,
+    borderBottomLeftRadius: radius.md,
+    borderBottomRightRadius: radius.md,
+    backgroundColor: colors.white,
     gap: spacing.sm,
+  },
+  noticeCommentVirtualizedFooterWithState: {
+    paddingTop: spacing.sm,
   },
   noticeCommentItem: {
     flexDirection: 'row',

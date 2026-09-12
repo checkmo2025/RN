@@ -79,3 +79,4 @@ ponytail-관련-기능-YYYY-MM-DD-HHmm.md
 | 2026-09-12 16:00 | [다른 사용자 프로필 공개 서재 가상화](./ponytail-user-profile-public-library-virtualization-2026-09-12-1600.md) | Release 100권 48.4%, 500권 88.7% 초기 커밋 단축; 7·19권은 35.4%·8.1% 증가 | 부분 확인 |
 | 2026-09-12 16:25 | [사용자 프로필 책 이야기 페이지 수집 공통화](./ponytail-user-profile-story-pagination-2026-09-12-1625.md) | 수집 코드 16→4줄, 115개 사례 불일치 0건, 요청 518→518회 유지 | 확인 |
 | 2026-09-12 16:58 | [모임 관리 멤버 목록 가상화](./ponytail-group-management-member-list-virtualization-2026-09-12-1658.md) | 500명 첫 커밋 카드 500→10개, 중앙값 96.5% 단축 | 확인 |
+| 2026-09-12 17:41 | [모임 공지 상세 댓글 가상화](./ponytail-group-notice-comment-list-virtualization-2026-09-12-1741.md) | 500개 첫 커밋 96.2% 단축, 동일 거리 스크롤 FPS는 변화 없음 | 부분 확인 |

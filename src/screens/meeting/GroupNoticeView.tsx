@@ -19,7 +19,6 @@ import {
 } from './helpers';
 import type {
   AsyncLoadStatus,
-  CursorPageState,
   NoticeComment,
   NoticeItem,
   NoticePollOption,
@@ -75,7 +74,6 @@ function renderNoticeTag(tag: NoticeItem['tags'][number], key: string, l: (text:
 export type GroupNoticeViewProps = {
   isMember: boolean;
   isInitialLoading?: boolean;
-  navigation: NavigationProp<ParamListBase>;
   // Raw notice state
   noticeItems: NoticeItem[];
   noticePage: number;
@@ -84,10 +82,7 @@ export type GroupNoticeViewProps = {
   submittingNoticeComment: boolean;
   noticeCommentAttachments: ImageAttachmentsController;
   editingNoticeCommentId: string | null;
-  noticeCommentsById: Record<string, NoticeComment[]>;
   noticeDetailLoadStateById: Record<string, AsyncLoadStatus>;
-  noticeCommentLoadStateById: Record<string, AsyncLoadStatus>;
-  noticeCommentPageStateByNoticeId: Record<string, CursorPageState>;
   noticePollOptionsById: Record<string, NoticePollOption[]>;
   selectedVoteOptionIdsByNotice: Record<string, string[]>;
   submittedVoteOptionIdsByNotice: Record<string, string[]>;
@@ -106,16 +101,90 @@ export type GroupNoticeViewProps = {
   handleSubmitVote: () => void;
   handleSubmitNoticeComment: () => void;
   handleCancelNoticeCommentEdit: () => void;
-  handlePressCommentMenu: (comment: NoticeComment, event: GestureResponderEvent) => void;
   retryNoticeDetail: () => void;
-  retryNoticeComments: () => void;
   onCommentInputMeasured?: (inputY: number, inputHeight: number) => void;
 };
+
+export type GroupNoticeCommentRowProps = {
+  comment: NoticeComment;
+  navigation: NavigationProp<ParamListBase>;
+  setPhotoViewer: (viewer: { photos: string[]; index: number } | null) => void;
+  handlePressCommentMenu: (comment: NoticeComment, event: GestureResponderEvent) => void;
+};
+
+export function GroupNoticeCommentRow({
+  comment,
+  navigation,
+  setPhotoViewer,
+  handlePressCommentMenu,
+}: GroupNoticeCommentRowProps) {
+  const { l } = useLanguage();
+
+  return (
+    <View style={styles.noticeCommentItem}>
+      <Pressable
+        style={({ pressed }) => [styles.noticeCommentAvatar, pressed && styles.pressed]}
+        onPress={() =>
+          navigation.navigate('UserProfile', {
+            memberNickname: comment.author,
+            fromScreen: 'Meeting',
+          })
+        }
+      >
+        {comment.authorProfileImageUrl ? (
+          <Image
+            source={{ uri: comment.authorProfileImageUrl }}
+            style={styles.noticeCommentAvatarImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <DefaultProfileAvatar size={20} />
+        )}
+      </Pressable>
+      <View style={styles.noticeCommentBody}>
+        <View style={styles.noticeCommentMetaRow}>
+          <View style={styles.noticeCommentAuthorRow}>
+            <Pressable
+              onPress={() =>
+                navigation.navigate('UserProfile', {
+                  memberNickname: comment.author,
+                  fromScreen: 'Meeting',
+                })
+              }
+            >
+              <Text style={styles.noticeCommentAuthor}>{comment.author}</Text>
+            </Pressable>
+            {comment.isAuthor ? (
+              <View style={styles.noticeCommentAuthorBadge}>
+                <Text style={styles.noticeCommentAuthorBadgeText}>{l('작성자')}</Text>
+              </View>
+            ) : null}
+            <Text style={styles.noticeCommentDate}>{comment.date}</Text>
+          </View>
+          <Pressable
+            style={({ pressed }) => [
+              styles.noticeCommentMenuButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={(event) => handlePressCommentMenu(comment, event)}
+          >
+            <MaterialIcons name="more-vert" size={16} color={colors.gray4} />
+          </Pressable>
+        </View>
+        <Text style={styles.noticeCommentText}>{comment.content}</Text>
+        <ImageGallery
+          imageUrls={comment.imageUrls}
+          compact
+          onPressImage={(index) => setPhotoViewer({ photos: comment.imageUrls, index })}
+        />
+      </View>
+    </View>
+  );
+}
 
 export function GroupNoticeView({
   isMember,
   isInitialLoading = false,
-  navigation,
   noticeItems,
   noticePage,
   selectedNoticeId,
@@ -123,10 +192,7 @@ export function GroupNoticeView({
   submittingNoticeComment,
   noticeCommentAttachments,
   editingNoticeCommentId,
-  noticeCommentsById,
   noticeDetailLoadStateById,
-  noticeCommentLoadStateById,
-  noticeCommentPageStateByNoticeId,
   noticePollOptionsById,
   selectedVoteOptionIdsByNotice,
   submittedVoteOptionIdsByNotice,
@@ -143,9 +209,7 @@ export function GroupNoticeView({
   handleSubmitVote,
   handleSubmitNoticeComment,
   handleCancelNoticeCommentEdit,
-  handlePressCommentMenu,
   retryNoticeDetail,
-  retryNoticeComments,
   onCommentInputMeasured,
 }: GroupNoticeViewProps) {
   const { l } = useLanguage();
@@ -155,16 +219,6 @@ export function GroupNoticeView({
     [noticeItems, selectedNoticeId],
   );
 
-  const currentNoticeComments = useMemo(() => {
-    if (!selectedNotice) return [];
-    return noticeCommentsById[selectedNotice.id] ?? [];
-  }, [noticeCommentsById, selectedNotice]);
-
-  const currentNoticeCommentPageState = useMemo<CursorPageState | null>(() => {
-    if (!selectedNotice) return null;
-    return noticeCommentPageStateByNoticeId[selectedNotice.id] ?? null;
-  }, [noticeCommentPageStateByNoticeId, selectedNotice]);
-
   const currentNoticeDetailLoadStatus = useMemo<AsyncLoadStatus>(() => {
     if (!selectedNotice) return 'idle';
     return (
@@ -172,16 +226,6 @@ export function GroupNoticeView({
       (selectedNotice.content.trim().length > 0 ? 'success' : 'idle')
     );
   }, [noticeDetailLoadStateById, selectedNotice]);
-
-  const currentNoticeCommentLoadStatus = useMemo<AsyncLoadStatus>(() => {
-    if (!selectedNotice) return 'idle';
-    return (
-      noticeCommentLoadStateById[selectedNotice.id] ??
-      (Object.prototype.hasOwnProperty.call(noticeCommentsById, selectedNotice.id)
-        ? 'success'
-        : 'idle')
-    );
-  }, [noticeCommentLoadStateById, noticeCommentsById, selectedNotice]);
 
   const currentNoticePollOptions = useMemo(() => {
     if (!selectedNotice?.poll) return [];
@@ -249,7 +293,7 @@ export function GroupNoticeView({
 
   if (selectedNotice) {
     return (
-      <View style={styles.noticeDetailCard}>
+      <View style={[styles.noticeDetailCard, styles.noticeDetailVirtualizedHeader]}>
         <Pressable
           style={({ pressed }) => [styles.breadcrumbPress, pressed && styles.pressed]}
           onPress={() => {
@@ -530,99 +574,6 @@ export function GroupNoticeView({
             </Pressable>
           ) : null}
 
-          <View style={styles.noticeCommentList}>
-            {currentNoticeComments.map((comment) => (
-              <View key={comment.id} style={styles.noticeCommentItem}>
-                <Pressable
-                  style={({ pressed }) => [styles.noticeCommentAvatar, pressed && styles.pressed]}
-                  onPress={() =>
-                    navigation.navigate('UserProfile', {
-                      memberNickname: comment.author,
-                      fromScreen: 'Meeting',
-                    })
-                  }
-                >
-                  {comment.authorProfileImageUrl ? (
-                    <Image
-                      source={{ uri: comment.authorProfileImageUrl }}
-                      style={styles.noticeCommentAvatarImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <DefaultProfileAvatar size={20} />
-                  )}
-                </Pressable>
-                <View style={styles.noticeCommentBody}>
-                  <View style={styles.noticeCommentMetaRow}>
-                    <View style={styles.noticeCommentAuthorRow}>
-                      <Pressable
-                        onPress={() =>
-                          navigation.navigate('UserProfile', {
-                            memberNickname: comment.author,
-                            fromScreen: 'Meeting',
-                          })
-                        }
-                      >
-                        <Text style={styles.noticeCommentAuthor}>{comment.author}</Text>
-                      </Pressable>
-                      {comment.isAuthor ? (
-                        <View style={styles.noticeCommentAuthorBadge}>
-                          <Text style={styles.noticeCommentAuthorBadgeText}>{l('작성자')}</Text>
-                        </View>
-                      ) : null}
-                      <Text style={styles.noticeCommentDate}>{comment.date}</Text>
-                    </View>
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.noticeCommentMenuButton,
-                        pressed && styles.pressed,
-                      ]}
-                      onPress={(event) => handlePressCommentMenu(comment, event)}
-                    >
-                      <MaterialIcons name="more-vert" size={16} color={colors.gray4} />
-                    </Pressable>
-                  </View>
-                  <Text style={styles.noticeCommentText}>{comment.content}</Text>
-                  <ImageGallery
-                    imageUrls={comment.imageUrls}
-                    compact
-                    onPressImage={(index) =>
-                      setPhotoViewer({ photos: comment.imageUrls, index })
-                    }
-                  />
-                </View>
-              </View>
-            ))}
-            {(currentNoticeCommentLoadStatus === 'idle' ||
-              currentNoticeCommentLoadStatus === 'loading') &&
-            currentNoticeComments.length === 0 ? (
-              <View style={styles.detailLoadStateCard} accessibilityRole="progressbar">
-                <Text style={styles.detailLoadStateText}>{l('댓글을 불러오는 중...')}</Text>
-              </View>
-            ) : null}
-            {currentNoticeCommentLoadStatus === 'error' ? (
-              <View style={styles.detailLoadStateCard}>
-                <Text style={styles.detailLoadStateText}>{l('댓글을 불러오지 못했습니다.')}</Text>
-                <Pressable
-                  style={({ pressed }) => [styles.detailLoadRetryButton, pressed && styles.pressed]}
-                  onPress={retryNoticeComments}
-                  accessibilityRole="button"
-                  accessibilityLabel={l('다시 시도')}
-                >
-                  <MaterialIcons name="refresh" size={18} color={colors.primary1} />
-                  <Text style={styles.detailLoadRetryText}>{l('다시 시도')}</Text>
-                </Pressable>
-              </View>
-            ) : null}
-            {currentNoticeCommentLoadStatus === 'success' && currentNoticeComments.length === 0 ? (
-              <View style={styles.managementEmptyCard}>
-                <Text style={styles.managementEmptyText}>{l('등록된 댓글이 없습니다.')}</Text>
-              </View>
-            ) : null}
-            {currentNoticeCommentPageState?.loadingMore ? (
-              <Text style={styles.infiniteScrollLoadingText}>{l('불러오는 중...')}</Text>
-            ) : null}
-          </View>
         </View>
       </View>
     );

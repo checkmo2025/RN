@@ -138,7 +138,7 @@ import {
 } from './meeting/mappers';
 import { styles } from './meeting/meetingStyles';
 import { SkeletonBox } from '../components/common/SkeletonBox';
-import { GroupNoticeView } from './meeting/GroupNoticeView';
+import { GroupNoticeCommentRow, GroupNoticeView } from './meeting/GroupNoticeView';
 import { GroupBookshelfView } from './meeting/GroupBookshelfView';
 import { GroupManagementOverlay } from './meeting/GroupManagementOverlay';
 import { useNoticeState } from './meeting/useNoticeState';
@@ -1503,7 +1503,7 @@ function GroupHomeView({
     canManageClub;
   const [activeTab, setActiveTab] = useState<'home' | 'notice' | 'bookshelf'>('home');
   const [currentMemberNickname, setCurrentMemberNickname] = useState('');
-  const groupHomeScrollRef = useRef<ScrollView>(null);
+  const groupHomeScrollRef = useRef<FlatList<NoticeComment>>(null);
   const groupHomeScrollYRef = useRef(0);
   const groupTitleFocusOffsetRef = useRef(0);
   const hasFocusedGroupTitleRef = useRef(false);
@@ -2519,8 +2519,8 @@ function GroupHomeView({
     (inputY: number, inputHeight: number) => {
       const inputCenterY = inputY + inputHeight / 2;
       const targetCenterY = getFocusedInputTargetCenterY(screenHeight);
-      groupHomeScrollRef.current?.scrollTo({
-        y: Math.max(0, groupHomeScrollYRef.current + inputCenterY - targetCenterY),
+      groupHomeScrollRef.current?.scrollToOffset({
+        offset: Math.max(0, groupHomeScrollYRef.current + inputCenterY - targetCenterY),
         animated: true,
       });
     },
@@ -2546,8 +2546,8 @@ function GroupHomeView({
     const animated = pendingGroupTitleFocusAnimatedRef.current;
 
     requestAnimationFrame(() => {
-      groupHomeScrollRef.current?.scrollTo({
-        y: groupTitleFocusOffsetRef.current,
+      groupHomeScrollRef.current?.scrollToOffset({
+        offset: groupTitleFocusOffsetRef.current,
         animated,
       });
     });
@@ -2573,7 +2573,7 @@ function GroupHomeView({
   const flushPendingBookshelfDetailFocus = useCallback(() => {
     const targetY = pendingBookshelfDetailFocusYRef.current;
     if (targetY === null) return;
-    groupHomeScrollRef.current?.scrollTo({ y: targetY, animated: true });
+    groupHomeScrollRef.current?.scrollToOffset({ offset: targetY, animated: true });
   }, []);
 
   const focusBookshelfDetail = useCallback((sectionY: number) => {
@@ -2984,21 +2984,98 @@ function GroupHomeView({
     [clubParticipants, currentMemberNickname, requireAuth, togglingParticipantNickname],
   );
 
+  const currentNoticeCommentLoadStatus = selectedNotice
+    ? (noticeCommentLoadStateById[selectedNotice.id] ??
+      (Object.prototype.hasOwnProperty.call(noticeCommentsById, selectedNotice.id)
+        ? 'success'
+        : 'idle'))
+    : 'idle';
+  const showNoticeCommentFooterState =
+    ((currentNoticeCommentLoadStatus === 'idle' ||
+      currentNoticeCommentLoadStatus === 'loading') &&
+      currentNoticeComments.length === 0) ||
+    currentNoticeCommentLoadStatus === 'error' ||
+    (currentNoticeCommentLoadStatus === 'success' && currentNoticeComments.length === 0) ||
+    Boolean(currentNoticeCommentPageState?.loadingMore);
+
+  const renderNoticeComment = useCallback(
+    ({ item: comment }: ListRenderItemInfo<NoticeComment>) => (
+      <View style={styles.noticeCommentVirtualizedCell}>
+        <GroupNoticeCommentRow
+          comment={comment}
+          navigation={navigation}
+          setPhotoViewer={setPhotoViewer}
+          handlePressCommentMenu={handlePressCommentMenu}
+        />
+      </View>
+    ),
+    [handlePressCommentMenu, navigation, setPhotoViewer],
+  );
+
   return (
     <KeyboardAvoidingView
       style={styles.screenWrap}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView
+      <FlatList
         ref={groupHomeScrollRef}
         style={styles.container}
         contentContainerStyle={[
           styles.content,
+          styles.groupHomeVirtualizedContent,
           {
             minHeight: groupHomeContentMinHeight,
             paddingBottom: spacing.xl * 2,
           },
         ]}
+        data={activeTab === 'notice' && selectedNotice && isMember ? currentNoticeComments : []}
+        keyExtractor={(comment) => comment.id}
+        renderItem={renderNoticeComment}
+        ListHeaderComponentStyle={styles.groupHomeListHeader}
+        ListFooterComponent={
+          activeTab === 'notice' && selectedNotice && isMember ? (
+            <View
+              style={[
+                styles.noticeCommentVirtualizedFooter,
+                showNoticeCommentFooterState && styles.noticeCommentVirtualizedFooterWithState,
+              ]}
+            >
+              {(currentNoticeCommentLoadStatus === 'idle' ||
+                currentNoticeCommentLoadStatus === 'loading') &&
+              currentNoticeComments.length === 0 ? (
+                <View style={styles.detailLoadStateCard} accessibilityRole="progressbar">
+                  <Text style={styles.detailLoadStateText}>{l('댓글을 불러오는 중...')}</Text>
+                </View>
+              ) : null}
+              {currentNoticeCommentLoadStatus === 'error' ? (
+                <View style={styles.detailLoadStateCard}>
+                  <Text style={styles.detailLoadStateText}>{l('댓글을 불러오지 못했습니다.')}</Text>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.detailLoadRetryButton,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={retryNoticeComments}
+                    accessibilityRole="button"
+                    accessibilityLabel={l('다시 시도')}
+                  >
+                    <MaterialIcons name="refresh" size={18} color={colors.primary1} />
+                    <Text style={styles.detailLoadRetryText}>{l('다시 시도')}</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+              {currentNoticeCommentLoadStatus === 'success' &&
+              currentNoticeComments.length === 0 ? (
+                <View style={styles.managementEmptyCard}>
+                  <Text style={styles.managementEmptyText}>{l('등록된 댓글이 없습니다.')}</Text>
+                </View>
+              ) : null}
+              {currentNoticeCommentPageState?.loadingMore ? (
+                <Text style={styles.infiniteScrollLoadingText}>{l('불러오는 중...')}</Text>
+              ) : null}
+            </View>
+          ) : null
+        }
         onLayout={handleGroupHomeLayout}
         onContentSizeChange={handleGroupHomeContentSizeChange}
         showsVerticalScrollIndicator={false}
@@ -3011,7 +3088,8 @@ function GroupHomeView({
             onRefresh={handleRefreshGroupHome}
           />
         }
-      >
+        ListHeaderComponent={
+          <>
       <View style={styles.groupHomeHeaderRow}>
         <Pressable
           style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
@@ -3266,7 +3344,6 @@ function GroupHomeView({
         <GroupNoticeView
           isMember={isMember}
           isInitialLoading={!workspaceLoaded}
-          navigation={navigation}
           noticeItems={noticeItems}
           noticePage={noticePage}
           selectedNoticeId={selectedNoticeId}
@@ -3274,10 +3351,7 @@ function GroupHomeView({
           submittingNoticeComment={submittingNoticeComment}
           noticeCommentAttachments={noticeCommentAttachments}
           editingNoticeCommentId={editingNoticeCommentId}
-          noticeCommentsById={noticeCommentsById}
           noticeDetailLoadStateById={noticeDetailLoadStateById}
-          noticeCommentLoadStateById={noticeCommentLoadStateById}
-          noticeCommentPageStateByNoticeId={noticeCommentPageStateByNoticeId}
           noticePollOptionsById={noticePollOptionsById}
           selectedVoteOptionIdsByNotice={selectedVoteOptionIdsByNotice}
           submittedVoteOptionIdsByNotice={submittedVoteOptionIdsByNotice}
@@ -3294,9 +3368,7 @@ function GroupHomeView({
           handleSubmitVote={handleSubmitVote}
           handleSubmitNoticeComment={handleSubmitNoticeComment}
           handleCancelNoticeCommentEdit={handleCancelNoticeCommentEdit}
-          handlePressCommentMenu={handlePressCommentMenu}
           retryNoticeDetail={retryNoticeDetail}
-          retryNoticeComments={retryNoticeComments}
           onCommentInputMeasured={scrollNoticeCommentInputToFocusTarget}
         />
       ) : null}
@@ -3344,7 +3416,9 @@ function GroupHomeView({
           retryBookshelfDetailSection={retryBookshelfDetailSection}
         />
       ) : null}
-      </ScrollView>
+          </>
+        }
+      />
       {activeTab === 'bookshelf' &&
       bookshelfViewMode === 'DETAIL' &&
       bookshelfDetailTab === 'REGULAR' &&
