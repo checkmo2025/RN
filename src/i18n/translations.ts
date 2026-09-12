@@ -225,7 +225,7 @@ const enLiteralMessages: Record<string, string> = {
   '책이야기 목록을 불러오는 중...': 'Loading book stories...',
   '아직 작성된 책이야기가 없습니다.': 'No book stories yet.',
   '소식': 'News',
-  '봄메이트': 'Spring Mate',
+  '책모에 올라갈 소식을 문의하세요!': 'Contact us to share your news on Checkmo!',
   '5월 책 추천\n나의 돈키호테\n할인된 가격에\n만나보세요!':
     'May book pick\nMy Don Quixote\nMeet it at a special price!',
   '신간 소식': 'New Releases',

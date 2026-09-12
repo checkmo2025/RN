@@ -11,6 +11,7 @@ import { useNavigation, useScrollToTop, type NavigationProp, type ParamListBase 
 
 import { colors, radius, spacing, typography } from '../theme';
 import { SkeletonBox } from '../components/common/SkeletonBox';
+import { FeedbackPressable as Pressable } from '../components/common/FeedbackPressable';
 import { ScreenLayout } from '../components/common/ScreenLayout';
 import HomePostCard from '../components/feature/home/HomePostCard';
 import SubscribeUserItem from '../components/feature/member/SubscribeUserItem';
@@ -89,23 +90,11 @@ function getDefaultPromotions(l: (text: string) => string): HomePromotionItem[] 
   return [
     {
       id: 'p1',
-      title: l('봄메이트'),
-      description: l('5월 책 추천\n나의 돈키호테\n할인된 가격에\n만나보세요!'),
+      title: l('책모에 올라갈 소식을 문의하세요!'),
+      description: 'checkmo2025@gmail.com',
       imageUri: NEWS_DEFAULT_IMAGE,
     },
-    {
-      id: 'p2',
-      title: l('신간 소식'),
-      description: l('새로운 이야기와\n서점 큐레이션을\n매주 만나보세요.'),
-      imageUri: NEWS_DEFAULT_IMAGE,
-    },
-    {
-      id: 'p3',
-      title: l('이벤트'),
-      description: l('책모 구독자 전용\n굿즈 증정 이벤트'),
-      imageUri: NEWS_DEFAULT_IMAGE,
-    },
-  ].slice(0, 5);
+  ];
 }
 
 export function HomeScreen() {
@@ -130,13 +119,14 @@ export function HomeScreen() {
   const [myNickname, setMyNickname] = useState('');
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [loadingMorePosts, setLoadingMorePosts] = useState(false);
+  const [postsLoadError, setPostsLoadError] = useState<string | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingPromotions, setLoadingPromotions] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [promotions, setPromotions] = useState<HomePromotionItem[]>([]);
   const loadingPostsRef = useRef(false);
   const loadingMorePostsRef = useRef(false);
-  const hasNextPostsRef = useRef(true);
+  const hasNextPostsRef = useRef(false);
   const nextPostsCursorRef = useRef<number | null>(null);
   const listRef = useRef<FlatList<HomePostRow>>(null);
   useScrollToTop(listRef);
@@ -303,15 +293,16 @@ export function HomeScreen() {
   const loadPosts = useCallback(
     async ({ reset = false, forceRefresh = false }: { reset?: boolean; forceRefresh?: boolean } = {}) => {
       if (!accessPolicy.canViewBookStoryFeed) return;
+      if (loadingPostsRef.current || loadingMorePostsRef.current) return;
       if (reset) {
-        if (loadingPostsRef.current) return;
         loadingPostsRef.current = true;
         setLoadingPosts(true);
       } else {
-        if (loadingMorePostsRef.current || !hasNextPostsRef.current) return;
+        if (!hasNextPostsRef.current) return;
         loadingMorePostsRef.current = true;
         setLoadingMorePosts(true);
       }
+      setPostsLoadError(null);
 
       try {
         const cursorId = reset ? undefined : nextPostsCursorRef.current ?? undefined;
@@ -337,9 +328,9 @@ export function HomeScreen() {
         hasNextPostsRef.current = feed.hasNext;
         nextPostsCursorRef.current = feed.nextCursor;
       } catch (error) {
-        if (reset && !(error instanceof ApiError)) {
-          showToast(l('책이야기 목록을 불러오지 못했습니다.'));
-        }
+        // Footer layout changes can fire onEndReached again. Wait for a manual refresh after failure.
+        hasNextPostsRef.current = false;
+        setPostsLoadError(resolveApiError(error, {}, l('책이야기 목록을 불러오지 못했습니다.')));
       } finally {
         if (reset) {
           loadingPostsRef.current = false;
@@ -598,12 +589,24 @@ export function HomeScreen() {
           ListHeaderComponent={header}
           ItemSeparatorComponent={() => <View style={styles.postItemSeparator} />}
           ListEmptyComponent={
-            !loadingPosts ? (
+            !loadingPosts && !postsLoadError ? (
               <Text style={styles.emptyPostText}>{l('표시할 책이야기가 없습니다.')}</Text>
             ) : null
           }
           ListFooterComponent={
-            loadingMorePosts ? <Text style={styles.loadingPostText}>{l('불러오는 중...')}</Text> : null
+            loadingPosts || loadingMorePosts ? (
+              <Text style={styles.loadingPostText}>{l('불러오는 중...')}</Text>
+            ) : postsLoadError ? (
+              <View style={styles.postsLoadError}>
+                <Text style={styles.emptyUserText}>{l(postsLoadError)}</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => void loadPosts({ reset: true, forceRefresh: true })}
+                >
+                  <Text style={styles.loadingPostText}>{l('다시 시도')}</Text>
+                </Pressable>
+              </View>
+            ) : null
           }
           renderItem={({ item }) => (
             <View style={[styles.postRow, { maxWidth: storyFeedRowMaxWidth }]}>
@@ -737,6 +740,11 @@ const styles = StyleSheet.create({
     color: colors.gray4,
     textAlign: 'center',
     paddingVertical: spacing.lg,
+  },
+  postsLoadError: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
   },
   loadingPostText: {
     ...typography.body2_3,
