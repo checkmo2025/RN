@@ -80,3 +80,4 @@ ponytail-관련-기능-YYYY-MM-DD-HHmm.md
 | 2026-09-12 16:25 | [사용자 프로필 책 이야기 페이지 수집 공통화](./ponytail-user-profile-story-pagination-2026-09-12-1625.md) | 수집 코드 16→4줄, 115개 사례 불일치 0건, 요청 518→518회 유지 | 확인 |
 | 2026-09-12 16:58 | [모임 관리 멤버 목록 가상화](./ponytail-group-management-member-list-virtualization-2026-09-12-1658.md) | 500명 첫 커밋 카드 500→10개, 중앙값 96.5% 단축 | 확인 |
 | 2026-09-12 17:41 | [모임 공지 상세 댓글 가상화](./ponytail-group-notice-comment-list-virtualization-2026-09-12-1741.md) | 500개 첫 커밋 96.2% 단축, 동일 거리 스크롤 FPS는 변화 없음 | 부분 확인 |
+| 2026-09-12 18:34 | [마이페이지 신고 내역 목록 가상화](./ponytail-mypage-report-history-list-virtualization-2026-09-12-1834.md) | 100·500개 첫 커밋 80.9%·95.9% 단축, 7개는 35.0% 증가 | 부분 확인 |

@@ -98,7 +98,10 @@ import {
   notificationSettingRows,
   type AlarmItem,
 } from './mypage/useNotificationState';
-import { useAccountSettingsState } from './mypage/useAccountSettingsState';
+import {
+  useAccountSettingsState,
+  type ReportHistoryItem,
+} from './mypage/useAccountSettingsState';
 import { SkeletonBox } from '../components/common/SkeletonBox';
 import { ProfileImageViewer } from '../components/common/ProfileImageViewer';
 import { languageOptions, type LanguageCode } from '../i18n/translations';
@@ -2058,6 +2061,86 @@ export function MyPageScreen() {
     );
   };
 
+  const renderSettingsBack = () => (
+    <Pressable
+      style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
+      onPress={accountUpdateGuardEnabled ? handleAccountUpdateBack : handleCloseSelectedSetting}
+    >
+      <MaterialIcons name="chevron-left" size={18} color={colors.gray4} />
+      <Text style={styles.breadcrumbText}>{t('common.back')}</Text>
+    </Pressable>
+  );
+
+  const renderReportHistoryItem = useCallback(
+    ({ item: report }: ListRenderItemInfo<ReportHistoryItem>) => (
+      <Pressable
+        style={({ pressed }) => [styles.reportCard, pressed && styles.pressed]}
+        onPress={() => handlePressReportHistory(report)}
+      >
+        <View style={styles.reportBadgeRow}>
+          <Text style={styles.reportBadge}>{report.reportType}</Text>
+          <Text style={styles.reportTargetBadge}>{report.targetTypeLabel}</Text>
+        </View>
+        <View style={styles.reportHeader}>
+          <View style={styles.reportTargetInfo}>
+            <View style={styles.reportAvatar}>
+              {report.targetImageUrl ? (
+                <Image source={{ uri: report.targetImageUrl }} style={styles.reportAvatarImage} />
+              ) : (
+                <MaterialIcons name="flag" size={18} color={colors.gray4} />
+              )}
+            </View>
+            <Text style={styles.reportUser} numberOfLines={1}>
+              {report.targetDisplayName}
+            </Text>
+          </View>
+          {report.createdAtLabel ? (
+            <Text style={styles.reportDate}>{report.createdAtLabel}</Text>
+          ) : null}
+        </View>
+        <Text style={styles.reportText}>{formatReportContent(report.content)}</Text>
+      </Pressable>
+    ),
+    [handlePressReportHistory],
+  );
+
+  const renderReportHistoryStatus = () => {
+    if (loadingReportHistory) {
+      return (
+        <View style={styles.reportList}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={styles.reportCard}>
+              <SkeletonBox style={{ height: 22, width: 60, borderRadius: radius.lg }} />
+              <View style={styles.reportHeader}>
+                <SkeletonBox style={{ height: 16, width: '50%', borderRadius: radius.xs }} />
+                <SkeletonBox style={{ height: 13, width: 60, borderRadius: radius.xs }} />
+              </View>
+              <SkeletonBox style={{ height: 14, width: '85%', borderRadius: radius.xs }} />
+            </View>
+          ))}
+        </View>
+      );
+    }
+    if (reportHistoryErrorMessage) {
+      return <Text style={styles.emptyText}>{reportHistoryErrorMessage}</Text>;
+    }
+    return reportHistory.length === 0
+      ? <Text style={styles.emptyText}>{l('신고한 내역이 없습니다.')}</Text>
+      : null;
+  };
+
+  const renderReportHistoryHeader = () => (
+    <>
+      <View style={styles.settingsDetailWrap}>
+        {renderSettingsBack()}
+        <Text style={styles.detailTitle}>{getSettingLabel('report')}</Text>
+        <Text style={styles.detailDivider} />
+        {renderReportHistoryStatus()}
+      </View>
+      {reportHistory.length > 0 ? <View style={styles.reportListTopSpacing} /> : null}
+    </>
+  );
+
   const handleWriteStory = useCallback(() => {
     requireAuth(() => {
       navigation.navigate('Story', { openCompose: true });
@@ -2118,15 +2201,7 @@ export function MyPageScreen() {
   const renderSettingDetail = () => {
     if (!selectedSetting) return null;
 
-    const back = (
-      <Pressable
-        style={({ pressed }) => [styles.breadcrumbRow, pressed && styles.pressed]}
-        onPress={accountUpdateGuardEnabled ? handleAccountUpdateBack : handleCloseSelectedSetting}
-      >
-        <MaterialIcons name="chevron-left" size={18} color={colors.gray4} />
-        <Text style={styles.breadcrumbText}>{t('common.back')}</Text>
-      </Pressable>
-    );
+    const back = renderSettingsBack();
 
     if (selectedSetting === 'version') {
       return (
@@ -2535,70 +2610,6 @@ export function MyPageScreen() {
       );
     }
 
-    if (selectedSetting === 'report') {
-      return (
-        <View style={styles.settingsDetailWrap}>
-          {back}
-          <Text style={styles.detailTitle}>{getSettingLabel(selectedSetting)}</Text>
-          <Text style={styles.detailDivider} />
-          {loadingReportHistory ? (
-            <View style={styles.reportList}>
-              {[0, 1, 2].map((i) => (
-                <View key={i} style={styles.reportCard}>
-                  <SkeletonBox style={{ height: 22, width: 60, borderRadius: radius.lg }} />
-                  <View style={styles.reportHeader}>
-                    <SkeletonBox style={{ height: 16, width: '50%', borderRadius: radius.xs }} />
-                    <SkeletonBox style={{ height: 13, width: 60, borderRadius: radius.xs }} />
-                  </View>
-                  <SkeletonBox style={{ height: 14, width: '85%', borderRadius: radius.xs }} />
-                </View>
-              ))}
-            </View>
-          ) : null}
-          {!loadingReportHistory && reportHistoryErrorMessage ? (
-            <Text style={styles.emptyText}>{reportHistoryErrorMessage}</Text>
-          ) : null}
-          {!loadingReportHistory && !reportHistoryErrorMessage && reportHistory.length === 0 ? (
-            <Text style={styles.emptyText}>{l('신고한 내역이 없습니다.')}</Text>
-          ) : null}
-          <View style={styles.reportList}>
-            {reportHistory.map((report) => (
-              <Pressable
-                key={report.id}
-                style={({ pressed }) => [styles.reportCard, pressed && styles.pressed]}
-                onPress={() => handlePressReportHistory(report)}
-              >
-                <View style={styles.reportBadgeRow}>
-                  <Text style={styles.reportBadge}>{report.reportType}</Text>
-                  <Text style={styles.reportTargetBadge}>{report.targetTypeLabel}</Text>
-                </View>
-                <View style={styles.reportHeader}>
-                  <View style={styles.reportTargetInfo}>
-                    <View style={styles.reportAvatar}>
-                      {report.targetImageUrl ? (
-                        <Image source={{ uri: report.targetImageUrl }} style={styles.reportAvatarImage} />
-                      ) : (
-                        <MaterialIcons name="flag" size={18} color={colors.gray4} />
-                      )}
-                    </View>
-                    <Text style={styles.reportUser} numberOfLines={1}>
-                      {report.targetDisplayName}
-                    </Text>
-                  </View>
-                  {report.createdAtLabel ? (
-                    <Text style={styles.reportDate}>{report.createdAtLabel}</Text>
-                  ) : null}
-                </View>
-                <Text style={styles.reportText}>
-                  {formatReportContent(report.content)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      );
-    }
-
     if (selectedSetting === 'blocked') {
       return (
         <View style={styles.settingsDetailWrap}>
@@ -2886,6 +2897,23 @@ export function MyPageScreen() {
           )}
           ListEmptyComponent={renderMyNewsStatus()}
           ListFooterComponent={<View style={styles.myNewsListBottomSpacing} />}
+          showsVerticalScrollIndicator={false}
+        />
+      </ScreenLayout>
+    );
+  }
+
+  if (showSettings && selectedSetting === 'report') {
+    return (
+      <ScreenLayout title={t('profile.screenTitle')}>
+        <FlatList
+          style={styles.container}
+          contentContainerStyle={[styles.settingsContent, styles.reportHistoryListContent]}
+          data={reportHistory}
+          keyExtractor={(report) => report.id}
+          renderItem={renderReportHistoryItem}
+          ItemSeparatorComponent={() => <View style={styles.reportListSeparator} />}
+          ListHeaderComponent={renderReportHistoryHeader()}
           showsVerticalScrollIndicator={false}
         />
       </ScreenLayout>
@@ -3591,6 +3619,15 @@ const styles = StyleSheet.create({
   },
   reportList: {
     gap: spacing.sm,
+  },
+  reportHistoryListContent: {
+    gap: 0,
+  },
+  reportListTopSpacing: {
+    height: spacing.sm,
+  },
+  reportListSeparator: {
+    height: spacing.sm,
   },
   reportCard: {
     backgroundColor: colors.white,
