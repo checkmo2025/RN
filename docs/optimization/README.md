@@ -76,3 +76,4 @@ ponytail-관련-기능-YYYY-MM-DD-HHmm.md
 | 2026-09-07 17:00 | [마이페이지 내 책 이야기 목록 가상화](./ponytail-mypage-my-stories-list-virtualization-2026-09-07-1700.md) | 100개 70.2%, 500개 95.0% 단축; 19개는 11.7% 증가 | 부분 확인 |
 | 2026-09-07 17:31 | [마이페이지 내 서재 목록 가상화](./ponytail-mypage-bookshelf-list-virtualization-2026-09-07-1731.md) | 100개 54.6%, 500개 90.2% 단축; 실제 규모에 가까운 19개는 7.0% 증가 | 부분 확인 |
 | 2026-09-08 22:58 | [다른 사용자 프로필 책 이야기 목록 가상화](./ponytail-user-profile-story-list-virtualization-2026-09-08-2258.md) | 100개 69.2%, 500개 94.8% 단축; 실제 15개에 가까운 19개는 6.4% 증가 | 부분 확인 |
+| 2026-09-12 16:00 | [다른 사용자 프로필 공개 서재 가상화](./ponytail-user-profile-public-library-virtualization-2026-09-12-1600.md) | 전체 카드 즉시 생성 1→0, 핵심 변경 84줄, 회귀 검사 6개 통과; 런타임 미측정 | 부분 확인 |

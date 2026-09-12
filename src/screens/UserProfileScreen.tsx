@@ -683,8 +683,18 @@ export function UserProfileScreen() {
       ),
     [stories],
   );
+  const bookRows = useMemo(
+    () =>
+      Array.from({ length: Math.ceil(books.length / 3) }, (_, index) =>
+        books.slice(index * 3, index * 3 + 3),
+      ),
+    [books],
+  );
   const showStoryRows =
     activeTab === '책 이야기' && stories.length > 0 && (!profileLoading || refreshing);
+  const showBookRows =
+    activeTab === '서재' && books.length > 0 && (!profileLoading || refreshing);
+  const showGridStatus = !showStoryRows && (!showBookRows || loadingBooks);
 
   const renderStoryStatus = () => (
     <View style={[styles.gridContent, styles.cardWrap]}>
@@ -694,7 +704,7 @@ export function UserProfileScreen() {
 
   const renderStoryRow = useCallback(
     ({ item: row }: ListRenderItemInfo<StoryCard[]>) => (
-      <View style={styles.storyListRow}>
+      <View style={styles.gridListRow}>
         {row.map((story) => (
           <Pressable
             key={story.id}
@@ -732,7 +742,7 @@ export function UserProfileScreen() {
     [handleOpenStoryDetail],
   );
 
-  const renderLibraryCards = () => (
+  const renderLibraryStatus = () => (
     <View style={[styles.gridContent, styles.bookWrap]}>
       {loadingBooks ? (
         <View style={styles.bookWrap}>
@@ -746,27 +756,35 @@ export function UserProfileScreen() {
         </View>
       ) : null}
       {!loadingBooks && books.length === 0 ? <Text style={styles.emptyText}>{l('공개된 서재가 없습니다.')}</Text> : null}
-      {books.map((book) => (
-        <Pressable
-          key={book.id}
-          style={({ pressed }) => [styles.bookCard, pressed && styles.pressed]}
-          onPress={() => handleOpenBookSearchDetail(book)}
-        >
-          <View style={styles.bookThumb}>
-            <Image source={{ uri: book.imageUrl || BOOK_DEFAULT_IMAGE }} style={styles.bookThumbImage} resizeMode="cover" />
-            <View style={styles.bookLikeBadge}>
-              <MaterialIcons name="favorite" size={18} color={colors.secondary1} />
-            </View>
-          </View>
-          <Text style={styles.bookTitle} numberOfLines={1}>
-            {book.title}
-          </Text>
-          <Text style={styles.bookAuthor} numberOfLines={1}>
-            {book.author}
-          </Text>
-        </Pressable>
-      ))}
     </View>
+  );
+
+  const renderBookRow = useCallback(
+    ({ item: row }: ListRenderItemInfo<BookCard[]>) => (
+      <View style={styles.gridListRow}>
+        {row.map((book) => (
+          <Pressable
+            key={book.id}
+            style={({ pressed }) => [styles.bookCard, pressed && styles.pressed]}
+            onPress={() => handleOpenBookSearchDetail(book)}
+          >
+            <View style={styles.bookThumb}>
+              <Image source={{ uri: book.imageUrl || BOOK_DEFAULT_IMAGE }} style={styles.bookThumbImage} resizeMode="cover" />
+              <View style={styles.bookLikeBadge}>
+                <MaterialIcons name="favorite" size={18} color={colors.secondary1} />
+              </View>
+            </View>
+            <Text style={styles.bookTitle} numberOfLines={1}>
+              {book.title}
+            </Text>
+            <Text style={styles.bookAuthor} numberOfLines={1}>
+              {book.author}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    ),
+    [handleOpenBookSearchDetail],
   );
 
   const renderMeetings = () => (
@@ -815,7 +833,7 @@ export function UserProfileScreen() {
 
   const renderTabContent = () => {
     if (activeTab === '책 이야기') return renderStoryStatus();
-    if (activeTab === '서재') return renderLibraryCards();
+    if (activeTab === '서재') return renderLibraryStatus();
     return renderMeetings();
   };
 
@@ -989,11 +1007,15 @@ export function UserProfileScreen() {
             }
           />
         ) : (
-          <FlatList
+          <FlatList<StoryCard[] | BookCard[]>
             contentContainerStyle={[styles.content, styles.mainListContent]}
-            data={showStoryRows ? storyRows : []}
-            keyExtractor={(row) => `story-row-${row[0]?.id}`}
-            renderItem={renderStoryRow}
+            data={showStoryRows ? storyRows : showBookRows ? bookRows : []}
+            keyExtractor={(row) => `${showBookRows ? 'book' : 'story'}-row-${row[0]?.id}`}
+            renderItem={(info) =>
+              activeTab === '서재'
+                ? renderBookRow(info as ListRenderItemInfo<BookCard[]>)
+                : renderStoryRow(info as ListRenderItemInfo<StoryCard[]>)
+            }
             ListHeaderComponent={(
             <>
               <Pressable
@@ -1096,14 +1118,14 @@ export function UserProfileScreen() {
                 })}
               </View>
 
-              <View style={showStoryRows ? styles.storyListTopSpacing : styles.tabContent}>
+              <View style={showGridStatus ? styles.tabContent : styles.gridListTopSpacing}>
                 {profileLoading && !refreshing ? (
                   <View style={styles.profileSkeletonWrap}>
                     <SkeletonBox style={styles.profileSkeletonAvatar} />
                     <SkeletonBox style={styles.profileSkeletonName} />
                     <SkeletonBox style={styles.profileSkeletonBio} />
                   </View>
-                ) : !showStoryRows ? (
+                ) : showGridStatus ? (
                   renderTabContent()
                 ) : null}
               </View>
@@ -1198,7 +1220,7 @@ const styles = StyleSheet.create({
   mainListHeader: {
     gap: spacing.md,
   },
-  storyListTopSpacing: {
+  gridListTopSpacing: {
     height: spacing.sm,
   },
   breadcrumbRow: {
@@ -1331,7 +1353,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  storyListRow: {
+  gridListRow: {
     flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.sm,
