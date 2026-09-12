@@ -462,6 +462,96 @@ export function GroupManagementOverlay({
             </Pressable>
           </View>
 
+          {activeManagementScreen === 'MEMBERS' ? (
+            <FlatList
+              style={styles.managementScreenScroll}
+              contentContainerStyle={[
+                styles.managementMemberListContent,
+                { paddingBottom: managementScreenContentBottomPadding },
+              ]}
+              data={members}
+              keyExtractor={(member) => member.id}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshingMembers}
+                  onRefresh={handleRefreshMembers}
+                  tintColor={colors.primary1}
+                  colors={[colors.primary1]}
+                />
+              }
+              ListHeaderComponent={
+                <View style={styles.managementSummaryCard}>
+                  <Text style={styles.managementSummaryTitle}>{l('회원 역할 관리')}</Text>
+                  <Text style={styles.managementSummaryDescription}>
+                    {l('회원 역할을 수정하거나 운영진 권한을 조정할 수 있습니다.')}
+                  </Text>
+                  <View style={styles.managementCountBadge}>
+                    <Text style={styles.managementCountBadgeText}>
+                      {l('회원 {count}', { count: members.length })}
+                    </Text>
+                  </View>
+                </View>
+              }
+              ListHeaderComponentStyle={styles.managementMemberListHeader}
+              ItemSeparatorComponent={() => <View style={styles.managementMemberListSeparator} />}
+              ListEmptyComponent={
+                <View style={styles.managementEmptyCard}>
+                  <Text style={styles.managementEmptyText}>{l('조회된 회원이 없습니다.')}</Text>
+                </View>
+              }
+              renderItem={({ item: member }) => (
+                <View style={styles.managementListCard}>
+                  <View style={styles.managementListCardTop}>
+                    <View style={styles.managementIdentityRow}>
+                      <View style={styles.managementAvatar}>
+                        {member.profileImageUrl ? (
+                          <Image
+                            source={{ uri: member.profileImageUrl }}
+                            style={styles.managementAvatarImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <DefaultProfileAvatar size={18} />
+                        )}
+                      </View>
+                      <View style={styles.managementIdentityText}>
+                        <Text style={styles.managementPrimaryText}>{member.nickname}</Text>
+                        <Text style={styles.managementSecondaryText}>{member.name}</Text>
+                      </View>
+                    </View>
+                    <View
+                      style={[
+                        styles.managementRoleBadge,
+                        member.role === '개설자'
+                          ? styles.managementRoleBadgeOwner
+                          : member.role === '운영진'
+                            ? styles.managementRoleBadgeStaff
+                            : styles.managementRoleBadgeMember,
+                      ]}
+                    >
+                      <Text style={styles.managementRoleBadgeText}>{l(member.role)}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.managementMetaText}>{member.email}</Text>
+                  <Text style={styles.managementMetaText}>
+                    {l('가입일 {date}', { date: member.joinedAt })}
+                  </Text>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.managementWideButton,
+                      pressed && !submittingMemberAction && styles.pressed,
+                    ]}
+                    onPress={() => setSelectedMemberActionId(member.id)}
+                    disabled={submittingMemberAction}
+                  >
+                    <Text style={styles.managementWideButtonText}>{l('역할 수정')}</Text>
+                  </Pressable>
+                </View>
+              )}
+            />
+          ) : (
           <ScrollView
             style={styles.managementScreenScroll}
             contentContainerStyle={[
@@ -475,13 +565,6 @@ export function GroupManagementOverlay({
                 <RefreshControl
                   refreshing={refreshingJoinRequests}
                   onRefresh={handleRefreshJoinRequests}
-                  tintColor={colors.primary1}
-                  colors={[colors.primary1]}
-                />
-              ) : activeManagementScreen === 'MEMBERS' ? (
-                <RefreshControl
-                  refreshing={refreshingMembers}
-                  onRefresh={handleRefreshMembers}
                   tintColor={colors.primary1}
                   colors={[colors.primary1]}
                 />
@@ -560,79 +643,6 @@ export function GroupManagementOverlay({
                   {joinRequests.length === 0 ? (
                     <View style={styles.managementEmptyCard}>
                       <Text style={styles.managementEmptyText}>{l('대기 중인 가입 신청이 없습니다.')}</Text>
-                    </View>
-                  ) : null}
-                </View>
-              </>
-            ) : null}
-
-            {activeManagementScreen === 'MEMBERS' ? (
-              <>
-                <View style={styles.managementSummaryCard}>
-                  <Text style={styles.managementSummaryTitle}>{l('회원 역할 관리')}</Text>
-                  <Text style={styles.managementSummaryDescription}>
-                    {l('회원 역할을 수정하거나 운영진 권한을 조정할 수 있습니다.')}
-                  </Text>
-                  <View style={styles.managementCountBadge}>
-                    <Text style={styles.managementCountBadgeText}>
-                      {l('회원 {count}', { count: members.length })}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.managementCardList}>
-                  {members.map((member) => (
-                    <View key={member.id} style={styles.managementListCard}>
-                      <View style={styles.managementListCardTop}>
-                        <View style={styles.managementIdentityRow}>
-                          <View style={styles.managementAvatar}>
-                            {member.profileImageUrl ? (
-                              <Image
-                                source={{ uri: member.profileImageUrl }}
-                                style={styles.managementAvatarImage}
-                                resizeMode="cover"
-                              />
-                            ) : (
-                              <DefaultProfileAvatar size={18} />
-                            )}
-                          </View>
-                          <View style={styles.managementIdentityText}>
-                            <Text style={styles.managementPrimaryText}>{member.nickname}</Text>
-                            <Text style={styles.managementSecondaryText}>{member.name}</Text>
-                          </View>
-                        </View>
-                        <View
-                          style={[
-                            styles.managementRoleBadge,
-                            member.role === '개설자'
-                              ? styles.managementRoleBadgeOwner
-                              : member.role === '운영진'
-                                ? styles.managementRoleBadgeStaff
-                                : styles.managementRoleBadgeMember,
-                          ]}
-                        >
-                          <Text style={styles.managementRoleBadgeText}>{l(member.role)}</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.managementMetaText}>{member.email}</Text>
-                      <Text style={styles.managementMetaText}>
-                        {l('가입일 {date}', { date: member.joinedAt })}
-                      </Text>
-                      <Pressable
-                        style={({ pressed }) => [
-                          styles.managementWideButton,
-                          pressed && !submittingMemberAction && styles.pressed,
-                        ]}
-                        onPress={() => setSelectedMemberActionId(member.id)}
-                        disabled={submittingMemberAction}
-                      >
-                        <Text style={styles.managementWideButtonText}>{l('역할 수정')}</Text>
-                      </Pressable>
-                    </View>
-                  ))}
-                  {members.length === 0 ? (
-                    <View style={styles.managementEmptyCard}>
-                      <Text style={styles.managementEmptyText}>{l('조회된 회원이 없습니다.')}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -1172,6 +1182,7 @@ export function GroupManagementOverlay({
               </View>
             ) : null}
           </ScrollView>
+          )}
 
           {hasManagementFooter ? (
             <View style={[styles.managementFooter, { paddingBottom: managementFooterBottomPadding }]}>

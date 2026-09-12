@@ -1216,6 +1216,15 @@ export const styles = StyleSheet.create({
     gap: spacing.md,
     paddingBottom: spacing.xxl * 3,
   },
+  managementMemberListContent: {
+    padding: spacing.md,
+  },
+  managementMemberListHeader: {
+    marginBottom: spacing.md,
+  },
+  managementMemberListSeparator: {
+    height: spacing.sm,
+  },
   managementSummaryCard: {
     borderRadius: radius.md,
     borderWidth: 1,
