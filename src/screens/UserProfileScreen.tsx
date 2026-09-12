@@ -61,6 +61,7 @@ import {
   type RemoteStoryItem,
 } from '../services/api/bookStoryApi';
 import { normalizeRemoteImageUrl } from '../utils/image';
+import { collectAllCursorPages } from '../utils/pagination';
 import { emitMemberBlocked, isSameMemberNickname } from '../utils/blockedMembers';
 import { normalizeNickname, validateNickname } from '../utils/nickname';
 
@@ -241,25 +242,10 @@ export function UserProfileScreen() {
     setProfile(profileResult);
 
     try {
-      let cursorId: number | undefined;
-      const visitedCursors = new Set<number>();
-      const seenStoryIds = new Set<number>();
-      const allStories: RemoteStoryItem[] = [];
-
-      for (let page = 0; page < 100; page += 1) {
-        const response = await fetchMemberBookStories(memberNickname, cursorId);
-        response.items.forEach((item) => {
-          if (seenStoryIds.has(item.id)) return;
-          seenStoryIds.add(item.id);
-          allStories.push(item);
-        });
-
-        if (!response.hasNext || typeof response.nextCursor !== 'number') break;
-        if (visitedCursors.has(response.nextCursor)) break;
-
-        visitedCursors.add(response.nextCursor);
-        cursorId = response.nextCursor;
-      }
+      const allStories = await collectAllCursorPages({
+        fetchPage: (cursorId) => fetchMemberBookStories(memberNickname, cursorId),
+        dedupeId: (item) => item.id,
+      });
 
       setStories(allStories.map(mapRemoteStoryToCard));
     } catch (error) {
