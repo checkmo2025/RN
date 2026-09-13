@@ -8,7 +8,18 @@ EAS 클라우드 iOS 빌드 한도를 사용하지 않고 Mac의 Xcode에서 책
 - 인증서 설정은 정상화 후 매번 반복하지 않는다.
 - 일반적인 다음 제출은 **빌드 번호 동기화 → Archive → Upload**만 수행한다.
 
-## 마지막으로 확인된 상태
+## 현재 제출 준비 상태
+
+- 준비일: `2026-09-13`
+- 다음 iOS 제출: **`1.2.8 (45)`** — 사용자 확인 완료
+- Expo·패키지·iOS 마케팅/런타임 버전과 로컬 빌드 번호 동기화 완료
+- 로컬 `ios/app/Supporting/Expo.plist`도 `1.2.8`로 동기화했다. 생성 파일이므로 Git에는 포함하지 않으며 재생성 시 `app.json`을 기준으로 한다.
+- Xcode `26.6`, iOS SDK `26.5`, `app` 스킴의 Archive 설정 `Release` 확인
+- TypeScript, iOS 프로덕션 JS 번들 생성, plist, CocoaPods 잠금 일치, Xcode Release 설정 확인 완료
+- **Archive·Upload·App Store 심사 제출은 아직 실행하지 않았다.** 사용자가 Xcode에서 다음 단계를 진행한다.
+- 이번 버전의 업데이트 설명과 제출 순서: [iOS 1.2.8 제출 준비](../release/ios-1.2.8.md)
+
+## 이전 업로드 기록
 
 - 확인일: `2026-07-10`
 - 앱 버전: `1.1.8`
@@ -18,7 +29,7 @@ EAS 클라우드 iOS 빌드 한도를 사용하지 않고 Mac의 Xcode에서 책
 - `1.1.8 (39)` Xcode Archive 및 App Store Connect 업로드 완료
 - React/Hermes dSYM 경고와 함께 업로드됐지만 업로드 자체는 성공함
 
-다음 빌드는 App Store Connect에 더 높은 번호가 필요하므로 기본적으로 `40`부터 사용한다.
+위 내용은 과거 업로드 기록이다. 새 제출 번호는 상단의 현재 준비 상태를 따른다. 이후 빌드 번호는 최신 App Store Connect 업로드 이력과 로컬 Archive를 확인해 정한다.
 
 ## 매번 수행하는 제출 절차
 
