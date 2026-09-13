@@ -139,7 +139,11 @@ import {
 import { styles } from './meeting/meetingStyles';
 import { SkeletonBox } from '../components/common/SkeletonBox';
 import { GroupNoticeCommentRow, GroupNoticeView } from './meeting/GroupNoticeView';
-import { GroupBookshelfView } from './meeting/GroupBookshelfView';
+import {
+  GroupBookshelfTopicFooter,
+  GroupBookshelfTopicRow,
+  GroupBookshelfView,
+} from './meeting/GroupBookshelfView';
 import { GroupManagementOverlay } from './meeting/GroupManagementOverlay';
 import { useNoticeState } from './meeting/useNoticeState';
 import {
@@ -209,6 +213,8 @@ import {
   outputFilterOptions,
   MEETING_SEARCH_KEYWORD_MAX_LENGTH,
 } from './meeting/helpers';
+
+type GroupHomeListItem = NoticeComment | BookshelfPostItem;
 
 
 
@@ -1503,7 +1509,7 @@ function GroupHomeView({
     canManageClub;
   const [activeTab, setActiveTab] = useState<'home' | 'notice' | 'bookshelf'>('home');
   const [currentMemberNickname, setCurrentMemberNickname] = useState('');
-  const groupHomeScrollRef = useRef<FlatList<NoticeComment>>(null);
+  const groupHomeScrollRef = useRef<FlatList<GroupHomeListItem>>(null);
   const groupHomeScrollYRef = useRef(0);
   const groupTitleFocusOffsetRef = useRef(0);
   const hasFocusedGroupTitleRef = useRef(false);
@@ -1513,6 +1519,7 @@ function GroupHomeView({
   const bookshelfDetailFocusRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [groupHomeViewportHeight, setGroupHomeViewportHeight] = useState(0);
   const [groupTitleFocusOffset, setGroupTitleFocusOffset] = useState(0);
+  const [bookshelfDetailFocusOffset, setBookshelfDetailFocusOffset] = useState(0);
   // 책장 탭 진입 시: GRID 콘텐츠가 레이아웃된 뒤 스크롤하기 위한 플래그 (클램프 방지)
   const bookshelfTabScrollRef = useRef(false);
   const [groupHomeRefreshing, setGroupHomeRefreshing] = useState(false);
@@ -2196,8 +2203,21 @@ function GroupHomeView({
   );
   const groupHomeContentMinHeight = useMemo(() => {
     if (groupHomeViewportHeight <= 0) return undefined;
-    return groupHomeViewportHeight + groupTitleFocusOffset + GROUP_TITLE_FOCUS_SCROLL_SAFETY;
-  }, [groupHomeViewportHeight, groupTitleFocusOffset]);
+    const focusOffset =
+      activeTab === 'bookshelf' &&
+      bookshelfViewMode === 'DETAIL' &&
+      bookshelfDetailTab === 'TOPIC'
+        ? Math.max(groupTitleFocusOffset, bookshelfDetailFocusOffset)
+        : groupTitleFocusOffset;
+    return groupHomeViewportHeight + focusOffset + GROUP_TITLE_FOCUS_SCROLL_SAFETY;
+  }, [
+    activeTab,
+    bookshelfDetailFocusOffset,
+    bookshelfDetailTab,
+    bookshelfViewMode,
+    groupHomeViewportHeight,
+    groupTitleFocusOffset,
+  ]);
   const handleAuthExpired = useCallback(
     (options?: { suppressToast?: boolean }) => {
       setCanManageClub(false);
@@ -2537,6 +2557,7 @@ function GroupHomeView({
     }
     groupTitleFocusOffsetRef.current = 0;
     setGroupTitleFocusOffset(0);
+    setBookshelfDetailFocusOffset(0);
   }, [group.id]);
 
   const flushPendingGroupTitleFocus = useCallback(() => {
@@ -2580,6 +2601,7 @@ function GroupHomeView({
     pendingGroupTitleFocusRef.current = false;
     const targetY = Math.max(0, sectionY - BOOKSHELF_DETAIL_FOCUS_TOP_OFFSET);
     pendingBookshelfDetailFocusYRef.current = targetY;
+    setBookshelfDetailFocusOffset(targetY);
     if (bookshelfDetailFocusRetryRef.current) {
       clearTimeout(bookshelfDetailFocusRetryRef.current);
       bookshelfDetailFocusRetryRef.current = null;
@@ -2997,19 +3019,38 @@ function GroupHomeView({
     currentNoticeCommentLoadStatus === 'error' ||
     (currentNoticeCommentLoadStatus === 'success' && currentNoticeComments.length === 0) ||
     Boolean(currentNoticeCommentPageState?.loadingMore);
-
-  const renderNoticeComment = useCallback(
-    ({ item: comment }: ListRenderItemInfo<NoticeComment>) => (
-      <View style={styles.noticeCommentVirtualizedCell}>
-        <GroupNoticeCommentRow
-          comment={comment}
-          navigation={navigation}
-          setPhotoViewer={setPhotoViewer}
-          handlePressCommentMenu={handlePressCommentMenu}
-        />
-      </View>
-    ),
-    [handlePressCommentMenu, navigation, setPhotoViewer],
+  const showVirtualizedBookshelfTopics =
+    activeTab === 'bookshelf' &&
+    isMember &&
+    bookshelfViewMode === 'DETAIL' &&
+    bookshelfDetailTab === 'TOPIC' &&
+    selectedBookshelfBook !== null;
+  const groupHomeListItems: GroupHomeListItem[] =
+    activeTab === 'notice' && selectedNotice && isMember
+      ? currentNoticeComments
+      : showVirtualizedBookshelfTopics
+        ? bookshelfTopicItems
+        : [];
+  const renderGroupHomeListItem = useCallback(
+    ({ item }: ListRenderItemInfo<GroupHomeListItem>) =>
+      'type' in item ? (
+        <View style={styles.bookshelfTopicVirtualizedCell}>
+          <GroupBookshelfTopicRow
+            item={item}
+            handlePressBookshelfPostMenu={handlePressBookshelfPostMenu}
+          />
+        </View>
+      ) : (
+        <View style={styles.noticeCommentVirtualizedCell}>
+          <GroupNoticeCommentRow
+            comment={item}
+            navigation={navigation}
+            setPhotoViewer={setPhotoViewer}
+            handlePressCommentMenu={handlePressCommentMenu}
+          />
+        </View>
+      ),
+    [handlePressBookshelfPostMenu, handlePressCommentMenu, navigation, setPhotoViewer],
   );
 
   return (
@@ -3028,9 +3069,9 @@ function GroupHomeView({
             paddingBottom: spacing.xl * 2,
           },
         ]}
-        data={activeTab === 'notice' && selectedNotice && isMember ? currentNoticeComments : []}
-        keyExtractor={(comment) => comment.id}
-        renderItem={renderNoticeComment}
+        data={groupHomeListItems}
+        keyExtractor={(item) => item.id}
+        renderItem={renderGroupHomeListItem}
         ListHeaderComponentStyle={styles.groupHomeListHeader}
         ListFooterComponent={
           activeTab === 'notice' && selectedNotice && isMember ? (
@@ -3074,6 +3115,13 @@ function GroupHomeView({
                 <Text style={styles.infiniteScrollLoadingText}>{l('불러오는 중...')}</Text>
               ) : null}
             </View>
+          ) : showVirtualizedBookshelfTopics ? (
+            <GroupBookshelfTopicFooter
+              loadState={currentBookshelfDetailLoadState.topic}
+              itemCount={bookshelfTopicItems.length}
+              loadingMore={Boolean(currentBookshelfTopicPageState?.loadingMore)}
+              onRetry={() => retryBookshelfDetailSection('topic')}
+            />
           ) : null
         }
         onLayout={handleGroupHomeLayout}
@@ -3391,9 +3439,7 @@ function GroupHomeView({
           selectedBookshelfBook={selectedBookshelfBook}
           canManageRegularGroups={typeof selectedRegularMeetingId === 'number'}
           bookshelfDetailTab={bookshelfDetailTab}
-          bookshelfTopicItems={bookshelfTopicItems}
           bookshelfReviewItems={bookshelfReviewItems}
-          currentBookshelfTopicPageState={currentBookshelfTopicPageState}
           bookshelfDetailLoadState={currentBookshelfDetailLoadState}
           regularMeetingInfo={regularMeetingInfo}
           selectedRegularGroupId={selectedRegularGroupId}

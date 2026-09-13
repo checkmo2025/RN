@@ -82,3 +82,4 @@ ponytail-관련-기능-YYYY-MM-DD-HHmm.md
 | 2026-09-12 17:41 | [모임 공지 상세 댓글 가상화](./ponytail-group-notice-comment-list-virtualization-2026-09-12-1741.md) | 500개 첫 커밋 96.2% 단축, 동일 거리 스크롤 FPS는 변화 없음 | 부분 확인 |
 | 2026-09-12 18:34 | [마이페이지 신고 내역 목록 가상화](./ponytail-mypage-report-history-list-virtualization-2026-09-12-1834.md) | 100·500개 첫 커밋 80.9%·95.9% 단축, 7개는 35.0% 증가 | 부분 확인 |
 | 2026-09-12 19:06 | [홈 오프라인 반복 요청 차단](./ponytail-home-offline-2026-09-12-1906.md) | 실패 후 끝 도달 이벤트 20회에서 요청 21→1회, 실제 프레임 측정 보류 | 부분 확인 |
+| 2026-09-14 00:10 | [모임 책장 발제 목록 가상화](./ponytail-group-bookshelf-topic-list-virtualization-2026-09-14-0010.md) | 100·500개 첫 커밋 83.1%·95.4% 단축, 스크롤 FPS는 변화 없음 | 부분 확인 |

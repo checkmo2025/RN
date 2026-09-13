@@ -42,7 +42,7 @@ const rootList = allNodes(meetingSource).find(
   (node) =>
     ts.isJsxSelfClosingElement(node) &&
     node.tagName.getText(meetingSource) === 'FlatList' &&
-    node.attributes.getText(meetingSource).includes('currentNoticeComments'),
+    node.attributes.getText(meetingSource).includes('ref={groupHomeScrollRef}'),
 );
 assert.ok(rootList, 'Group home must use the comment-backed FlatList');
 
@@ -90,11 +90,12 @@ const comments = Array.from({ length: 7 }, (_, index) => ({
 test('uses one vertical FlatList and preserves comment identity and order', () => {
   const attributes = rootList.attributes.getText(meetingSource);
   assert.match(
-    attributes,
-    /data=\{activeTab === 'notice' && selectedNotice && isMember \? currentNoticeComments : \[\]\}/,
+    meetingText,
+    /activeTab === 'notice' && selectedNotice && isMember\s*\? currentNoticeComments/,
   );
-  assert.match(attributes, /keyExtractor=\{\(comment\) => comment\.id\}/);
-  assert.match(attributes, /renderItem=\{renderNoticeComment\}/);
+  assert.match(attributes, /data=\{groupHomeListItems\}/);
+  assert.match(attributes, /keyExtractor=\{\(item\) => item\.id\}/);
+  assert.match(attributes, /renderItem=\{renderGroupHomeListItem\}/);
   assert.doesNotMatch(noticeText, /currentNoticeComments\.map/);
 
   for (const count of [0, 1, 20, 100, 500]) {
@@ -106,8 +107,8 @@ test('uses one vertical FlatList and preserves comment identity and order', () =
 test('keeps non-members from receiving comment rows or list state', () => {
   const attributes = rootList.attributes.getText(meetingSource);
   assert.match(
-    attributes,
-    /data=\{activeTab === 'notice' && selectedNotice && isMember \? currentNoticeComments : \[\]\}/,
+    meetingText,
+    /activeTab === 'notice' && selectedNotice && isMember\s*\? currentNoticeComments/,
   );
   assert.match(attributes, /activeTab === 'notice' && selectedNotice && isMember \? \(/);
   assert.match(noticeText, /공지사항은 독서 모임의 회원이 되신 후 조회 가능합니다\./);

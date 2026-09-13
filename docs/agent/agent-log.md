@@ -4205,3 +4205,9 @@ export const interactionOpacity = {
 - Android 표시 버전·로컬 런타임을 1.2.8로 동기화하고 기존 EAS remote auto-increment로 versionCode 16 적용
 - production 서명 AAB 빌드 성공 확인, TypeScript·Android 프로덕션 JS export 통과 및 SDK 36 설정 확인
 - Android 제출 문서에 AAB 링크·정확한 빌드 ID의 제출 명령·출시 노트를 기록하고 Google Play 제출은 사용자 직접 실행으로 인계
+
+# 2026-09-14 00:13:58 KST 모임 책장 발제 목록 가상화
+
+- 책장 상세의 발제 목록을 기존 루트 `FlatList`로 가상화하고 ID·순서·문구·권한·메뉴·추가 페이지 조회 동작을 유지
+- iOS Release/Hermes 조건별 30회에서 발제 500개 초기 커밋 중앙값 123.89→5.72ms, 첫 커밋 발제 500→10개 확인; 스크롤 FPS는 변화 없어 부분 확인
+- 회귀 검사 11개, TypeScript·대상 ESLint·디자인 토큰·일반 iOS Release 빌드 통과; 원본 JSON·재현 측정기·최적화 기록 보관

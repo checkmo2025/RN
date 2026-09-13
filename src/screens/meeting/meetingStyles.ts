@@ -3293,6 +3293,15 @@ export const styles = StyleSheet.create({
   bookshelfPostList: {
     gap: spacing.sm,
   },
+  bookshelfTopicVirtualizedCell: {
+    paddingTop: spacing.sm,
+  },
+  bookshelfTopicVirtualizedFooter: {
+    gap: spacing.sm,
+  },
+  bookshelfTopicVirtualizedFooterWithState: {
+    paddingTop: spacing.sm,
+  },
   bookshelfPostCard: {
     borderWidth: 1,
     borderColor: colors.gray2,
