@@ -4199,3 +4199,9 @@ export const interactionOpacity = {
 - iOS 제출 문서에 한·영 업데이트 설명과 Xcode 업로드·App Store Connect 심사 절차를 정리하고 로컬 릴리스 런북의 현재 상태 갱신
 - TypeScript·iOS 프로덕션 JS export·plist·CocoaPods 잠금 일치 및 Xcode Release 버전·빌드·서명 팀 설정 확인 통과
 - Archive·업로드·심사 제출은 사용자가 Xcode에서 진행 예정이며 Android 제출 준비와 기존 무관한 미커밋 자료는 이번 커밋에서 제외
+
+# 2026-09-13 14:49:38 KST Android 1.2.8 빌드 16 제출 준비
+
+- Android 표시 버전·로컬 런타임을 1.2.8로 동기화하고 기존 EAS remote auto-increment로 versionCode 16 적용
+- production 서명 AAB 빌드 성공 확인, TypeScript·Android 프로덕션 JS export 통과 및 SDK 36 설정 확인
+- Android 제출 문서에 AAB 링크·정확한 빌드 ID의 제출 명령·출시 노트를 기록하고 Google Play 제출은 사용자 직접 실행으로 인계
