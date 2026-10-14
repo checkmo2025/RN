@@ -377,7 +377,19 @@ export function GroupManagementOverlay({
               onScroll={handleBookshelfBookSearchScroll}
               ListEmptyComponent={
                 bookshelfBookSearchSearched && !bookshelfBookSearchLoading ? (
-                  <Text style={styles.bookshelfBookSearchEmpty}>{l('검색 결과가 없습니다.')}</Text>
+                  bookshelfBookSearchHasNext ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      disabled={bookshelfBookSearchLoadingMore}
+                      onPress={() => { void loadMoreBookshelfBookSearch(); }}
+                    >
+                      <Text style={styles.bookshelfBookSearchEmpty}>
+                        {l(bookshelfBookSearchLoadingMore ? '검색 중...' : '다음 검색 결과 보기')}
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <Text style={styles.bookshelfBookSearchEmpty}>{l('검색 결과가 없습니다.')}</Text>
+                  )
                 ) : null
               }
               renderItem={({ item: book }) => (

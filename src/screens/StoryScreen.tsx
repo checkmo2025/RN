@@ -3373,7 +3373,19 @@ export function StoryScreen() {
                     onScroll={handleBookSearchScroll}
                     ListEmptyComponent={
                       bookSearchSearched && !bookSearchLoading ? (
-                        <Text style={styles.bookPickerEmptyText}>{l('검색 결과가 없습니다.')}</Text>
+                        bookSearchHasNext ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            disabled={bookSearchLoadingMore}
+                            onPress={() => { void loadMoreBookSearch(); }}
+                          >
+                            <Text style={styles.bookPickerEmptyText}>
+                              {l(bookSearchLoadingMore ? '검색 중...' : '다음 검색 결과 보기')}
+                            </Text>
+                          </Pressable>
+                        ) : (
+                          <Text style={styles.bookPickerEmptyText}>{l('검색 결과가 없습니다.')}</Text>
+                        )
                       ) : null
                     }
                     renderItem={({ item: bookItem }) => (
