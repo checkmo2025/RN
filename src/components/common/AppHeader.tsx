@@ -1334,9 +1334,7 @@ export function AppHeader(props: Props) {
                   {selectedBook ? (
                     <Pressable
                       style={styles.resultCard}
-                      onPress={() => {
-                        void openAladinUrl(ALADIN_HOME_URL);
-                      }}
+                      onPress={() => openStoryCompose(selectedBook)}
                     >
                       {selectedBook.imgUrl ? (
                         <Image source={{ uri: selectedBook.imgUrl }} style={styles.resultThumb} />
@@ -1373,7 +1371,7 @@ export function AppHeader(props: Props) {
                         ]}
                         onPress={(event) => {
                           event.stopPropagation();
-                          openStoryCompose(selectedBook);
+                          void openAladinUrl(ALADIN_HOME_URL);
                         }}
                       >
                         <WriteIcon width={20} height={20} />
