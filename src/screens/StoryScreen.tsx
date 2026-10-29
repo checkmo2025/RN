@@ -421,7 +421,7 @@ export function StoryScreen() {
   const storyFeedRequestIdRef = useRef(0);
   const storyDetailRequestIdRef = useRef(0);
   const lastEndReachedAtRef = useRef(0);
-  const detailScrollRef = useRef<ScrollView>(null);
+  const detailScrollRef = useRef<FlatList<Comment>>(null);
   const detailScrollYRef = useRef(0);
   const commentInputRef = useRef<TextInput>(null);
   const inlineReplyInputRef = useRef<TextInput>(null);
@@ -569,8 +569,8 @@ export function StoryScreen() {
 
   const scrollToCommentSection = useCallback((animated = true) => {
     if (commentSectionYRef.current <= 0) return false;
-    detailScrollRef.current?.scrollTo({
-      y: Math.max(0, commentSectionYRef.current - spacing.sm),
+    detailScrollRef.current?.scrollToOffset({
+      offset: Math.max(0, commentSectionYRef.current - spacing.sm),
       animated,
     });
     return true;
@@ -584,8 +584,8 @@ export function StoryScreen() {
         input.measureInWindow((_x, inputY, _width, inputHeight) => {
           const inputCenterY = inputY + inputHeight / 2;
           const targetCenterY = getFocusedInputTargetCenterY(screenHeight);
-          detailScrollRef.current?.scrollTo({
-            y: Math.max(0, detailScrollYRef.current + inputCenterY - targetCenterY),
+          detailScrollRef.current?.scrollToOffset({
+            offset: Math.max(0, detailScrollYRef.current + inputCenterY - targetCenterY),
             animated: true,
           });
         });
@@ -616,7 +616,7 @@ export function StoryScreen() {
   }, [scheduleStoryInputFocusScroll]);
 
   const scrollDetailToTop = useCallback((animated = true) => {
-    detailScrollRef.current?.scrollTo({ y: 0, animated });
+    detailScrollRef.current?.scrollToOffset({ offset: 0, animated });
   }, []);
 
   const handleCommentSectionLayout = useCallback(
@@ -2661,9 +2661,12 @@ export function StoryScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + scaleSize(44) : 0}
         >
-          <ScrollView
+          <FlatList
             ref={detailScrollRef}
-            contentContainerStyle={[styles.detailContent, tabletReadingContentStyle]}
+            data={selectedStory.commentList}
+            keyExtractor={(comment) => comment.id}
+            removeClippedSubviews={false}
+            contentContainerStyle={[styles.detailListContent, tabletReadingContentStyle]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             scrollEventThrottle={16}
@@ -2676,7 +2679,8 @@ export function StoryScreen() {
                 onRefresh={handleRefreshSelectedStory}
               />
             }
-          >
+            ListHeaderComponent={(
+          <View style={styles.detailListHeader}>
           <View style={styles.breadcrumbRow}>
             <Pressable
               style={styles.breadcrumbButton}
@@ -2906,8 +2910,10 @@ export function StoryScreen() {
               </View>
             )}
 
-            <View style={styles.commentList}>
-              {selectedStory.commentList.map((comment) => (
+          </View>
+          </View>
+            )}
+            renderItem={({ item: comment }) => (
                 <View key={comment.id} style={[styles.commentItem, comment.replyTo && styles.commentReply]}>
                   {comment.replyTo ? <Text style={styles.replyPrefix}>ㄴ</Text> : null}
                   <View style={styles.commentAvatar}>
@@ -3071,10 +3077,9 @@ export function StoryScreen() {
                     )}
                   </View>
                 </View>
-              ))}
-            </View>
-          </View>
-        </ScrollView>
+            )}
+            ItemSeparatorComponent={() => <View style={styles.commentSeparator} />}
+          />
         <ActionMenu
           visible={Boolean(commentMenu)}
           anchor={
@@ -4148,9 +4153,12 @@ const styles = StyleSheet.create({
     ...typography.body1_3,
     color: colors.gray5,
   },
-  detailContent: {
+  detailListContent: {
     padding: spacing.md,
+  },
+  detailListHeader: {
     gap: spacing.md,
+    paddingBottom: spacing.sm,
   },
   breadcrumbRow: {
     flexDirection: 'row',
@@ -4351,8 +4359,8 @@ const styles = StyleSheet.create({
     ...typography.body1_2,
     color: colors.white,
   },
-  commentList: {
-    gap: spacing.sm,
+  commentSeparator: {
+    height: spacing.sm,
   },
   commentItem: {
     flexDirection: 'row',
