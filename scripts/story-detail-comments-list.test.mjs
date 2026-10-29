@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import ts from 'typescript';
 import { source, listAttribute, evaluate, elements } from './list-render-test-helpers.mjs';
 
 const file = source('src/screens/StoryScreen.tsx');
@@ -57,4 +58,17 @@ test('keeps inline reply and edit composers connected to existing submission and
     assert.deepEqual(calls, ['수정', editing ? 'edit-focus' : 'reply-focus', 'submit']);
     assert.equal(nodes.some((node) => node.type === 'ImageGallery'), !editing);
   }
+});
+
+test('comment focus includes the content padding after nesting the section in the list header', () => {
+  const callback = (name) => file.nodes.find((node) => ts.isVariableDeclaration(node) && node.name.getText(file.ast) === name).initializer.arguments[0].getText(file.ast);
+  const commentSectionYRef = { current: 0 }, calls = [];
+  evaluate(callback('handleCommentSectionLayout'), {
+    commentSectionYRef, pendingDetailFocusRef: { current: null },
+  })({ nativeEvent: { layout: { y: 300 } } });
+  const scroll = evaluate(callback('scrollToCommentSection'), {
+    commentSectionYRef, detailScrollRef: { current: { scrollToOffset: (value) => calls.push(value) } },
+  });
+  assert.equal(scroll(false), true);
+  assert.deepEqual(calls, [{ offset: 308, animated: false }]);
 });

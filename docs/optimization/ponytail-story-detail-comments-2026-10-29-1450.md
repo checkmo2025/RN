@@ -56,3 +56,18 @@ React Native 기본 FlatList와 기존 행 JSX·핸들러를 재사용하면 새
 ## 7. 가설 판단과 결론
 
 부분 확인. 기존 데이터·행·핸들러의 회귀 검사를 통과했고 가상 목록으로 연결했다. 실기기 전체 화면 검증을 완료한 결과는 아니다. 후속 작업은 실제 기기에서 진입·스크롤·해당 목록 상호작용 확인이며 추가 성능 튜닝은 하지 않는다.
+
+## 후속 보완: 댓글 위치 좌표 보존
+
+댓글 섹션이 FlatList 헤더의 자식으로 옮겨져 onLayout의 기준이 달라졌다. 콘텐츠 상단 padding을 더해 기존 댓글 이동 위치를 보존했다. 핵심 후속 변경은 추가 1줄·삭제 1줄이며, 초기 변경과 합산해도 200줄 이내다.
+
+```ts
+commentSectionYRef.current = event.nativeEvent.layout.y + spacing.md;
+detailScrollRef.current?.scrollToOffset({
+  offset: Math.max(0, commentSectionYRef.current - spacing.sm), animated,
+});
+```
+
+- 실제 레이아웃·이동 콜백을 실행하는 위치 회귀 검사 포함, 댓글 목록 검사 4개 통과.
+- 최종 `node --test scripts/*.test.mjs`: 81개 통과, 실패 0개.
+- 타입·디자인 토큰·대상 ESLint 오류 0개. 성능 실험·실기기 검증 미수행.

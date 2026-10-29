@@ -621,7 +621,7 @@ export function StoryScreen() {
 
   const handleCommentSectionLayout = useCallback(
     (event: LayoutChangeEvent) => {
-      commentSectionYRef.current = event.nativeEvent.layout.y;
+      commentSectionYRef.current = event.nativeEvent.layout.y + spacing.md;
 
       if (pendingDetailFocusRef.current !== 'comments') return;
       requestAnimationFrame(() => {
