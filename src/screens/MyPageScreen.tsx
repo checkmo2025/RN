@@ -2631,21 +2631,7 @@ export function MyPageScreen() {
           {!loadingBlockedMembers && blockedMembers.length === 0 ? (
             <Text style={styles.emptyText}>{l('차단한 사용자가 없습니다.')}</Text>
           ) : null}
-          <View style={styles.reportList}>
-            {blockedMembers.map((member) => (
-              <View key={member.memberId} style={styles.reportCard}>
-                <View style={styles.reportHeader}>
-                  <Text style={styles.reportUser}>{member.nickname}</Text>
-                  <Pressable
-                    style={({ pressed }) => [pressed && styles.pressed]}
-                    onPress={() => handleUnblockMember(member.nickname)}
-                  >
-                    <Text style={styles.unblockButton}>{l('차단 해제')}</Text>
-                  </Pressable>
-                </View>
-              </View>
-            ))}
-          </View>
+
         </View>
       );
     }
@@ -2898,6 +2884,38 @@ export function MyPageScreen() {
           ListEmptyComponent={renderMyNewsStatus()}
           ListFooterComponent={<View style={styles.myNewsListBottomSpacing} />}
           showsVerticalScrollIndicator={false}
+        />
+      </ScreenLayout>
+    );
+  }
+
+  if (showSettings && selectedSetting === 'blocked') {
+    return (
+      <ScreenLayout title={t('profile.screenTitle')}>
+        <FlatList
+          style={styles.container}
+          contentContainerStyle={[styles.settingsContent, styles.reportHistoryListContent]}
+          data={blockedMembers}
+          keyExtractor={(member) => String(member.memberId)}
+          ListHeaderComponent={renderSettingDetail()}
+          ListHeaderComponentStyle={styles.blockedListHeader}
+          ItemSeparatorComponent={() => <View style={styles.reportListSeparator} />}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          renderItem={({ item: member }) => (
+              <View key={member.memberId} style={styles.reportCard}>
+                <View style={styles.reportHeader}>
+                  <Text style={styles.reportUser}>{member.nickname}</Text>
+                  <Pressable
+                    style={({ pressed }) => [pressed && styles.pressed]}
+                    onPress={() => handleUnblockMember(member.nickname)}
+                  >
+                    <Text style={styles.unblockButton}>{l('차단 해제')}</Text>
+                  </Pressable>
+                </View>
+              </View>
+          )}
         />
       </ScreenLayout>
     );
@@ -3622,6 +3640,9 @@ const styles = StyleSheet.create({
   },
   reportHistoryListContent: {
     gap: 0,
+  },
+  blockedListHeader: {
+    paddingBottom: spacing.sm,
   },
   reportListTopSpacing: {
     height: spacing.sm,
