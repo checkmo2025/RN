@@ -2912,8 +2912,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  voteVotersList: {
-    gap: spacing.xs,
+  voteVotersScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  voteVotersSeparator: {
+    height: spacing.xs,
   },
   voteVotersRow: {
     flexDirection: 'row',

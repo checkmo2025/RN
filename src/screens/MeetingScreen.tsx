@@ -4753,8 +4753,14 @@ function GroupHomeView({
                 <MaterialIcons name="close" size={22} color={colors.gray6} />
               </Pressable>
             </View>
-            <View style={styles.voteVotersList}>
-              {voteVotersModal.voters.map((voter, index) => (
+            <FlatList
+              style={styles.voteVotersScroll}
+              data={voteVotersModal.voters}
+              keyExtractor={(voter, index) => `${voter.nickname}-${index}`}
+              showsVerticalScrollIndicator={false}
+              ItemSeparatorComponent={() => <View style={styles.voteVotersSeparator} />}
+              ListEmptyComponent={<Text style={styles.voteVotersEmptyText}>{l('아직 투표자가 없습니다.')}</Text>}
+              renderItem={({ item: voter, index }) => (
                 <Pressable
                   key={`${voter.nickname}-${index}`}
                   style={({ pressed }) => [styles.voteVotersRow, pressed && styles.pressed]}
@@ -4777,11 +4783,8 @@ function GroupHomeView({
                   </View>
                   <Text style={styles.voteVotersName}>{voter.nickname}</Text>
                 </Pressable>
-              ))}
-              {voteVotersModal.voters.length === 0 ? (
-                <Text style={styles.voteVotersEmptyText}>{l('아직 투표자가 없습니다.')}</Text>
-              ) : null}
-            </View>
+              )}
+            />
           </>
         ) : null}
       </DialogOverlay>
