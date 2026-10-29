@@ -1468,6 +1468,9 @@ export const styles = StyleSheet.create({
     ...typography.body2_2,
     color: colors.primary1,
   },
+  managementJoinRequestSeparator: {
+    height: spacing.sm,
+  },
   managementCardList: {
     gap: spacing.sm,
   },
