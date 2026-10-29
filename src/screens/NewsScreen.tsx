@@ -1,3 +1,4 @@
+import type { ScrollViewInstance } from 'react-native';
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import {
   Animated,
@@ -152,7 +153,7 @@ export function NewsScreen() {
   const [recommendedBooks, setRecommendedBooks] = useState<RecommendedBook[]>([]);
   const newsListRef = useRef<FlatList>(null);
   useScrollToTop(newsListRef);
-  const detailScrollRef = useRef<ScrollView>(null);
+  const detailScrollRef = useRef<ScrollViewInstance>(null);
   const detailTranslateX = useRef(new Animated.Value(0)).current;
   const newsDetailRequestIdRef = useRef(0);
 
@@ -614,7 +615,7 @@ export function NewsScreen() {
             </View>
           }
           ListEmptyComponent={
-            loadingNews ? (
+            (loadingNews ? (
               <View style={styles.skeletonList}>
                 <NewsCardSkeleton />
                 <NewsCardSkeleton />
@@ -623,7 +624,7 @@ export function NewsScreen() {
               </View>
             ) : (
               <Text style={styles.emptyNewsText}>{l('등록된 소식이 없습니다.')}</Text>
-            )
+            ))
           }
           renderItem={({ item }) => (
             <Pressable style={styles.card} onPress={() => onSelect(item)}>
@@ -693,7 +694,7 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 10,
   },
   promoGradient: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(91, 71, 61, 0.35)',
   },
   promoContent: {
@@ -741,7 +742,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   recommendedOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(41, 31, 26, 0.2)',
   },
   recommendedTextWrap: {
@@ -826,7 +827,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray2,
   },
   bannerOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     padding: spacing.lg,
   },

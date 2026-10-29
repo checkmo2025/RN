@@ -992,7 +992,7 @@ export function UserProfileScreen() {
                 {activeFollowUsers.length > 0 ? renderFollowListStatus() : null}
               </>
             )}
-            ListEmptyComponent={renderFollowListStatus()}
+            ListEmptyComponent={(renderFollowListStatus()) ?? undefined}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={handleFollowPageRefresh} />
@@ -1004,7 +1004,7 @@ export function UserProfileScreen() {
             data={showStoryRows ? storyRows : showBookRows ? bookRows : showGroupRows ? groups : []}
             keyExtractor={(row) => Array.isArray(row) ? `${showBookRows ? 'book' : 'story'}-row-${row[0]?.id}` : `group-${row.id}`}
             ItemSeparatorComponent={showGroupRows ? () => <View style={styles.gridListTopSpacing} /> : undefined}
-            ListFooterComponent={showGroupRows ? <View style={styles.gridListTopSpacing} /> : null}
+            ListFooterComponent={(showGroupRows ? <View style={styles.gridListTopSpacing} /> : null) ?? undefined}
             renderItem={(info) =>
               activeTab === '모임'
                 ? renderGroupItem(info as ListRenderItemInfo<GroupItem>)

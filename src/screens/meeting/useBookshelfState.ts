@@ -1,5 +1,6 @@
+import type { ViewInstance } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Keyboard, PanResponder, View } from 'react-native';
+import { Alert, Keyboard, PanResponder } from 'react-native';
 import type {
   GestureResponderEvent,
   LayoutChangeEvent,
@@ -288,7 +289,7 @@ export function useBookshelfState({
   >({});
   const bookshelfBaseDetailByMeetingIdRef = useRef<Record<number, ClubBookshelfDetail>>({});
   const bookshelfDetailLoadPromiseByKeyRef = useRef<Record<string, Promise<unknown>>>({});
-  const teamManageQuickDropRefs = useRef<Record<string, View | null>>({});
+  const teamManageQuickDropRefs = useRef<Record<string, ViewInstance | null>>({});
   const teamManageQuickDropLayoutsRef = useRef<Record<string, TeamManageDropLayout>>({});
   const teamManageContentDropLayoutsRef = useRef<Record<string, TeamManageDropLayout>>({});
   const dragStartRef = useRef<{
@@ -297,8 +298,8 @@ export function useBookshelfState({
     pageY: number;
     moved: boolean;
   } | null>(null);
-  const teamManageScrollRef = useRef<import('react-native').ScrollView>(null);
-  const teamManageScrollViewRef = useRef<View>(null);
+  const teamManageScrollRef = useRef<import('react-native').ScrollViewInstance>(null);
+  const teamManageScrollViewRef = useRef<ViewInstance>(null);
   const teamManageScrollMetricsRef = useRef<TeamManageScrollMetrics>({
     left: 0,
     top: 0,

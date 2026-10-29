@@ -10,14 +10,13 @@ EAS 클라우드 iOS 빌드 한도를 사용하지 않고 Mac의 Xcode에서 책
 
 ## 현재 제출 준비 상태
 
-- 준비일: `2026-09-13`
-- 다음 iOS 제출: **`1.2.8 (45)`** — 사용자 확인 완료
-- Expo·패키지·iOS 마케팅/런타임 버전과 로컬 빌드 번호 동기화 완료
-- 로컬 `ios/app/Supporting/Expo.plist`도 `1.2.8`로 동기화했다. 생성 파일이므로 Git에는 포함하지 않으며 재생성 시 `app.json`을 기준으로 한다.
-- Xcode `26.6`, iOS SDK `26.5`, `app` 스킴의 Archive 설정 `Release` 확인
-- TypeScript, iOS 프로덕션 JS 번들 생성, plist, CocoaPods 잠금 일치, Xcode Release 설정 확인 완료
-- **Archive·Upload·App Store 심사 제출은 아직 실행하지 않았다.** 사용자가 Xcode에서 다음 단계를 진행한다.
-- 이번 버전의 업데이트 설명과 제출 순서: [iOS 1.2.8 제출 준비](../release/ios-1.2.8.md)
+- 준비일: `2026-10-29`
+- 다음 iOS 제출: **`1.3.0 (46)`** — 앱 버전 사용자 지정, 빌드 번호는 최신 로컬 Archive `1.2.8 (45)` 다음 번호
+- App Store Connect 최신 업로드 번호는 직접 조회하지 않았다.
+- Expo·패키지·iOS 마케팅 버전 및 로컬 빌드 번호 동기화 완료. Android 네이티브 설정은 이번 작업에서 변경하지 않았다.
+- SDK 58 전환에 적용된 `runtimeVersion: { "policy": "fingerprint" }`를 유지한다. `Expo.plist`의 `file:fingerprint`를 앱 버전 문자열로 덮어쓰지 않는다.
+- Archive 설정은 `Release`. 서명 포함 기기용 Release build·타입 검사·회귀 86개 통과. 사전 검증 결과와 사용자 다음 단계: [iOS 1.3.0 준비](../release/ios-1.3.0.md)
+- **Product > Archive는 사용자가 직접 실행한다. Archive·Upload·심사 제출은 에이전트가 실행하지 않는다.**
 
 ## 이전 업로드 기록
 

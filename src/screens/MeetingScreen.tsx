@@ -1,3 +1,4 @@
+import type { ScrollViewInstance, TextInputInstance } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import {
@@ -25,7 +26,7 @@ import type {
   ListRenderItemInfo,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  TextInputContentSizeChangeEventData,
+  TextInputContentSizeChangeEvent,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import {
@@ -461,9 +462,9 @@ function upsertGroupByClubId(groups: Group[], nextGroup: Group): Group[] {
 
 export function MeetingScreen() {
   const meetingScrollRef = useRef<FlatList<Group>>(null);
-  const applyModalScrollRef = useRef<ScrollView>(null);
+  const applyModalScrollRef = useRef<ScrollViewInstance>(null);
   const meetingScrollYRef = useRef(0);
-  const meetingSearchInputRef = useRef<TextInput>(null);
+  const meetingSearchInputRef = useRef<TextInputInstance>(null);
   useScrollToTop(meetingScrollRef);
   const navigation = useNavigation<NavigationProp<TabParamList, 'Meeting'>>();
   const route = useRoute<RouteProp<TabParamList, 'Meeting'>>();
@@ -1551,7 +1552,7 @@ function GroupHomeView({
   const [togglingParticipantNickname, setTogglingParticipantNickname] = useState<string | null>(null);
 
   const handleNoticeTitleContentSizeChange = useCallback(
-    (event: NativeSyntheticEvent<TextInputContentSizeChangeEventData>, text: string) => {
+    (event: TextInputContentSizeChangeEvent, text: string) => {
       const nextHeight = getStableNoticeInputHeight(
         text,
         event.nativeEvent.contentSize.height,
@@ -1566,7 +1567,7 @@ function GroupHomeView({
   );
 
   const handleNoticeContentSizeChange = useCallback(
-    (event: NativeSyntheticEvent<TextInputContentSizeChangeEventData>, text: string) => {
+    (event: TextInputContentSizeChangeEvent, text: string) => {
       const nextHeight = getStableNoticeInputHeight(
         text,
         event.nativeEvent.contentSize.height,
@@ -3124,7 +3125,7 @@ function GroupHomeView({
         renderItem={renderGroupHomeListItem}
         ListHeaderComponentStyle={styles.groupHomeListHeader}
         ListFooterComponent={
-          activeTab === 'notice' && selectedNotice && isMember ? (
+          (activeTab === 'notice' && selectedNotice && isMember ? (
             <View
               style={[
                 styles.noticeCommentVirtualizedFooter,
@@ -3178,7 +3179,7 @@ function GroupHomeView({
               itemCount={bookshelfReviewItems.length}
               onRetry={() => retryBookshelfDetailSection('review')}
             />
-          ) : null
+          ) : null) ?? undefined
         }
         onLayout={handleGroupHomeLayout}
         onContentSizeChange={handleGroupHomeContentSizeChange}

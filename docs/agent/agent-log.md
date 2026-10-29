@@ -4279,3 +4279,17 @@ export const interactionOpacity = {
 
 - 가상 목록 헤더로 이동한 댓글 섹션의 좌표에 콘텐츠 padding을 반영해 기존 자동 이동 위치를 보존
 - 댓글 위치 회귀 포함 전체 목록·관련 회귀 81개 통과, 타입·디자인 토큰 검사 통과; 성능 실험·실기기 검증 미수행
+
+# 2026-10-29 15:45:06 KST Expo SDK 58 / Xcode 27 개발 실행 복구
+
+- SDK 58·React Native 0.88 의존성과 제거 API·타입·스플래시·SceneDelegate를 이전하고 앱 버전·서명·푸시·딥링크를 보존
+- 기존 Firebase 25/Android 초기화를 유지하고 미설정 iOS Firebase의 잘못된 초기화를 방지; OTA 런타임은 fingerprint로 분리
+- 회귀 86개·타입·토큰 검사 및 양 플랫폼 JS export 통과, iOS 27 개발 빌드·온보딩 화면 실행 확인; Doctor 19/20(기존 플러그인의 직접 의존성 경고)
+- 기존 사용자 작업 보존, 미커밋. iOS Firebase 설정 파일·실기기·Android 네이티브 전체 빌드·운영 배포는 미검증
+
+# 2026-10-29 19:54:10 KST 1.3.0 iOS·Android 배포 준비
+
+- 공통 앱 버전 1.3.0 및 iOS 빌드 46 동기화, fingerprint 유지; iOS Archive·업로드는 사용자 직접 진행
+- iOS 서명 포함 기기용 Release build·산출물 서명 검증·타입 검사·회귀 86개 통과
+- Android 표시 버전 1.3.0 동기화, 기존 EAS production 원격 서명·자동 증가로 제출용 AAB 생성 준비; 스토어 제출 미실행
+- SDK 58 호환성 변경을 함께 기록하고 관련 파일만 커밋; IDE·자동 게시·소개 자료·E2E 작업은 제외

@@ -376,7 +376,7 @@ export function GroupManagementOverlay({
               scrollEventThrottle={16}
               onScroll={handleBookshelfBookSearchScroll}
               ListEmptyComponent={
-                bookshelfBookSearchSearched && !bookshelfBookSearchLoading ? (
+                (bookshelfBookSearchSearched && !bookshelfBookSearchLoading ? (
                   bookshelfBookSearchHasNext ? (
                     <Pressable
                       accessibilityRole="button"
@@ -390,7 +390,7 @@ export function GroupManagementOverlay({
                   ) : (
                     <Text style={styles.bookshelfBookSearchEmpty}>{l('검색 결과가 없습니다.')}</Text>
                   )
-                ) : null
+                ) : null) ?? undefined
               }
               renderItem={({ item: book }) => (
                 <Pressable
@@ -430,7 +430,7 @@ export function GroupManagementOverlay({
                 </Pressable>
               )}
               ListFooterComponent={
-                bookshelfBookSearchSearched &&
+                (bookshelfBookSearchSearched &&
                 !bookshelfBookSearchLoading &&
                 bookshelfBookSearchResults.length > 0 ? (
                   bookshelfBookSearchLoadingMore ? (
@@ -442,7 +442,7 @@ export function GroupManagementOverlay({
                       {l('마지막 검색 결과입니다.')}
                     </Text>
                   ) : null
-                ) : null
+                ) : null) ?? undefined
               }
             />
           </View>

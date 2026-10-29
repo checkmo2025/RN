@@ -1,3 +1,4 @@
+import type { ScrollViewInstance, TextInputInstance } from 'react-native';
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
   ActivityIndicator,
@@ -5,7 +6,6 @@ import {
   Animated,
   FlatList,
   GestureResponderEvent,
-  InteractionManager,
   Keyboard,
   KeyboardAvoidingView,
   LayoutChangeEvent,
@@ -18,7 +18,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TextInputContentSizeChangeEventData,
+  TextInputContentSizeChangeEvent,
   View,
   Platform,
   useWindowDimensions,
@@ -423,11 +423,11 @@ export function StoryScreen() {
   const lastEndReachedAtRef = useRef(0);
   const detailScrollRef = useRef<FlatList<Comment>>(null);
   const detailScrollYRef = useRef(0);
-  const commentInputRef = useRef<TextInput>(null);
-  const inlineReplyInputRef = useRef<TextInput>(null);
-  const inlineEditCommentInputRef = useRef<TextInput>(null);
-  const bodyInputRef = useRef<TextInput>(null);
-  const composeScrollRef = useRef<ScrollView>(null);
+  const commentInputRef = useRef<TextInputInstance>(null);
+  const inlineReplyInputRef = useRef<TextInputInstance>(null);
+  const inlineEditCommentInputRef = useRef<TextInputInstance>(null);
+  const bodyInputRef = useRef<TextInputInstance>(null);
+  const composeScrollRef = useRef<ScrollViewInstance>(null);
   const composeScrollYRef = useRef(0);
   const composeBodyFocusedRef = useRef(false);
   const composeBodyContentHeightRef = useRef(0);
@@ -520,7 +520,7 @@ export function StoryScreen() {
 
     requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({ offset: restoredOffset, animated: false });
-      InteractionManager.runAfterInteractions(() => {
+      requestIdleCallback(() => {
         listRef.current?.scrollToOffset({ offset: restoredOffset, animated: false });
       });
     });
@@ -577,7 +577,7 @@ export function StoryScreen() {
   }, []);
 
   const scrollStoryInputToFocusTarget = useCallback(
-    (input: TextInput | null) => {
+    (input: TextInputInstance | null) => {
       if (!input) return;
 
       requestAnimationFrame(() => {
@@ -595,7 +595,7 @@ export function StoryScreen() {
   );
 
   const scheduleStoryInputFocusScroll = useCallback(
-    (getInput: () => TextInput | null) => {
+    (getInput: () => TextInputInstance | null) => {
       FOCUSED_INPUT_SCROLL_RETRY_DELAYS_MS.forEach((delay) => {
         setTimeout(() => scrollStoryInputToFocusTarget(getInput()), delay);
       });
@@ -823,7 +823,7 @@ export function StoryScreen() {
   }, []);
 
   const handleStoryBodyContentSizeChange = useCallback(
-    (event: NativeSyntheticEvent<TextInputContentSizeChangeEventData>) => {
+    (event: TextInputContentSizeChangeEvent) => {
       composeBodyContentHeightRef.current = event.nativeEvent.contentSize.height;
       scrollComposeBodyCursorToTarget(true);
     },
@@ -1386,7 +1386,7 @@ export function StoryScreen() {
       animateTransition();
       setIsComposing(true);
       // 모달 dismiss/화면 전환이 끝난 뒤에 포커스해야 iOS first-responder 충돌 크래시를 피한다.
-      InteractionManager.runAfterInteractions(() => {
+      requestIdleCallback(() => {
         bodyInputRef.current?.focus();
       });
     },
@@ -3391,7 +3391,7 @@ export function StoryScreen() {
                         ) : (
                           <Text style={styles.bookPickerEmptyText}>{l('검색 결과가 없습니다.')}</Text>
                         )
-                      ) : null
+                      ) : undefined
                     }
                     renderItem={({ item: bookItem }) => (
                       <Pressable
@@ -3426,8 +3426,8 @@ export function StoryScreen() {
                           <Text style={styles.bookSearchEndText}>
                             {l('마지막 검색 결과입니다.')}
                           </Text>
-                        ) : null
-                      ) : null
+                        ) : undefined
+                      ) : undefined
                     }
                   />
                 </KeyboardAvoidingView>
@@ -3550,10 +3550,10 @@ export function StoryScreen() {
                   </View>
                 ))}
               </View>
-            ) : null
+            ) : undefined
           }
           ListFooterComponent={
-            isLoadingMore ? (
+            (isLoadingMore ? (
               <View style={styles.listFooter}>
                 <Text style={styles.listFooterText}>{l('불러오는 중...')}</Text>
               </View>
@@ -3565,7 +3565,7 @@ export function StoryScreen() {
               </Pressable>
             ) : (
               <View style={{ height: spacing.xxl }} />
-            )
+            ))
           }
           refreshControl={
             <RefreshControl

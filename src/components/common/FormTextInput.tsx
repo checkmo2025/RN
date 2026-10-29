@@ -1,9 +1,9 @@
+import type { TextInputInstance } from 'react-native';
 import { forwardRef, useCallback, useEffect, useRef } from 'react';
 import {
   TextInput,
   type KeyboardTypeOptions,
-  type NativeSyntheticEvent,
-  type TextInputKeyPressEventData,
+  type TextInputKeyPressEvent,
   type TextInputProps,
 } from 'react-native';
 
@@ -78,7 +78,7 @@ type Props = Omit<TextInputProps, 'onChangeText' | 'maxLength'> & {
   overLimitMessage?: string;
 };
 
-export const FormTextInput = forwardRef<TextInput, Props>(function FormTextInput(
+export const FormTextInput = forwardRef<TextInputInstance, Props>(function FormTextInput(
   {
     fieldType = 'text',
     maxLength,
@@ -143,7 +143,7 @@ export const FormTextInput = forwardRef<TextInput, Props>(function FormTextInput
   );
 
   const handleKeyPress = useCallback(
-    (event: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+    (event: TextInputKeyPressEvent) => {
       onKeyPress?.(event);
       if (
         !enforceMaxLength ||

@@ -1,3 +1,4 @@
+import type { ScrollViewInstance } from 'react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ScrollView,
@@ -37,7 +38,7 @@ export function NewsPromotionCarousel({
   const promotionWidth = Math.max(scaleSize(260), width - horizontalInset * 2);
   const promotionStep = promotionWidth + spacing.sm;
   const [activeSlide, setActiveSlide] = useState(0);
-  const carouselRef = useRef<ScrollView | null>(null);
+  const carouselRef = useRef<ScrollViewInstance | null>(null);
   const snapOffsets = useMemo(
     () => items.map((_, index) => promotionStep * index),
     [items, promotionStep],
@@ -157,7 +158,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   promoGradient: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(41, 31, 26, 0.32)',
   },
   promoContent: {

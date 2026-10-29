@@ -1,3 +1,4 @@
+import type { ViewInstance } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { Image, Modal, ScrollView, Text, View } from 'react-native';
@@ -432,7 +433,7 @@ export function GroupBookshelfView({
   const { l } = useLanguage();
   const bookshelfSectionYRef = useRef(0);
   const detailSectionYRef = useRef(0);
-  const regularGroupMemberButtonRef = useRef<View>(null);
+  const regularGroupMemberButtonRef = useRef<ViewInstance>(null);
   const [bookshelfMenuVisible, setBookshelfMenuVisible] = useState(false);
   const [regularGroupMemberDropdownAnchor, setRegularGroupMemberDropdownAnchor] = useState<{
     left: number;

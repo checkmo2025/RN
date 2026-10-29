@@ -289,9 +289,9 @@ export function MeetingChatOverlay({ state, currentMemberNickname }: Props) {
                   requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: false }));
                 }}
                 ListHeaderComponent={
-                  state.loadingOlder ? (
+                  (state.loadingOlder ? (
                     <Text style={styles.loadingOlderText}>{l('이전 채팅을 불러오는 중...')}</Text>
-                  ) : null
+                  ) : null) ?? undefined
                 }
                 ListEmptyComponent={<Text style={styles.emptyText}>{l('표시할 채팅 내역이 없습니다.')}</Text>}
                 renderItem={({ item }) => {
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   inlineOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.overlay30,
     alignItems: 'center',
     justifyContent: 'center',
@@ -678,7 +678,7 @@ const styles = StyleSheet.create({
     elevation: layers.overlay,
   },
   messageActionOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.overlay30,
     justifyContent: 'flex-end',
     zIndex: layers.overlay,

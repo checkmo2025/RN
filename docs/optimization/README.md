@@ -85,3 +85,4 @@ ponytail-관련-기능-YYYY-MM-DD-HHmm.md
 | 2026-09-14 00:10 | [모임 책장 발제 목록 가상화](./ponytail-group-bookshelf-topic-list-virtualization-2026-09-14-0010.md) | 100·500개 첫 커밋 83.1%·95.4% 단축, 스크롤 FPS는 변화 없음 | 부분 확인 |
 | 2026-09-14 01:41 | [모임 책장 한줄평 목록 가상화](./ponytail-group-bookshelf-review-list-virtualization-2026-09-14-0141.md) | 100·500개 첫 커밋 79.6%·94.8% 단축, 스크롤 FPS는 변화 없음 | 부분 확인 |
 | 2026-10-29 | [예스24 클라이언트 연결](./ponytail-yes24-client-2026-10-14-1810.md) | 현재 main 적용, 회귀 6개·타입 검사 통과, 실기기 미검증 | 부분 확인 |
+| 2026-10-29 15:36 | [SDK 58 호환성 전환](./ponytail-sdk58-upgrade-2026-10-29-1536.md) | 타입·회귀 86개·양 플랫폼 번들·iOS 개발 및 Release build 확인; 성능 미측정 | 확인 (배포 전) |

@@ -1305,7 +1305,7 @@ export function AppHeader(props: Props) {
                 )}
                 ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
                 ListFooterComponent={
-                  searched && searchResults.length > 0 ? (
+                  (searched && searchResults.length > 0 ? (
                     searchHasNext ? (
                       <View style={styles.searchMoreSpinner}>
                         <ActivityIndicator size="small" color={colors.primary1} />
@@ -1313,7 +1313,7 @@ export function AppHeader(props: Props) {
                     ) : (
                       <Text style={styles.searchEndText}>{l('마지막 검색 결과입니다.')}</Text>
                     )
-                  ) : null
+                  ) : null) ?? undefined
                 }
                 ListFooterComponentStyle={{ marginTop: spacing.md }}
               />
@@ -1671,7 +1671,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   searchPageRoot: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: layers.overlay,
     elevation: layers.overlay,
   },

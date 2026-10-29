@@ -2847,7 +2847,7 @@ export function MyPageScreen() {
               {activeFollowUsers.length > 0 ? renderFollowListStatus() : null}
             </>
           )}
-          ListEmptyComponent={renderFollowListStatus()}
+          ListEmptyComponent={(renderFollowListStatus()) ?? undefined}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -2888,7 +2888,7 @@ export function MyPageScreen() {
               {myNews.length > 0 ? renderMyNewsStatus() : null}
             </>
           )}
-          ListEmptyComponent={renderMyNewsStatus()}
+          ListEmptyComponent={(renderMyNewsStatus()) ?? undefined}
           ListFooterComponent={<View style={styles.myNewsListBottomSpacing} />}
           showsVerticalScrollIndicator={false}
         />
@@ -2904,7 +2904,7 @@ export function MyPageScreen() {
           contentContainerStyle={[styles.settingsContent, styles.reportHistoryListContent]}
           data={blockedMembers}
           keyExtractor={(member) => String(member.memberId)}
-          ListHeaderComponent={renderSettingDetail()}
+          ListHeaderComponent={(renderSettingDetail()) ?? undefined}
           ListHeaderComponentStyle={styles.blockedListHeader}
           ItemSeparatorComponent={() => <View style={styles.reportListSeparator} />}
           showsVerticalScrollIndicator={false}
@@ -3194,15 +3194,15 @@ export function MyPageScreen() {
           )}
           ListHeaderComponentStyle={styles.mainHeader}
           ListEmptyComponent={
-            activeTab === '내 알림' && isLoggedIn ? renderAlarmStatus() : null
+            (activeTab === '내 알림' && isLoggedIn ? renderAlarmStatus() : null) ?? undefined
           }
           ListFooterComponent={
-            (activeTab === '내 알림' && alarms.length > 0) ||
+            ((activeTab === '내 알림' && alarms.length > 0) ||
             (activeTab === '내 책 이야기' && stories.length > 0) ||
             (activeTab === '내 서재' && books.length > 0) ||
             (activeTab === '내 모임' && groups.length > 0)
               ? <View style={styles.mainListBottomSpacing} />
-              : null
+              : null) ?? undefined
           }
           showsVerticalScrollIndicator={false}
           refreshControl={

@@ -1,4 +1,4 @@
-const { withPodfile } = require('@expo/config-plugins');
+const { withPodfile } = require('expo/config-plugins');
 
 const MARKER = '# checkmo-xcode26-fmt-workaround';
 const POST_INSTALL_ANCHOR = [
@@ -8,7 +8,11 @@ const POST_INSTALL_ANCHOR = [
 
 module.exports = function withXcode26FmtWorkaround(config) {
   return withPodfile(config, (podfileConfig) => {
-    const { contents } = podfileConfig.modResults;
+    let { contents } = podfileConfig.modResults;
+    if (!contents.includes('$RNFirebaseAsStaticFramework = true')) {
+      contents = contents.replace('  use_expo_modules!', '  $RNFirebaseAsStaticFramework = true\n  use_expo_modules!');
+      podfileConfig.modResults.contents = contents;
+    }
 
     if (contents.includes(MARKER)) {
       return podfileConfig;

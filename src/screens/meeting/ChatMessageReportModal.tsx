@@ -151,7 +151,7 @@ export function ChatMessageReportModal({ target, submitting, onClose, onSubmit }
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.overlay30,
     alignItems: 'center',
     justifyContent: 'center',

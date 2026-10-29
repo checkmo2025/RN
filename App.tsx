@@ -158,7 +158,7 @@ export default function App() {
             <DeepLinkCoordinator navigationReady={navigationReady} navigationRef={rootNavigationRef} />
             <PushNotificationCoordinator navigationRef={rootNavigationRef} />
             <AppRoutes />
-            <StatusBar style="dark" backgroundColor="transparent" translucent />
+            <StatusBar style="dark" />
           </AuthGateProvider>
         </NavigationContainer>
       </LanguageProvider>
@@ -171,15 +171,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   authPageOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 900,
   },
   authTransitionOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 1000,
   },
   bootOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 2000,
   },
 });

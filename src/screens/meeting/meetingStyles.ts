@@ -6,7 +6,7 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: layers.overlay,
     elevation: layers.overlay,
   },
@@ -1101,7 +1101,7 @@ export const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   managementOverlayBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   managementOverlayBottom: {
     flex: 1,
@@ -1117,7 +1117,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   managementInlineOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.overlay30,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2613,7 +2613,7 @@ export const styles = StyleSheet.create({
     opacity: 0.5,
   },
   noticeBookSelectorInlineOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: layers.overlay,
     elevation: layers.overlay,
     backgroundColor: colors.overlay30,

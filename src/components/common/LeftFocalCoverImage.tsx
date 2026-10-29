@@ -3,10 +3,9 @@ import {
   Image,
   StyleSheet,
   View,
-  type ImageLoadEventData,
+  type ImageLoadEvent,
   type ImageStyle,
   type LayoutChangeEvent,
-  type NativeSyntheticEvent,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -49,7 +48,7 @@ export function LeftFocalCoverImage({
     setContainerSize((prev) => (hasSizeChanged(prev, nextSize) ? nextSize : prev));
   }, []);
 
-  const handleLoad = useCallback((event: NativeSyntheticEvent<ImageLoadEventData>) => {
+  const handleLoad = useCallback((event: ImageLoadEvent) => {
     const width = event.nativeEvent.source?.width ?? 0;
     const height = event.nativeEvent.source?.height ?? 0;
     if (width <= 0 || height <= 0) return;
@@ -99,6 +98,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   fill: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
 });

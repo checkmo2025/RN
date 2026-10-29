@@ -589,12 +589,12 @@ export function HomeScreen() {
           ListHeaderComponent={header}
           ItemSeparatorComponent={() => <View style={styles.postItemSeparator} />}
           ListEmptyComponent={
-            !loadingPosts && !postsLoadError ? (
+            (!loadingPosts && !postsLoadError ? (
               <Text style={styles.emptyPostText}>{l('표시할 책이야기가 없습니다.')}</Text>
-            ) : null
+            ) : null) ?? undefined
           }
           ListFooterComponent={
-            loadingPosts || loadingMorePosts ? (
+            (loadingPosts || loadingMorePosts ? (
               <Text style={styles.loadingPostText}>{l('불러오는 중...')}</Text>
             ) : postsLoadError ? (
               <View style={styles.postsLoadError}>
@@ -606,7 +606,7 @@ export function HomeScreen() {
                   <Text style={styles.loadingPostText}>{l('다시 시도')}</Text>
                 </Pressable>
               </View>
-            ) : null
+            ) : null) ?? undefined
           }
           renderItem={({ item }) => (
             <View style={[styles.postRow, { maxWidth: storyFeedRowMaxWidth }]}>

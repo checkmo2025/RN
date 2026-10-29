@@ -1,3 +1,4 @@
+import type { TextInputInstance } from 'react-native';
 import { useCallback, useMemo, useRef } from 'react';
 import { SkeletonBox } from '../../components/common/SkeletonBox';
 import { Image, Text, TextInput, View } from 'react-native';
@@ -213,7 +214,7 @@ export function GroupNoticeView({
   onCommentInputMeasured,
 }: GroupNoticeViewProps) {
   const { l } = useLanguage();
-  const noticeCommentInputRef = useRef<TextInput>(null);
+  const noticeCommentInputRef = useRef<TextInputInstance>(null);
   const selectedNotice = useMemo(
     () => noticeItems.find((item) => item.id === selectedNoticeId) ?? null,
     [noticeItems, selectedNoticeId],

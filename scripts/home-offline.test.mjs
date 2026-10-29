@@ -159,7 +159,7 @@ test('error UI replaces the empty message and offers an explicit refresh', () =>
     return new Function(...Object.keys(deps), `${outputText}\nreturn render();`)(...Object.values(deps));
   }
   const state = { loadingPosts: false, loadingMorePosts: false, postsLoadError: offline().message };
-  assert.equal(renderProp('ListEmptyComponent', state), null);
+  assert.equal(renderProp('ListEmptyComponent', state), undefined);
   let retryOptions;
   const footer = renderProp('ListFooterComponent', state, (options) => { retryOptions = options; });
   assert.equal(footer.children[0].children[0], offline().message);
@@ -169,5 +169,5 @@ test('error UI replaces the empty message and offers an explicit refresh', () =>
   assert.deepEqual(retryOptions, { reset: true, forceRefresh: true });
   const loading = renderProp('ListFooterComponent', { ...state, loadingPosts: true, postsLoadError: null });
   assert.equal(loading.children[0], '불러오는 중...');
-  assert.equal(renderProp('ListFooterComponent', { ...state, postsLoadError: null }), null);
+  assert.equal(renderProp('ListFooterComponent', { ...state, postsLoadError: null }), undefined);
 });
