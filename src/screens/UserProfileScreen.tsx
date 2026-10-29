@@ -680,7 +680,8 @@ export function UserProfileScreen() {
     activeTab === '책 이야기' && stories.length > 0 && (!profileLoading || refreshing);
   const showBookRows =
     activeTab === '서재' && books.length > 0 && (!profileLoading || refreshing);
-  const showGridStatus = !showStoryRows && (!showBookRows || loadingBooks);
+  const showGroupRows = activeTab === '모임' && groups.length > 0 && (!profileLoading || refreshing);
+  const showGridStatus = !showStoryRows && (!showBookRows || loadingBooks) && (!showGroupRows || loadingGroups);
 
   const renderStoryStatus = () => (
     <View style={[styles.gridContent, styles.cardWrap]}>
@@ -787,7 +788,12 @@ export function UserProfileScreen() {
       {!loadingGroups && groups.length === 0 ? (
         <Text style={styles.emptyText}>{l('공개된 모임이 없습니다.')}</Text>
       ) : null}
-      {groups.map((group) => (
+
+    </View>
+  );
+
+  const renderGroupItem = useCallback(
+    ({ item: group }: ListRenderItemInfo<GroupItem>) => (
         <Pressable
           key={group.id}
           style={({ pressed }) => [styles.groupRow, pressed && styles.pressed]}
@@ -813,8 +819,8 @@ export function UserProfileScreen() {
             <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
           </Pressable>
         </Pressable>
-      ))}
-    </View>
+    ),
+    [handleOpenGroupMenu, handleVisitGroupByClubId, l],
   );
 
   const renderTabContent = () => {
@@ -993,12 +999,16 @@ export function UserProfileScreen() {
             }
           />
         ) : (
-          <FlatList<StoryCard[] | BookCard[]>
+          <FlatList<StoryCard[] | BookCard[] | GroupItem>
             contentContainerStyle={[styles.content, styles.mainListContent]}
-            data={showStoryRows ? storyRows : showBookRows ? bookRows : []}
-            keyExtractor={(row) => `${showBookRows ? 'book' : 'story'}-row-${row[0]?.id}`}
+            data={showStoryRows ? storyRows : showBookRows ? bookRows : showGroupRows ? groups : []}
+            keyExtractor={(row) => Array.isArray(row) ? `${showBookRows ? 'book' : 'story'}-row-${row[0]?.id}` : `group-${row.id}`}
+            ItemSeparatorComponent={showGroupRows ? () => <View style={styles.gridListTopSpacing} /> : undefined}
+            ListFooterComponent={showGroupRows ? <View style={styles.gridListTopSpacing} /> : null}
             renderItem={(info) =>
-              activeTab === '서재'
+              activeTab === '모임'
+                ? renderGroupItem(info as ListRenderItemInfo<GroupItem>)
+                : activeTab === '서재'
                 ? renderBookRow(info as ListRenderItemInfo<BookCard[]>)
                 : renderStoryRow(info as ListRenderItemInfo<StoryCard[]>)
             }
