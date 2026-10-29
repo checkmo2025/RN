@@ -141,13 +141,14 @@ test('keeps loading, error, empty, retry and load-more states after topic rows',
   assert.match(meetingText, /retryBookshelfDetailSection\('topic'\)/);
 });
 
-test('keeps pagination trigger, root scroll and review rendering', () => {
+test('keeps pagination trigger, root scroll and review virtualization', () => {
   assert.match(
     meetingText,
     /bookshelfDetailTab === 'TOPIC'[\s\S]*?loadMoreBookshelfTopics\(selectedBookshelfBook\.remoteMeetingId\)/,
   );
   assert.match(rootList.attributes.getText(meetingSource), /onScroll=\{handleGroupHomeScroll\}/);
-  assert.match(bookshelfText, /bookshelfReviewItems\.map/);
-  assert.match(bookshelfText, /bookshelfDetailTab !== 'TOPIC'/);
+  assert.doesNotMatch(bookshelfText, /bookshelfReviewItems\.map/);
+  assert.match(meetingText, /showVirtualizedBookshelfReviews\s*\? bookshelfReviewItems/);
+  assert.match(bookshelfText, /bookshelfDetailTab === 'REGULAR'/);
   assert.match(meetingText, /Math\.max\(groupTitleFocusOffset, bookshelfDetailFocusOffset\)/);
 });

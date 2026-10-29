@@ -59,7 +59,6 @@ export type GroupBookshelfViewProps = {
   selectedBookshelfBook: BookshelfItem | null;
   canManageRegularGroups: boolean;
   bookshelfDetailTab: BookshelfDetailTab;
-  bookshelfReviewItems: BookshelfPostItem[];
   bookshelfDetailLoadState: BookshelfDetailLoadState;
   regularMeetingInfo: RegularMeetingInfo | null;
   selectedRegularGroupId: string | null;
@@ -73,7 +72,6 @@ export type GroupBookshelfViewProps = {
   handleBackToBookshelfGrid: () => void;
   handleChangeBookshelfTab: (tab: BookshelfDetailTab) => void;
   handleOpenBookshelfComposer: (type: 'TOPIC' | 'REVIEW', post?: BookshelfPostItem) => void;
-  handlePressBookshelfPostMenu: (post: BookshelfPostItem, event: GestureResponderEvent) => void;
   handleSelectRegularGroup: (groupId: string) => void;
   handleToggleRegularGroupMembers: () => void;
   handleToggleRegularGroupPost: (groupId: string, postId: string) => void;
@@ -178,6 +176,109 @@ export function GroupBookshelfTopicFooter({
   );
 }
 
+export function GroupBookshelfReviewRow({
+  item,
+  handlePressBookshelfPostMenu,
+}: {
+  item: BookshelfPostItem;
+  handlePressBookshelfPostMenu: (
+    post: BookshelfPostItem,
+    event: GestureResponderEvent,
+  ) => void;
+}) {
+  return (
+    <View style={styles.bookshelfPostCard}>
+      <View style={styles.bookshelfPostTop}>
+        <View style={styles.bookshelfPostAuthorRow}>
+          <View style={styles.bookshelfPostAvatar}>
+            {item.authorProfileImageUrl ? (
+              <Image
+                source={{ uri: item.authorProfileImageUrl }}
+                style={styles.bookshelfPostAvatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <DefaultProfileAvatar size={16} />
+            )}
+          </View>
+          <Text style={styles.bookshelfPostAuthor}>{item.author}</Text>
+        </View>
+        <Pressable
+          style={({ pressed }) => [
+            styles.bookshelfPostMenuButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={(event) => handlePressBookshelfPostMenu(item, event)}
+        >
+          <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
+        </Pressable>
+      </View>
+      <View style={styles.bookshelfPostRatingRow}>
+        {Array.from({ length: 5 }).map((_, idx) => (
+          <MaterialIcons
+            key={`${item.id}-review-star-${idx}`}
+            name={getStarIconName(item.rating ?? 0, idx)}
+            size={16}
+            color={
+              getStarIconName(item.rating ?? 0, idx) === 'star-border'
+                ? colors.gray2
+                : colors.secondary2
+            }
+          />
+        ))}
+      </View>
+      <Text style={styles.bookshelfPostContent}>{item.content}</Text>
+    </View>
+  );
+}
+
+export function GroupBookshelfReviewFooter({
+  loadState,
+  itemCount,
+  onRetry,
+}: {
+  loadState: BookshelfDetailLoadState['review'];
+  itemCount: number;
+  onRetry: () => void;
+}) {
+  const { l } = useLanguage();
+  const loading = (loadState === 'idle' || loadState === 'loading') && itemCount === 0;
+  return (
+    <View
+      style={[
+        styles.bookshelfTopicVirtualizedFooter,
+        (loading || loadState === 'error' || itemCount === 0) &&
+          styles.bookshelfTopicVirtualizedFooterWithState,
+      ]}
+    >
+      {loading ? (
+        <View style={styles.managementEmptyCard}>
+          <Text style={styles.managementEmptyText}>{l('한줄평을 불러오는 중...')}</Text>
+        </View>
+      ) : null}
+      {loadState === 'error' ? (
+        <View style={styles.detailLoadStateCard}>
+          <Text style={styles.detailLoadStateText}>{l('한줄평을 불러오지 못했습니다.')}</Text>
+          <Pressable
+            style={({ pressed }) => [styles.detailLoadRetryButton, pressed && styles.pressed]}
+            onPress={onRetry}
+            accessibilityRole="button"
+            accessibilityLabel={l('다시 시도')}
+          >
+            <MaterialIcons name="refresh" size={18} color={colors.primary1} />
+            <Text style={styles.detailLoadRetryText}>{l('다시 시도')}</Text>
+          </Pressable>
+        </View>
+      ) : null}
+      {loadState === 'success' && itemCount === 0 ? (
+        <View style={styles.managementEmptyCard}>
+          <Text style={styles.managementEmptyText}>{l('등록된 한줄평이 없습니다.')}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 export function GroupBookshelfView({
   isMember,
   isInitialLoading = false,
@@ -195,7 +296,6 @@ export function GroupBookshelfView({
   selectedBookshelfBook,
   canManageRegularGroups,
   bookshelfDetailTab,
-  bookshelfReviewItems,
   bookshelfDetailLoadState,
   regularMeetingInfo,
   selectedRegularGroupId,
@@ -207,7 +307,6 @@ export function GroupBookshelfView({
   handleBackToBookshelfGrid,
   handleChangeBookshelfTab,
   handleOpenBookshelfComposer,
-  handlePressBookshelfPostMenu,
   handleSelectRegularGroup,
   handleToggleRegularGroupMembers,
   handleToggleRegularGroupPost,
@@ -229,10 +328,6 @@ export function GroupBookshelfView({
   const scrollToBookshelfDetail = useCallback(() => {
     onScrollToBookshelfDetail(bookshelfSectionYRef.current + detailSectionYRef.current);
   }, [onScrollToBookshelfDetail]);
-  const showBookshelfReviewLoading =
-    (bookshelfDetailLoadState.review === 'idle' ||
-      bookshelfDetailLoadState.review === 'loading') &&
-    bookshelfReviewItems.length === 0;
   const showRegularMeetingLoading =
     bookshelfDetailLoadState.regular === 'idle' ||
     bookshelfDetailLoadState.regular === 'loading';
@@ -483,7 +578,7 @@ export function GroupBookshelfView({
     <View
       style={[
         styles.bookshelfDetailSection,
-        bookshelfDetailMinHeight && bookshelfDetailTab !== 'TOPIC'
+        bookshelfDetailMinHeight && bookshelfDetailTab === 'REGULAR'
           ? { minHeight: bookshelfDetailMinHeight }
           : null,
       ]}
@@ -639,66 +734,6 @@ export function GroupBookshelfView({
             </Pressable>
           </View>
 
-	                  <View style={styles.bookshelfPostList}>
-	                    {bookshelfReviewItems.map((item) => (
-	                      <View key={item.id} style={styles.bookshelfPostCard}>
-	                        <View style={styles.bookshelfPostTop}>
-	                          <View style={styles.bookshelfPostAuthorRow}>
-	                            <View style={styles.bookshelfPostAvatar}>
-	                              {item.authorProfileImageUrl ? (
-	                                <Image
-	                                  source={{ uri: item.authorProfileImageUrl }}
-	                                  style={styles.bookshelfPostAvatarImage}
-	                                  resizeMode="cover"
-	                                />
-	                              ) : (
-	                                <DefaultProfileAvatar size={16} />
-	                              )}
-	                            </View>
-	                            <Text style={styles.bookshelfPostAuthor}>{item.author}</Text>
-	                          </View>
-	                          <Pressable
-	                            style={({ pressed }) => [
-	                              styles.bookshelfPostMenuButton,
-	                              pressed && styles.pressed,
-	                            ]}
-	                            onPress={(event) => handlePressBookshelfPostMenu(item, event)}
-	                          >
-	                            <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
-	                          </Pressable>
-	                        </View>
-	                        <View style={styles.bookshelfPostRatingRow}>
-	                          {Array.from({ length: 5 }).map((_, idx) => (
-	                            <MaterialIcons
-	                              key={`${item.id}-review-star-${idx}`}
-                      name={getStarIconName(item.rating ?? 0, idx)}
-                      size={16}
-                      color={
-                        getStarIconName(item.rating ?? 0, idx) === 'star-border'
-                          ? colors.gray2
-                          : colors.secondary2
-	                              }
-	                            />
-	                          ))}
-	                        </View>
-	                        <Text style={styles.bookshelfPostContent}>{item.content}</Text>
-	                      </View>
-	                    ))}
-            {showBookshelfReviewLoading ? (
-              <View style={styles.managementEmptyCard}>
-                <Text style={styles.managementEmptyText}>{l('한줄평을 불러오는 중...')}</Text>
-              </View>
-            ) : null}
-            {bookshelfDetailLoadState.review === 'error'
-              ? renderDetailLoadError('review', '한줄평을 불러오지 못했습니다.')
-              : null}
-            {bookshelfDetailLoadState.review === 'success' &&
-            bookshelfReviewItems.length === 0 ? (
-              <View style={styles.managementEmptyCard}>
-                <Text style={styles.managementEmptyText}>{l('등록된 한줄평이 없습니다.')}</Text>
-              </View>
-            ) : null}
-          </View>
         </View>
       ) : null}
 

@@ -140,6 +140,8 @@ import { styles } from './meeting/meetingStyles';
 import { SkeletonBox } from '../components/common/SkeletonBox';
 import { GroupNoticeCommentRow, GroupNoticeView } from './meeting/GroupNoticeView';
 import {
+  GroupBookshelfReviewFooter,
+  GroupBookshelfReviewRow,
   GroupBookshelfTopicFooter,
   GroupBookshelfTopicRow,
   GroupBookshelfView,
@@ -2206,7 +2208,7 @@ function GroupHomeView({
     const focusOffset =
       activeTab === 'bookshelf' &&
       bookshelfViewMode === 'DETAIL' &&
-      bookshelfDetailTab === 'TOPIC'
+      (bookshelfDetailTab === 'TOPIC' || bookshelfDetailTab === 'REVIEW')
         ? Math.max(groupTitleFocusOffset, bookshelfDetailFocusOffset)
         : groupTitleFocusOffset;
     return groupHomeViewportHeight + focusOffset + GROUP_TITLE_FOCUS_SCROLL_SAFETY;
@@ -3025,20 +3027,35 @@ function GroupHomeView({
     bookshelfViewMode === 'DETAIL' &&
     bookshelfDetailTab === 'TOPIC' &&
     selectedBookshelfBook !== null;
+  const showVirtualizedBookshelfReviews =
+    activeTab === 'bookshelf' &&
+    isMember &&
+    bookshelfViewMode === 'DETAIL' &&
+    bookshelfDetailTab === 'REVIEW' &&
+    selectedBookshelfBook !== null;
   const groupHomeListItems: GroupHomeListItem[] =
     activeTab === 'notice' && selectedNotice && isMember
       ? currentNoticeComments
       : showVirtualizedBookshelfTopics
         ? bookshelfTopicItems
-        : [];
+        : showVirtualizedBookshelfReviews
+          ? bookshelfReviewItems
+          : [];
   const renderGroupHomeListItem = useCallback(
     ({ item }: ListRenderItemInfo<GroupHomeListItem>) =>
       'type' in item ? (
         <View style={styles.bookshelfTopicVirtualizedCell}>
-          <GroupBookshelfTopicRow
-            item={item}
-            handlePressBookshelfPostMenu={handlePressBookshelfPostMenu}
-          />
+          {item.type === 'REVIEW' ? (
+            <GroupBookshelfReviewRow
+              item={item}
+              handlePressBookshelfPostMenu={handlePressBookshelfPostMenu}
+            />
+          ) : (
+            <GroupBookshelfTopicRow
+              item={item}
+              handlePressBookshelfPostMenu={handlePressBookshelfPostMenu}
+            />
+          )}
         </View>
       ) : (
         <View style={styles.noticeCommentVirtualizedCell}>
@@ -3121,6 +3138,12 @@ function GroupHomeView({
               itemCount={bookshelfTopicItems.length}
               loadingMore={Boolean(currentBookshelfTopicPageState?.loadingMore)}
               onRetry={() => retryBookshelfDetailSection('topic')}
+            />
+          ) : showVirtualizedBookshelfReviews ? (
+            <GroupBookshelfReviewFooter
+              loadState={currentBookshelfDetailLoadState.review}
+              itemCount={bookshelfReviewItems.length}
+              onRetry={() => retryBookshelfDetailSection('review')}
             />
           ) : null
         }
@@ -3439,7 +3462,6 @@ function GroupHomeView({
           selectedBookshelfBook={selectedBookshelfBook}
           canManageRegularGroups={typeof selectedRegularMeetingId === 'number'}
           bookshelfDetailTab={bookshelfDetailTab}
-          bookshelfReviewItems={bookshelfReviewItems}
           bookshelfDetailLoadState={currentBookshelfDetailLoadState}
           regularMeetingInfo={regularMeetingInfo}
           selectedRegularGroupId={selectedRegularGroupId}
@@ -3451,7 +3473,6 @@ function GroupHomeView({
           handleBackToBookshelfGrid={handleBackToBookshelfGrid}
           handleChangeBookshelfTab={handleChangeBookshelfTab}
           handleOpenBookshelfComposer={handleOpenBookshelfComposer}
-          handlePressBookshelfPostMenu={handlePressBookshelfPostMenu}
           handleSelectRegularGroup={handleSelectRegularGroup}
           handleToggleRegularGroupMembers={handleToggleRegularGroupMembers}
           handleToggleRegularGroupPost={handleToggleRegularGroupPost}
