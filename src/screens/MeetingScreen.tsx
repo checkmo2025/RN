@@ -141,6 +141,7 @@ import { SkeletonBox } from '../components/common/SkeletonBox';
 import { GroupNoticeCommentRow, GroupNoticeView } from './meeting/GroupNoticeView';
 import {
   GroupBookshelfBookRow,
+  GroupBookshelfRegularPostRow,
   GroupBookshelfReviewFooter,
   GroupBookshelfReviewRow,
   GroupBookshelfTopicFooter,
@@ -217,7 +218,7 @@ import {
   MEETING_SEARCH_KEYWORD_MAX_LENGTH,
 } from './meeting/helpers';
 
-type GroupHomeListItem = NoticeComment | BookshelfPostItem | BookshelfItem[];
+type GroupHomeListItem = NoticeComment | BookshelfPostItem | RegularGroupPostItem | BookshelfItem[];
 
 
 
@@ -3041,6 +3042,11 @@ function GroupHomeView({
       visibleBookshelfItems.slice(index * 2, index * 2 + 2)),
     [visibleBookshelfItems],
   );
+  const showVirtualizedRegularPosts =
+    activeTab === 'bookshelf' && isMember && workspaceLoaded &&
+    bookshelfViewMode === 'DETAIL' && bookshelfDetailTab === 'REGULAR' &&
+    currentBookshelfDetailLoadState.regular !== 'idle' && currentBookshelfDetailLoadState.regular !== 'loading' &&
+    selectedBookshelfBook !== null && regularMeetingInfo !== null && selectedRegularGroup !== null;
   const groupHomeListItems: GroupHomeListItem[] =
     activeTab === 'notice' && selectedNotice && isMember
       ? currentNoticeComments
@@ -3050,13 +3056,26 @@ function GroupHomeView({
           ? bookshelfReviewItems
           : showVirtualizedBookshelfGrid
             ? bookshelfRows
-            : [];
+            : showVirtualizedRegularPosts
+              ? selectedRegularGroup.posts
+              : [];
   const renderGroupHomeListItem = useCallback(
     ({ item, index }: ListRenderItemInfo<GroupHomeListItem>) =>
       Array.isArray(item) ? (
         <View style={index === 0 ? styles.bookshelfGridFirstRow : styles.bookshelfGridNextRow}>
           <GroupBookshelfBookRow items={item} openBookshelfDetail={openBookshelfDetail} />
         </View>
+      ) : 'completed' in item ? (
+        selectedRegularGroup ? (
+        <View style={styles.bookshelfTopicVirtualizedCell}>
+          <GroupBookshelfRegularPostRow
+            post={item}
+            groupId={selectedRegularGroup.id}
+            isPending={regularGroupPendingPostKeys.has(`${selectedRegularGroup.id}:${item.id}`)}
+            onToggle={handleToggleRegularGroupPost}
+          />
+        </View>
+        ) : null
       ) : 'type' in item ? (
         <View style={styles.bookshelfTopicVirtualizedCell}>
           {item.type === 'REVIEW' ? (
@@ -3081,7 +3100,7 @@ function GroupHomeView({
           />
         </View>
       ),
-    [handlePressBookshelfPostMenu, handlePressCommentMenu, navigation, openBookshelfDetail, setPhotoViewer],
+    [handlePressBookshelfPostMenu, handlePressCommentMenu, handleToggleRegularGroupPost, navigation, openBookshelfDetail, regularGroupPendingPostKeys, selectedRegularGroup, setPhotoViewer],
   );
 
   return (
@@ -3480,7 +3499,6 @@ function GroupHomeView({
           regularMeetingInfo={regularMeetingInfo}
           selectedRegularGroupId={selectedRegularGroupId}
           selectedRegularGroup={selectedRegularGroup}
-          regularGroupPendingPostKeys={regularGroupPendingPostKeys}
           regularGroupMembersVisible={regularGroupMembersVisible}
           setSelectedBookshelfSession={setSelectedBookshelfSession}
           handleBackToBookshelfGrid={handleBackToBookshelfGrid}
@@ -3488,7 +3506,6 @@ function GroupHomeView({
           handleOpenBookshelfComposer={handleOpenBookshelfComposer}
           handleSelectRegularGroup={handleSelectRegularGroup}
           handleToggleRegularGroupMembers={handleToggleRegularGroupMembers}
-          handleToggleRegularGroupPost={handleToggleRegularGroupPost}
           handleSortRegularGroupPosts={handleSortRegularGroupPosts}
           handleOpenBookshelfEdit={handleOpenBookshelfEdit}
           handleDeleteSelectedBookshelf={handleDeleteSelectedBookshelf}

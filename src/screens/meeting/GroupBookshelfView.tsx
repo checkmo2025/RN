@@ -22,6 +22,7 @@ import type {
   BookshelfPostItem,
   BookshelfViewMode,
   Group,
+  RegularGroupPostItem,
   RegularMeetingGroupItem,
   RegularMeetingInfo,
 } from './types';
@@ -63,7 +64,6 @@ export type GroupBookshelfViewProps = {
   regularMeetingInfo: RegularMeetingInfo | null;
   selectedRegularGroupId: string | null;
   selectedRegularGroup: RegularMeetingGroupItem | null;
-  regularGroupPendingPostKeys: ReadonlySet<string>;
   regularGroupMembersVisible: boolean;
   // Setters
   setSelectedBookshelfSession: (session: string) => void;
@@ -73,7 +73,6 @@ export type GroupBookshelfViewProps = {
   handleOpenBookshelfComposer: (type: 'TOPIC' | 'REVIEW', post?: BookshelfPostItem) => void;
   handleSelectRegularGroup: (groupId: string) => void;
   handleToggleRegularGroupMembers: () => void;
-  handleToggleRegularGroupPost: (groupId: string, postId: string) => void;
   handleSortRegularGroupPosts: (groupId: string) => void;
   handleOpenBookshelfEdit: () => void;
   handleDeleteSelectedBookshelf: () => void;
@@ -152,6 +151,50 @@ export function GroupBookshelfBookRow({ items, openBookshelfDetail }: {
             </Pressable>
           ))}
         </View>
+  );
+}
+
+export function GroupBookshelfRegularPostRow({ post, groupId, isPending, onToggle }: {
+  post: RegularGroupPostItem;
+  groupId: string;
+  isPending: boolean;
+  onToggle: (groupId: string, postId: string) => void;
+}) {
+  return (
+                        <Pressable
+                          key={post.id}
+                          disabled={isPending}
+                          style={({ pressed }) => [
+                            styles.bookshelfGroupPostCard,
+                            post.completed && styles.bookshelfGroupPostCardCompleted,
+                            isPending && styles.bookshelfGroupPostCardPending,
+                            pressed && styles.pressed,
+                          ]}
+                          onPress={() => onToggle(groupId, post.id)}
+                        >
+                          <View style={styles.bookshelfPostTop}>
+                            <View style={styles.bookshelfPostAuthorRow}>
+                              <View style={styles.bookshelfPostAvatar}>
+                                {post.authorProfileImageUrl ? (
+                                  <Image
+                                    source={{ uri: post.authorProfileImageUrl }}
+                                    style={styles.bookshelfPostAvatarImage}
+                                    resizeMode="cover"
+                                  />
+                                ) : (
+                                  <DefaultProfileAvatar size={16} />
+                                )}
+                              </View>
+                              <Text style={styles.bookshelfPostAuthor}>{post.author}</Text>
+                            </View>
+                            <MaterialIcons
+                              name="check"
+                              size={28}
+                              color={post.completed ? '#3FBE78' : colors.gray2}
+                            />
+                          </View>
+                          <Text style={styles.bookshelfPostContent}>{post.content}</Text>
+                        </Pressable>
   );
 }
 
@@ -373,7 +416,6 @@ export function GroupBookshelfView({
   regularMeetingInfo,
   selectedRegularGroupId,
   selectedRegularGroup,
-  regularGroupPendingPostKeys,
   regularGroupMembersVisible,
   setSelectedBookshelfSession,
   handleBackToBookshelfGrid,
@@ -381,7 +423,6 @@ export function GroupBookshelfView({
   handleOpenBookshelfComposer,
   handleSelectRegularGroup,
   handleToggleRegularGroupMembers,
-  handleToggleRegularGroupPost,
   handleSortRegularGroupPosts,
   handleOpenBookshelfEdit,
   handleDeleteSelectedBookshelf,
@@ -584,7 +625,7 @@ export function GroupBookshelfView({
     <View
       style={[
         styles.bookshelfDetailSection,
-        bookshelfDetailMinHeight && bookshelfDetailTab === 'REGULAR'
+        bookshelfDetailMinHeight && bookshelfDetailTab === 'REGULAR' && !selectedRegularGroup?.posts.length
           ? { minHeight: bookshelfDetailMinHeight }
           : null,
       ]}
@@ -932,47 +973,7 @@ export function GroupBookshelfView({
                   </Modal>
 
                   <View style={styles.bookshelfGroupPostList}>
-                    {selectedRegularGroup.posts.map((post) => {
-                      const isPending = regularGroupPendingPostKeys.has(
-                        `${selectedRegularGroup.id}:${post.id}`,
-                      );
-                      return (
-                        <Pressable
-                          key={post.id}
-                          disabled={isPending}
-                          style={({ pressed }) => [
-                            styles.bookshelfGroupPostCard,
-                            post.completed && styles.bookshelfGroupPostCardCompleted,
-                            isPending && styles.bookshelfGroupPostCardPending,
-                            pressed && styles.pressed,
-                          ]}
-                          onPress={() => handleToggleRegularGroupPost(selectedRegularGroup.id, post.id)}
-                        >
-                          <View style={styles.bookshelfPostTop}>
-                            <View style={styles.bookshelfPostAuthorRow}>
-                              <View style={styles.bookshelfPostAvatar}>
-                                {post.authorProfileImageUrl ? (
-                                  <Image
-                                    source={{ uri: post.authorProfileImageUrl }}
-                                    style={styles.bookshelfPostAvatarImage}
-                                    resizeMode="cover"
-                                  />
-                                ) : (
-                                  <DefaultProfileAvatar size={16} />
-                                )}
-                              </View>
-                              <Text style={styles.bookshelfPostAuthor}>{post.author}</Text>
-                            </View>
-                            <MaterialIcons
-                              name="check"
-                              size={28}
-                              color={post.completed ? '#3FBE78' : colors.gray2}
-                            />
-                          </View>
-                          <Text style={styles.bookshelfPostContent}>{post.content}</Text>
-                        </Pressable>
-                      );
-                    })}
+
                     {selectedRegularGroup.posts.length === 0 ? (
                       <View style={styles.managementEmptyCard}>
                         <Text style={styles.managementEmptyText}>{l('등록된 조 발제가 없습니다.')}</Text>
