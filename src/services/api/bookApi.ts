@@ -32,6 +32,7 @@ export type BookItem = {
   description: string;
   imgUrl?: string;
   publisher?: string;
+  link?: string;
   likedByMe?: boolean;
 };
 
@@ -112,6 +113,7 @@ function normalizeBookItem(raw: unknown): BookItem | null {
     description,
     imgUrl,
     publisher,
+    link: toStringValue(record.link),
     likedByMe: typeof likedByMe === 'boolean' ? likedByMe : undefined,
   };
 }

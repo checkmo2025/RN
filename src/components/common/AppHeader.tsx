@@ -83,8 +83,7 @@ const SearchIcon = HEADER_SEARCH_URI;
 const SearchDarkIcon = SEARCH_DARK_URI;
 const AlarmIcon = HEADER_ALARM_URI;
 const WriteIcon = PENCIL_ICON_URI;
-const ALADIN_RANKING_URL = PUBLIC_ENV.ALADIN_RANKING_URL;
-const ALADIN_HOME_URL = PUBLIC_ENV.ALADIN_HOME_URL;
+const YES24_RANKING_URL = PUBLIC_ENV.YES24_RANKING_URL;
 
 type HeaderAction = {
   key?: string;
@@ -205,6 +204,7 @@ export function AppHeader(props: Props) {
     searchedKeyword,
     results: searchResults,
     loading: searchLoading,
+    loadingMore: searchLoadingMore,
     hasNext: searchHasNext,
     totalResults: searchTotalResults,
     search: executeSearch,
@@ -263,7 +263,7 @@ export function AppHeader(props: Props) {
     notiAnim.setValue(0);
   }, [notiAnim]);
 
-  const openAladinUrl = useCallback(async (url: string) => {
+  const openBookUrl = useCallback(async (url: string) => {
     try {
       await Linking.openURL(url);
     } catch {
@@ -1128,11 +1128,11 @@ export function AppHeader(props: Props) {
               <Pressable
                 style={styles.dropdownRecoLink}
                 onPress={() => {
-                  void openAladinUrl(ALADIN_RANKING_URL);
+                  void openBookUrl(YES24_RANKING_URL);
                 }}
               >
                 <Text style={styles.dropdownRecoLinkText}>
-                  {l('알라딘 랭킹 더 보러가기')}
+                  {l('예스24 베스트셀러 더 보러가기')}
                 </Text>
                 <MaterialIcons name="north-east" size={16} color={colors.white} />
               </Pressable>
@@ -1221,7 +1221,19 @@ export function AppHeader(props: Props) {
                   )}
 
                   {searched && !searchLoading && searchResults.length === 0 ? (
-                    <Text style={styles.searchEmptyText}>{l('검색 결과가 없습니다.')}</Text>
+                    searchHasNext ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={searchLoadingMore}
+                        onPress={() => { void loadMoreSearchResults(); }}
+                      >
+                        <Text style={styles.searchEmptyText}>
+                          {l(searchLoadingMore ? '검색 중...' : '다음 검색 결과 보기')}
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <Text style={styles.searchEmptyText}>{l('검색 결과가 없습니다.')}</Text>
+                    )
                   ) : null}
 
                   {searchLoading ? (
@@ -1369,9 +1381,10 @@ export function AppHeader(props: Props) {
                           styles.resultWriteButton,
                           pressed && styles.resultWriteButtonPressed,
                         ]}
+                        disabled={!selectedBook.link}
                         onPress={(event) => {
                           event.stopPropagation();
-                          void openAladinUrl(ALADIN_HOME_URL);
+                          if (selectedBook.link) void openBookUrl(selectedBook.link);
                         }}
                       >
                         <WriteIcon width={20} height={20} />

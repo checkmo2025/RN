@@ -20,12 +20,8 @@ export const PUBLIC_ENV = {
     process.env.EXPO_PUBLIC_SUPPORT_FORM_URL,
     'https://www.checkmo.co.kr/support',
   ),
-  ALADIN_HOME_URL: readPublicEnv(
-    process.env.EXPO_PUBLIC_ALADIN_HOME_URL,
-    'https://www.aladin.co.kr/',
-  ),
-  ALADIN_RANKING_URL: readPublicEnv(
-    process.env.EXPO_PUBLIC_ALADIN_RANKING_URL,
-    'https://www.aladin.co.kr/shop/common/wbest.aspx?BranchType=1',
+  YES24_RANKING_URL: readPublicEnv(
+    process.env.EXPO_PUBLIC_YES24_RANKING_URL,
+    'https://www.yes24.com/Product/Category/BestSeller?categoryNumber=001',
   ),
 } as const;
