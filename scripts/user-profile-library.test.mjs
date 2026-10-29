@@ -30,6 +30,7 @@ const { outputText } = ts.transpileModule(`
     loadingBooks = false, profileLoading = false, refreshing = false, navigation } = {}) {
     const useMemo = (fn) => fn(), useCallback = (fn) => fn;
     const l = (text) => text, loadingGroups = false;
+    const handleOpenGroupMenu = () => {}, handleVisitGroupByClubId = () => {};
     const styles = new Proxy({}, { get: (_, key) => key });
     const colors = {}, BOOK_DEFAULT_IMAGE = 'default-cover';
     const View = 'View', Text = 'Text', Pressable = 'Pressable', Image = 'Image';

@@ -192,7 +192,7 @@ type BookCard = {
   liked: boolean;
 };
 
-type MyPageListItem = AlarmItem | StoryCard[] | BookCard[];
+type MyPageListItem = AlarmItem | GroupItem | StoryCard[] | BookCard[];
 
 function toBookLikePayload(book: BookCard) {
   return {
@@ -1536,7 +1536,21 @@ export function MyPageScreen() {
       {!loadingGroups && groups.length === 0 ? (
         <Text style={styles.emptyText}>{l('가입한 모임이 없습니다.')}</Text>
       ) : null}
-      {groups.map((group) => (
+
+    </View>
+  );
+
+  const handleOpenGroupHome = useCallback((group: GroupItem) => {
+    if (typeof group.clubId !== 'number' || group.clubId <= 0) {
+      showToast('해당 모임 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    navigation.navigate('Meeting', { openClubId: group.clubId });
+  }, [navigation]);
+
+  const renderGroupItem = useCallback(
+    (group: GroupItem) => (
         <Pressable
           key={group.id}
           style={({ pressed }) => [styles.groupRow, pressed && styles.pressed]}
@@ -1558,8 +1572,8 @@ export function MyPageScreen() {
             <MaterialIcons name="more-vert" size={18} color={colors.gray4} />
           </Pressable>
         </Pressable>
-      ))}
-    </View>
+    ),
+    [handleOpenGroupHome],
   );
 
   const renderAlarmItem = useCallback(
@@ -1589,16 +1603,18 @@ export function MyPageScreen() {
         ? storyRows
         : isLoggedIn && activeTab === '내 서재'
           ? bookRows
-          : [];
+          : isLoggedIn && activeTab === '내 모임'
+            ? groups
+            : [];
 
   const renderMainListItem = useCallback(
     ({ item }: ListRenderItemInfo<MyPageListItem>) => {
-      if (!Array.isArray(item)) return renderAlarmItem(item);
+      if (!Array.isArray(item)) return 'name' in item ? renderGroupItem(item) : renderAlarmItem(item);
       return activeTab === '내 서재'
         ? renderBookRow(item as BookCard[])
         : renderStoryRow(item as StoryCard[]);
     },
-    [activeTab, renderAlarmItem, renderBookRow, renderStoryRow],
+    [activeTab, renderAlarmItem, renderBookRow, renderGroupItem, renderStoryRow],
   );
 
   const renderAlarmStatus = () => (
@@ -1977,15 +1993,6 @@ export function MyPageScreen() {
       },
     ];
   }, [groupMenu, handleLeaveGroup]);
-
-  const handleOpenGroupHome = useCallback((group: GroupItem) => {
-    if (typeof group.clubId !== 'number' || group.clubId <= 0) {
-      showToast('해당 모임 정보를 찾을 수 없습니다.');
-      return;
-    }
-
-    navigation.navigate('Meeting', { openClubId: group.clubId });
-  }, [navigation]);
 
   const handleOpenMyNews = useCallback((item: MyNewsItem) => {
     if (item.newsId <= 0) {
@@ -2631,21 +2638,7 @@ export function MyPageScreen() {
           {!loadingBlockedMembers && blockedMembers.length === 0 ? (
             <Text style={styles.emptyText}>{l('차단한 사용자가 없습니다.')}</Text>
           ) : null}
-          <View style={styles.reportList}>
-            {blockedMembers.map((member) => (
-              <View key={member.memberId} style={styles.reportCard}>
-                <View style={styles.reportHeader}>
-                  <Text style={styles.reportUser}>{member.nickname}</Text>
-                  <Pressable
-                    style={({ pressed }) => [pressed && styles.pressed]}
-                    onPress={() => handleUnblockMember(member.nickname)}
-                  >
-                    <Text style={styles.unblockButton}>{l('차단 해제')}</Text>
-                  </Pressable>
-                </View>
-              </View>
-            ))}
-          </View>
+
         </View>
       );
     }
@@ -2898,6 +2891,38 @@ export function MyPageScreen() {
           ListEmptyComponent={renderMyNewsStatus()}
           ListFooterComponent={<View style={styles.myNewsListBottomSpacing} />}
           showsVerticalScrollIndicator={false}
+        />
+      </ScreenLayout>
+    );
+  }
+
+  if (showSettings && selectedSetting === 'blocked') {
+    return (
+      <ScreenLayout title={t('profile.screenTitle')}>
+        <FlatList
+          style={styles.container}
+          contentContainerStyle={[styles.settingsContent, styles.reportHistoryListContent]}
+          data={blockedMembers}
+          keyExtractor={(member) => String(member.memberId)}
+          ListHeaderComponent={renderSettingDetail()}
+          ListHeaderComponentStyle={styles.blockedListHeader}
+          ItemSeparatorComponent={() => <View style={styles.reportListSeparator} />}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          renderItem={({ item: member }) => (
+              <View key={member.memberId} style={styles.reportCard}>
+                <View style={styles.reportHeader}>
+                  <Text style={styles.reportUser}>{member.nickname}</Text>
+                  <Pressable
+                    style={({ pressed }) => [pressed && styles.pressed]}
+                    onPress={() => handleUnblockMember(member.nickname)}
+                  >
+                    <Text style={styles.unblockButton}>{l('차단 해제')}</Text>
+                  </Pressable>
+                </View>
+              </View>
+          )}
         />
       </ScreenLayout>
     );
@@ -3160,6 +3185,8 @@ export function MyPageScreen() {
           books.length > 0 &&
           !loadingBooks ? (
           <View style={styles.mainListTopSpacing} />
+        ) : activeTab === '내 모임' && isLoggedIn && groups.length > 0 ? (
+          loadingGroups ? renderGroups() : <View style={styles.mainListTopSpacing} />
         ) : (
           <View style={styles.tabContent}>{renderTabContent()}</View>
         )}
@@ -3172,7 +3199,8 @@ export function MyPageScreen() {
           ListFooterComponent={
             (activeTab === '내 알림' && alarms.length > 0) ||
             (activeTab === '내 책 이야기' && stories.length > 0) ||
-            (activeTab === '내 서재' && books.length > 0)
+            (activeTab === '내 서재' && books.length > 0) ||
+            (activeTab === '내 모임' && groups.length > 0)
               ? <View style={styles.mainListBottomSpacing} />
               : null
           }
@@ -3622,6 +3650,9 @@ const styles = StyleSheet.create({
   },
   reportHistoryListContent: {
     gap: 0,
+  },
+  blockedListHeader: {
+    paddingBottom: spacing.sm,
   },
   reportListTopSpacing: {
     height: spacing.sm,

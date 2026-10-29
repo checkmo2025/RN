@@ -61,7 +61,7 @@ function elements(node) {
 test('feeds review items to the existing root FlatList without reordering', () => {
   const attributes = rootList.attributes.getText(meetingSource);
   assert.match(attributes, /data=\{groupHomeListItems\}/);
-  assert.match(attributes, /keyExtractor=\{\(item\) => item\.id\}/);
+  assert.match(attributes, /keyExtractor=\{\(item\) => Array\.isArray\(item\) \? .* : item\.id\}/);
   assert.match(attributes, /renderItem=\{renderGroupHomeListItem\}/);
   assert.match(meetingText, /showVirtualizedBookshelfReviews\s*\? bookshelfReviewItems/);
   assert.doesNotMatch(bookshelfText, /bookshelfReviewItems\.map/);

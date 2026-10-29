@@ -1468,6 +1468,9 @@ export const styles = StyleSheet.create({
     ...typography.body2_2,
     color: colors.primary1,
   },
+  managementJoinRequestSeparator: {
+    height: spacing.sm,
+  },
   managementCardList: {
     gap: spacing.sm,
   },
@@ -2909,8 +2912,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  voteVotersList: {
-    gap: spacing.xs,
+  voteVotersScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  voteVotersSeparator: {
+    height: spacing.xs,
   },
   voteVotersRow: {
     flexDirection: 'row',
@@ -3057,6 +3064,12 @@ export const styles = StyleSheet.create({
   },
   bookshelfSessionTextActive: {
     color: colors.primary1,
+  },
+  bookshelfGridFirstRow: {
+    paddingTop: spacing.md,
+  },
+  bookshelfGridNextRow: {
+    paddingTop: spacing.sm,
   },
   bookshelfGrid: {
     flexDirection: 'row',

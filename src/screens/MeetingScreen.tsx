@@ -140,6 +140,8 @@ import { styles } from './meeting/meetingStyles';
 import { SkeletonBox } from '../components/common/SkeletonBox';
 import { GroupNoticeCommentRow, GroupNoticeView } from './meeting/GroupNoticeView';
 import {
+  GroupBookshelfBookRow,
+  GroupBookshelfRegularPostRow,
   GroupBookshelfReviewFooter,
   GroupBookshelfReviewRow,
   GroupBookshelfTopicFooter,
@@ -216,7 +218,7 @@ import {
   MEETING_SEARCH_KEYWORD_MAX_LENGTH,
 } from './meeting/helpers';
 
-type GroupHomeListItem = NoticeComment | BookshelfPostItem;
+type GroupHomeListItem = NoticeComment | BookshelfPostItem | RegularGroupPostItem | BookshelfItem[];
 
 
 
@@ -3033,6 +3035,18 @@ function GroupHomeView({
     bookshelfViewMode === 'DETAIL' &&
     bookshelfDetailTab === 'REVIEW' &&
     selectedBookshelfBook !== null;
+  const showVirtualizedBookshelfGrid =
+    activeTab === 'bookshelf' && isMember && workspaceLoaded && bookshelfViewMode === 'GRID';
+  const bookshelfRows = useMemo(
+    () => Array.from({ length: Math.ceil(visibleBookshelfItems.length / 2) }, (_, index) =>
+      visibleBookshelfItems.slice(index * 2, index * 2 + 2)),
+    [visibleBookshelfItems],
+  );
+  const showVirtualizedRegularPosts =
+    activeTab === 'bookshelf' && isMember && workspaceLoaded &&
+    bookshelfViewMode === 'DETAIL' && bookshelfDetailTab === 'REGULAR' &&
+    currentBookshelfDetailLoadState.regular !== 'idle' && currentBookshelfDetailLoadState.regular !== 'loading' &&
+    selectedBookshelfBook !== null && regularMeetingInfo !== null && selectedRegularGroup !== null;
   const groupHomeListItems: GroupHomeListItem[] =
     activeTab === 'notice' && selectedNotice && isMember
       ? currentNoticeComments
@@ -3040,10 +3054,29 @@ function GroupHomeView({
         ? bookshelfTopicItems
         : showVirtualizedBookshelfReviews
           ? bookshelfReviewItems
-          : [];
+          : showVirtualizedBookshelfGrid
+            ? bookshelfRows
+            : showVirtualizedRegularPosts
+              ? selectedRegularGroup.posts
+              : [];
   const renderGroupHomeListItem = useCallback(
-    ({ item }: ListRenderItemInfo<GroupHomeListItem>) =>
-      'type' in item ? (
+    ({ item, index }: ListRenderItemInfo<GroupHomeListItem>) =>
+      Array.isArray(item) ? (
+        <View style={index === 0 ? styles.bookshelfGridFirstRow : styles.bookshelfGridNextRow}>
+          <GroupBookshelfBookRow items={item} openBookshelfDetail={openBookshelfDetail} />
+        </View>
+      ) : 'completed' in item ? (
+        selectedRegularGroup ? (
+        <View style={styles.bookshelfTopicVirtualizedCell}>
+          <GroupBookshelfRegularPostRow
+            post={item}
+            groupId={selectedRegularGroup.id}
+            isPending={regularGroupPendingPostKeys.has(`${selectedRegularGroup.id}:${item.id}`)}
+            onToggle={handleToggleRegularGroupPost}
+          />
+        </View>
+        ) : null
+      ) : 'type' in item ? (
         <View style={styles.bookshelfTopicVirtualizedCell}>
           {item.type === 'REVIEW' ? (
             <GroupBookshelfReviewRow
@@ -3067,7 +3100,7 @@ function GroupHomeView({
           />
         </View>
       ),
-    [handlePressBookshelfPostMenu, handlePressCommentMenu, navigation, setPhotoViewer],
+    [handlePressBookshelfPostMenu, handlePressCommentMenu, handleToggleRegularGroupPost, navigation, openBookshelfDetail, regularGroupPendingPostKeys, selectedRegularGroup, setPhotoViewer],
   );
 
   return (
@@ -3087,7 +3120,7 @@ function GroupHomeView({
           },
         ]}
         data={groupHomeListItems}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => Array.isArray(item) ? `bookshelf-row-${item[0]?.id}` : item.id}
         renderItem={renderGroupHomeListItem}
         ListHeaderComponentStyle={styles.groupHomeListHeader}
         ListFooterComponent={
@@ -3466,16 +3499,13 @@ function GroupHomeView({
           regularMeetingInfo={regularMeetingInfo}
           selectedRegularGroupId={selectedRegularGroupId}
           selectedRegularGroup={selectedRegularGroup}
-          regularGroupPendingPostKeys={regularGroupPendingPostKeys}
           regularGroupMembersVisible={regularGroupMembersVisible}
           setSelectedBookshelfSession={setSelectedBookshelfSession}
-          openBookshelfDetail={openBookshelfDetail}
           handleBackToBookshelfGrid={handleBackToBookshelfGrid}
           handleChangeBookshelfTab={handleChangeBookshelfTab}
           handleOpenBookshelfComposer={handleOpenBookshelfComposer}
           handleSelectRegularGroup={handleSelectRegularGroup}
           handleToggleRegularGroupMembers={handleToggleRegularGroupMembers}
-          handleToggleRegularGroupPost={handleToggleRegularGroupPost}
           handleSortRegularGroupPosts={handleSortRegularGroupPosts}
           handleOpenBookshelfEdit={handleOpenBookshelfEdit}
           handleDeleteSelectedBookshelf={handleDeleteSelectedBookshelf}
@@ -4723,8 +4753,14 @@ function GroupHomeView({
                 <MaterialIcons name="close" size={22} color={colors.gray6} />
               </Pressable>
             </View>
-            <View style={styles.voteVotersList}>
-              {voteVotersModal.voters.map((voter, index) => (
+            <FlatList
+              style={styles.voteVotersScroll}
+              data={voteVotersModal.voters}
+              keyExtractor={(voter, index) => `${voter.nickname}-${index}`}
+              showsVerticalScrollIndicator={false}
+              ItemSeparatorComponent={() => <View style={styles.voteVotersSeparator} />}
+              ListEmptyComponent={<Text style={styles.voteVotersEmptyText}>{l('아직 투표자가 없습니다.')}</Text>}
+              renderItem={({ item: voter, index }) => (
                 <Pressable
                   key={`${voter.nickname}-${index}`}
                   style={({ pressed }) => [styles.voteVotersRow, pressed && styles.pressed]}
@@ -4747,11 +4783,8 @@ function GroupHomeView({
                   </View>
                   <Text style={styles.voteVotersName}>{voter.nickname}</Text>
                 </Pressable>
-              ))}
-              {voteVotersModal.voters.length === 0 ? (
-                <Text style={styles.voteVotersEmptyText}>{l('아직 투표자가 없습니다.')}</Text>
-              ) : null}
-            </View>
+              )}
+            />
           </>
         ) : null}
       </DialogOverlay>

@@ -17,7 +17,6 @@ import {
   Keyboard,
   Linking,
   Modal,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -1155,6 +1154,7 @@ export function AppHeader(props: Props) {
           >
             {searchStage === 'results' ? (
               <FlatList
+                key="book-search-results"
                 style={styles.searchPageScroll}
                 contentContainerStyle={[
                   styles.searchPageContent,
@@ -1318,15 +1318,19 @@ export function AppHeader(props: Props) {
                 ListFooterComponentStyle={{ marginTop: spacing.md }}
               />
             ) : (
-              <ScrollView
+              <FlatList
+                key="book-detail-stories"
+                data={bookStories}
+                keyExtractor={(story) => `book-story-${story.id}`}
                 style={styles.searchPageScroll}
                 contentContainerStyle={[
                   styles.searchPageContent,
-                  { paddingBottom: searchPageBottomPadding },
+                  { gap: 0, paddingBottom: searchPageBottomPadding },
                 ]}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
-              >
+                ListHeaderComponent={(
+                  <View style={styles.detailStoriesHeader}>
                   <Pressable
                     style={styles.detailBackRow}
                     onPress={() => {
@@ -1414,8 +1418,9 @@ export function AppHeader(props: Props) {
                     </Text>
                   ) : null}
 
-                  <View style={styles.detailStoryList}>
-                    {bookStories.map((story) => {
+                  </View>
+                )}
+                renderItem={({ item: story }) => {
                       const isMineForViewer = isLoggedIn && (story.mine ?? false);
                       return (
                         <BookStoryFeedCard
@@ -1445,9 +1450,10 @@ export function AppHeader(props: Props) {
                           }}
                         />
                       );
-                    })}
-                  </View>
-              </ScrollView>
+                }}
+                ItemSeparatorComponent={() => <View style={styles.detailStorySeparator} />}
+                ListFooterComponent={<View style={styles.detailStoryBottomSpacing} />}
+              />
             )}
           </View>
         </View>
@@ -1834,8 +1840,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: spacing.md,
   },
-  detailStoryList: {
-    gap: spacing.xs,
+  detailStoriesHeader: {
+    gap: spacing.md,
     paddingBottom: spacing.md,
+  },
+  detailStorySeparator: {
+    height: spacing.xs,
+  },
+  detailStoryBottomSpacing: {
+    height: spacing.md,
   },
 });

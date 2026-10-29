@@ -563,28 +563,26 @@ export function GroupManagementOverlay({
                 </View>
               )}
             />
-          ) : (
-          <ScrollView
-            style={styles.managementScreenScroll}
-            contentContainerStyle={[
-              styles.managementScreenContent,
-              { paddingBottom: managementScreenContentBottomPadding },
-            ]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            refreshControl={
-              activeManagementScreen === 'JOIN_REQUESTS' ? (
+          ) : activeManagementScreen === 'JOIN_REQUESTS' ? (
+            <FlatList
+              style={styles.managementScreenScroll}
+              contentContainerStyle={[
+                styles.managementMemberListContent,
+                { paddingBottom: managementScreenContentBottomPadding },
+              ]}
+              data={joinRequests}
+              keyExtractor={(request) => request.id}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              refreshControl={
                 <RefreshControl
                   refreshing={refreshingJoinRequests}
                   onRefresh={handleRefreshJoinRequests}
                   tintColor={colors.primary1}
                   colors={[colors.primary1]}
                 />
-              ) : undefined
-            }
-          >
-            {activeManagementScreen === 'JOIN_REQUESTS' ? (
-              <>
+              }
+              ListHeaderComponent={
                 <View style={styles.managementSummaryCard}>
                   <Text style={styles.managementSummaryTitle}>{l('가입 신청 현황')}</Text>
                   <Text style={styles.managementSummaryDescription}>
@@ -596,9 +594,15 @@ export function GroupManagementOverlay({
                     </Text>
                   </View>
                 </View>
-
-                <View style={styles.managementCardList}>
-                  {joinRequests.map((request) => (
+              }
+              ListHeaderComponentStyle={styles.managementMemberListHeader}
+              ItemSeparatorComponent={() => <View style={styles.managementJoinRequestSeparator} />}
+              ListEmptyComponent={
+                    <View style={styles.managementEmptyCard}>
+                      <Text style={styles.managementEmptyText}>{l('대기 중인 가입 신청이 없습니다.')}</Text>
+                    </View>
+              }
+              renderItem={({ item: request }) => (
                     <View key={request.id} style={styles.managementListCard}>
                       <View style={styles.managementListCardTop}>
                         <View style={styles.managementIdentityRow}>
@@ -651,16 +655,18 @@ export function GroupManagementOverlay({
                         </Pressable>
                       </View>
                     </View>
-                  ))}
-                  {joinRequests.length === 0 ? (
-                    <View style={styles.managementEmptyCard}>
-                      <Text style={styles.managementEmptyText}>{l('대기 중인 가입 신청이 없습니다.')}</Text>
-                    </View>
-                  ) : null}
-                </View>
-              </>
-            ) : null}
-
+              )}
+            />
+          ) : (
+          <ScrollView
+            style={styles.managementScreenScroll}
+            contentContainerStyle={[
+              styles.managementScreenContent,
+              { paddingBottom: managementScreenContentBottomPadding },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             {activeManagementScreen === 'EDIT' ? (
               <View style={styles.managementEditSection}>
                 <View style={styles.sectionBox}>
