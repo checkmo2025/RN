@@ -68,7 +68,6 @@ export type GroupBookshelfViewProps = {
   // Setters
   setSelectedBookshelfSession: (session: string) => void;
   // Handlers
-  openBookshelfDetail: (book: BookshelfItem, tab: BookshelfDetailTab) => void;
   handleBackToBookshelfGrid: () => void;
   handleChangeBookshelfTab: (tab: BookshelfDetailTab) => void;
   handleOpenBookshelfComposer: (type: 'TOPIC' | 'REVIEW', post?: BookshelfPostItem) => void;
@@ -81,6 +80,80 @@ export type GroupBookshelfViewProps = {
   handlePressManageRegularGroups: () => void;
   retryBookshelfDetailSection: (section: BookshelfDetailSection) => void;
 };
+
+export function GroupBookshelfBookRow({ items, openBookshelfDetail }: {
+  items: BookshelfItem[];
+  openBookshelfDetail: (book: BookshelfItem, tab: BookshelfDetailTab) => void;
+}) {
+  const { l } = useLanguage();
+  return (
+        <View style={styles.bookshelfGrid}>
+          {items.map((book) => (
+            <Pressable
+              key={book.id}
+              style={({ pressed }) => [styles.bookshelfCard, pressed && styles.pressed]}
+              onPress={() => openBookshelfDetail(book, 'TOPIC')}
+            >
+              <Image
+                source={{ uri: book.coverImage }}
+                style={styles.bookshelfCover}
+                resizeMode="cover"
+              />
+              <Text style={styles.bookshelfTitle} numberOfLines={1}>
+                {book.title}
+              </Text>
+              <Text style={styles.bookshelfAuthor} numberOfLines={1}>
+                {book.author}
+              </Text>
+              <View style={styles.bookshelfBadgeRow}>
+                <View style={styles.bookshelfSessionBadge}>
+                  <Text style={styles.bookshelfBadgeText}>{book.session}</Text>
+                </View>
+                <View
+                  style={[
+                    styles.bookshelfCategoryBadge,
+                    getBookshelfCategoryBadgeStyle(book.category),
+                  ]}
+                >
+                  <Text style={styles.bookshelfBadgeText}>{l(book.category)}</Text>
+                </View>
+              </View>
+              {[
+                { label: '발제', tab: 'TOPIC' as const },
+                { label: '한줄평', tab: 'REVIEW' as const },
+                { label: '정기모임', tab: 'REGULAR' as const },
+              ].map((item) => (
+                <Pressable
+                  key={`${book.id}-${item.label}`}
+                  style={({ pressed }) => [styles.bookshelfLinkRow, pressed && styles.pressed]}
+                  onPress={() => openBookshelfDetail(book, item.tab)}
+                >
+                  <Text style={styles.bookshelfLinkLabel}>{l(item.label)}</Text>
+                  <MaterialIcons name="north-east" size={14} color={colors.gray3} />
+                </Pressable>
+              ))}
+              <View style={styles.bookshelfRatingRow}>
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <MaterialIcons
+                    key={`${book.id}-star-${idx}`}
+                    name={getStarIconName(book.rating, idx)}
+                    size={16}
+                    color={
+                      getStarIconName(book.rating, idx) === 'star-border'
+                        ? colors.gray2
+                        : colors.secondary2
+                    }
+                  />
+                ))}
+                <Text style={styles.bookshelfRatingText}>
+                  {formatAverageRating(book.rating)}
+                </Text>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+  );
+}
 
 export function GroupBookshelfTopicRow({
   item,
@@ -303,7 +376,6 @@ export function GroupBookshelfView({
   regularGroupPendingPostKeys,
   regularGroupMembersVisible,
   setSelectedBookshelfSession,
-  openBookshelfDetail,
   handleBackToBookshelfGrid,
   handleChangeBookshelfTab,
   handleOpenBookshelfComposer,
@@ -506,73 +578,7 @@ export function GroupBookshelfView({
         <View style={styles.managementEmptyCard}>
           <Text style={styles.managementEmptyText}>{l('등록된 책장이 없습니다.')}</Text>
         </View>
-      ) : (
-        <View style={styles.bookshelfGrid}>
-          {visibleBookshelfItems.map((book) => (
-            <Pressable
-              key={book.id}
-              style={({ pressed }) => [styles.bookshelfCard, pressed && styles.pressed]}
-              onPress={() => openBookshelfDetail(book, 'TOPIC')}
-            >
-              <Image
-                source={{ uri: book.coverImage }}
-                style={styles.bookshelfCover}
-                resizeMode="cover"
-              />
-              <Text style={styles.bookshelfTitle} numberOfLines={1}>
-                {book.title}
-              </Text>
-              <Text style={styles.bookshelfAuthor} numberOfLines={1}>
-                {book.author}
-              </Text>
-              <View style={styles.bookshelfBadgeRow}>
-                <View style={styles.bookshelfSessionBadge}>
-                  <Text style={styles.bookshelfBadgeText}>{book.session}</Text>
-                </View>
-                <View
-                  style={[
-                    styles.bookshelfCategoryBadge,
-                    getBookshelfCategoryBadgeStyle(book.category),
-                  ]}
-                >
-                  <Text style={styles.bookshelfBadgeText}>{l(book.category)}</Text>
-                </View>
-              </View>
-              {[
-                { label: '발제', tab: 'TOPIC' as const },
-                { label: '한줄평', tab: 'REVIEW' as const },
-                { label: '정기모임', tab: 'REGULAR' as const },
-              ].map((item) => (
-                <Pressable
-                  key={`${book.id}-${item.label}`}
-                  style={({ pressed }) => [styles.bookshelfLinkRow, pressed && styles.pressed]}
-                  onPress={() => openBookshelfDetail(book, item.tab)}
-                >
-                  <Text style={styles.bookshelfLinkLabel}>{l(item.label)}</Text>
-                  <MaterialIcons name="north-east" size={14} color={colors.gray3} />
-                </Pressable>
-              ))}
-              <View style={styles.bookshelfRatingRow}>
-                {Array.from({ length: 5 }).map((_, idx) => (
-                  <MaterialIcons
-                    key={`${book.id}-star-${idx}`}
-                    name={getStarIconName(book.rating, idx)}
-                    size={16}
-                    color={
-                      getStarIconName(book.rating, idx) === 'star-border'
-                        ? colors.gray2
-                        : colors.secondary2
-                    }
-                  />
-                ))}
-                <Text style={styles.bookshelfRatingText}>
-                  {formatAverageRating(book.rating)}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
-        </View>
-      )}
+      ) : null}
     </>
   ) : selectedBookshelfBook ? (
     <View

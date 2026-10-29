@@ -140,6 +140,7 @@ import { styles } from './meeting/meetingStyles';
 import { SkeletonBox } from '../components/common/SkeletonBox';
 import { GroupNoticeCommentRow, GroupNoticeView } from './meeting/GroupNoticeView';
 import {
+  GroupBookshelfBookRow,
   GroupBookshelfReviewFooter,
   GroupBookshelfReviewRow,
   GroupBookshelfTopicFooter,
@@ -216,7 +217,7 @@ import {
   MEETING_SEARCH_KEYWORD_MAX_LENGTH,
 } from './meeting/helpers';
 
-type GroupHomeListItem = NoticeComment | BookshelfPostItem;
+type GroupHomeListItem = NoticeComment | BookshelfPostItem | BookshelfItem[];
 
 
 
@@ -3033,6 +3034,13 @@ function GroupHomeView({
     bookshelfViewMode === 'DETAIL' &&
     bookshelfDetailTab === 'REVIEW' &&
     selectedBookshelfBook !== null;
+  const showVirtualizedBookshelfGrid =
+    activeTab === 'bookshelf' && isMember && workspaceLoaded && bookshelfViewMode === 'GRID';
+  const bookshelfRows = useMemo(
+    () => Array.from({ length: Math.ceil(visibleBookshelfItems.length / 2) }, (_, index) =>
+      visibleBookshelfItems.slice(index * 2, index * 2 + 2)),
+    [visibleBookshelfItems],
+  );
   const groupHomeListItems: GroupHomeListItem[] =
     activeTab === 'notice' && selectedNotice && isMember
       ? currentNoticeComments
@@ -3040,10 +3048,16 @@ function GroupHomeView({
         ? bookshelfTopicItems
         : showVirtualizedBookshelfReviews
           ? bookshelfReviewItems
-          : [];
+          : showVirtualizedBookshelfGrid
+            ? bookshelfRows
+            : [];
   const renderGroupHomeListItem = useCallback(
-    ({ item }: ListRenderItemInfo<GroupHomeListItem>) =>
-      'type' in item ? (
+    ({ item, index }: ListRenderItemInfo<GroupHomeListItem>) =>
+      Array.isArray(item) ? (
+        <View style={index === 0 ? styles.bookshelfGridFirstRow : styles.bookshelfGridNextRow}>
+          <GroupBookshelfBookRow items={item} openBookshelfDetail={openBookshelfDetail} />
+        </View>
+      ) : 'type' in item ? (
         <View style={styles.bookshelfTopicVirtualizedCell}>
           {item.type === 'REVIEW' ? (
             <GroupBookshelfReviewRow
@@ -3067,7 +3081,7 @@ function GroupHomeView({
           />
         </View>
       ),
-    [handlePressBookshelfPostMenu, handlePressCommentMenu, navigation, setPhotoViewer],
+    [handlePressBookshelfPostMenu, handlePressCommentMenu, navigation, openBookshelfDetail, setPhotoViewer],
   );
 
   return (
@@ -3087,7 +3101,7 @@ function GroupHomeView({
           },
         ]}
         data={groupHomeListItems}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => Array.isArray(item) ? `bookshelf-row-${item[0]?.id}` : item.id}
         renderItem={renderGroupHomeListItem}
         ListHeaderComponentStyle={styles.groupHomeListHeader}
         ListFooterComponent={
@@ -3469,7 +3483,6 @@ function GroupHomeView({
           regularGroupPendingPostKeys={regularGroupPendingPostKeys}
           regularGroupMembersVisible={regularGroupMembersVisible}
           setSelectedBookshelfSession={setSelectedBookshelfSession}
-          openBookshelfDetail={openBookshelfDetail}
           handleBackToBookshelfGrid={handleBackToBookshelfGrid}
           handleChangeBookshelfTab={handleChangeBookshelfTab}
           handleOpenBookshelfComposer={handleOpenBookshelfComposer}

@@ -3061,6 +3061,12 @@ export const styles = StyleSheet.create({
   bookshelfSessionTextActive: {
     color: colors.primary1,
   },
+  bookshelfGridFirstRow: {
+    paddingTop: spacing.md,
+  },
+  bookshelfGridNextRow: {
+    paddingTop: spacing.sm,
+  },
   bookshelfGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

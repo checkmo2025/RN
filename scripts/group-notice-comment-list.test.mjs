@@ -94,7 +94,7 @@ test('uses one vertical FlatList and preserves comment identity and order', () =
     /activeTab === 'notice' && selectedNotice && isMember\s*\? currentNoticeComments/,
   );
   assert.match(attributes, /data=\{groupHomeListItems\}/);
-  assert.match(attributes, /keyExtractor=\{\(item\) => item\.id\}/);
+  assert.match(attributes, /keyExtractor=\{\(item\) => Array\.isArray\(item\) \? .* : item\.id\}/);
   assert.match(attributes, /renderItem=\{renderGroupHomeListItem\}/);
   assert.doesNotMatch(noticeText, /currentNoticeComments\.map/);
 
